@@ -1,3 +1,0 @@
-{
-  "connectionString": "wrangler:123456@tcp(127.0.0.1:9001)/wrangler?charset=utf8mb4&parseTime=True&loc=Local"
-}

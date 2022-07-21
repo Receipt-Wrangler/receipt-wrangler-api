@@ -1,11 +1,13 @@
 package main
 
 import (
-	connect "receipt-wrangler/api/internal/database"
+	db "receipt-wrangler/api/internal/database"
 )
 
 func main() {
-	connect.Connect()
+	db.Connect()
+	db.MakeMigrations()
+
 	// environment.SetEnv()
 	// router := mux.NewRouter()
 	// database.ConnectToDatabase()

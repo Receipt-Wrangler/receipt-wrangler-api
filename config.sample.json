@@ -1,3 +1,4 @@
 {
-  "connectionString": "db connection string here"
+  "connectionString": "db connection string here",
+  "secretKey": "secret key for jwts here"
 }

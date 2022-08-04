@@ -1,9 +1,7 @@
 package db
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
+	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 
 	"gorm.io/driver/mysql"
@@ -12,39 +10,15 @@ import (
 
 var db *gorm.DB
 
-type Config struct {
-	ConnectionString string
-}
-
 func Connect() {
-	connectionString := getConnectionString()
-	connectedDb, err := gorm.Open(mysql.Open(connectionString), &gorm.Config{})
+	config := config.GetConfig()
+	connectedDb, err := gorm.Open(mysql.Open(config.ConnectionString), &gorm.Config{})
 
 	if err != nil {
 		panic(err.Error())
 	}
 
 	db = connectedDb
-}
-
-func getConnectionString() string {
-	jsonFile, err := os.Open("config.json")
-
-	if err != nil {
-		panic(err.Error())
-	}
-
-	bytes, err := ioutil.ReadAll(jsonFile)
-
-	var config Config
-	marshalErr := json.Unmarshal(bytes, &config)
-
-	if marshalErr != nil {
-		panic(err.Error())
-	}
-
-	jsonFile.Close()
-	return config.ConnectionString
 }
 
 func MakeMigrations() {

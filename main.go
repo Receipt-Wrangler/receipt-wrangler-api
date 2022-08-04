@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
+	config "receipt-wrangler/api/internal/env"
 	signUp "receipt-wrangler/api/internal/handlers/auth"
 	signUpMiddleware "receipt-wrangler/api/internal/middleware/sign-up"
 	"time"
@@ -12,6 +13,7 @@ import (
 )
 
 func main() {
+	config.SetConfig()
 	db.Connect()
 	db.MakeMigrations()
 

@@ -1,11 +1,12 @@
 package signUp
 
 import (
-	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	httpUtils "receipt-wrangler/api/internal/utils/http"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
@@ -14,10 +15,13 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
 
 	userData := r.Context().Value("user").(models.User)
-	fmt.Println(userData)
 
-	// hash password
+	bytes, err := bcrypt.GenerateFromPassword([]byte(userData.Password), 14)
+	if err != nil {
+		httpUtils.WriteErrorResponse(w, err, 500)
+	}
 
+	userData.Password = string(bytes)
 	result := db.Create(&userData)
 
 	if result.Error != nil {
@@ -25,9 +29,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte("hello there"))
 }
 
 func validateData() {
-
 }

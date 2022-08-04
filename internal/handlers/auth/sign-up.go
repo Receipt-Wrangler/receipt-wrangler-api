@@ -6,8 +6,13 @@ import (
 	"receipt-wrangler/api/internal/models"
 	httpUtils "receipt-wrangler/api/internal/utils/http"
 
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type Claims struct {
+	jwt.RegisteredClaims
+}
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
 	validateData()
@@ -29,6 +34,22 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tokenString, err := generateJWT()
+	if err != nil {
+		httpUtils.WriteErrorResponse(w, err, 500)
+		return
+	}
+
+	w.Write([]byte(tokenString))
+}
+
+func generateJWT() (string, error) {
+	claims := &Claims{}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	signedString, err := token.SignedString([]byte("this is a placeholder for secret"))
+
+	return signedString, err
 }
 
 func validateData() {

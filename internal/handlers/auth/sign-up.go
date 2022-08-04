@@ -3,6 +3,7 @@ package signUp
 import (
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
+	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	httpUtils "receipt-wrangler/api/internal/utils/http"
 
@@ -44,10 +45,11 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func generateJWT() (string, error) {
+	config := config.GetConfig()
 	claims := &Claims{}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	signedString, err := token.SignedString([]byte("this is a placeholder for secret"))
+	signedString, err := token.SignedString([]byte(config.SecretKey))
 
 	return signedString, err
 }

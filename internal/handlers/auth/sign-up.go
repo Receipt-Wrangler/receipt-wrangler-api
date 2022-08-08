@@ -4,6 +4,7 @@ import (
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/models"
 	httpUtils "receipt-wrangler/api/internal/utils/http"
 
@@ -16,11 +17,14 @@ type Claims struct {
 }
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
-	validateData()
-
 	db := db.GetDB()
-
 	userData := r.Context().Value("user").(models.User)
+	validatorErrors := validateData(userData)
+
+	if len(validatorErrors.Errors) > 0 {
+		httpUtils.WriteValidatorErrorResponse(w, validatorErrors, 500)
+		return
+	}
 
 	bytes, err := bcrypt.GenerateFromPassword([]byte(userData.Password), 14)
 	if err != nil {
@@ -54,5 +58,30 @@ func generateJWT() (string, error) {
 	return signedString, err
 }
 
-func validateData() {
+func validateData(userData models.User) handlers.ValidatorError {
+	db := db.GetDB()
+	err := handlers.ValidatorError{
+		Errors: make(map[string]string),
+	}
+
+	if len(userData.Username) == 0 {
+		err.Errors["username"] = "Username is required"
+	} else {
+		var count int64
+		db.Model(&models.User{}).Where("username = ?", userData.Username).Count(&count)
+
+		if count > 0 {
+			err.Errors["username"] = "Username already exists"
+		}
+	}
+
+	if len(userData.Password) == 0 {
+		err.Errors["password"] = "Password is required"
+	}
+
+	if len(userData.DisplayName) == 0 {
+		err.Errors["displayName"] = "Displayname is required"
+	}
+
+	return err
 }

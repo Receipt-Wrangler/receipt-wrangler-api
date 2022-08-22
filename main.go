@@ -5,8 +5,9 @@ import (
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
+	login "receipt-wrangler/api/internal/handlers/auth"
 	signUp "receipt-wrangler/api/internal/handlers/auth"
-	signUpMiddleware "receipt-wrangler/api/internal/middleware/sign-up"
+	auth_middleware "receipt-wrangler/api/internal/middleware/auth"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -36,10 +37,16 @@ func initRoutes() *chi.Mux {
 
 	// Signup Router
 	signUpRouter := chi.NewRouter()
-	signUpRouter.Use(signUpMiddleware.SetBodyData)
+	signUpRouter.Use(auth_middleware.SetBodyData)
 	signUpRouter.Post("/", signUp.SignUp)
 
+	// Login Router
+	loginRouter := chi.NewRouter()
+	loginRouter.Use(auth_middleware.SetBodyData)
+	loginRouter.Post("/", login.Login)
+
 	rootRouter.Mount("/api/signup", signUpRouter)
+	rootRouter.Mount("/api/login", loginRouter)
 
 	return rootRouter
 }

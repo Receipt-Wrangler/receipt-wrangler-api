@@ -14,7 +14,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
 	userData := r.Context().Value("user").(models.User)
 	validatorErrors := validateLoginData(userData)
-	errMsg := "Either user doesn't exist, or the password is incorrect"
+	errMsg := "Either the user doesn't exist, or the password is incorrect"
 	var dbUser models.User
 
 	if len(validatorErrors.Errors) > 0 {
@@ -40,9 +40,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie := http.Cookie{Name: "jwt", Value: jwt}
-	w.WriteHeader(200)
+	cookie := http.Cookie{Name: "jwt", Value: jwt, HttpOnly: true} //TODO: Set as HTTP
 	http.SetCookie(w, &cookie)
+	w.WriteHeader(200)
 }
 
 func validateLoginData(userData models.User) handlers.ValidatorError {

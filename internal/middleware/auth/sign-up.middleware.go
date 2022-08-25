@@ -1,4 +1,4 @@
-package signUpMiddleware
+package auth_middleware
 
 import (
 	"context"

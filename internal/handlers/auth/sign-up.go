@@ -1,4 +1,4 @@
-package signUp
+package auth
 
 import (
 	"net/http"
@@ -7,19 +7,21 @@ import (
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/models"
 	httpUtils "receipt-wrangler/api/internal/utils/http"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Claims struct {
+	UserID uint
 	jwt.RegisteredClaims
 }
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
 	userData := r.Context().Value("user").(models.User)
-	validatorErrors := validateData(userData)
+	validatorErrors := validateSignUpData(userData)
 
 	if len(validatorErrors.Errors) > 0 {
 		httpUtils.WriteValidatorErrorResponse(w, validatorErrors, 500)
@@ -39,18 +41,29 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenString, err := generateJWT()
-	if err != nil {
-		httpUtils.WriteErrorResponse(w, err, 500)
-		return
-	}
-
-	w.Write([]byte(tokenString))
+	w.WriteHeader(200)
 }
 
-func generateJWT() (string, error) {
+func generateJWT(username string) (string, error) {
+	db := db.GetDB()
 	config := config.GetConfig()
-	claims := &Claims{}
+	var user models.User
+
+	err := db.Model(models.User{}).Where("username = ?", username).First(&user).Error
+	if err != nil {
+		return "", err
+	}
+
+	expirationDate := time.Now().Add(5 * time.Minute)
+
+	claims := &Claims{
+		UserID: user.ID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "https://recieptWrangler.io",
+			Audience:  []string{"https://receiptWrangler.io"},
+			ExpiresAt: jwt.NewNumericDate(expirationDate),
+		},
+	} // TODO: Set up issuer, and audience correctly
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	signedString, err := token.SignedString([]byte(config.SecretKey))
@@ -58,7 +71,7 @@ func generateJWT() (string, error) {
 	return signedString, err
 }
 
-func validateData(userData models.User) handlers.ValidatorError {
+func validateSignUpData(userData models.User) handlers.ValidatorError {
 	db := db.GetDB()
 	err := handlers.ValidatorError{
 		Errors: make(map[string]string),

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/handlers"
@@ -15,6 +16,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	userData := r.Context().Value("user").(models.User)
 	validatorErrors := validateLoginData(userData)
 	errMsg := "Either the user doesn't exist, or the password is incorrect"
+	var responseData = make(map[string]string)
 	var dbUser models.User
 
 	if len(validatorErrors.Errors) > 0 {
@@ -40,9 +42,17 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie := http.Cookie{Name: "jwt", Value: jwt, HttpOnly: true} //TODO: Set as HTTP
+	responseBytes, err := json.Marshal(responseData)
+	if err != nil {
+		httpUtils.WriteErrorResponse(w, err, 500)
+		return
+	}
+
+	cookie := http.Cookie{Name: "jwt", Value: jwt, HttpOnly: false, Path: "/"}
+
 	http.SetCookie(w, &cookie)
 	w.WriteHeader(200)
+	w.Write(responseBytes)
 }
 
 func validateLoginData(userData models.User) handlers.ValidatorError {

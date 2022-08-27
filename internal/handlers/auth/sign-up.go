@@ -14,7 +14,9 @@ import (
 )
 
 type Claims struct {
-	UserID uint
+	UserID      uint
+	Username    string
+	Displayname string
 	jwt.RegisteredClaims
 }
 
@@ -57,7 +59,9 @@ func generateJWT(username string) (string, error) {
 	expirationDate := time.Now().Add(5 * time.Minute)
 
 	claims := &Claims{
-		UserID: user.ID,
+		UserID:      user.ID,
+		Displayname: user.DisplayName,
+		Username:    user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://recieptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},

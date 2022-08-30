@@ -36,7 +36,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, err := generateJWT(userData.Username)
+	jwt, refreshToken, err := generateJWT(userData.Username)
 	if err != nil {
 		httpUtils.WriteErrorResponse(w, err, 500)
 		return
@@ -48,9 +48,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie := http.Cookie{Name: "jwt", Value: jwt, HttpOnly: false, Path: "/"}
+	accessTokenCookie := http.Cookie{Name: "jwt", Value: jwt, HttpOnly: false, Path: "/"}
+	refreshTokenCookie := http.Cookie{Name: "refresh_token", Value: refreshToken, HttpOnly: true, Path: "/"}
 
-	http.SetCookie(w, &cookie)
+	http.SetCookie(w, &accessTokenCookie)
+	http.SetCookie(w, &refreshTokenCookie)
+
 	w.WriteHeader(200)
 	w.Write(responseBytes)
 }

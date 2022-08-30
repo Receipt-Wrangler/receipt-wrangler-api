@@ -8,6 +8,7 @@ import (
 	login "receipt-wrangler/api/internal/handlers/auth"
 	signUp "receipt-wrangler/api/internal/handlers/auth"
 	auth_middleware "receipt-wrangler/api/internal/middleware/auth"
+	auth_utils "receipt-wrangler/api/internal/utils/auth"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -33,7 +34,18 @@ func serve(router *chi.Mux) {
 }
 
 func initRoutes() *chi.Mux {
+	_, err := auth_utils.InitJwtValidator()
+	if err != nil {
+		panic(err)
+	}
+
 	rootRouter := chi.NewRouter()
+
+	// Set up token endpoint to refresh our credentials
+	// set up jwt validation middleware
+
+	// part of our custom validation will be to compare subject ids, and make sure they are the same, if not, reject
+	// also, if we don't get an access token, then we will reject
 
 	// Signup Router
 	signUpRouter := chi.NewRouter()

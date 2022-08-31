@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
@@ -18,6 +20,10 @@ type Claims struct {
 	Username    string
 	Displayname string
 	jwt.RegisteredClaims
+}
+
+func (claim *Claims) Validate(ctx context.Context) error { // TODO: Implement claim validation
+	return nil
 }
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +52,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-func generateJWT(username string) (string, string, error) {
+func GenerateJWT(username string) (string, string, error) {
 	db := db.GetDB()
 	config := config.GetConfig()
 	var user models.User
@@ -76,7 +82,7 @@ func generateJWT(username string) (string, string, error) {
 
 	refreshTokenClaims := &Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   string(user.ID),
+			Subject:   fmt.Sprint(user.ID),
 			Issuer:    "https://recieptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),

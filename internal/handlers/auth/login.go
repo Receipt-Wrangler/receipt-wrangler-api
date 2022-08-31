@@ -36,7 +36,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, refreshToken, err := generateJWT(userData.Username)
+	jwt, refreshToken, err := GenerateJWT(userData.Username)
 	if err != nil {
 		httpUtils.WriteErrorResponse(w, err, 500)
 		return

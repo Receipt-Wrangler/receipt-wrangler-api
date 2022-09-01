@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"receipt-wrangler/api/internal/handlers/auth"
 	auth_utils "receipt-wrangler/api/internal/utils/auth"
 	httpUtils "receipt-wrangler/api/internal/utils/http"
 
@@ -21,7 +20,7 @@ func ValidateRefreshToken(next http.Handler) http.Handler {
 			panic(err)
 		}
 
-		jwt := r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims).CustomClaims.(*auth.Claims)
+		jwt := r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims).CustomClaims.(*auth_utils.Claims)
 
 		// get cookie
 		refreshTokenCookie, err := r.Cookie("refresh_token")

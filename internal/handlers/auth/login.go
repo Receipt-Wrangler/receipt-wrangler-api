@@ -6,6 +6,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/models"
+	auth "receipt-wrangler/api/internal/utils/auth"
 	httpUtils "receipt-wrangler/api/internal/utils/http"
 
 	"golang.org/x/crypto/bcrypt"
@@ -36,7 +37,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, refreshToken, err := GenerateJWT(userData.Username)
+	jwt, refreshToken, err := auth.GenerateJWT(userData.Username)
 	if err != nil {
 		httpUtils.WriteErrorResponse(w, err, 500)
 		return

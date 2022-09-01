@@ -2,11 +2,16 @@ package auth_utils
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
-	"receipt-wrangler/api/internal/handlers/auth"
+	"receipt-wrangler/api/internal/models"
 	"time"
 
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 func InitJwtValidator() (*validator.Validator, error) {
@@ -46,9 +51,56 @@ func InitTokenRefreshValidator() (*validator.Validator, error) {
 }
 
 func customClaims() validator.CustomClaims {
-	return &auth.Claims{}
+	return &Claims{}
 }
 
-// func customClaims() validator.CustomClaims {
-// 	return &Claims{}
-// }
+func GenerateJWT(username string) (string, string, error) {
+	db := db.GetDB()
+	config := config.GetConfig()
+	var user models.User
+
+	err := db.Model(models.User{}).Where("username = ?", username).First(&user).Error
+	if err != nil {
+		return "", "", err
+	}
+
+	claims := &Claims{
+		UserID:      user.ID,
+		Displayname: user.DisplayName,
+		Username:    user.Username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "https://recieptWrangler.io",
+			Audience:  []string{"https://receiptWrangler.io"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
+		},
+	} // TODO: Set up issuer, and audience correctly
+
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	signedString, err := accessToken.SignedString([]byte(config.SecretKey))
+
+	if err != nil {
+		return "", "", err
+	}
+
+	refreshTokenClaims := Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   fmt.Sprint(user.ID),
+			Issuer:    "https://recieptWrangler.io",
+			Audience:  []string{"https://receiptWrangler.io"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+		},
+	}
+
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS512, refreshTokenClaims)
+	refreshTokenString, err := refreshToken.SignedString([]byte(config.SecretKey))
+
+	if err != nil {
+		return "", "", err
+	}
+
+	return signedString, refreshTokenString, nil
+}
+
+func GetJWT(r *http.Request) *Claims {
+	return r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims).CustomClaims.(*Claims)
+}

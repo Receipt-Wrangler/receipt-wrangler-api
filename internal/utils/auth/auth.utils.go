@@ -44,7 +44,7 @@ func InitTokenRefreshValidator() (*validator.Validator, error) {
 		"https://recieptWrangler.io",
 		[]string{"https://receiptWrangler.io"},
 		validator.WithCustomClaims(customClaims),
-		validator.WithAllowedClockSkew(24*time.Hour),
+		validator.WithAllowedClockSkew(30*time.Second),
 	)
 
 	return jwtValidator, err

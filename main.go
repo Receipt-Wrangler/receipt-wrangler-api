@@ -7,7 +7,7 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers/auth"
 	auth_middleware "receipt-wrangler/api/internal/middleware/auth"
-	auth_utils "receipt-wrangler/api/internal/utils/auth"
+	"receipt-wrangler/api/internal/utils"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -33,7 +33,7 @@ func serve(router *chi.Mux) {
 }
 
 func initRoutes() *chi.Mux {
-	_, err := auth_utils.InitTokenValidator()
+	_, err := utils.InitTokenValidator()
 	if err != nil {
 		panic(err)
 	}

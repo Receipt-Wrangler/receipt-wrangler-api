@@ -1,4 +1,4 @@
-package auth_utils
+package utils
 
 import (
 	"context"

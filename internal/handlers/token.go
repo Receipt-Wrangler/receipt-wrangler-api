@@ -1,9 +1,12 @@
-package auth
+package handlers
 
 import (
 	"net/http"
-	auth_utils "receipt-wrangler/api/internal/utils/auth"
-	httpUtils "receipt-wrangler/api/internal/utils/http"
+	db "receipt-wrangler/api/internal/database"
+	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/utils"
+
+	"github.com/auth0/go-jwt-middleware/v2/validator"
 )
 
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
@@ -12,11 +15,19 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	// and validate the refresh token, and custom claims
 	// at this point we can generate a new set, and return them as cookies
 	// et voiala
-	oldJwt := auth_utils.GetJWT(r)
+	oldRefreshToken := r.Context().Value("refreshToken").(*validator.ValidatedClaims)
+	db := db.GetDB()
+	var dbUser models.User
 
-	jwt, refreshToken, err := auth_utils.GenerateJWT(oldJwt.Username)
+	err := db.Model(models.User{}).Where("id = ?", oldRefreshToken.RegisteredClaims.Subject).First(&dbUser).Error
 	if err != nil {
-		httpUtils.WriteErrorResponse(w, err, 500)
+		utils.WriteCustomErrorResponse(w, "Error refreshing token", 500)
+		return
+	}
+
+	jwt, refreshToken, err := utils.GenerateJWT(dbUser.Username)
+	if err != nil {
+		utils.WriteErrorResponse(w, err, 500)
 		return
 	}
 

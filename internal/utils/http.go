@@ -1,10 +1,10 @@
-package httpUtils
+package utils
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	handlers "receipt-wrangler/api/internal/handlers"
+	"receipt-wrangler/api/internal/structs"
 )
 
 func GetBodyData(w http.ResponseWriter, r *http.Request) ([]byte, error) {
@@ -38,7 +38,7 @@ func WriteCustomErrorResponse(w http.ResponseWriter, msg string, responseCode in
 	w.Write(bytes)
 }
 
-func WriteValidatorErrorResponse(w http.ResponseWriter, err handlers.ValidatorError, responseCode int) {
+func WriteValidatorErrorResponse(w http.ResponseWriter, err structs.ValidatorError, responseCode int) {
 	bytes, marshalErr := json.Marshal(err.Errors)
 	if marshalErr != nil {
 		WriteErrorResponse(w, marshalErr, 500)

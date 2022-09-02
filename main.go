@@ -5,12 +5,10 @@ import (
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
-	"receipt-wrangler/api/internal/handlers/auth"
-	auth_middleware "receipt-wrangler/api/internal/middleware/auth"
-	auth_utils "receipt-wrangler/api/internal/utils/auth"
+	"receipt-wrangler/api/internal/handlers"
+	"receipt-wrangler/api/internal/middleware"
+	"receipt-wrangler/api/internal/utils"
 	"time"
-
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -35,39 +33,27 @@ func serve(router *chi.Mux) {
 }
 
 func initRoutes() *chi.Mux {
-	_, err := auth_utils.InitJwtValidator()
+	_, err := utils.InitTokenValidator()
 	if err != nil {
 		panic(err)
 	}
-
-	tokenRefreshValidator, err := auth_utils.InitTokenRefreshValidator()
-	if err != nil {
-		panic(err)
-	}
-	jwtMiddleWare := jwtmiddleware.New(tokenRefreshValidator.ValidateToken)
 
 	rootRouter := chi.NewRouter()
 
-	// Set up token endpoint to refresh our credentials
-	// set up jwt validation middleware
-
-	// part of our custom validation will be to compare subject ids, and make sure they are the same, if not, reject
-	// also, if we don't get an access token, then we will reject
-
 	// Token Refresh Router
 	refreshRouter := chi.NewRouter()
-	refreshRouter.Use(jwtMiddleWare.CheckJWT, auth_middleware.ValidateRefreshToken)
-	refreshRouter.Post("/", auth.RefreshToken)
+	refreshRouter.Use(middleware.ValidateRefreshToken)
+	refreshRouter.Post("/", handlers.RefreshToken)
 
 	// Signup Router
 	signUpRouter := chi.NewRouter()
-	signUpRouter.Use(auth_middleware.SetBodyData)
-	signUpRouter.Post("/", auth.SignUp)
+	signUpRouter.Use(middleware.SetBodyData)
+	signUpRouter.Post("/", handlers.SignUp)
 
 	// Login Router
 	loginRouter := chi.NewRouter()
-	loginRouter.Use(auth_middleware.SetBodyData)
-	loginRouter.Post("/", auth.Login)
+	loginRouter.Use(middleware.SetBodyData)
+	loginRouter.Post("/", handlers.Login)
 
 	rootRouter.Mount("/api/token", refreshRouter)
 	rootRouter.Mount("/api/signup", signUpRouter)

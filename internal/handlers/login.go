@@ -1,13 +1,12 @@
-package auth
+package handlers
 
 import (
 	"encoding/json"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
-	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/models"
-	auth "receipt-wrangler/api/internal/utils/auth"
-	httpUtils "receipt-wrangler/api/internal/utils/http"
+	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,31 +20,31 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	var dbUser models.User
 
 	if len(validatorErrors.Errors) > 0 {
-		httpUtils.WriteValidatorErrorResponse(w, validatorErrors, 500)
+		utils.WriteValidatorErrorResponse(w, validatorErrors, 500)
 		return
 	}
 
 	err := db.Model(models.User{}).Where("username = ?", userData.Username).First(&dbUser).Error
 	if err != nil {
-		httpUtils.WriteCustomErrorResponse(w, errMsg, 500)
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(userData.Password))
 	if err != nil {
-		httpUtils.WriteCustomErrorResponse(w, errMsg, 500)
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
-	jwt, refreshToken, err := auth.GenerateJWT(userData.Username)
+	jwt, refreshToken, err := utils.GenerateJWT(userData.Username)
 	if err != nil {
-		httpUtils.WriteErrorResponse(w, err, 500)
+		utils.WriteErrorResponse(w, err, 500)
 		return
 	}
 
 	responseBytes, err := json.Marshal(responseData)
 	if err != nil {
-		httpUtils.WriteErrorResponse(w, err, 500)
+		utils.WriteErrorResponse(w, err, 500)
 		return
 	}
 
@@ -59,8 +58,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseBytes)
 }
 
-func validateLoginData(userData models.User) handlers.ValidatorError {
-	err := handlers.ValidatorError{
+func validateLoginData(userData models.User) structs.ValidatorError {
+	err := structs.ValidatorError{
 		Errors: make(map[string]string),
 	}
 

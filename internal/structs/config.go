@@ -1,4 +1,4 @@
-package config
+package structs
 
 type Config struct {
 	ConnectionString string

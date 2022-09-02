@@ -6,7 +6,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers/auth"
-	auth_middleware "receipt-wrangler/api/internal/middleware/auth"
+	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -42,17 +42,17 @@ func initRoutes() *chi.Mux {
 
 	// Token Refresh Router
 	refreshRouter := chi.NewRouter()
-	refreshRouter.Use(auth_middleware.ValidateRefreshToken)
+	refreshRouter.Use(middleware.ValidateRefreshToken)
 	refreshRouter.Post("/", auth.RefreshToken)
 
 	// Signup Router
 	signUpRouter := chi.NewRouter()
-	signUpRouter.Use(auth_middleware.SetBodyData)
+	signUpRouter.Use(middleware.SetBodyData)
 	signUpRouter.Post("/", auth.SignUp)
 
 	// Login Router
 	loginRouter := chi.NewRouter()
-	loginRouter.Use(auth_middleware.SetBodyData)
+	loginRouter.Use(middleware.SetBodyData)
 	loginRouter.Post("/", auth.Login)
 
 	rootRouter.Mount("/api/token", refreshRouter)

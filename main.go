@@ -10,8 +10,6 @@ import (
 	auth_utils "receipt-wrangler/api/internal/utils/auth"
 	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-
 	"github.com/go-chi/chi/v5"
 )
 
@@ -40,11 +38,11 @@ func initRoutes() *chi.Mux {
 		panic(err)
 	}
 
-	tokenRefreshValidator, err := auth_utils.InitTokenRefreshValidator()
-	if err != nil {
-		panic(err)
-	}
-	jwtMiddleWare := jwtmiddleware.New(tokenRefreshValidator.ValidateToken)
+	// tokenRefreshValidator, err := auth_utils.InitTokenRefreshValidator()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// jwtMiddleWare := jwtmiddleware.New(tokenRefreshValidator.ValidateToken)
 
 	rootRouter := chi.NewRouter()
 
@@ -56,7 +54,7 @@ func initRoutes() *chi.Mux {
 
 	// Token Refresh Router
 	refreshRouter := chi.NewRouter()
-	refreshRouter.Use(jwtMiddleWare.CheckJWT, auth_middleware.ValidateRefreshToken)
+	refreshRouter.Use(auth_middleware.ValidateRefreshToken)
 	refreshRouter.Post("/", auth.RefreshToken)
 
 	// Signup Router

@@ -2,13 +2,9 @@ package auth_middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	auth_utils "receipt-wrangler/api/internal/utils/auth"
 	httpUtils "receipt-wrangler/api/internal/utils/http"
-
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	"github.com/auth0/go-jwt-middleware/v2/validator"
 )
 
 func ValidateRefreshToken(next http.Handler) http.Handler {
@@ -20,7 +16,7 @@ func ValidateRefreshToken(next http.Handler) http.Handler {
 			panic(err)
 		}
 
-		jwt := r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims).CustomClaims.(*auth_utils.Claims)
+		// jwt := r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims).CustomClaims.(*auth_utils.Claims)
 
 		// get cookie
 		refreshTokenCookie, err := r.Cookie("refresh_token")
@@ -35,11 +31,12 @@ func ValidateRefreshToken(next http.Handler) http.Handler {
 			return
 		}
 
-		if refreshToken.(*validator.ValidatedClaims).RegisteredClaims.Subject != fmt.Sprint(jwt.UserID) {
-			httpUtils.WriteCustomErrorResponse(w, errMessage, 500)
-			return
-		}
+		// if refreshToken.(*validator.ValidatedClaims).RegisteredClaims.Subject != fmt.Sprint(jwt.UserID) {
+		// 	httpUtils.WriteCustomErrorResponse(w, errMessage, 500)
+		// 	return
+		// }
 
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), "refreshToken", refreshToken)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

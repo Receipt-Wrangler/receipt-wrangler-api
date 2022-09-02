@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"receipt-wrangler/api/internal/structs"
 )
 
-var config Config
+var config structs.Config
 
-func GetConfig() Config {
+func GetConfig() structs.Config {
 	return config
 }
 
@@ -21,7 +22,7 @@ func SetConfig() {
 
 	bytes, err := ioutil.ReadAll(jsonFile)
 
-	var configFile Config
+	var configFile structs.Config
 	marshalErr := json.Unmarshal(bytes, &configFile)
 
 	if marshalErr != nil {

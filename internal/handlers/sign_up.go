@@ -1,10 +1,10 @@
-package auth
+package handlers
 
 import (
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
-	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
 	"golang.org/x/crypto/bcrypt"
@@ -36,9 +36,9 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-func validateSignUpData(userData models.User) handlers.ValidatorError {
+func validateSignUpData(userData models.User) structs.ValidatorError {
 	db := db.GetDB()
-	err := handlers.ValidatorError{
+	err := structs.ValidatorError{
 		Errors: make(map[string]string),
 	}
 

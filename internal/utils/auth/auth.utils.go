@@ -14,25 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func InitJwtValidator() (*validator.Validator, error) {
-	keyFunc := func(ctx context.Context) (interface{}, error) {
-		config := config.GetConfig()
-		return []byte(config.SecretKey), nil
-	}
-
-	jwtValidator, err := validator.New(
-		keyFunc,
-		validator.HS512,
-		"https://recieptWrangler.io",
-		[]string{"https://receiptWrangler.io"},
-		// validator.WithCustomClaims(), TODO: Add for custom claim validation
-		validator.WithAllowedClockSkew(30*time.Second),
-	)
-
-	return jwtValidator, err
-}
-
-func InitTokenRefreshValidator() (*validator.Validator, error) {
+func InitTokenValidator() (*validator.Validator, error) {
 	keyFunc := func(ctx context.Context) (interface{}, error) {
 		config := config.GetConfig()
 		return []byte(config.SecretKey), nil
@@ -73,7 +55,7 @@ func GenerateJWT(username string) (string, string, error) {
 			Audience:  []string{"https://receiptWrangler.io"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 		},
-	} // TODO: Set up issuer, and audience correctly
+	}
 
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	signedString, err := accessToken.SignedString([]byte(config.SecretKey))

@@ -33,24 +33,12 @@ func serve(router *chi.Mux) {
 }
 
 func initRoutes() *chi.Mux {
-	_, err := auth_utils.InitJwtValidator()
+	_, err := auth_utils.InitTokenValidator()
 	if err != nil {
 		panic(err)
 	}
 
-	// tokenRefreshValidator, err := auth_utils.InitTokenRefreshValidator()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// jwtMiddleWare := jwtmiddleware.New(tokenRefreshValidator.ValidateToken)
-
 	rootRouter := chi.NewRouter()
-
-	// Set up token endpoint to refresh our credentials
-	// set up jwt validation middleware
-
-	// part of our custom validation will be to compare subject ids, and make sure they are the same, if not, reject
-	// also, if we don't get an access token, then we will reject
 
 	// Token Refresh Router
 	refreshRouter := chi.NewRouter()

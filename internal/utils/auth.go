@@ -36,21 +36,21 @@ func customClaims() validator.CustomClaims {
 	return &Claims{}
 }
 
-func GenerateJWT(username string) (string, string, error) {
+func GenerateJWT(userId string) (string, string, error) {
 	db := db.GetDB()
 	config := config.GetConfig()
 	var user models.User
 
-	err := db.Model(models.User{}).Where("username = ?", username).First(&user).Error
+	err := db.Model(models.User{}).Where("id = ?", userId).First(&user).Error
 	if err != nil {
 		return "", "", err
 	}
 
 	claims := &Claims{
-		UserID:      user.ID,
 		Displayname: user.DisplayName,
 		Username:    user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   fmt.Sprint(user.ID),
 			Issuer:    "https://recieptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),

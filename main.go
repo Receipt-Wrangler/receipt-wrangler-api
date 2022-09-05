@@ -10,6 +10,7 @@ import (
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -33,10 +34,11 @@ func serve(router *chi.Mux) {
 }
 
 func initRoutes() *chi.Mux {
-	_, err := utils.InitTokenValidator()
+	tokenValidator, err := utils.InitTokenValidator()
 	if err != nil {
 		panic(err)
 	}
+	tokenValidatorMiddleware := jwtmiddleware.New(tokenValidator.ValidateToken)
 
 	rootRouter := chi.NewRouter()
 
@@ -44,20 +46,25 @@ func initRoutes() *chi.Mux {
 	refreshRouter := chi.NewRouter()
 	refreshRouter.Use(middleware.ValidateRefreshToken)
 	refreshRouter.Post("/", handlers.RefreshToken)
+	rootRouter.Mount("/api/token", refreshRouter)
 
 	// Signup Router
 	signUpRouter := chi.NewRouter()
 	signUpRouter.Use(middleware.SetBodyData)
 	signUpRouter.Post("/", handlers.SignUp)
+	rootRouter.Mount("/api/signup", signUpRouter)
 
 	// Login Router
 	loginRouter := chi.NewRouter()
 	loginRouter.Use(middleware.SetBodyData)
 	loginRouter.Post("/", handlers.Login)
-
-	rootRouter.Mount("/api/token", refreshRouter)
-	rootRouter.Mount("/api/signup", signUpRouter)
 	rootRouter.Mount("/api/login", loginRouter)
+
+	// Receipt Router
+	receiptRouter := chi.NewRouter()
+	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	receiptRouter.Get("/", handlers.GetAllReceipts)
+	rootRouter.Mount("/api/receipt", receiptRouter)
 
 	return rootRouter
 }

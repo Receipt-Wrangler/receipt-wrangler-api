@@ -7,6 +7,8 @@ import (
 	"receipt-wrangler/api/internal/structs"
 )
 
+var errKey = "errorMsg"
+
 func GetBodyData(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 	bodyData, err := ioutil.ReadAll(r.Body)
 	return bodyData, err
@@ -14,7 +16,7 @@ func GetBodyData(w http.ResponseWriter, r *http.Request) ([]byte, error) {
 
 func WriteErrorResponse(w http.ResponseWriter, err error, responseCode int) {
 	errMap := make(map[string]string)
-	errMap["errorMsg"] = err.Error()
+	errMap[errKey] = err.Error()
 
 	bytes, marshalErr := json.Marshal(errMap)
 	if marshalErr != nil {
@@ -27,7 +29,7 @@ func WriteErrorResponse(w http.ResponseWriter, err error, responseCode int) {
 
 func WriteCustomErrorResponse(w http.ResponseWriter, msg string, responseCode int) {
 	errMap := make(map[string]string)
-	errMap["errorMsg"] = msg
+	errMap[errKey] = msg
 
 	bytes, marshalErr := json.Marshal(errMap)
 	if marshalErr != nil {

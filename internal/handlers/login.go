@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -36,7 +37,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, refreshToken, err := utils.GenerateJWT(userData.Username)
+	jwt, refreshToken, err := utils.GenerateJWT(fmt.Sprint(dbUser.ID))
 	if err != nil {
 		utils.WriteErrorResponse(w, err, 500)
 		return

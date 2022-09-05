@@ -22,7 +22,7 @@ func Connect() {
 }
 
 func MakeMigrations() {
-	db.AutoMigrate(&models.User{}, &models.Group{}, &models.Receipt{}, &models.Item{}, &models.ReceiptGroup{}, &models.GroupUser{})
+	db.AutoMigrate(&models.User{}, &models.Receipt{}, &models.Item{})
 }
 
 func GetDB() *gorm.DB {

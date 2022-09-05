@@ -5,7 +5,7 @@ type Receipt struct {
 	Name          string `gorm:"not null" json:"name"`
 	ImgPath       string `json:"-"`
 	PaidByUserID  uint
-	PaidByUser    User
+	PaidByUser    User `json:"-"`
 	OwnedByUserID uint
-	OwnedByUser   User
+	OwnedByUser   User `json:"-"`
 }

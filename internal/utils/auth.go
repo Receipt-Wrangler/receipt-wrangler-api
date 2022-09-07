@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
@@ -36,7 +35,7 @@ func customClaims() validator.CustomClaims {
 	return &Claims{}
 }
 
-func GenerateJWT(userId string) (string, string, error) {
+func GenerateJWT(userId uint) (string, string, error) {
 	db := db.GetDB()
 	config := config.GetConfig()
 	var user models.User
@@ -47,10 +46,10 @@ func GenerateJWT(userId string) (string, string, error) {
 	}
 
 	claims := &Claims{
+		UserId:      user.ID,
 		Displayname: user.DisplayName,
 		Username:    user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   fmt.Sprint(user.ID),
 			Issuer:    "https://recieptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
@@ -65,8 +64,8 @@ func GenerateJWT(userId string) (string, string, error) {
 	}
 
 	refreshTokenClaims := Claims{
+		UserId: user.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   fmt.Sprint(user.ID),
 			Issuer:    "https://recieptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),

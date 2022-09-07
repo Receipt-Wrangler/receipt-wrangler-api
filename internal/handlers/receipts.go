@@ -16,7 +16,7 @@ func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error retrieving receipts."
 	var receipts []models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.Subject).Find(&receipts).Error
+	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.UserId).Find(&receipts).Error
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
@@ -34,11 +34,11 @@ func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
-	// token := utils.GetJWT(r)
+	token := utils.GetJWT(r)
 
 	errMsg := "Error creating receipts."
 	bodyData := r.Context().Value("receipt").(models.Receipt)
-	bodyData.OwnedByUserID = 5
+	bodyData.OwnedByUserID = token.UserId
 
 	fmt.Println(bodyData)
 

@@ -8,9 +8,9 @@ import (
 )
 
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
-	oldRefreshToken := r.Context().Value("refreshToken").(*validator.ValidatedClaims)
+	oldRefreshToken := r.Context().Value("refreshToken").(*validator.ValidatedClaims).CustomClaims.(*utils.Claims)
 
-	jwt, refreshToken, err := utils.GenerateJWT(oldRefreshToken.RegisteredClaims.Subject)
+	jwt, refreshToken, err := utils.GenerateJWT(oldRefreshToken.UserId)
 	if err != nil {
 		utils.WriteErrorResponse(w, err, 500)
 		return

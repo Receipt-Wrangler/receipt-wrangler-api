@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -21,7 +20,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	var dbUser models.User
 
 	if len(validatorErrors.Errors) > 0 {
-		utils.WriteValidatorErrorResponse(w, validatorErrors, 500)
+		utils.WriteValidatorErrorResponse(w, validatorErrors, 400)
 		return
 	}
 
@@ -37,7 +36,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, refreshToken, err := utils.GenerateJWT(fmt.Sprint(dbUser.ID))
+	jwt, refreshToken, err := utils.GenerateJWT(dbUser.ID)
 	if err != nil {
 		utils.WriteErrorResponse(w, err, 500)
 		return

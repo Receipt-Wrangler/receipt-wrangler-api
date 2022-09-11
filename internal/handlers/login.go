@@ -20,7 +20,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	var dbUser models.User
 
 	if len(validatorErrors.Errors) > 0 {
-		utils.WriteValidatorErrorResponse(w, validatorErrors, 500)
+		utils.WriteValidatorErrorResponse(w, validatorErrors, 400)
 		return
 	}
 

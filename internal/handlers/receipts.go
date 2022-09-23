@@ -2,11 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
-	"image/jpeg"
 	"net/http"
-	"os"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
@@ -64,76 +60,6 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write(bytes)
-}
-
-func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
-	basePath, err := os.Getwd()
-	errMsg := "Error uploading image."
-	token := utils.GetJWT(r)
-	if err != nil {
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	if err != nil {
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	// Check if data path exists
-	if _, err := os.Stat(basePath + "/data"); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(basePath+"/data", os.ModePerm)
-		if err != nil {
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
-	}
-
-	userPath := basePath + "/data/" + token.Username
-
-	// Check if user's path exists
-	if _, err := os.Stat(userPath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(basePath+"/data/"+token.Username, os.ModePerm)
-		if err != nil {
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
-	}
-
-	bodyData, err := utils.GetBodyData(w, r)
-	var fileData structs.FileData
-
-	err = json.Unmarshal(bodyData, &fileData)
-	if err != nil {
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	// Somewhere in the same package
-	f, err := os.Create("outimage.jpg")
-	if err != nil {
-		// Handle error
-	}
-	defer f.Close()
-
-	// Specify the quality, between 0-100
-	// Higher is better
-	opt := jpeg.Options{
-		Quality: 90,
-	}
-	err = jpeg.Encode(f, img, &opt)
-	if err != nil {
-		// Handle error
-	}
-
-	// err = os.WriteFile(userPath+"/"+fileData.Name, []byte(fileData.ImageData), 777)
-	// if err != nil {
-	// 	utils.WriteCustomErrorResponse(w, errMsg, 500)
-	// 	return
-	// }
-
-	w.WriteHeader(200)
-	fmt.Println(basePath)
 }
 
 func validateReceipt(r models.Receipt) structs.ValidatorError {

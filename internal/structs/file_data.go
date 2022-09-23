@@ -2,7 +2,7 @@ package structs
 
 type FileData struct {
 	Name      string
-	ImageData string
+	ImageData []byte
 	FileType  string
 	Size      uint
 }

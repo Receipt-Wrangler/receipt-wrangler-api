@@ -62,13 +62,16 @@ func initRoutes() *chi.Mux {
 
 	// Receipt Router
 	receiptRouter := chi.NewRouter()
-	// Put set receipt body data back
-	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
 	receiptRouter.Get("/", handlers.GetAllReceipts)
 	receiptRouter.Post("/", handlers.CreateReceipt)
-
-	receiptRouter.Post("/uploadReceipt", handlers.UploadReceiptImage)
 	rootRouter.Mount("/api/receipt", receiptRouter)
+
+	// Receipt Image Router
+	receiptImageRouter := chi.NewRouter()
+	receiptImageRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptImageData)
+	receiptImageRouter.Post("/", handlers.UploadReceiptImage)
+	rootRouter.Mount("/api/receipt/uploadReceipt", receiptImageRouter)
 
 	// User Router
 	userRouter := chi.NewRouter()

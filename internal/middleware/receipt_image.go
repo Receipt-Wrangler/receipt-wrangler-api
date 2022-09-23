@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 )
 
@@ -12,7 +12,7 @@ func SetReceiptImageData(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			// TODO: Come up with a better way to handdle this
-			var receipt structs.FileData
+			var receipt models.FileData
 			bodyData, err := utils.GetBodyData(w, r)
 
 			if err != nil {

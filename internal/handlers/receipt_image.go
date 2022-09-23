@@ -2,14 +2,17 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
-	"receipt-wrangler/api/internal/structs"
+	db "receipt-wrangler/api/internal/database"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate size and file type
+	db := db.GetDB()
 	basePath, err := os.Getwd()
 	errMsg := "Error uploading image."
 	token := utils.GetJWT(r)
@@ -43,11 +46,19 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fileData := r.Context().Value("fileData").(structs.FileData)
+	fileData := r.Context().Value("fileData").(models.FileData)
+	receiptId := fmt.Sprint(fileData.ReceiptId)
+	fileName := userPath + "/" + receiptId + "-" + fileData.Name
 	// TODO: Fix perms
-	err = os.WriteFile(userPath+"/"+fileData.Name, fileData.ImageData, 777)
+	err = os.WriteFile(fileName, fileData.ImageData, 777)
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	if db.Model(models.FileData{}).Create(&fileData).Error != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		os.Remove(fileName)
 		return
 	}
 

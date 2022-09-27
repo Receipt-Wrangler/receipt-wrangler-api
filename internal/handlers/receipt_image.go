@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -41,11 +40,11 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	userPath := basePath + "/data/" + token.Username
+	userPath := filepath.Join(basePath, "data", token.Username)
 
 	// Check if user's path exists
 	if _, err := os.Stat(userPath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(basePath+"/data/"+token.Username, os.ModePerm)
+		err := os.Mkdir(userPath, os.ModePerm)
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
@@ -54,7 +53,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	fileData := r.Context().Value("fileData").(models.FileData)
 	receiptId := fmt.Sprint(fileData.ReceiptId)
-	fileName := userPath + "/" + receiptId + "-" + fileData.Name
+	fileName := filepath.Join(userPath, buildFileName(receiptId, fileData.Name))
 	// TODO: Fix perms
 	err = os.WriteFile(fileName, fileData.ImageData, 777)
 	if err != nil {
@@ -107,15 +106,13 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := filepath.Join(basePath, "data", token.Username, id+"-"+fileData.Name)
-	fmt.Println(path)
-
+	path := filepath.Join(basePath, "data", token.Username, buildFileName(id, fileData.Name))
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
 		return
 	}
 
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
@@ -125,4 +122,8 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write([]byte(imageData))
+}
+
+func buildFileName(rid string, fname string) string {
+	return rid + "-" + fname
 }

@@ -7,6 +7,8 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +55,34 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bytes, err := json.Marshal(bodyData)
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+}
+
+func GetReceipt(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	var receipt models.Receipt
+	errMsg := "Error retrieving receipt."
+	token := utils.GetJWT(r)
+
+	id := chi.URLParam(r, "id")
+
+	if db.Model(models.Receipt{}).Where("id = ?", id).Find(&receipt).Error != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, 404)
+		return
+	}
+
+	if receipt.OwnedByUserID != token.UserId {
+		utils.WriteCustomErrorResponse(w, errMsg, 403)
+		return
+	}
+
+	bytes, err := json.Marshal(receipt)
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return

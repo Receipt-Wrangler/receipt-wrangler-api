@@ -2,13 +2,17 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
+	"os"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
+	"gorm.io/gorm"
 )
 
 func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +94,65 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write(bytes)
+}
+
+func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	var receipt models.Receipt
+	errMsg := "Error deleting receipt."
+	var fileData models.FileData
+	token := utils.GetJWT(r)
+
+	id := chi.URLParam(r, "id")
+
+	receipt, err, errCode := validateAccess(r, id)
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, int(errCode))
+	}
+
+	db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(models.FileData{}).Where("receipt_id = ?", receipt.ID).Find(&fileData).Error
+		if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
+			return err
+		} else {
+			err = tx.Delete(&models.FileData{}, fileData.ID).Error
+			if err != nil {
+				return err
+			}
+		}
+
+		err = tx.Delete(&models.Receipt{}, id).Error
+		if err != nil {
+			return err
+		}
+
+		if fmt.Sprint(fileData.ReceiptId) == id {
+			path, _ := BuildFilePath(token.Username, id, fileData.Name)
+			os.Remove(path)
+		}
+
+		// return nil will commit the whole transaction
+		return nil
+	})
+
+	w.WriteHeader(200)
+}
+
+func validateAccess(r *http.Request, rid string) (models.Receipt, error, uint) {
+	db := db.GetDB()
+	token := utils.GetJWT(r)
+	var receipt models.Receipt
+
+	err := db.Model(models.Receipt{}).Where("id = ?", rid).Find(&receipt).Error
+	if err != nil {
+		return receipt, err, 404
+	}
+
+	if receipt.OwnedByUserID != token.UserId {
+		return receipt, err, 403
+	}
+
+	return receipt, nil, 200
 }
 
 func validateReceipt(r models.Receipt) structs.ValidatorError {

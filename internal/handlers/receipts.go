@@ -108,9 +108,10 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 	receipt, err, errCode := validateAccess(r, id)
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, int(errCode))
+		return
 	}
 
-	db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(models.FileData{}).Where("receipt_id = ?", receipt.ID).Find(&fileData).Error
 		if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
 			return err
@@ -134,6 +135,11 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 		// return nil will commit the whole transaction
 		return nil
 	})
+
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
 
 	w.WriteHeader(200)
 }

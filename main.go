@@ -66,6 +66,7 @@ func initRoutes() *chi.Mux {
 	receiptRouter.Get("/", handlers.GetAllReceipts)
 	receiptRouter.Get("/{id}", handlers.GetReceipt)
 	receiptRouter.Post("/", handlers.CreateReceipt)
+	receiptRouter.Delete("/{id}", handlers.DeleteReceipt)
 	rootRouter.Mount("/api/receipt", receiptRouter)
 
 	// Receipt Image Router

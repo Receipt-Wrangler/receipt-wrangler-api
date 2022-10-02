@@ -53,9 +53,15 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	fileData := r.Context().Value("fileData").(models.FileData)
 	receiptId := fmt.Sprint(fileData.ReceiptId)
-	fileName := filepath.Join(userPath, buildFileName(receiptId, fileData.Name))
+	path, err := BuildFilePath(token.Username, receiptId, fileData.Name)
+
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
 	// TODO: Fix perms
-	err = os.WriteFile(fileName, fileData.ImageData, 777)
+	err = os.WriteFile(path, fileData.ImageData, 777)
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
@@ -63,7 +69,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	if db.Model(models.FileData{}).Create(&fileData).Error != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		os.Remove(fileName)
+		os.Remove(path)
 		return
 	}
 
@@ -72,14 +78,8 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
-	basePath, err := os.Getwd()
 	token := utils.GetJWT(r)
 	errMsg := "Error retrieving image."
-
-	if err != nil {
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
 
 	id := chi.URLParam(r, "id")
 	var fileData models.FileData
@@ -95,7 +95,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.Model(models.FileData{}).Where("receipt_id = ?", id).First(&fileData).Error
+	err := db.Model(models.FileData{}).Where("receipt_id = ?", id).First(&fileData).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		w.WriteHeader(204)
 		return
@@ -106,7 +106,12 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := filepath.Join(basePath, "data", token.Username, buildFileName(id, fileData.Name))
+	path, err := BuildFilePath(token.Username, id, fileData.Name)
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, 404)
+		return
+	}
+
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
 		return
@@ -124,6 +129,14 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(imageData))
 }
 
-func buildFileName(rid string, fname string) string {
-	return rid + "-" + fname
+func BuildFilePath(uname string, rid string, fname string) (string, error) {
+	basePath, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	fileName := rid + "-" + fname
+	path := filepath.Join(basePath, "data", uname, fileName)
+
+	return path, nil
 }

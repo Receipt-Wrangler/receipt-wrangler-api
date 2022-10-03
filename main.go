@@ -76,6 +76,12 @@ func initRoutes() *chi.Mux {
 	receiptImageRouter.Post("/", handlers.UploadReceiptImage)
 	rootRouter.Mount("/api/receiptImage", receiptImageRouter)
 
+	// Tag Router
+	tagRouter := chi.NewRouter()
+	tagRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	tagRouter.Get("/", handlers.GetAllTags)
+	rootRouter.Mount("/api/tag", tagRouter)
+
 	// User Router
 	userRouter := chi.NewRouter()
 	userRouter.Use(tokenValidatorMiddleware.CheckJWT)

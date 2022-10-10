@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +23,7 @@ func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error retrieving receipts."
 	var receipts []models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.UserId).Find(&receipts).Error
+	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.UserId).Preload("Tags").Find(&receipts).Error
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
@@ -76,7 +77,7 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	if db.Model(models.Receipt{}).Where("id = ?", id).Find(&receipt).Error != nil {
+	if db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Find(&receipt).Error != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
 		return
 	}

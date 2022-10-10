@@ -23,7 +23,7 @@ func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error retrieving receipts."
 	var receipts []models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.UserId).Find(&receipts).Error
+	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.UserId).Preload("Tags").Find(&receipts).Error
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return

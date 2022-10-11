@@ -82,6 +82,12 @@ func initRoutes() *chi.Mux {
 	tagRouter.Get("/", handlers.GetAllTags)
 	rootRouter.Mount("/api/tag", tagRouter)
 
+	// Category Router
+	categoryRouter := chi.NewRouter()
+	categoryRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	categoryRouter.Get("/", handlers.GetAllCategories)
+	rootRouter.Mount("/api/category", categoryRouter)
+
 	// User Router
 	userRouter := chi.NewRouter()
 	userRouter.Use(tokenValidatorMiddleware.CheckJWT)

@@ -11,6 +11,7 @@ type Receipt struct {
 	PaidByUserID  uint      `json:"paidByUserId"`
 	PaidByUser    User      `json:"-"`
 	OwnedByUserID uint
-	OwnedByUser   User  `json:"-"`
-	Tags          []Tag `gorm:"many2many:receipt_tags" json:"tags"`
+	OwnedByUser   User       `json:"-"`
+	Tags          []Tag      `gorm:"many2many:receipt_tags" json:"tags"`
+	Categories    []Category `gorm:"many2many:receipt_categories" json:"categories"`
 }

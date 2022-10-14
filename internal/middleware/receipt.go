@@ -10,7 +10,7 @@ import (
 
 func SetReceiptBodyData(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		if r.Method == http.MethodPost || r.Method == http.MethodPut {
 			// TODO: Come up with a better way to handdle this
 			var receipt models.Receipt
 			bodyData, err := utils.GetBodyData(w, r)

@@ -10,6 +10,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
@@ -95,6 +96,64 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write(bytes)
+}
+
+func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+
+	errMsg := "Error updating receipt."
+	id := chi.URLParam(r, "id")
+	u64Id, err := strconv.ParseUint(id, 10, 32)
+
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	bodyData := r.Context().Value("receipt").(models.Receipt)
+	bodyData.ID = uint(u64Id)
+
+	_, err, code := validateAccess(r, id)
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, int(code))
+		return
+	}
+
+	vErr := validateReceipt(bodyData)
+	if len(vErr.Errors) > 0 {
+		utils.WriteValidatorErrorResponse(w, vErr, 500)
+		return
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Omit("ID, OwnedByUserID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
+		if txErr != nil {
+			utils.WriteCustomErrorResponse(w, errMsg, 500)
+			return txErr
+		}
+
+		txErr = db.Model(&bodyData).Association("Tags").Replace(bodyData.Tags)
+		if txErr != nil {
+			utils.WriteCustomErrorResponse(w, errMsg, 500)
+			return txErr
+		}
+
+		err = db.Model(&bodyData).Association("Categories").Replace(bodyData.Categories)
+		if txErr != nil {
+			utils.WriteCustomErrorResponse(w, errMsg, 500)
+			return txErr
+		}
+
+		// return nil will commit the whole transaction
+		return nil
+	})
+
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	w.WriteHeader(200)
 }
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	db "receipt-wrangler/api/internal/database"
@@ -26,12 +27,14 @@ func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
 
 	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.UserId).Preload("Tags").Preload("Categories").Find(&receipts).Error
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	bytes, err := json.Marshal(receipts)
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -50,18 +53,21 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 
 	vErr := validateReceipt(bodyData)
 	if len(vErr.Errors) > 0 {
+		log.Print(vErr.Errors)
 		utils.WriteValidatorErrorResponse(w, vErr, 400)
 		return
 	}
 
 	err := db.Model(models.Receipt{}).Create(&bodyData).Error
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	bytes, err := json.Marshal(bodyData)
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -84,6 +90,7 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if receipt.OwnedByUserID != token.UserId {
+		log.Print("Unauthorized")
 		utils.WriteCustomErrorResponse(w, errMsg, 403)
 		return
 	}

@@ -1,0 +1,6 @@
+App2022/10/19 08:35:35 log.go:32: create
+App2022/10/19 08:35:53 log.go:32: create
+App2022/10/19 08:35:53 log.go:37: hello??
+App2022/10/19 08:35:53 main.go:24: Initializing app...
+App2022/10/19 08:35:54 log.go:37: hello??
+App2022/10/19 08:35:54 main.go:41: Initialize completed

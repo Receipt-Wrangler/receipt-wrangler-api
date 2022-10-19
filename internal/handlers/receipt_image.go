@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,11 +23,13 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error uploading image."
 	token := utils.GetJWT(r)
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -35,6 +38,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(basePath + "/data"); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(basePath+"/data", os.ModePerm)
 		if err != nil {
+			log.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
 		}
@@ -46,6 +50,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(userPath); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(userPath, os.ModePerm)
 		if err != nil {
+			log.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
 		}
@@ -56,6 +61,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	path, err := BuildFilePath(token.Username, receiptId, fileData.Name)
 
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -63,11 +69,14 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	// TODO: Fix perms
 	err = os.WriteFile(path, fileData.ImageData, 777)
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
-	if db.Model(models.FileData{}).Create(&fileData).Error != nil {
+	err = db.Model(models.FileData{}).Create(&fileData).Error
+	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		os.Remove(path)
 		return
@@ -85,40 +94,48 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 	var fileData models.FileData
 	var receipt models.Receipt
 
-	if db.Model(models.Receipt{}).Where("id = ?", id).Select("owned_by_user_id").Find(&receipt).Error != nil {
+	err := db.Model(models.Receipt{}).Where("id = ?", id).Select("owned_by_user_id").Find(&receipt).Error
+	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	if receipt.OwnedByUserID != token.UserId {
+		log.Print("Unauthorized access")
 		utils.WriteCustomErrorResponse(w, errMsg, 403)
 		return
 	}
 
-	err := db.Model(models.FileData{}).Where("receipt_id = ?", id).First(&fileData).Error
+	err = db.Model(models.FileData{}).Where("receipt_id = ?", id).First(&fileData).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Print(err.Error())
 		w.WriteHeader(204)
 		return
 	}
 
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	path, err := BuildFilePath(token.Username, id, fileData.Name)
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
 		return
 	}
 
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
 		return
 	}
 
 	bytes, err := os.ReadFile(path)
 	if err != nil {
+		log.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -132,6 +149,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 func BuildFilePath(uname string, rid string, fname string) (string, error) {
 	basePath, err := os.Getwd()
 	if err != nil {
+		log.Print(err.Error())
 		return "", err
 	}
 

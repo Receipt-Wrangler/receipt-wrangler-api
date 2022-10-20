@@ -24,8 +24,6 @@ func InitLog() error {
 		return err
 	}
 
-	// defer logFile.Close()
-
 	// Flags are for date time, file name, and line number
 	logger = log.New(logFile, "App", log.Lshortfile|log.LstdFlags)
 

@@ -15,12 +15,14 @@ func GetAllTags(w http.ResponseWriter, r *http.Request) {
 
 	err := db.Model(models.Tag{}).Find(&tags).Error
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	bytes, err := json.Marshal(tags)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}

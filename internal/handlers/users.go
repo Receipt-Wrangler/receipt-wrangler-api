@@ -16,12 +16,14 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	err := db.Model(models.User{}).Find(&users).Error
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	bytes, err := json.Marshal(users)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}

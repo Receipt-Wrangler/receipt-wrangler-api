@@ -20,30 +20,35 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	var dbUser models.User
 
 	if len(validatorErrors.Errors) > 0 {
+		handler_logger.Print(validatorErrors)
 		utils.WriteValidatorErrorResponse(w, validatorErrors, 400)
 		return
 	}
 
 	err := db.Model(models.User{}).Where("username = ?", userData.Username).First(&dbUser).Error
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(userData.Password))
 	if err != nil {
+		handler_logger.Print(err.Error(), r)
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	jwt, refreshToken, err := utils.GenerateJWT(dbUser.ID)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteErrorResponse(w, err, 500)
 		return
 	}
 
 	responseBytes, err := json.Marshal(responseData)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteErrorResponse(w, err, 500)
 		return
 	}

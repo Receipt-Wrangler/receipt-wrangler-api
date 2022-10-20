@@ -22,6 +22,7 @@ func main() {
 	}
 	logger := logging.GetLogger()
 	logger.Print("Initializing app...")
+	initLoggers()
 	config.SetConfig()
 	db.Connect()
 	db.MakeMigrations()
@@ -40,6 +41,10 @@ func serve(router *chi.Mux) {
 	}
 	logger.Print("Initialize completed")
 	logger.Fatal(srv.ListenAndServe())
+}
+
+func initLoggers() {
+	handlers.InitHandlerLogger()
 }
 
 func initRoutes() *chi.Mux {

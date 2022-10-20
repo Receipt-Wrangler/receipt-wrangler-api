@@ -12,6 +12,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	jwt, refreshToken, err := utils.GenerateJWT(oldRefreshToken.UserId)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteErrorResponse(w, err, 500)
 		return
 	}

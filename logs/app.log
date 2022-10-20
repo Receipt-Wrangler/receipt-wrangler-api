@@ -4,3 +4,33 @@ App2022/10/19 08:35:53 log.go:37: hello??
 App2022/10/19 08:35:53 main.go:24: Initializing app...
 App2022/10/19 08:35:54 log.go:37: hello??
 App2022/10/19 08:35:54 main.go:41: Initialize completed
+App2022/10/19 08:41:39 log.go:30: create
+App2022/10/19 08:41:39 main.go:24: Initializing app...
+App2022/10/19 08:41:39 main.go:41: Initialize completed
+App2022/10/19 08:57:39 log.go:30: create
+App2022/10/19 08:57:39 main.go:24: Initializing app...
+App2022/10/19 08:57:39 main.go:41: Initialize completed
+App2022/10/19 08:58:08 log.go:30: create
+App2022/10/19 08:58:08 main.go:24: Initializing app...
+App2022/10/19 08:58:08 main.go:41: Initialize completed
+App2022/10/19 08:58:24 log.go:30: create
+App2022/10/19 08:58:24 main.go:24: Initializing app...
+App2022/10/19 08:58:25 main.go:41: Initialize completed
+App2022/10/19 09:00:55 log.go:30: create
+App2022/10/19 09:00:55 main.go:24: Initializing app...
+App2022/10/19 09:00:55 main.go:42: Initialize completed
+App2022/10/19 09:00:59 receipts.go:94: Unauthorized
+App2022/10/19 09:00:59 receipts.go:94: Unauthorized
+App2022/10/19 09:01:01 receipts.go:94: Unauthorized
+App2022/10/19 09:01:01 receipts.go:94: Unauthorized
+App2022/10/19 09:01:05 receipt_image.go:111: record not found
+App2022/10/19 09:01:05 receipt_image.go:111: record not found
+App2022/10/19 09:01:10 receipts.go:203: Error 1451: Cannot delete or update a parent row: a foreign key constraint fails (`wrangler`.`receipt_categories`, CONSTRAINT `fk_receipt_categories_receipt` FOREIGN KEY (`receipt_id`) REFERENCES `receipts` (`id`))
+App2022/10/19 09:01:10 receipts.go:217: Error 1451: Cannot delete or update a parent row: a foreign key constraint fails (`wrangler`.`receipt_categories`, CONSTRAINT `fk_receipt_categories_receipt` FOREIGN KEY (`receipt_id`) REFERENCES `receipts` (`id`))
+App2022/10/19 09:01:48 login.go:37: crypto/bcrypt: hashedPassword is not the hash of the given password
+App2022/10/19 09:01:56 login.go:37: crypto/bcrypt: hashedPassword is not the hash of the given password
+App2022/10/19 09:02:48 log.go:30: create
+App2022/10/19 09:02:48 main.go:24: Initializing app...
+App2022/10/19 09:02:48 main.go:42: Initialize completed
+App2022/10/19 09:02:54 login.go:30: record not found
+App2022/10/19 09:03:00 login.go:37: crypto/bcrypt: hashedPassword is not the hash of the given password&{POST /api/login HTTP/1.1 1 1 map[Accept:[application/json, text/plain, */*] Accept-Encoding:[gzip, deflate, br] Accept-Language:[en-US,en;q=0.5] Connection:[close] Content-Length:[39] Content-Type:[application/json] Dnt:[1] Origin:[http://localhost:8081] Referer:[http://localhost:3000/] Sec-Fetch-Dest:[empty] Sec-Fetch-Mode:[cors] Sec-Fetch-Site:[same-origin] User-Agent:[Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0] X-Forwarded-For:[127.0.0.1] X-Forwarded-Host:[localhost:3000] X-Forwarded-Port:[3000] X-Forwarded-Proto:[http]] 0xc000233c40 <nil> 39 [] true localhost:8081 map[] map[] <nil> map[] 127.0.0.1:57672 /api/login <nil> <nil> <nil> 0xc00022fb00}

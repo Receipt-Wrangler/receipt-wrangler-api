@@ -7,5 +7,5 @@ type FileData struct {
 	FileType  string
 	Size      uint
 	ReceiptId uint
-	Receipt   Receipt
+	Receipt   Receipt `json:"-"`
 }

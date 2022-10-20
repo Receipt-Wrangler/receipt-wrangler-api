@@ -15,12 +15,14 @@ func GetAllCategories(w http.ResponseWriter, r *http.Request) {
 
 	err := db.Model(models.Category{}).Find(&categories).Error
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	bytes, err := json.Marshal(categories)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}

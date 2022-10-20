@@ -6,6 +6,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -15,6 +16,13 @@ import (
 )
 
 func main() {
+	err := logging.InitLog()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	logger := logging.GetLogger()
+	logger.Print("Initializing app...")
+	initLoggers()
 	config.SetConfig()
 	db.Connect()
 	db.MakeMigrations()
@@ -24,13 +32,19 @@ func main() {
 }
 
 func serve(router *chi.Mux) {
+	logger := logging.GetLogger()
 	srv := &http.Server{
 		Handler:      router,
 		Addr:         "0.0.0.0:8081", // TODO: make configurable
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	log.Fatal(srv.ListenAndServe())
+	logger.Print("Initialize completed")
+	logger.Fatal(srv.ListenAndServe())
+}
+
+func initLoggers() {
+	handlers.InitHandlerLogger()
 }
 
 func initRoutes() *chi.Mux {

@@ -16,12 +16,14 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	validatorErrors := validateSignUpData(userData)
 
 	if len(validatorErrors.Errors) > 0 {
+		handler_logger.Print(validatorErrors)
 		utils.WriteValidatorErrorResponse(w, validatorErrors, 500)
 		return
 	}
 
 	bytes, err := bcrypt.GenerateFromPassword([]byte(userData.Password), 14)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteErrorResponse(w, err, 500)
 	}
 
@@ -29,6 +31,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	result := db.Create(&userData)
 
 	if result.Error != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteErrorResponse(w, result.Error, 500)
 		return
 	}

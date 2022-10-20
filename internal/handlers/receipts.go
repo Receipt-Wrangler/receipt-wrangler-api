@@ -26,12 +26,14 @@ func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
 
 	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.UserId).Preload("Tags").Preload("Categories").Find(&receipts).Error
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	bytes, err := json.Marshal(receipts)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -50,18 +52,21 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 
 	vErr := validateReceipt(bodyData)
 	if len(vErr.Errors) > 0 {
+		handler_logger.Print(vErr.Errors)
 		utils.WriteValidatorErrorResponse(w, vErr, 400)
 		return
 	}
 
 	err := db.Model(models.Receipt{}).Create(&bodyData).Error
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	bytes, err := json.Marshal(bodyData)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -78,18 +83,22 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	if db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Find(&receipt).Error != nil {
+	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Find(&receipt).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
 		return
 	}
 
 	if receipt.OwnedByUserID != token.UserId {
+		handler_logger.Print("Unauthorized")
 		utils.WriteCustomErrorResponse(w, errMsg, 403)
 		return
 	}
 
 	bytes, err := json.Marshal(receipt)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -106,6 +115,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	u64Id, err := strconv.ParseUint(id, 10, 32)
 
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -115,12 +125,14 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 
 	_, err, code := validateAccess(r, id)
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, int(code))
 		return
 	}
 
 	vErr := validateReceipt(bodyData)
 	if len(vErr.Errors) > 0 {
+		handler_logger.Print(vErr)
 		utils.WriteValidatorErrorResponse(w, vErr, 500)
 		return
 	}
@@ -128,18 +140,21 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Omit("ID, OwnedByUserID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
 		if txErr != nil {
+			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return txErr
 		}
 
 		txErr = db.Model(&bodyData).Association("Tags").Replace(bodyData.Tags)
 		if txErr != nil {
+			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return txErr
 		}
 
 		err = db.Model(&bodyData).Association("Categories").Replace(bodyData.Categories)
 		if txErr != nil {
+			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return txErr
 		}
@@ -149,6 +164,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
+
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
@@ -184,6 +200,7 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 
 		err = tx.Delete(&models.Receipt{}, id).Error
 		if err != nil {
+			handler_logger.Print(err.Error())
 			return err
 		}
 
@@ -197,6 +214,7 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
+		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}

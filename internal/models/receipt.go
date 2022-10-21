@@ -14,5 +14,5 @@ type Receipt struct {
 	OwnedByUser   User       `json:"-"`
 	Tags          []Tag      `gorm:"many2many:receipt_tags" json:"tags"`
 	Categories    []Category `gorm:"many2many:receipt_categories" json:"categories"`
-	ImageFiles    []FileData
+	ImageFiles    []FileData `json:"imageFiles"`
 }

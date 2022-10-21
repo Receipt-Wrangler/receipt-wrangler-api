@@ -27,7 +27,6 @@ func InitLog() error {
 	// Flags are for date time, file name, and line number
 	logger = log.New(logFile, "App", log.Lshortfile|log.LstdFlags)
 
-	logger.Println("create")
 	return nil
 }
 

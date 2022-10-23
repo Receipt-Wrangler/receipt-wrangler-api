@@ -106,12 +106,6 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if receipt.OwnedByUserID != token.UserId {
-		handler_logger.Print("Unauthorized access")
-		utils.WriteCustomErrorResponse(w, errMsg, 403)
-		return
-	}
-
 	path, err := BuildFilePath(token.Username, fmt.Sprint(receipt.ID), fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
@@ -138,6 +132,45 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(imageData))
 }
 
+func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	token := utils.GetJWT(r)
+	errMsg := "Error retrieving image."
+
+	id := chi.URLParam(r, "id")
+	var fileData models.FileData
+
+	err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	err = db.Delete(fileData).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	path, err := BuildFilePath(token.Username, fmt.Sprint(fileData.ReceiptId), fileData.Name)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	err = os.Remove(path)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
 func BuildFilePath(uname string, rid string, fname string) (string, error) {
 	basePath, err := os.Getwd()
 	if err != nil {
@@ -149,4 +182,23 @@ func BuildFilePath(uname string, rid string, fname string) (string, error) {
 	path := filepath.Join(basePath, "data", uname, fileName)
 
 	return path, nil
+}
+
+func ReadImageFile(uname string, rid string, fname string, fileType string) (string, error) {
+	path, err := BuildFilePath(uname, rid, fname)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	result := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
+	return result, nil
 }

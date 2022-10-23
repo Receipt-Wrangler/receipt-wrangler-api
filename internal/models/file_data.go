@@ -2,10 +2,10 @@ package models
 
 type FileData struct {
 	BaseModel
-	Name      string
-	ImageData []byte `gorm:"-"`
-	FileType  string
-	Size      uint
-	ReceiptId uint
+	Name      string  `json:"name"`
+	ImageData []byte  `gorm:"-" json:"imageData"`
+	FileType  string  `json:"fileType"`
+	Size      uint    `json:"size"`
+	ReceiptId uint    `json:"receiptId"`
 	Receipt   Receipt `json:"-"`
 }

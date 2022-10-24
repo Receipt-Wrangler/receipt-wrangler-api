@@ -12,7 +12,6 @@ import (
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
-	"gorm.io/gorm"
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
@@ -93,33 +92,21 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 	var fileData models.FileData
 	var receipt models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("id = ?", id).Select("owned_by_user_id").Find(&receipt).Error
+	err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
-	if receipt.OwnedByUserID != token.UserId {
-		handler_logger.Print("Unauthorized access")
-		utils.WriteCustomErrorResponse(w, errMsg, 403)
-		return
-	}
-
-	err = db.Model(models.FileData{}).Where("receipt_id = ?", id).First(&fileData).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		handler_logger.Print(err.Error())
-		w.WriteHeader(204)
-		return
-	}
-
+	err = db.Model(models.Receipt{}).Where("id = ?", fileData.ReceiptId).Select("id", "owned_by_user_id").Find(&receipt).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
-	path, err := BuildFilePath(token.Username, id, fileData.Name)
+	path, err := BuildFilePath(token.Username, fmt.Sprint(receipt.ID), fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
@@ -145,6 +132,45 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(imageData))
 }
 
+func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	token := utils.GetJWT(r)
+	errMsg := "Error retrieving image."
+
+	id := chi.URLParam(r, "id")
+	var fileData models.FileData
+
+	err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	err = db.Delete(fileData).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	path, err := BuildFilePath(token.Username, fmt.Sprint(fileData.ReceiptId), fileData.Name)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	err = os.Remove(path)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
 func BuildFilePath(uname string, rid string, fname string) (string, error) {
 	basePath, err := os.Getwd()
 	if err != nil {
@@ -156,4 +182,23 @@ func BuildFilePath(uname string, rid string, fname string) (string, error) {
 	path := filepath.Join(basePath, "data", uname, fileName)
 
 	return path, nil
+}
+
+func ReadImageFile(uname string, rid string, fname string, fileType string) (string, error) {
+	path, err := BuildFilePath(uname, rid, fname)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return "", err
+	}
+
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	result := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
+	return result, nil
 }

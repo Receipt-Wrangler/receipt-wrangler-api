@@ -2,8 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	db "receipt-wrangler/api/internal/database"
@@ -173,43 +171,41 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
+	// fix access validation to happen in middleware
+	// get receipt with all fileImages, iterate over them and remove each image
 	db := db.GetDB()
+	var err error
 	var receipt models.Receipt
 	errMsg := "Error deleting receipt."
-	var fileData models.FileData
 	token := utils.GetJWT(r)
 
 	id := chi.URLParam(r, "id")
 
-	receipt, err, errCode := validateAccess(r, id)
+	err = db.Model(models.Receipt{}).Where("id = ?", id).Preload("ImageFiles").Find(&receipt).Error
 	if err != nil {
-		utils.WriteCustomErrorResponse(w, errMsg, int(errCode))
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(models.FileData{}).Where("receipt_id = ?", receipt.ID).Find(&fileData).Error
-		if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
-			return err
-		} else {
-			err = tx.Delete(&models.FileData{}, fileData.ID).Error
-			if err != nil {
-				return err
-			}
-		}
-
-		err = tx.Delete(&models.Receipt{}, id).Error
+		err = tx.Select(clause.Associations).Delete(&receipt).Error
 		if err != nil {
 			handler_logger.Print(err.Error())
 			return err
 		}
 
-		if fmt.Sprint(fileData.ReceiptId) == id {
-			path, _ := BuildFilePath(token.Username, id, fileData.Name)
+		err = tx.Delete(&receipt).Error
+		if err != nil {
+			handler_logger.Print(err.Error())
+			return err
+		}
+
+		for _, f := range receipt.ImageFiles {
+			path, _ := BuildFilePath(token.Username, id, f.Name)
 			os.Remove(path)
 		}
 
-		// return nil will commit the whole transaction
 		return nil
 	})
 

@@ -37,7 +37,7 @@ func SetReceiptImageData(next http.Handler) http.Handler {
 	})
 }
 
-func ValidateAccess(next http.Handler) http.Handler {
+func ValidateReceiptImageAccess(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		errMsg := "Unauthorized access to receipt image."

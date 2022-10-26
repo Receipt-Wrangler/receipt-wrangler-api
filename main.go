@@ -78,17 +78,17 @@ func initRoutes() *chi.Mux {
 	receiptRouter := chi.NewRouter()
 	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
 	receiptRouter.Get("/", handlers.GetAllReceipts)
-	receiptRouter.Get("/{id}", handlers.GetReceipt)
-	receiptRouter.Put("/{id}", handlers.UpdateReceipt)
+	receiptRouter.With(middleware.ValidateReceiptAccess).Get("/{id}", handlers.GetReceipt)
+	receiptRouter.With(middleware.ValidateReceiptAccess).Put("/{id}", handlers.UpdateReceipt)
+	receiptRouter.With(middleware.ValidateReceiptAccess).Delete("/{id}", handlers.DeleteReceipt)
 	receiptRouter.Post("/", handlers.CreateReceipt)
-	receiptRouter.Delete("/{id}", handlers.DeleteReceipt)
 	rootRouter.Mount("/api/receipt", receiptRouter)
 
 	// Receipt Image Router
 	receiptImageRouter := chi.NewRouter()
 	receiptImageRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptImageData)
-	receiptImageRouter.Get("/{id}", handlers.GetReceiptImage)
-	receiptImageRouter.Delete("/{id}", handlers.RemoveReceiptImage)
+	receiptImageRouter.With(middleware.ValidateReceiptImageAccess).Get("/{id}", handlers.GetReceiptImage)
+	receiptImageRouter.With(middleware.ValidateReceiptImageAccess).Delete("/{id}", handlers.RemoveReceiptImage)
 	receiptImageRouter.Post("/", handlers.UploadReceiptImage)
 	rootRouter.Mount("/api/receiptImage", receiptImageRouter)
 

@@ -76,7 +76,7 @@ func initRoutes() *chi.Mux {
 
 	// Receipt Router
 	receiptRouter := chi.NewRouter()
-	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
+	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData, middleware.ValidateReceiptAccess)
 	receiptRouter.Get("/", handlers.GetAllReceipts)
 	receiptRouter.Get("/{id}", handlers.GetReceipt)
 	receiptRouter.Put("/{id}", handlers.UpdateReceipt)

@@ -121,13 +121,6 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	bodyData := r.Context().Value("receipt").(models.Receipt)
 	bodyData.ID = uint(u64Id)
 
-	_, err, code := validateAccess(r, id)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, int(code))
-		return
-	}
-
 	vErr := validateReceipt(bodyData)
 	if len(vErr.Errors) > 0 {
 		handler_logger.Print(vErr)
@@ -171,8 +164,6 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
-	// fix access validation to happen in middleware
-	// get receipt with all fileImages, iterate over them and remove each image
 	db := db.GetDB()
 	var err error
 	var receipt models.Receipt
@@ -216,23 +207,6 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-}
-
-func validateAccess(r *http.Request, rid string) (models.Receipt, error, uint) {
-	db := db.GetDB()
-	token := utils.GetJWT(r)
-	var receipt models.Receipt
-
-	err := db.Model(models.Receipt{}).Where("id = ?", rid).Find(&receipt).Error
-	if err != nil {
-		return receipt, err, 404
-	}
-
-	if receipt.OwnedByUserID != token.UserId {
-		return receipt, err, 403
-	}
-
-	return receipt, nil, 200
 }
 
 func validateReceipt(r models.Receipt) structs.ValidatorError {

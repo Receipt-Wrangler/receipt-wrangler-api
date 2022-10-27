@@ -15,4 +15,5 @@ type Receipt struct {
 	Tags          []Tag      `gorm:"many2many:receipt_tags" json:"tags"`
 	Categories    []Category `gorm:"many2many:receipt_categories" json:"categories"`
 	ImageFiles    []FileData `json:"imageFiles"`
+	ReceiptItems  []Item     `json:"receiptItems"`
 }

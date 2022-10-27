@@ -1,12 +1,14 @@
 package models
 
+import "github.com/shopspring/decimal"
+
 type Item struct {
 	BaseModel
 	Name            string `gorm:"not null"`
 	ChargedToUser   User
-	ChargedToUserId uint
+	ChargedToUserId uint `gorm:"not null"`
 	ReceiptId       uint `gorm:"not null"`
 	Receipt         Receipt
-	Amount          uint `gorm:"not null"`
-	IsTaxed         bool `gorm:"not null"`
+	Amount          decimal.Decimal `json:"amount" sql:"type:decimal(20,3);"`
+	IsTaxed         bool            `gorm:"not null"`
 }

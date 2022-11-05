@@ -9,6 +9,6 @@ type Item struct {
 	ChargedToUserId uint   `json:"chargedToUserId" gorm:"not null"`
 	ReceiptId       uint   `json:"receiptId" gorm:"not null"`
 	Receipt         Receipt
-	Amount          decimal.Decimal `json:"amount" sql:"type:decimal(20,3);"`
+	Amount          decimal.Decimal `gorm:"not null" json:"amount" sql:"type:decimal(20,3);"`
 	IsTaxed         bool            `gorm:"not null"`
 }

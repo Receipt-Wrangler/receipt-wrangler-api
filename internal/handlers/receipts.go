@@ -6,7 +6,6 @@ import (
 	"os"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
 
@@ -47,13 +46,6 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error creating receipts."
 	bodyData := r.Context().Value("receipt").(models.Receipt)
 	bodyData.OwnedByUserID = token.UserId
-
-	vErr := validateReceipt(bodyData)
-	if len(vErr.Errors) > 0 {
-		handler_logger.Print(vErr.Errors)
-		utils.WriteValidatorErrorResponse(w, vErr, 400)
-		return
-	}
 
 	err := db.Model(models.Receipt{}).Create(&bodyData).Error
 	if err != nil {
@@ -120,13 +112,6 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 
 	bodyData := r.Context().Value("receipt").(models.Receipt)
 	bodyData.ID = uint(u64Id)
-
-	vErr := validateReceipt(bodyData)
-	if len(vErr.Errors) > 0 {
-		handler_logger.Print(vErr)
-		utils.WriteValidatorErrorResponse(w, vErr, 500)
-		return
-	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Omit("ID, OwnedByUserID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
@@ -207,24 +192,4 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-}
-
-func validateReceipt(r models.Receipt) structs.ValidatorError {
-	err := structs.ValidatorError{
-		Errors: make(map[string]string),
-	}
-
-	if len(r.Name) == 0 {
-		err.Errors["name"] = "Name is required"
-	}
-
-	if r.Amount <= 0 {
-		err.Errors["amount"] = "Amount must be greater than zero"
-	}
-
-	if r.Date.IsZero() {
-		err.Errors["date"] = "Date is required"
-	}
-
-	return err
 }

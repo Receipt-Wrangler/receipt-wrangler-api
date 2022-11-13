@@ -116,22 +116,25 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Omit("ID, OwnedByUserID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
 		if txErr != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
+			handler_logger.Print(txErr.Error())
 			return txErr
 		}
 
 		txErr = db.Model(&bodyData).Association("Tags").Replace(bodyData.Tags)
 		if txErr != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
+			handler_logger.Print(txErr.Error())
 			return txErr
 		}
 
-		err = db.Model(&bodyData).Association("Categories").Replace(bodyData.Categories)
+		txErr = db.Model(&bodyData).Association("Categories").Replace(bodyData.Categories)
 		if txErr != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
+			handler_logger.Print(txErr.Error())
+			return txErr
+		}
+
+		txErr = db.Model(&bodyData).Association("ReceiptItems").Replace(bodyData.ReceiptItems)
+		if txErr != nil {
+			handler_logger.Print(txErr.Error())
 			return txErr
 		}
 

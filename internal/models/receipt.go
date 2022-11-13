@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 type Receipt struct {
@@ -19,5 +20,10 @@ type Receipt struct {
 	Tags          []Tag      `gorm:"many2many:receipt_tags" json:"tags"`
 	Categories    []Category `gorm:"many2many:receipt_categories" json:"categories"`
 	ImageFiles    []FileData `json:"imageFiles"`
-	ReceiptItems  []Item     `json:"receiptItems"`
+	ReceiptItems  []Item     `json:"receiptItems" gorm:"constraint:OnDelete:DELETE;"`
+}
+
+func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {
+	tx.Where("receipt_id IS NULL").Delete(&Item{})
+	return
 }

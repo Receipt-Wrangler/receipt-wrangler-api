@@ -7,6 +7,6 @@ import (
 
 var middleware_logger *log.Logger
 
-func InitHandlerLogger() {
+func InitMiddlewareLogger() {
 	middleware_logger = logging.GetLogger()
 }

@@ -45,6 +45,7 @@ func serve(router *chi.Mux) {
 
 func initLoggers() {
 	handlers.InitHandlerLogger()
+	middleware.InitMiddlewareLogger()
 }
 
 func initRoutes() *chi.Mux {

@@ -20,7 +20,7 @@ type Receipt struct {
 	Tags          []Tag      `gorm:"many2many:receipt_tags" json:"tags"`
 	Categories    []Category `gorm:"many2many:receipt_categories" json:"categories"`
 	ImageFiles    []FileData `json:"imageFiles"`
-	ReceiptItems  []Item     `json:"receiptItems" gorm:"constraint:OnDelete:DELETE;"`
+	ReceiptItems  []Item     `json:"receiptItems"`
 }
 
 func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {

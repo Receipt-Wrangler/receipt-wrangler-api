@@ -79,6 +79,18 @@ func GenerateJWT(userId uint) (string, string, error) {
 		return "", "", err
 	}
 
+	token := models.RefreshToken{
+		UserId: user.ID,
+		Token:  refreshTokenString,
+		IsUsed: false,
+	}
+
+	err = db.Model(&models.RefreshToken{}).Create(&token).Error
+
+	if err != nil {
+		return "", "", err
+	}
+
 	return signedString, refreshTokenString, nil
 }
 

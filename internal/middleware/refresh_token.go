@@ -10,9 +10,6 @@ import (
 
 func ValidateRefreshToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		db := db.GetDB()
-		dbToken := models.RefreshToken{}
-
 		tokenValidator, err := utils.InitTokenValidator()
 		errMessage := "Error refreshing token"
 
@@ -32,6 +29,24 @@ func ValidateRefreshToken(next http.Handler) http.Handler {
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, 500)
 			middleware_logger.Println(err.Error())
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "refreshToken", refreshToken)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func RevokeRefreshToken(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		db := db.GetDB()
+		dbToken := models.RefreshToken{}
+		errMessage := "Error refreshing token"
+
+		refreshTokenCookie, err := r.Cookie("refresh_token")
+		if err != nil {
+			utils.WriteCustomErrorResponse(w, errMessage, 500)
+			middleware_logger.Println("Refresh token cookie not found")
 			return
 		}
 
@@ -55,7 +70,6 @@ func ValidateRefreshToken(next http.Handler) http.Handler {
 			}
 		}
 
-		ctx := context.WithValue(r.Context(), "refreshToken", refreshToken)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	})
 }

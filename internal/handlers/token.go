@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/auth0/go-jwt-middleware/v2/validator"
@@ -17,8 +18,8 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessTokenCookie := http.Cookie{Name: "jwt", Value: jwt, HttpOnly: false, Path: "/"}
-	refreshTokenCookie := http.Cookie{Name: "refresh_token", Value: refreshToken, HttpOnly: true, Path: "/"}
+	accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: false, Path: "/"}
+	refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/"}
 
 	http.SetCookie(w, &accessTokenCookie)
 	http.SetCookie(w, &refreshTokenCookie)

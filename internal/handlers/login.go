@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
@@ -53,8 +54,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessTokenCookie := http.Cookie{Name: "jwt", Value: jwt, HttpOnly: false, Path: "/"}
-	refreshTokenCookie := http.Cookie{Name: "refresh_token", Value: refreshToken, HttpOnly: true, Path: "/"}
+	accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: false, Path: "/"}
+	refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/"}
 
 	http.SetCookie(w, &accessTokenCookie)
 	http.SetCookie(w, &refreshTokenCookie)

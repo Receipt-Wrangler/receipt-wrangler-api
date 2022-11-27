@@ -38,4 +38,6 @@ func TestInitTokenValidatorReturnsValidator(t *testing.T) {
 	}
 }
 
-func TestGenerateJWTGeneratesTokens(t *testing.T) {}
+func TestGenerateJWTGeneratesTokens(t *testing.T) {
+	GenerateJWT(1)
+}

@@ -18,11 +18,10 @@ func InitTokenValidator() (*validator.Validator, error) {
 		config := config.GetConfig()
 		return []byte(config.SecretKey), nil
 	}
-
 	jwtValidator, err := validator.New(
 		keyFunc,
 		validator.HS512,
-		"https://recieptWrangler.io",
+		"https://receiptWrangler.io",
 		[]string{"https://receiptWrangler.io"},
 		validator.WithCustomClaims(customClaims),
 		validator.WithAllowedClockSkew(30*time.Second),
@@ -50,7 +49,7 @@ func GenerateJWT(userId uint) (string, string, error) {
 		Displayname: user.DisplayName,
 		Username:    user.Username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "https://recieptWrangler.io",
+			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 		},
@@ -66,7 +65,7 @@ func GenerateJWT(userId uint) (string, string, error) {
 	refreshTokenClaims := Claims{
 		UserId: user.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "https://recieptWrangler.io",
+			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 		},

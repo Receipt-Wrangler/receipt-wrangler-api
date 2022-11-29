@@ -86,7 +86,7 @@ func InitTestDb() string {
 
 	cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	time.Sleep(5 * time.Second)
-	fmt.Printf("Container %s is ready", cont.ID)
+	fmt.Println("Container " + cont.ID + " is ready")
 
 	return cont.ID
 }

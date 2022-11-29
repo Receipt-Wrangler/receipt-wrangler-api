@@ -43,7 +43,7 @@ func WriteCustomErrorResponse(w http.ResponseWriter, msg string, responseCode in
 func WriteValidatorErrorResponse(w http.ResponseWriter, err structs.ValidatorError, responseCode int) {
 	bytes, marshalErr := json.Marshal(err.Errors)
 	if marshalErr != nil {
-		WriteErrorResponse(w, marshalErr, 500)
+		WriteErrorResponse(w, marshalErr, responseCode)
 	}
 
 	w.WriteHeader(responseCode)

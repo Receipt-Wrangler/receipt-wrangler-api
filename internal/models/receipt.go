@@ -15,12 +15,12 @@ type Receipt struct {
 	ImgPath       string          `json:"-"`
 	PaidByUserID  uint            `json:"paidByUserId"`
 	PaidByUser    User            `json:"-"`
-	OwnedByUserID uint
-	OwnedByUser   User       `json:"-"`
-	Tags          []Tag      `gorm:"many2many:receipt_tags" json:"tags"`
-	Categories    []Category `gorm:"many2many:receipt_categories" json:"categories"`
-	ImageFiles    []FileData `json:"imageFiles"`
-	ReceiptItems  []Item     `json:"receiptItems"`
+	OwnedByUserID uint            `json:"ownedByUserId"`
+	OwnedByUser   User            `json:"-"`
+	Tags          []Tag           `gorm:"many2many:receipt_tags" json:"tags"`
+	Categories    []Category      `gorm:"many2many:receipt_categories" json:"categories"`
+	ImageFiles    []FileData      `json:"imageFiles"`
+	ReceiptItems  []Item          `json:"receiptItems"`
 }
 
 func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {

@@ -143,7 +143,32 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
 
+	w.WriteHeader(200)
+}
+
+func ToggleIsResolved(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	var err error
+	var receipt models.Receipt
+
+	errMsg := "Error toggling is resolved receipt."
+	id := chi.URLParam(r, "id")
+
+	err = db.Model(models.Receipt{}).Select("id, is_resolved").Where("id = ?", id).Find(&receipt).Error
+
+	if err != nil {
+		handler_logger.Print(err)
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+	err = db.Model(&receipt).Update("is_resolved", !receipt.IsResolved).Error
+	if err != nil {
+		handler_logger.Print(err)
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}

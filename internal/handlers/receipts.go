@@ -47,7 +47,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	bodyData := r.Context().Value("receipt").(models.Receipt)
 	bodyData.OwnedByUserID = token.UserId
 
-	err := db.Model(models.Receipt{}).Create(&bodyData).Error
+	err := db.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -114,7 +114,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	bodyData.ID = uint(u64Id)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Omit("ID, OwnedByUserID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
+		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID, OwnedByUserID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
 		if txErr != nil {
 			handler_logger.Print(txErr.Error())
 			return txErr
@@ -143,7 +143,32 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
 
+	w.WriteHeader(200)
+}
+
+func ToggleIsResolved(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	var err error
+	var receipt models.Receipt
+
+	errMsg := "Error toggling is resolved receipt."
+	id := chi.URLParam(r, "id")
+
+	err = db.Model(models.Receipt{}).Select("id, is_resolved").Where("id = ?", id).Find(&receipt).Error
+
+	if err != nil {
+		handler_logger.Print(err)
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+	err = db.Model(&receipt).Update("is_resolved", !receipt.IsResolved).Error
+	if err != nil {
+		handler_logger.Print(err)
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}

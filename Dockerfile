@@ -8,5 +8,4 @@ RUN go build
 RUN ./api
 EXPOSE 8081
 
-
-# Super basic example. We need the ability to create a config based on passed in env variables
+# Super basic example. We need the ability to create a config based on passed in env variables or pass in config

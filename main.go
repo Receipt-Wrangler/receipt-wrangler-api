@@ -35,7 +35,7 @@ func serve(router *chi.Mux) {
 	logger := logging.GetLogger()
 	srv := &http.Server{
 		Handler:      router,
-		Addr:         "0.0.0.0:8081", // TODO: make configurable
+		Addr:         "0.0.0.0:8081",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}

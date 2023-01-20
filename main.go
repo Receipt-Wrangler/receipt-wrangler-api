@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers"
@@ -24,7 +25,11 @@ func main() {
 	logger.Print("Initializing app...")
 	initLoggers()
 	config.SetConfig()
-	db.Connect()
+	err = db.Connect()
+	if err != nil {
+		logger.Print(err.Error())
+		os.Exit(0)
+	}
 	db.MakeMigrations()
 
 	router := initRoutes()

@@ -1,11 +1,21 @@
-# syntax=docker/dockerfile:1
+# Pull in source code to container
 FROM golang:1.19.5-alpine3.17
 WORKDIR .
 RUN mkdir api
 WORKDIR api
-COPY . . 
-RUN go build
-RUN ./api
-EXPOSE 8081
+COPY . .
 
-# Super basic example. We need the ability to create a config based on passed in env variables or pass in config
+# Pull in configs from volume
+WORKDIR /
+RUN mkdir config
+VOLUME ./config
+RUN cp -a ./config/. /go/api
+
+# Build api
+WORKDIR /go/api
+RUN ls && pwd
+RUN go build
+
+# Run
+RUN ./api --env prod
+EXPOSE 8081

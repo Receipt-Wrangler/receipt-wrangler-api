@@ -21,10 +21,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
 	logger := logging.GetLogger()
 	logger.Print("Initializing app...")
 	initLoggers()
-	config.SetConfig()
+
+	err = config.SetConfig()
+	if err != nil {
+		logger.Print(err.Error())
+		os.Exit(0)
+	}
+
 	err = db.Connect()
 	if err != nil {
 		logger.Print(err.Error())

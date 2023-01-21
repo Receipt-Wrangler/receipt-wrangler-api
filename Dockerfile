@@ -15,7 +15,7 @@ RUN cp -a ./config/. /go/api
 WORKDIR /go/api
 RUN go build
 
-# Set up 
+# Set up data dir
 RUN mkdir data
 VOLUME ./data
 

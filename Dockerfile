@@ -13,8 +13,11 @@ RUN cp -a ./config/. /go/api
 
 # Build api
 WORKDIR /go/api
-RUN ls && pwd
 RUN go build
+
+# Set up 
+RUN mkdir data
+VOLUME ./data
 
 # Run
 RUN ./api --env prod

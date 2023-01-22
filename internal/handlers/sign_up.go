@@ -44,7 +44,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		group := models.Group{
 			Name:           "Home",
 			IsDefaultGroup: true,
-			GroupMembers:   models.GroupMember{UserID: uint64(userData.ID)},
+			GroupMembers:   models.GroupMember{UserID: uint64(userData.ID), GroupRole: models.OWNER},
 		}
 		result = db.Create(&group)
 

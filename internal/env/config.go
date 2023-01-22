@@ -24,7 +24,8 @@ func GetBasePath() string {
 func SetConfig() error {
 	setBasePath()
 	env := getEnv()
-	jsonFile, err := os.Open(filepath.Join(basePath, "config."+env+".json"))
+	path := filepath.Join(basePath, "config", "config."+env+".json")
+	jsonFile, err := os.Open(path)
 
 	if err != nil {
 		return err

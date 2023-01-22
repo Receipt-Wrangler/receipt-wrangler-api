@@ -1,3 +1,5 @@
-config.*.json
+/config/config.*.json
+!/config/config.sample.json
 /data/*
 /logs/*
+./api

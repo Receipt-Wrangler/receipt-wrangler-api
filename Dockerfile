@@ -5,20 +5,18 @@ RUN mkdir api
 WORKDIR api
 COPY . .
 
-# Pull in configs from volume
-WORKDIR /
-RUN mkdir config
-VOLUME ./config
-RUN cp -a ./config/. /go/api
+# Set up config volume
+VOLUME /go/api/config
 
 # Build api
 WORKDIR /go/api
 RUN go build
 
-# Set up data dir
+# Set up data volume
 RUN mkdir data
-VOLUME ./data
+VOLUME /go/api/data
 
 # Run
+RUN ls .
 RUN ./api --env prod
 EXPOSE 8081

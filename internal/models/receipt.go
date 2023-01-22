@@ -18,7 +18,7 @@ type Receipt struct {
 	OwnedByUserID uint            `json:"ownedByUserId"`
 	OwnedByUser   User            `json:"-"`
 	IsResolved    bool            `gorm:"default: false" json:"isResolved"`
-	GroupId       uint            `json:"groupId"`
+	GroupId       uint            `gorm: "not null" json:"groupId"`
 	Group         Group           `json:"-"`
 	Tags          []Tag           `gorm:"many2many:receipt_tags" json:"tags"`
 	Categories    []Category      `gorm:"many2many:receipt_categories" json:"categories"`

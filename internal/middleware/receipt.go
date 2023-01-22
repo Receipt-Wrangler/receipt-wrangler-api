@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -46,20 +46,17 @@ func ValidateReceiptAccess(next http.Handler) http.Handler {
 		errMsg := "Unauthorized access to receipt image."
 
 		if len(id) > 0 {
-			db := db.GetDB()
 			token := utils.GetJWT(r)
-			var receipt models.Receipt
 
-			err := db.Model(models.Receipt{}).Where("id = ?", id).Select("owned_by_user_id").Find(&receipt).Error
+			hasAccess, err := services.UserHasAccessToReceipt(token.UserId, id)
 			if err != nil {
-				middleware_logger.Print(err.Error())
-				utils.WriteCustomErrorResponse(w, errMsg, 500)
+				middleware_logger.Print(errMsg)
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 				return
 			}
 
-			if receipt.OwnedByUserID != token.UserId {
-				middleware_logger.Print(errMsg)
-				utils.WriteCustomErrorResponse(w, errMsg, 403)
+			if !hasAccess {
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
 				return
 			}
 		}

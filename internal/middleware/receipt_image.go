@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -43,28 +44,24 @@ func ValidateReceiptImageAccess(next http.Handler) http.Handler {
 		errMsg := "Unauthorized access to receipt image."
 
 		if len(id) > 0 {
-			db := db.GetDB()
 			token := utils.GetJWT(r)
-			var receipt models.Receipt
-			var fileData models.FileData
 
-			err := db.Model(models.FileData{}).Where("id = ?", id).Select("receipt_id").First(&fileData).Error
+			receipt, err := services.GetReceiptByReceiptImageId(id)
 			if err != nil {
 				middleware_logger.Print(err.Error())
 				utils.WriteCustomErrorResponse(w, errMsg, 500)
 				return
 			}
 
-			err = db.Model(models.Receipt{}).Where("id = ?", fileData.ReceiptId).Select("owned_by_user_id").Find(&receipt).Error
+			hasAccess, err := services.UserHasAccessToReceipt(token.UserId, strconv.FormatUint(uint64(receipt.ID), 10))
 			if err != nil {
 				middleware_logger.Print(err.Error())
 				utils.WriteCustomErrorResponse(w, errMsg, 500)
 				return
 			}
 
-			if receipt.OwnedByUserID != token.UserId {
-				middleware_logger.Print("Unauthorized access")
-				utils.WriteCustomErrorResponse(w, errMsg, 403)
+			if !hasAccess {
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
 				return
 			}
 		}

@@ -32,7 +32,16 @@ func Connect() error {
 }
 
 func MakeMigrations() {
-	db.AutoMigrate(&models.RefreshToken{}, &models.User{}, &models.Receipt{}, &models.Item{}, &models.FileData{}, &models.Tag{}, &models.Category{})
+	db.AutoMigrate(
+		&models.RefreshToken{},
+		&models.User{},
+		&models.Receipt{},
+		&models.Item{},
+		&models.FileData{},
+		&models.Tag{},
+		&models.Category{},
+		&models.Group{},
+		&models.GroupMember{})
 }
 
 func GetDB() *gorm.DB {

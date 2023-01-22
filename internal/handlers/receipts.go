@@ -41,11 +41,9 @@ func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
-	token := utils.GetJWT(r)
 
 	errMsg := "Error creating receipts."
 	bodyData := r.Context().Value("receipt").(models.Receipt)
-	bodyData.OwnedByUserID = token.UserId
 
 	err := db.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
 	if err != nil {
@@ -69,7 +67,6 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
 	var receipt models.Receipt
 	errMsg := "Error retrieving receipt."
-	token := utils.GetJWT(r)
 
 	id := chi.URLParam(r, "id")
 
@@ -77,12 +74,6 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
-		return
-	}
-
-	if receipt.OwnedByUserID != token.UserId {
-		handler_logger.Print("Unauthorized")
-		utils.WriteCustomErrorResponse(w, errMsg, 403)
 		return
 	}
 
@@ -114,7 +105,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	bodyData.ID = uint(u64Id)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID, OwnedByUserID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
+		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
 		if txErr != nil {
 			handler_logger.Print(txErr.Error())
 			return txErr

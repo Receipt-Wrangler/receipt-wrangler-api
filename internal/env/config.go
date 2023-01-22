@@ -21,13 +21,14 @@ func GetBasePath() string {
 	return basePath
 }
 
-func SetConfig() {
+func SetConfig() error {
 	setBasePath()
 	env := getEnv()
-	jsonFile, err := os.Open(filepath.Join(basePath, "config."+env+".json"))
+	path := filepath.Join(basePath, "config", "config."+env+".json")
+	jsonFile, err := os.Open(path)
 
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 
 	bytes, err := ioutil.ReadAll(jsonFile)
@@ -36,11 +37,12 @@ func SetConfig() {
 	marshalErr := json.Unmarshal(bytes, &configFile)
 
 	if marshalErr != nil {
-		panic(err.Error())
+		return err
 	}
 
 	jsonFile.Close()
 	config = configFile
+	return nil
 }
 
 func getEnv() string {

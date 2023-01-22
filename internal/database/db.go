@@ -19,15 +19,16 @@ import (
 
 var db *gorm.DB
 
-func Connect() {
+func Connect() error {
 	config := config.GetConfig()
 	connectedDb, err := gorm.Open(mysql.Open(config.ConnectionString), &gorm.Config{})
 
 	if err != nil {
-		panic(err.Error())
+		return err
 	}
 
 	db = connectedDb
+	return nil
 }
 
 func MakeMigrations() {

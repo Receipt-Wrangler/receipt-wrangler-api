@@ -131,5 +131,11 @@ func initRoutes() *chi.Mux {
 	userRouter.Get("/amountOwedForUser", handlers.GetAmountOwedForUser)
 	rootRouter.Mount("/api/user", userRouter)
 
+	// Group Router
+	groupRouter := chi.NewRouter()
+	groupRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	groupRouter.Get("/", handlers.GetGroupsForUser)
+	rootRouter.Mount("/api/group", groupRouter)
+
 	return rootRouter
 }

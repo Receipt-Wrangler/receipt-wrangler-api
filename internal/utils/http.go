@@ -49,3 +49,12 @@ func WriteValidatorErrorResponse(w http.ResponseWriter, err structs.ValidatorErr
 	w.WriteHeader(responseCode)
 	w.Write(bytes)
 }
+
+func MarshalResponseData(data interface{}) ([]byte, error) {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
+}

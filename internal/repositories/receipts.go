@@ -9,7 +9,7 @@ func GetReceiptById(receiptId string) (models.Receipt, error) {
 	db := db.GetDB()
 	var receipt models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("id = ?", receipt).Find(&receipt).Error
+	err := db.Model(models.Receipt{}).Where("id = ?", receiptId).Find(&receipt).Error
 	if err != nil {
 		return models.Receipt{}, err
 	}

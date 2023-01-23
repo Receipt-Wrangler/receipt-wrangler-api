@@ -22,12 +22,14 @@ func SetReceiptBodyData(next http.Handler) http.Handler {
 			bodyData, err := utils.GetBodyData(w, r)
 
 			if err != nil {
+				middleware_logger.Print(err.Error())
 				utils.WriteErrorResponse(w, err, 500)
 				return
 			}
 
 			marshalErr := json.Unmarshal(bodyData, &receipt)
 			if marshalErr != nil {
+				middleware_logger.Print(err.Error())
 				utils.WriteErrorResponse(w, marshalErr, 500)
 				return
 			}
@@ -50,12 +52,49 @@ func ValidateReceiptAccess(next http.Handler) http.Handler {
 
 			hasAccess, err := services.UserHasAccessToReceipt(token.UserId, id)
 			if err != nil {
-				middleware_logger.Print(errMsg)
+				middleware_logger.Print(err.Error())
 				utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 				return
 			}
 
 			if !hasAccess {
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
+				return
+			}
+		}
+
+		next.ServeHTTP(w, r)
+		return
+	})
+}
+
+func ValidateGroupAccess(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		groupId := chi.URLParam(r, "groupId")
+		errMsg := "Unauthorized access to receipt image."
+
+		if len(groupId) > 0 {
+			token := utils.GetJWT(r)
+
+			groups, err := services.GetGroupsForUser(token.UserId)
+			if err != nil {
+				middleware_logger.Print(err.Error())
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+				return
+			}
+
+			var hasAccess = false
+			for i := 0; i < len(groups); i++ {
+				id := utils.UintToString(groups[i].ID)
+
+				if id == groupId {
+					hasAccess = true
+					break
+				}
+			}
+
+			if !hasAccess {
+				middleware_logger.Print(token, "no access to group: ", groupId)
 				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
 				return
 			}

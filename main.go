@@ -96,7 +96,7 @@ func initRoutes() *chi.Mux {
 	// Receipt Router
 	receiptRouter := chi.NewRouter()
 	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
-	receiptRouter.Get("/group/{groupId}", handlers.GetReceiptsForGroup)
+	receiptRouter.With(middleware.ValidateGroupAccess).Get("/group/{groupId}", handlers.GetReceiptsForGroup)
 	receiptRouter.With(middleware.ValidateReceiptAccess).Get("/{id}", handlers.GetReceipt)
 	receiptRouter.With(middleware.ValidateReceiptAccess, middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
 	receiptRouter.With(middleware.ValidateReceiptAccess).Put("/{id}/toggleIsResolved", handlers.ToggleIsResolved)

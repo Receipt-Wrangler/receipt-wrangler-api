@@ -6,6 +6,7 @@ import (
 	"os"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
 
@@ -14,21 +15,19 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func GetAllReceipts(w http.ResponseWriter, r *http.Request) {
+func GetReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 	// re add user id in claim??
-	db := db.GetDB()
-	token := utils.GetJWT(r)
 	errMsg := "Error retrieving receipts."
-	var receipts []models.Receipt
+	groupId := chi.URLParam(r, "groupId")
 
-	err := db.Model(models.Receipt{}).Where("owned_by_user_id = ?", token.UserId).Preload("Tags").Preload("Categories").Find(&receipts).Error
+	receipts, err := repositories.GetReceiptsByGroupId(groupId)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
-	bytes, err := json.Marshal(receipts)
+	bytes, err := utils.MarshalResponseData(receipts)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

@@ -16,3 +16,15 @@ func GetReceiptById(receiptId string) (models.Receipt, error) {
 
 	return receipt, nil
 }
+
+func GetReceiptsByGroupId(groupId string) ([]models.Receipt, error) {
+	db := db.GetDB()
+	var receipts []models.Receipt
+
+	err := db.Model(models.Receipt{}).Where("group_id = ?", groupId).Preload("Tags").Preload("Categories").Find(&receipts).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return receipts, nil
+}

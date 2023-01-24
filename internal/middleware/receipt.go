@@ -27,10 +27,10 @@ func SetReceiptBodyData(next http.Handler) http.Handler {
 				return
 			}
 
-			marshalErr := json.Unmarshal(bodyData, &receipt)
-			if marshalErr != nil {
+			err = json.Unmarshal(bodyData, &receipt)
+			if err != nil {
 				middleware_logger.Print(err.Error())
-				utils.WriteErrorResponse(w, marshalErr, 500)
+				utils.WriteErrorResponse(w, err, 500)
 				return
 			}
 			ctx := context.WithValue(r.Context(), "receipt", receipt)

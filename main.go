@@ -96,7 +96,7 @@ func initRoutes() *chi.Mux {
 	// Receipt Router
 	receiptRouter := chi.NewRouter()
 	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
-	receiptRouter.Get("/", handlers.GetAllReceipts)
+	receiptRouter.With(middleware.ValidateGroupAccess).Get("/group/{groupId}", handlers.GetReceiptsForGroup)
 	receiptRouter.With(middleware.ValidateReceiptAccess).Get("/{id}", handlers.GetReceipt)
 	receiptRouter.With(middleware.ValidateReceiptAccess, middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
 	receiptRouter.With(middleware.ValidateReceiptAccess).Put("/{id}/toggleIsResolved", handlers.ToggleIsResolved)
@@ -130,6 +130,12 @@ func initRoutes() *chi.Mux {
 	userRouter.Get("/", handlers.GetAllUsers)
 	userRouter.Get("/amountOwedForUser", handlers.GetAmountOwedForUser)
 	rootRouter.Mount("/api/user", userRouter)
+
+	// Group Router
+	groupRouter := chi.NewRouter()
+	groupRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	groupRouter.Get("/", handlers.GetGroupsForUser)
+	rootRouter.Mount("/api/group", groupRouter)
 
 	return rootRouter
 }

@@ -8,6 +8,7 @@ import (
 	"receipt-wrangler/api/internal/utils"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
@@ -21,18 +22,41 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Hash password
 	bytes, err := bcrypt.GenerateFromPassword([]byte(userData.Password), 14)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteErrorResponse(w, err, 500)
 	}
-
 	userData.Password = string(bytes)
-	result := db.Create(&userData)
 
-	if result.Error != nil {
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// Save User
+		result := db.Create(&userData)
+
+		if result.Error != nil {
+			handler_logger.Print(err.Error())
+			utils.WriteErrorResponse(w, result.Error, 500)
+			return result.Error
+		}
+
+		// Create default group with user as group member
+		group := models.Group{
+			Name:           "Home",
+			IsDefaultGroup: true,
+			GroupMembers:   models.GroupMember{UserID: userData.ID, GroupRole: models.OWNER},
+		}
+		result = db.Create(&group)
+
+		if result != nil {
+			return result.Error
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		handler_logger.Print(err.Error())
-		utils.WriteErrorResponse(w, result.Error, 500)
 		return
 	}
 

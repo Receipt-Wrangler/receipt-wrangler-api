@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -22,13 +22,15 @@ func SetReceiptBodyData(next http.Handler) http.Handler {
 			bodyData, err := utils.GetBodyData(w, r)
 
 			if err != nil {
+				middleware_logger.Print(err.Error())
 				utils.WriteErrorResponse(w, err, 500)
 				return
 			}
 
-			marshalErr := json.Unmarshal(bodyData, &receipt)
-			if marshalErr != nil {
-				utils.WriteErrorResponse(w, marshalErr, 500)
+			err = json.Unmarshal(bodyData, &receipt)
+			if err != nil {
+				middleware_logger.Print(err.Error())
+				utils.WriteErrorResponse(w, err, 500)
 				return
 			}
 			ctx := context.WithValue(r.Context(), "receipt", receipt)
@@ -46,20 +48,54 @@ func ValidateReceiptAccess(next http.Handler) http.Handler {
 		errMsg := "Unauthorized access to receipt image."
 
 		if len(id) > 0 {
-			db := db.GetDB()
 			token := utils.GetJWT(r)
-			var receipt models.Receipt
 
-			err := db.Model(models.Receipt{}).Where("id = ?", id).Select("owned_by_user_id").Find(&receipt).Error
+			hasAccess, err := services.UserHasAccessToReceipt(token.UserId, id)
 			if err != nil {
 				middleware_logger.Print(err.Error())
-				utils.WriteCustomErrorResponse(w, errMsg, 500)
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 				return
 			}
 
-			if receipt.OwnedByUserID != token.UserId {
-				middleware_logger.Print(errMsg)
-				utils.WriteCustomErrorResponse(w, errMsg, 403)
+			if !hasAccess {
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
+				return
+			}
+		}
+
+		next.ServeHTTP(w, r)
+		return
+	})
+}
+
+func ValidateGroupAccess(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		groupId := chi.URLParam(r, "groupId")
+		errMsg := "Unauthorized access to receipt image."
+
+		if len(groupId) > 0 {
+			token := utils.GetJWT(r)
+
+			groups, err := services.GetGroupsForUser(token.UserId)
+			if err != nil {
+				middleware_logger.Print(err.Error())
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+				return
+			}
+
+			var hasAccess = false
+			for i := 0; i < len(groups); i++ {
+				id := utils.UintToString(groups[i].ID)
+
+				if id == groupId {
+					hasAccess = true
+					break
+				}
+			}
+
+			if !hasAccess {
+				middleware_logger.Print(token, "no access to group: ", groupId)
+				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
 				return
 			}
 		}

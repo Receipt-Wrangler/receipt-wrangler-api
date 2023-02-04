@@ -48,6 +48,7 @@ func GenerateJWT(userId uint) (string, string, error) {
 		UserId:      user.ID,
 		Displayname: user.DisplayName,
 		Username:    user.Username,
+		UserRole: user.UserRole,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},

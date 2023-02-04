@@ -31,7 +31,16 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	userData.Password = string(bytes)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		var usrCnt int64
+		// Set user's role
+		 db.Model(models.User{}).Count(&usrCnt)
 		// Save User
+		if (usrCnt == 0) {
+			userData.UserRole = models.ADMIN
+		} else {
+			userData.UserRole = models.USER
+		}
+
 		result := db.Create(&userData)
 
 		if result.Error != nil {

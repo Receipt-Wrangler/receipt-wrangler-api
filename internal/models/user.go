@@ -5,4 +5,5 @@ type User struct {
 	Username    string `gorm:"not null; uniqueIndex"`
 	Password    string `gorm:"not null"`
 	DisplayName string `json:"displayName"`
+	UserRole UserRole `gorm:"default:'USER'" json:"userRole"` 
 }

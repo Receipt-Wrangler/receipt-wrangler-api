@@ -5,7 +5,7 @@ import "database/sql/driver"
 type UserRole string
 
 const (
-	ADMIN  UserRole = "OWNER"
+	ADMIN  UserRole = "ADMIN"
 	USER UserRole = "USER"
 )
 

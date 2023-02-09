@@ -9,6 +9,7 @@ import (
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -128,7 +129,8 @@ func initRoutes() *chi.Mux {
 	userRouter := chi.NewRouter()
 	userRouter.Use(tokenValidatorMiddleware.CheckJWT)
 	userRouter.Get("/", handlers.GetAllUsers)
-	userRouter.With(middleware.SetUserData).Post("/{id}", handlers.UpdateUser) // TODO: Add middleware to validate user role
+	
+	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.UpdateUser) // TODO: Add middleware to validate user role
 	userRouter.Get("/amountOwedForUser", handlers.GetAmountOwedForUser)
 	rootRouter.Mount("/api/user", userRouter)
 

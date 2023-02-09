@@ -6,6 +6,7 @@ import (
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
@@ -42,6 +43,19 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write(bytes)
+}
+
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+	bodyData := r.Context().Value("user").(models.User)
+	errMsg := "Error creating user."
+	_, err := repositories.CreateUser(bodyData)
+
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {

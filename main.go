@@ -129,7 +129,7 @@ func initRoutes() *chi.Mux {
 	userRouter := chi.NewRouter()
 	userRouter.Use(tokenValidatorMiddleware.CheckJWT)
 	userRouter.Get("/", handlers.GetAllUsers)
-	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Post("/", handlers.CreateUser)
+	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN), middleware.ValidateUserData(true)).Post("/", handlers.CreateUser)
 	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.UpdateUser)
 	userRouter.Get("/amountOwedForUser", handlers.GetAmountOwedForUser)
 	rootRouter.Mount("/api/user", userRouter)

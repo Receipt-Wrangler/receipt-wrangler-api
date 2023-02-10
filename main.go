@@ -78,7 +78,7 @@ func initRoutes() *chi.Mux {
 
 	// Signup Router
 	signUpRouter := chi.NewRouter()
-	signUpRouter.Use(middleware.SetBodyData)
+	signUpRouter.Use(middleware.SetBodyData, middleware.ValidateUserData(false))
 	signUpRouter.Post("/", handlers.SignUp)
 	rootRouter.Mount("/api/signup", signUpRouter)
 

@@ -46,16 +46,33 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	var apiUser structs.APIUser
 	bodyData := r.Context().Value("user").(models.User)
 	errMsg := "Error creating user."
-	_, err := repositories.CreateUser(bodyData)
+	createdUser, err := repositories.CreateUser(bodyData)
 
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 		return
 	}
 
+	err = db.Model(models.User{}).Where("id = ?", createdUser.ID).Find(&apiUser).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	bytes, err := utils.MarshalResponseData(apiUser)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
+	w.Write(bytes)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -117,6 +134,30 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+}
+
+func GetUsernameCount(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	errMsg := "Error getting username count."
+	username := chi.URLParam(r, "username")
+	var result int64
+
+	err := db.Model(models.User{}).Where("username = ?", username).Count(&result).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	bytes, err := utils.MarshalResponseData(result)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 		return
 	}
 

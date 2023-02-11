@@ -9,6 +9,7 @@ import (
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -77,7 +78,7 @@ func initRoutes() *chi.Mux {
 
 	// Signup Router
 	signUpRouter := chi.NewRouter()
-	signUpRouter.Use(middleware.SetBodyData)
+	signUpRouter.Use(middleware.SetBodyData, middleware.ValidateUserData(false))
 	signUpRouter.Post("/", handlers.SignUp)
 	rootRouter.Mount("/api/signup", signUpRouter)
 
@@ -128,6 +129,9 @@ func initRoutes() *chi.Mux {
 	userRouter := chi.NewRouter()
 	userRouter.Use(tokenValidatorMiddleware.CheckJWT)
 	userRouter.Get("/", handlers.GetAllUsers)
+	userRouter.Get("/{username}", handlers.GetUsernameCount)
+	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN), middleware.ValidateUserData(true)).Post("/", handlers.CreateUser)
+	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.UpdateUser)
 	userRouter.Get("/amountOwedForUser", handlers.GetAmountOwedForUser)
 	rootRouter.Mount("/api/user", userRouter)
 

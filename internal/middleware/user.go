@@ -39,6 +39,32 @@ func SetUserData(next http.Handler) http.Handler {
 	})
 }
 
+func SetResetPasswordData(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		errMsg := "Error updating user."
+		// TODO: Come up with a better way to handdle this
+		var resetPasswordData structs.ResetPassword
+		bodyData, err := utils.GetBodyData(w, r)
+
+		if err != nil {
+			middleware_logger.Print(err.Error())
+			utils.WriteErrorResponse(w, err, 500)
+			return
+		}
+
+		marshalErr := json.Unmarshal(bodyData, &resetPasswordData)
+		if marshalErr != nil {
+			middleware_logger.Print(marshalErr.Error())
+			utils.WriteCustomErrorResponse(w, errMsg, 500)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "reset_password", resetPasswordData)
+		next.ServeHTTP(w, r.WithContext(ctx))
+		return
+	})
+}
+
 func ValidateUserData(roleRequired bool) (mw func(http.Handler) http.Handler) {
 
 	mw = func(h http.Handler) http.Handler {

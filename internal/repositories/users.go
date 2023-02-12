@@ -3,9 +3,9 @@ package repositories
 import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/utils"
 	"reflect"
 
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +13,7 @@ func CreateUser(userData models.User) (models.User, error) {
 	db := db.GetDB()
 
 	// Hash password
-	bytes, err := bcrypt.GenerateFromPassword([]byte(userData.Password), 14)
+	bytes, err := utils.HashPassword(userData.Password)
 	if err != nil {
 		return models.User{}, err
 	}

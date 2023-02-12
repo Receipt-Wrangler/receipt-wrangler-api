@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -90,8 +89,6 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	bodyData := r.Context().Value("user").(models.User)
 	bodyData.ID = uint(u64Id)
 
-	fmt.Println(bodyData)
-
 	err = db.Model(&bodyData).Select("username", "display_name", "user_role").Updates(&bodyData).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
@@ -163,4 +160,27 @@ func GetUsernameCount(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write(bytes)
+}
+
+func ResetPassword(w http.ResponseWriter, r *http.Request) {
+	db := db.GetDB()
+	errMsg := "Error resetting password."
+	id := chi.URLParam(r, "id")
+	resetPasswordData := r.Context().Value("reset_password").(structs.ResetPassword)
+
+	hashedPassword, err := utils.HashPassword(resetPasswordData.Password)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	err = db.Model(models.User{}).Where("id = ?", id).UpdateColumn("password", hashedPassword).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
 }

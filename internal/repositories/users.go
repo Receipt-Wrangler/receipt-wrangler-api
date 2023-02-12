@@ -4,7 +4,6 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
-	"reflect"
 
 	"gorm.io/gorm"
 )
@@ -20,9 +19,9 @@ func CreateUser(userData models.User) (models.User, error) {
 	userData.Password = string(bytes)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		value := reflect.ValueOf(userData.UserRole)
+		value := userData.UserRole
 
-		if !value.IsValid() {
+		if len(value) == 0 {
 			var usrCnt int64
 			// Set user's role
 			db.Model(models.User{}).Count(&usrCnt)

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -89,8 +88,6 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	bodyData := r.Context().Value("user").(models.User)
 	bodyData.ID = uint(u64Id)
-
-	fmt.Println(bodyData)
 
 	err = db.Model(&bodyData).Select("username", "display_name", "user_role").Updates(&bodyData).Error
 	if err != nil {

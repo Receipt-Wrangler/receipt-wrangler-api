@@ -99,7 +99,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.Model(models.Receipt{}).Where("id = ?", fileData.ReceiptId).Select("id", "owned_by_user_id").Find(&receipt).Error
+	err = db.Model(models.Receipt{}).Where("id = ?", fileData.ReceiptId).Select("id").Find(&receipt).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

@@ -11,6 +11,7 @@ import (
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/golang-jwt/jwt/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func InitTokenValidator() (*validator.Validator, error) {
@@ -48,7 +49,7 @@ func GenerateJWT(userId uint) (string, string, error) {
 		UserId:      user.ID,
 		Displayname: user.DisplayName,
 		Username:    user.Username,
-		UserRole: user.UserRole,
+		UserRole:    user.UserRole,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
@@ -96,4 +97,13 @@ func GenerateJWT(userId uint) (string, string, error) {
 
 func GetJWT(r *http.Request) *Claims {
 	return r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims).CustomClaims.(*Claims)
+}
+
+func HashPassword(password string) ([]byte, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
 }

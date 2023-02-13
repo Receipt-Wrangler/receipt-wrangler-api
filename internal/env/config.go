@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,19 +12,66 @@ import (
 )
 
 var config structs.Config
+var featureConfig structs.FeatureConfig
 var basePath string
+var env string
 
 func GetConfig() structs.Config {
 	return config
+}
+
+func GetFeatureConfig() structs.FeatureConfig {
+	return featureConfig
 }
 
 func GetBasePath() string {
 	return basePath
 }
 
-func SetConfig() error {
+func SetConfigs() error {
+	setEnv()
 	setBasePath()
-	env := getEnv()
+
+	err := setSettingsConfig()
+	if err != nil {
+		return err
+	}
+
+	err = setFeatureConfig()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(featureConfig.EnableLocalSignUp)
+	return nil
+}
+
+func setFeatureConfig() error {
+	path := filepath.Join(basePath, "config", "feature-config."+env+".json")
+	jsonFile, err := os.Open(path)
+
+	if err != nil {
+		featureConfig = structs.FeatureConfig{
+			EnableLocalSignUp: false,
+		}
+		return nil
+	}
+
+	bytes, err := ioutil.ReadAll(jsonFile)
+
+	var configFile structs.FeatureConfig
+	marshalErr := json.Unmarshal(bytes, &configFile)
+
+	if marshalErr != nil {
+		return err
+	}
+
+	jsonFile.Close()
+	featureConfig = configFile
+	return nil
+}
+
+func setSettingsConfig() error {
 	path := filepath.Join(basePath, "config", "config."+env+".json")
 	jsonFile, err := os.Open(path)
 
@@ -45,11 +93,11 @@ func SetConfig() error {
 	return nil
 }
 
-func getEnv() string {
+func setEnv() {
 	envFlag := flag.String("env", "dev", "set runtime environment")
 	flag.Parse()
 
-	return *envFlag
+	env = *envFlag
 }
 
 func setBasePath() {

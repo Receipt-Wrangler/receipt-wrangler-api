@@ -27,7 +27,7 @@ func main() {
 	logger.Print("Initializing app...")
 	initLoggers()
 
-	err = config.SetConfig()
+	err = config.SetConfigs()
 	if err != nil {
 		logger.Print(err.Error())
 		os.Exit(0)
@@ -62,6 +62,7 @@ func initLoggers() {
 }
 
 func initRoutes() *chi.Mux {
+	featureConfig := config.GetFeatureConfig()
 	tokenValidator, err := utils.InitTokenValidator()
 	if err != nil {
 		panic(err)
@@ -77,10 +78,12 @@ func initRoutes() *chi.Mux {
 	rootRouter.Mount("/api/token", refreshRouter)
 
 	// Signup Router
-	signUpRouter := chi.NewRouter()
-	signUpRouter.Use(middleware.SetBodyData, middleware.ValidateUserData(false))
-	signUpRouter.Post("/", handlers.SignUp)
-	rootRouter.Mount("/api/signup", signUpRouter)
+	if featureConfig.EnableLocalSignUp {
+		signUpRouter := chi.NewRouter()
+		signUpRouter.Use(middleware.SetBodyData, middleware.ValidateUserData(false))
+		signUpRouter.Post("/", handlers.SignUp)
+		rootRouter.Mount("/api/signup", signUpRouter)
+	}
 
 	// Login Router
 	loginRouter := chi.NewRouter()

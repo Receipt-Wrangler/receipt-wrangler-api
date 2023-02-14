@@ -1,4 +1,6 @@
 /config/config.*.json
+/config/feature-config.*.json
+!/config/feature-config.sample.json
 !/config/config.sample.json
 /data/*
 /logs/*

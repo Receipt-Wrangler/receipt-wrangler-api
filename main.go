@@ -145,5 +145,10 @@ func initRoutes() *chi.Mux {
 	groupRouter.Get("/", handlers.GetGroupsForUser)
 	rootRouter.Mount("/api/group", groupRouter)
 
+	// Feature Config Router
+	featureConfigRouter := chi.NewRouter()
+	featureConfigRouter.Get("/", handlers.GetFeatureConfig)
+	rootRouter.Mount("/api/featureConfig", featureConfigRouter)
+
 	return rootRouter
 }

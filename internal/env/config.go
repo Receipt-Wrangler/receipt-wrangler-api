@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -42,7 +41,6 @@ func SetConfigs() error {
 		return err
 	}
 
-	fmt.Println(featureConfig.EnableLocalSignUp)
 	return nil
 }
 

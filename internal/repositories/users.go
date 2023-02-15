@@ -39,11 +39,13 @@ func CreateUser(userData models.User) (models.User, error) {
 			return err
 		}
 
+		var groupMembers = make([]models.GroupMember, 1)
+		groupMembers = append(groupMembers, models.GroupMember{UserID: userData.ID, GroupRole: models.OWNER})
 		// Create default group with user as group member
 		group := models.Group{
 			Name:           "Home",
 			IsDefaultGroup: true,
-			GroupMembers:   models.GroupMember{UserID: userData.ID, GroupRole: models.OWNER},
+			GroupMembers:   groupMembers,
 		}
 		err = db.Create(&group).Error
 

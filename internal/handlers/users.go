@@ -15,10 +15,11 @@ import (
 )
 
 type ItemView struct {
-	ItemId       uint `json:"id"`
-	ReceiptId    uint
-	PaidByUserId uint
-	ItemAmount   decimal.Decimal
+	ItemId          uint `json:"id"`
+	ReceiptId       uint
+	PaidByUserId    uint
+	ChargedToUserId uint
+	ItemAmount      decimal.Decimal
 }
 
 func GetAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -102,21 +103,32 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
 	errMsg := "Error calculating amount owed."
-	var items []ItemView
+	var itemsOwed []ItemView
+	var itemsOthersOwe []ItemView
 	total := decimal.NewFromInt(0)
 	token := utils.GetJWT(r)
 	id := token.UserId
 	resultMap := make(map[uint]decimal.Decimal)
 
-	err := db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, receipts.is_resolved, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.is_resolved=?", id, id, false).Scan(&items).Error
+	groupId := chi.URLParam(r, "groupId")
+
+	err := db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, receipts.is_resolved, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id =? AND receipts.is_resolved=?", id, id, groupId, false).Scan(&itemsOwed).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
-	for i := 1; i < len(items); i++ {
-		item := items[i]
+	err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, receipts.is_resolved, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id =? AND receipts.is_resolved=?", id, id, "1", false).Scan(&itemsOthersOwe).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	// These are items from receipts that I did not pay for, so I owe these
+	for i := 0; i < len(itemsOwed); i++ {
+		item := itemsOwed[i]
 		total = total.Add(item.ItemAmount)
 		amount, ok := resultMap[item.PaidByUserId]
 		if ok {
@@ -125,7 +137,18 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			resultMap[item.PaidByUserId] = item.ItemAmount
 		}
 	}
-	resultMap[0] = total
+
+	// These are items from receipts that I paid for, so they owe me
+	for i := 0; i < len(itemsOthersOwe); i++ {
+		item := itemsOthersOwe[i]
+		total = total.Sub(item.ItemAmount)
+		amount, ok := resultMap[item.ChargedToUserId]
+		if ok {
+			resultMap[item.ChargedToUserId] = amount.Sub(item.ItemAmount)
+		} else {
+			resultMap[item.ChargedToUserId] = amount.Mul(decimal.NewFromInt(-1))
+		}
+	}
 
 	bytes, err := json.Marshal(resultMap)
 	if err != nil {

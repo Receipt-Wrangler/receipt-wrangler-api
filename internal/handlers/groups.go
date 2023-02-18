@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -31,11 +31,25 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateGroup(w http.ResponseWriter, r *http.Request) {
-	//errMsg := "Error retrieving groups."
-	//token := utils.GetJWT(r)
+	errMsg := "Error creating group."
+	token := utils.GetJWT(r)
 	group := r.Context().Value("group").(models.Group)
-	fmt.Println(group)
+
+	group, err := repositories.CreateGroup(group, token.UserId)
+
+	if err != nil {
+		handler_logger.Println(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	bytes, err := utils.MarshalResponseData(group)
+	if err != nil {
+		handler_logger.Println(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(200)
-	//w.Write(bytes)
+	w.Write(bytes)
 }

@@ -57,18 +57,19 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 			return
 		}
 
-		if dbToken.IsUsed {
-			utils.WriteCustomErrorResponse(w, errMessage, 500)
-			middleware_logger.Println("Refresh token has been used already.", r, dbToken)
-			return
-		} else {
-			err = db.Model(&dbToken).Update("is_used", true).Error
-			if err != nil {
-				utils.WriteCustomErrorResponse(w, errMessage, 500)
-				middleware_logger.Println(err.Error())
-				return
-			}
-		}
+		// TODO: Fix
+		// if dbToken.IsUsed {
+		// 	utils.WriteCustomErrorResponse(w, errMessage, 500)
+		// 	middleware_logger.Println("Refresh token has been used already.", r, dbToken)
+		// 	return
+		// } else {
+		// 	err = db.Model(&dbToken).Update("is_used", true).Error
+		// 	if err != nil {
+		// 		utils.WriteCustomErrorResponse(w, errMessage, 500)
+		// 		middleware_logger.Println(err.Error())
+		// 		return
+		// 	}
+		// }
 
 		next.ServeHTTP(w, r)
 	})

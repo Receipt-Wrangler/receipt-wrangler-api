@@ -3,12 +3,12 @@ package handlers
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -19,7 +19,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
 	basePath, err := os.Getwd()
 	errMsg := "Error uploading image."
-	token := utils.GetJWT(r)
+
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -42,11 +42,27 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	userPath := filepath.Join(basePath, "data", token.Username)
+	// Get initial group directory to see if it exists
+	fileData := r.Context().Value("fileData").(models.FileData)
+	filePath, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), "", fileData.Name)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+	groupDir, _ := filepath.Split(filePath)
 
-	// Check if user's path exists
-	if _, err := os.Stat(userPath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(userPath, os.ModePerm)
+	err = db.Model(models.FileData{}).Create(&fileData).Error
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		os.Remove(filePath)
+		return
+	}
+
+	// Check if group's path exists
+	if _, err := os.Stat(groupDir); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(groupDir, os.ModePerm)
 		if err != nil {
 			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -54,10 +70,8 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	fileData := r.Context().Value("fileData").(models.FileData)
-	receiptId := fmt.Sprint(fileData.ReceiptId)
-	path, err := BuildFilePath(token.Username, receiptId, fileData.Name)
-
+	// Rebuild file path with correct file id
+	filePath, err = BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -65,18 +79,10 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Fix perms
-	err = os.WriteFile(path, fileData.ImageData, 777)
+	err = os.WriteFile(filePath, fileData.ImageData, 777)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	err = db.Model(models.FileData{}).Create(&fileData).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		os.Remove(path)
 		return
 	}
 
@@ -85,9 +91,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
-	token := utils.GetJWT(r)
 	errMsg := "Error retrieving image."
-
 	id := chi.URLParam(r, "id")
 	var fileData models.FileData
 	var receipt models.Receipt
@@ -106,7 +110,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := BuildFilePath(token.Username, fmt.Sprint(receipt.ID), fileData.Name)
+	path, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
@@ -134,7 +138,6 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
-	token := utils.GetJWT(r)
 	errMsg := "Error retrieving image."
 
 	id := chi.URLParam(r, "id")
@@ -154,7 +157,7 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := BuildFilePath(token.Username, fmt.Sprint(fileData.ReceiptId), fileData.Name)
+	path, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -171,34 +174,31 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-func BuildFilePath(uname string, rid string, fname string) (string, error) {
+func BuildFilePath(rid string, fId string, fname string) (string, error) {
+	db := db.GetDB()
+	var receipt models.Receipt
+
+	err := db.Model(models.Receipt{}).Where("id = ?", rid).Select("group_id").Find(&receipt).Error
+	if err != nil {
+		return "", err
+	}
+
 	basePath, err := os.Getwd()
 	if err != nil {
 		handler_logger.Print(err.Error())
 		return "", err
 	}
 
-	fileName := rid + "-" + fname
-	path := filepath.Join(basePath, "data", uname, fileName)
+	group, err := repositories.GetGroupById(utils.UintToString(receipt.GroupId))
+	if err != nil {
+		return "", err
+	}
+
+	strGroupId := utils.UintToString(group.ID)
+
+	fileName := rid + "-" + fId + "-" + fname
+	groupPath := strGroupId + "-" + group.Name
+	path := filepath.Join(basePath, "data", groupPath, fileName)
 
 	return path, nil
-}
-
-func ReadImageFile(uname string, rid string, fname string, fileType string) (string, error) {
-	path, err := BuildFilePath(uname, rid, fname)
-	if err != nil {
-		return "", err
-	}
-
-	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		return "", err
-	}
-
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-
-	result := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
-	return result, nil
 }

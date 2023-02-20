@@ -171,7 +171,6 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var receipt models.Receipt
 	errMsg := "Error deleting receipt."
-	token := utils.GetJWT(r)
 
 	id := chi.URLParam(r, "id")
 
@@ -196,7 +195,7 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, f := range receipt.ImageFiles {
-			path, _ := BuildFilePath(token.Username, id, f.Name)
+			path, _ := BuildFilePath(utils.UintToString(f.ReceiptId), utils.UintToString(f.ID), f.Name)
 			os.Remove(path)
 		}
 

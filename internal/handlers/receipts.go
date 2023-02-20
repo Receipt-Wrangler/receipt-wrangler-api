@@ -195,7 +195,7 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, f := range receipt.ImageFiles {
-			path, _ := BuildFilePath(utils.UintToString(f.ReceiptId), f.Name)
+			path, _ := BuildFilePath(utils.UintToString(f.ReceiptId), utils.UintToString(f.ID), f.Name)
 			os.Remove(path)
 		}
 

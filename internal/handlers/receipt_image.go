@@ -42,8 +42,9 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Get initial group directory to see if it exists
 	fileData := r.Context().Value("fileData").(models.FileData)
-	filePath, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), fileData.Name)
+	filePath, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), "", fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -67,6 +68,14 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
 		}
+	}
+
+	// Rebuild file path with correct file id
+	filePath, err = BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
 	}
 
 	// TODO: Fix perms
@@ -101,7 +110,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), fileData.Name)
+	path, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
@@ -148,7 +157,7 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), fileData.Name)
+	path, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -165,7 +174,7 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-func BuildFilePath(rid string, fname string) (string, error) {
+func BuildFilePath(rid string, fId string, fname string) (string, error) {
 	db := db.GetDB()
 	var receipt models.Receipt
 
@@ -187,7 +196,7 @@ func BuildFilePath(rid string, fname string) (string, error) {
 
 	strGroupId := utils.UintToString(group.ID)
 
-	fileName := rid + "-" + fname
+	fileName := rid + "-" + fId + "-" + fname
 	groupPath := strGroupId + "-" + group.Name
 	path := filepath.Join(basePath, "data", groupPath, fileName)
 

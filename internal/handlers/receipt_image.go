@@ -86,7 +86,16 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fileData.ImageData = make([]byte, 0)
+	bytes, err := utils.MarshalResponseData(fileData)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
 	w.WriteHeader(200)
+	w.Write(bytes)
 }
 
 func GetReceiptImage(w http.ResponseWriter, r *http.Request) {

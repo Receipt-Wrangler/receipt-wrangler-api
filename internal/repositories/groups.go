@@ -42,11 +42,18 @@ func CreateGroup(group models.Group, userId uint) (models.Group, error) {
 	return returnGroup, nil
 }
 
-func GetGroupById(id string) (models.Group, error) {
+func GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {
 	db := db.GetDB()
 	var group models.Group
+	var err error
 
-	err := db.Model(models.Group{}).Where("id = ?", id).Find(&group).Error
+	if preloadGroupMembers {
+		err = db.Model(models.Group{}).Where("id = ?", id).Preload("GroupMembers").Find(&group).Error
+
+	} else {
+		err = db.Model(models.Group{}).Where("id = ?", id).Find(&group).Error
+	}
+
 	if err != nil {
 		return models.Group{}, err
 	}

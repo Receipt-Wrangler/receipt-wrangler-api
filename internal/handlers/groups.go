@@ -6,6 +6,8 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
@@ -16,6 +18,28 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handler_logger.Println(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	bytes, err := utils.MarshalResponseData(groups)
+	if err != nil {
+		handler_logger.Println(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+}
+
+func GetGroupById(w http.ResponseWriter, r *http.Request) {
+	errMsg := "Error retrieving group."
+	id := chi.URLParam(r, "groupId")
+
+	groups, err := repositories.GetGroupById(id, true)
+	if err != nil {
+		handler_logger.Println(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 		return
 	}
 

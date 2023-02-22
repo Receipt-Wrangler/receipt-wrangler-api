@@ -143,6 +143,7 @@ func initRoutes() *chi.Mux {
 	groupRouter := chi.NewRouter()
 	groupRouter.Use(tokenValidatorMiddleware.CheckJWT)
 	groupRouter.Get("/", handlers.GetGroupsForUser)
+	groupRouter.With(middleware.ValidateGroupAccess).Get("/{groupId}", handlers.GetGroupById)
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{})).Post("/", handlers.CreateGroup)
 	rootRouter.Mount("/api/group", groupRouter)
 

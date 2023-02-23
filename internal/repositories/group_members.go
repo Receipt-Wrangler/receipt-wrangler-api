@@ -16,3 +16,15 @@ func GetGroupMembersByUserId(userId uint) ([]models.GroupMember, error) {
 
 	return groupMembers, nil
 }
+
+func GetGroupMemberByUserIdAndGroupId(userId string, groupId string) (models.GroupMember, error) {
+	db := db.GetDB()
+	var groupMember models.GroupMember
+
+	err := db.Model(models.GroupMember{}).Where("user_id = ? AND group_id = ?", userId, groupId).Find(&groupMember).Error
+	if err != nil {
+		return models.GroupMember{}, err
+	}
+
+	return groupMember, nil
+}

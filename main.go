@@ -139,12 +139,14 @@ func initRoutes() *chi.Mux {
 	userRouter.With(middleware.ValidateGroupAccess).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
 	rootRouter.Mount("/api/user", userRouter)
 
+	// Add validaiton on update group that at least one user has owner, and that must have at least 1 user
 	// Group Router
 	groupRouter := chi.NewRouter()
 	groupRouter.Use(tokenValidatorMiddleware.CheckJWT)
 	groupRouter.Get("/", handlers.GetGroupsForUser)
 	groupRouter.With(middleware.ValidateGroupAccess).Get("/{groupId}", handlers.GetGroupById)
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{})).Post("/", handlers.CreateGroup)
+	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{}), middleware.ValidateGroupRole(models.OWNER)).Put("/{groupId}", handlers.UpdateGroup)
 	rootRouter.Mount("/api/group", groupRouter)
 
 	// Feature Config Router

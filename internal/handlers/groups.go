@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -60,6 +61,32 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 	group := r.Context().Value("group").(models.Group)
 
 	group, err := repositories.CreateGroup(group, token.UserId)
+
+	if err != nil {
+		handler_logger.Println(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	bytes, err := utils.MarshalResponseData(group)
+	if err != nil {
+		handler_logger.Println(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+}
+
+func UpdateGroup(w http.ResponseWriter, r *http.Request) {
+	errMsg := "Error updating group."
+	group := r.Context().Value("group").(models.Group)
+	groupId := chi.URLParam(r, "groupId")
+
+	fmt.Println(group)
+
+	err := repositories.UpdateGroup(group, groupId)
 
 	if err != nil {
 		handler_logger.Println(err.Error())

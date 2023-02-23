@@ -3,6 +3,7 @@ package repositories
 import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -40,6 +41,23 @@ func CreateGroup(group models.Group, userId uint) (models.Group, error) {
 	}
 
 	return returnGroup, nil
+}
+
+func UpdateGroup(group models.Group, groupId string) error {
+	db := db.GetDB()
+	u64Id, err := utils.StringToUint64(groupId)
+	if err != nil {
+		return err
+	}
+
+	group.ID = uint(u64Id)
+
+	err = db.Model(&group).Updates(&group).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {

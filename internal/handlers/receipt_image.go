@@ -198,7 +198,7 @@ func BuildFilePath(rid string, fId string, fname string) (string, error) {
 		return "", err
 	}
 
-	group, err := repositories.GetGroupById(utils.UintToString(receipt.GroupId))
+	group, err := repositories.GetGroupById(utils.UintToString(receipt.GroupId), false)
 	if err != nil {
 		return "", err
 	}

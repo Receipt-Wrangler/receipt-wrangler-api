@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -83,8 +82,6 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error updating group."
 	group := r.Context().Value("group").(models.Group)
 	groupId := chi.URLParam(r, "groupId")
-
-	fmt.Println(group)
 
 	err := repositories.UpdateGroup(group, groupId)
 

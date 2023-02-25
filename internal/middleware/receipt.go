@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -34,6 +34,7 @@ func SetReceiptBodyData(next http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), "receipt", receipt)
+			ctx = context.WithValue(ctx, "groupId", utils.UintToString(receipt.GroupId))
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
@@ -42,65 +43,19 @@ func SetReceiptBodyData(next http.Handler) http.Handler {
 	})
 }
 
-func ValidateReceiptAccess(next http.Handler) http.Handler {
+func SetReceiptGroupId(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		errMsg := "Unauthorized access to receipt image."
+		errMsg := "Unauthorized access to receipt."
 
-		if len(id) > 0 {
-			token := utils.GetJWT(r)
-
-			hasAccess, err := services.UserHasAccessToReceipt(token.UserId, id)
-			if err != nil {
-				middleware_logger.Print(err.Error())
-				utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-				return
-			}
-
-			if !hasAccess {
-				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
-				return
-			}
+		groupId, err := repositories.GetReceiptGroupIdByReceiptId(id)
+		if err != nil {
+			middleware_logger.Print(err.Error())
+			utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
 		}
 
-		next.ServeHTTP(w, r)
-		return
-	})
-}
-
-func ValidateGroupAccess(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		groupId := chi.URLParam(r, "groupId")
-		errMsg := "Unauthorized access to receipt image."
-
-		if len(groupId) > 0 {
-			token := utils.GetJWT(r)
-
-			groups, err := services.GetGroupsForUser(token.UserId)
-			if err != nil {
-				middleware_logger.Print(err.Error())
-				utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-				return
-			}
-
-			var hasAccess = false
-			for i := 0; i < len(groups); i++ {
-				id := utils.UintToString(groups[i].ID)
-
-				if id == groupId {
-					hasAccess = true
-					break
-				}
-			}
-
-			if !hasAccess {
-				middleware_logger.Print(token, "no access to group: ", groupId)
-				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
-				return
-			}
-		}
-
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), "groupId", utils.UintToString(groupId))
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

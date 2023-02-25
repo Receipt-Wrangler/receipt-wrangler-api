@@ -13,8 +13,18 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 
 	mw = func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			groupId := chi.URLParam(r, "groupId")
-			errMsg := "Unauthorized access to receipt image."
+			groupMap := make(map[models.GroupRole]int)
+			groupMap[models.VIEWER] = 0
+			groupMap[models.EDITOR] = 1
+			groupMap[models.OWNER] = 2
+
+			var groupId string
+			if len(chi.URLParam(r, "groupId")) > 0 {
+				groupId = chi.URLParam(r, "groupId")
+			} else {
+				groupId = r.Context().Value("groupId").(string)
+			}
+			errMsg := "Unauthorized access to entity."
 
 			if len(groupId) > 0 {
 				token := utils.GetJWT(r)
@@ -26,8 +36,10 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 					return
 				}
 
-				if groupMember.GroupRole != role {
-					middleware_logger.Print(err.Error())
+				var hasAccess = groupMap[groupMember.GroupRole] >= groupMap[role]
+
+				if !hasAccess {
+					middleware_logger.Print("Unauthorized request", r)
 					utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
 					return
 				}

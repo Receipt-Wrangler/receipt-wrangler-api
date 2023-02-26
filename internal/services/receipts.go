@@ -7,28 +7,6 @@ import (
 	"strconv"
 )
 
-func UserHasAccessToReceipt(userId uint, receiptId string) (bool, error) {
-	receipt, err := repositories.GetReceiptById(receiptId)
-
-	if err != nil {
-		return false, err
-	}
-
-	groupMembers, err := repositories.GetGroupMembersByUserId(userId)
-	if err != nil {
-		return false, err
-	}
-
-	for i := 0; i < len(groupMembers); i++ {
-		var groupMember = groupMembers[i]
-		if receipt.GroupId == uint(groupMembers[i].GroupID) && (groupMember.GroupRole == models.OWNER || groupMember.GroupRole == models.EDITOR || groupMember.GroupRole == models.VIEWER) {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
 func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
 	db := db.GetDB()
 	var fileData models.FileData

@@ -100,20 +100,20 @@ func initRoutes() *chi.Mux {
 	// Receipt Router
 	receiptRouter := chi.NewRouter()
 	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
-	receiptRouter.With(middleware.ValidateGroupAccess).Get("/group/{groupId}", handlers.GetReceiptsForGroup)
-	receiptRouter.With(middleware.ValidateReceiptAccess).Get("/{id}", handlers.GetReceipt)
-	receiptRouter.With(middleware.ValidateReceiptAccess, middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
-	receiptRouter.With(middleware.ValidateReceiptAccess).Put("/{id}/toggleIsResolved", handlers.ToggleIsResolved)
-	receiptRouter.With(middleware.ValidateReceipt).Post("/", handlers.CreateReceipt)
-	receiptRouter.With(middleware.ValidateReceiptAccess).Delete("/{id}", handlers.DeleteReceipt)
+	receiptRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/group/{groupId}", handlers.GetReceiptsForGroup)
+	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceipt)
+	receiptRouter.With(middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
+	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Put("/{id}/toggleIsResolved", handlers.ToggleIsResolved)
+	receiptRouter.With(middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Post("/", handlers.CreateReceipt)
+	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Delete("/{id}", handlers.DeleteReceipt)
 	rootRouter.Mount("/api/receipt", receiptRouter)
 
 	// Receipt Image Router
 	receiptImageRouter := chi.NewRouter()
-	receiptImageRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptImageData)
-	receiptImageRouter.With(middleware.ValidateReceiptImageAccess).Get("/{id}", handlers.GetReceiptImage)
-	receiptImageRouter.With(middleware.ValidateReceiptImageAccess).Delete("/{id}", handlers.RemoveReceiptImage)
-	receiptImageRouter.Post("/", handlers.UploadReceiptImage)
+	receiptImageRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceiptImage)
+	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.EDITOR)).Delete("/{id}", handlers.RemoveReceiptImage)
+	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.EDITOR), middleware.SetReceiptImageData).Post("/", handlers.UploadReceiptImage)
 	rootRouter.Mount("/api/receiptImage", receiptImageRouter)
 
 	// Tag Router
@@ -136,7 +136,7 @@ func initRoutes() *chi.Mux {
 	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN), middleware.ValidateUserData(true)).Post("/", handlers.CreateUser)
 	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.UpdateUser)
 	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.ResetPassword)
-	userRouter.With(middleware.ValidateGroupAccess).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
+	userRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
 	rootRouter.Mount("/api/user", userRouter)
 
 	// Add validaiton on update group that at least one user has owner, and that must have at least 1 user
@@ -144,7 +144,7 @@ func initRoutes() *chi.Mux {
 	groupRouter := chi.NewRouter()
 	groupRouter.Use(tokenValidatorMiddleware.CheckJWT)
 	groupRouter.Get("/", handlers.GetGroupsForUser)
-	groupRouter.With(middleware.ValidateGroupAccess).Get("/{groupId}", handlers.GetGroupById)
+	groupRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/{groupId}", handlers.GetGroupById)
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{})).Post("/", handlers.CreateGroup)
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{}), middleware.ValidateGroupRole(models.OWNER)).Put("/{groupId}", handlers.UpdateGroup)
 	rootRouter.Mount("/api/group", groupRouter)

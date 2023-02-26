@@ -110,10 +110,10 @@ func initRoutes() *chi.Mux {
 
 	// Receipt Image Router
 	receiptImageRouter := chi.NewRouter()
-	receiptImageRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptImageData)
-	receiptImageRouter.With(middleware.ValidateReceiptImageAccess).Get("/{id}", handlers.GetReceiptImage)
-	receiptImageRouter.With(middleware.ValidateReceiptImageAccess).Delete("/{id}", handlers.RemoveReceiptImage)
-	receiptImageRouter.Post("/", handlers.UploadReceiptImage)
+	receiptImageRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceiptImage)
+	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.EDITOR)).Delete("/{id}", handlers.RemoveReceiptImage)
+	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.EDITOR), middleware.SetReceiptImageData).Post("/", handlers.UploadReceiptImage)
 	rootRouter.Mount("/api/receiptImage", receiptImageRouter)
 
 	// Tag Router

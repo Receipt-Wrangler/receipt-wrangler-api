@@ -52,6 +52,7 @@ func SetReceiptGroupId(next http.Handler) http.Handler {
 		if err != nil {
 			middleware_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
+			return
 		}
 
 		ctx := context.WithValue(r.Context(), "groupId", utils.UintToString(groupId))

@@ -147,6 +147,7 @@ func initRoutes() *chi.Mux {
 	groupRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/{groupId}", handlers.GetGroupById)
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{})).Post("/", handlers.CreateGroup)
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{}), middleware.ValidateGroupRole(models.OWNER)).Put("/{groupId}", handlers.UpdateGroup)
+	groupRouter.With(middleware.ValidateGroupRole(models.OWNER)).Delete("/{groupId}", handlers.DeleteGroup)
 	rootRouter.Mount("/api/group", groupRouter)
 
 	// Feature Config Router

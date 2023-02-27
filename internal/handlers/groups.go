@@ -28,6 +28,7 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	utils.SetJSONResponseHeaders(w)
 	w.WriteHeader(200)
 	w.Write(bytes)
 }
@@ -50,6 +51,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	utils.SetJSONResponseHeaders(w)
 	w.WriteHeader(200)
 	w.Write(bytes)
 }
@@ -74,6 +76,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	utils.SetJSONResponseHeaders(w)
 	w.WriteHeader(200)
 	w.Write(bytes)
 }
@@ -98,6 +101,21 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	utils.SetJSONResponseHeaders(w)
 	w.WriteHeader(200)
 	w.Write(bytes)
+}
+
+func DeleteGroup(w http.ResponseWriter, r *http.Request) {
+	errMsg := "Error deleting group."
+	id := chi.URLParam(r, "groupId")
+
+	err := repositories.DeleteGroup(id)
+	if err != nil {
+		handler_logger.Println(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

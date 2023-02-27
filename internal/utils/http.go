@@ -58,3 +58,7 @@ func MarshalResponseData(data interface{}) ([]byte, error) {
 
 	return bytes, nil
 }
+
+func SetJSONResponseHeaders(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+}

@@ -60,6 +60,22 @@ func UpdateGroup(group models.Group, groupId string) error {
 	return nil
 }
 
+func DeleteGroup(groupId string) error {
+	db := db.GetDB()
+
+	group, err := GetGroupById(groupId, false)
+	if err != nil {
+		return err
+	}
+
+	err = db.Model(models.Group{}).Delete(&group).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {
 	db := db.GetDB()
 	var group models.Group

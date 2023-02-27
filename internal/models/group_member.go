@@ -7,5 +7,5 @@ type GroupMember struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 	UserID    uint      `gorm:"primaryKey;autoIncrement:false" json:"userId"`
 	GroupID   uint      `gorm:"primaryKey;autoIncrement:false" json:"groupId"`
-	GroupRole GroupRole `json:"groupRole"`
+	GroupRole GroupRole `gorm:"not null" json:"groupRole"`
 }

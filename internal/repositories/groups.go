@@ -52,7 +52,7 @@ func UpdateGroup(group models.Group, groupId string) error {
 
 	group.ID = uint(u64Id)
 
-	err = db.Model(&group).Updates(&group).Error
+	err = db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&group).Updates(&group).Error
 	if err != nil {
 		return err
 	}

@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
 
@@ -167,41 +167,10 @@ func ToggleIsResolved(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
-	var err error
-	var receipt models.Receipt
 	errMsg := "Error deleting receipt."
-
 	id := chi.URLParam(r, "id")
 
-	err = db.Model(models.Receipt{}).Where("id = ?", id).Preload("ImageFiles").Find(&receipt).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-		err = tx.Select(clause.Associations).Delete(&receipt).Error
-		if err != nil {
-			handler_logger.Print(err.Error())
-			return err
-		}
-
-		err = tx.Delete(&receipt).Error
-		if err != nil {
-			handler_logger.Print(err.Error())
-			return err
-		}
-
-		for _, f := range receipt.ImageFiles {
-			path, _ := BuildFilePath(utils.UintToString(f.ReceiptId), utils.UintToString(f.ID), f.Name)
-			os.Remove(path)
-		}
-
-		return nil
-	})
-
+	err := services.DeleteReceipt(id)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

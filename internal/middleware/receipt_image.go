@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
 
@@ -28,9 +29,7 @@ func SetReceiptImageData(next http.Handler) http.Handler {
 			return
 		}
 
-		id := chi.URLParam(r, "id")
-
-		receipt, err := services.GetReceiptByReceiptImageId(id)
+		receipt, err := repositories.GetReceiptById(utils.UintToString(fileData.ReceiptId))
 		if err != nil {
 			utils.WriteErrorResponse(w, marshalErr, 500)
 			return

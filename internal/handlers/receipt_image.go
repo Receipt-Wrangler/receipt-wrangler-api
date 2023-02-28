@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -44,7 +43,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	// Get initial group directory to see if it exists
 	fileData := r.Context().Value("fileData").(models.FileData)
-	filePath, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), "", fileData.Name)
+	filePath, err := utils.BuildFilePath(utils.UintToString(fileData.ReceiptId), "", fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -71,7 +70,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Rebuild file path with correct file id
-	filePath, err = BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
+	filePath, err = utils.BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -119,7 +118,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
+	path, err := utils.BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 404)
@@ -166,7 +165,7 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
+	path, err := utils.BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -181,33 +180,4 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-}
-
-func BuildFilePath(rid string, fId string, fname string) (string, error) {
-	db := db.GetDB()
-	var receipt models.Receipt
-
-	err := db.Model(models.Receipt{}).Where("id = ?", rid).Select("group_id").Find(&receipt).Error
-	if err != nil {
-		return "", err
-	}
-
-	basePath, err := os.Getwd()
-	if err != nil {
-		handler_logger.Print(err.Error())
-		return "", err
-	}
-
-	group, err := repositories.GetGroupById(utils.UintToString(receipt.GroupId), false)
-	if err != nil {
-		return "", err
-	}
-
-	strGroupId := utils.UintToString(group.ID)
-
-	fileName := rid + "-" + fId + "-" + fname
-	groupPath := strGroupId + "-" + group.Name
-	path := filepath.Join(basePath, "data", groupPath, fileName)
-
-	return path, nil
 }

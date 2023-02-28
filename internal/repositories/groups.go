@@ -60,35 +60,6 @@ func UpdateGroup(group models.Group, groupId string) error {
 	return nil
 }
 
-func DeleteGroup(groupId string) error {
-	db := db.GetDB()
-
-	group, err := GetGroupById(groupId, false)
-	if err != nil {
-		return err
-	}
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-
-		txErr := db.Where("group_id = ?", groupId).Delete(&models.Group{}).Error
-		if txErr != nil {
-			return txErr
-		}
-
-		txErr = db.Model(models.Group{}).Delete(&group).Error
-		if txErr != nil {
-			return txErr
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {
 	db := db.GetDB()
 	var group models.Group

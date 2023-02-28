@@ -110,7 +110,7 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error deleting group."
 	id := chi.URLParam(r, "groupId")
 
-	err := repositories.DeleteGroup(id)
+	err := services.DeleteGroup(id)
 	if err != nil {
 		handler_logger.Println(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

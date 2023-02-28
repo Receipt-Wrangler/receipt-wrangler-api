@@ -68,7 +68,20 @@ func DeleteGroup(groupId string) error {
 		return err
 	}
 
-	err = db.Model(models.Group{}).Delete(&group).Error
+	err = db.Transaction(func(tx *gorm.DB) error {
+
+		txErr := db.Where("group_id = ?", groupId).Delete(&models.Group{}).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = db.Model(models.Group{}).Delete(&group).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		return nil
+	})
 	if err != nil {
 		return err
 	}

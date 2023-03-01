@@ -221,6 +221,8 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return 500, err
 			}
+
+			w.WriteHeader(http.StatusOK)
 			return 0, nil
 		},
 	}

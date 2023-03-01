@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func GetGroupsForUser(userId uint) ([]models.Group, error) {
+func GetGroupsForUser(userId string) ([]models.Group, error) {
 	db := db.GetDB()
 	var groups []models.Group
 

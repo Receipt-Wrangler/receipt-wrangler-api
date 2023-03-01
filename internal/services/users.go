@@ -13,6 +13,7 @@ func DeleteUser(userId string) error {
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		var receipts []models.Receipt
+		var groupIdsToNotDelete []uint
 
 		// Remove receipt items
 		txErr := tx.Where("charged_to_user_id = ?", userId).Delete(&models.Item{}).Error
@@ -20,10 +21,27 @@ func DeleteUser(userId string) error {
 			return txErr
 		}
 
-		// Remove group members
-		txErr = tx.Where("user_id = ?", userId).Delete(&models.GroupMember{}).Error
-		if txErr != nil {
-			return txErr
+		// Remove groups where the user is the only user
+		groups, txErr := GetGroupsForUser(userId)
+		for i := 0; i < len(groups); i++ {
+			group := groups[i]
+			if len(group.GroupMembers) == 1 {
+				txErr := DeleteGroup(utils.UintToString(group.ID))
+				if txErr != nil {
+					return txErr
+				} else {
+					groupIdsToNotDelete = append(groupIdsToNotDelete, group.ID)
+				}
+			}
+		}
+
+		// Remove other group members
+		for i := 0; i < len(groupIdsToNotDelete); i++ {
+			txErr = tx.Where("user_id = ? AND group_id = ?", userId, groupIdsToNotDelete[i]).Delete(&models.GroupMember{}).Error
+			if txErr != nil {
+				return txErr
+			}
+
 		}
 
 		// Remove receipts that the user paid

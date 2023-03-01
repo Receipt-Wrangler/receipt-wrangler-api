@@ -49,3 +49,25 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 	}
 	return
 }
+
+func CanDeleteGroup(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := utils.GetJWT(r)
+		errMsg := "User must be a part of at least one group."
+
+		groupMembers, err := repositories.GetGroupMembersByUserId(token.UserId)
+		if err != nil {
+			middleware_logger.Print(err.Error())
+			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+			return
+		}
+
+		if len(groupMembers) == 1 {
+			middleware_logger.Print(errMsg, r)
+			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}

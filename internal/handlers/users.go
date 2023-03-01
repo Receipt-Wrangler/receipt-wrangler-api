@@ -210,16 +210,20 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	errMsg := "Error deleting user."
-
-	err := services.DeleteUser(id)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+	handler := structs.Handler{
+		ErrorMessage: "Error Deleting User.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			err := services.DeleteUser(id)
+			if err != nil {
+				return 500, err
+			}
+			return 0, nil
+		},
 	}
 
-	w.WriteHeader(200)
-
+	HandleRequest(handler)
 }

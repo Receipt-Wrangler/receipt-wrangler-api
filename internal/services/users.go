@@ -15,14 +15,30 @@ func DeleteUser(userId string) error {
 		var receipts []models.Receipt
 		var groupIdsToNotDelete []uint
 
+		// Remove receipts that the user paid
+		txErr := tx.Model(models.Receipt{}).Where("paid_by_user_id = ?", userId).Select("id").Find(&receipts).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		for i := 0; i < len(receipts); i++ {
+			txErr = DeleteReceipt(utils.UintToString(receipts[i].ID))
+			if txErr != nil {
+				return txErr
+			}
+		}
+
 		// Remove receipt items
-		txErr := tx.Where("charged_to_user_id = ?", userId).Delete(&models.Item{}).Error
+		txErr = tx.Where("charged_to_user_id = ?", userId).Delete(&models.Item{}).Error
 		if txErr != nil {
 			return txErr
 		}
 
 		// Remove groups where the user is the only user
 		groups, txErr := GetGroupsForUser(userId)
+		if txErr != nil {
+			return txErr
+		}
 		for i := 0; i < len(groups); i++ {
 			group := groups[i]
 			if len(group.GroupMembers) == 1 {
@@ -42,19 +58,6 @@ func DeleteUser(userId string) error {
 				return txErr
 			}
 
-		}
-
-		// Remove receipts that the user paid
-		txErr = tx.Model(models.Receipt{}).Where("paid_by = ?", userId).Select("id").Find(&receipts).Error
-		if txErr != nil {
-			return txErr
-		}
-
-		for i := 0; i < len(receipts); i++ {
-			txErr = DeleteReceipt(utils.UintToString(receipts[i].ID))
-			if txErr != nil {
-				return txErr
-			}
 		}
 
 		// Remove user

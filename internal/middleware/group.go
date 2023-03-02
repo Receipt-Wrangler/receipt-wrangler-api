@@ -55,7 +55,7 @@ func CanDeleteGroup(next http.Handler) http.Handler {
 		token := utils.GetJWT(r)
 		errMsg := "User must be a part of at least one group."
 
-		groupMembers, err := repositories.GetGroupMembersByUserId(token.UserId)
+		groupMembers, err := repositories.GetGroupMembersByUserId(utils.UintToString(token.UserId))
 		if err != nil {
 			middleware_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

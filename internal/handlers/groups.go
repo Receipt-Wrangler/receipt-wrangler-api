@@ -14,7 +14,7 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error retrieving groups."
 	token := utils.GetJWT(r)
 
-	groups, err := services.GetGroupsForUser(token.UserId)
+	groups, err := services.GetGroupsForUser(utils.UintToString(token.UserId))
 	if err != nil {
 		handler_logger.Println(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

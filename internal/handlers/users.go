@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
@@ -206,4 +208,30 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
+}
+
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error Deleting User.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			token := utils.GetJWT(r)
+			if utils.UintToString(token.UserId) == id {
+				return 500, errors.New("user cannot delete itself")
+			}
+
+			err := services.DeleteUser(id)
+			if err != nil {
+				return 500, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
 }

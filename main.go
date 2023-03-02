@@ -136,6 +136,7 @@ func initRoutes() *chi.Mux {
 	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN), middleware.ValidateUserData(true)).Post("/", handlers.CreateUser)
 	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.UpdateUser)
 	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.ResetPassword)
+	userRouter.With(middleware.ValidateRole(models.ADMIN)).Delete("/{id}", handlers.DeleteUser)
 	userRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
 	rootRouter.Mount("/api/user", userRouter)
 

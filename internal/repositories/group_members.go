@@ -5,7 +5,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 )
 
-func GetGroupMembersByUserId(userId uint) ([]models.GroupMember, error) {
+func GetGroupMembersByUserId(userId string) ([]models.GroupMember, error) {
 	db := db.GetDB()
 	var groupMembers []models.GroupMember
 

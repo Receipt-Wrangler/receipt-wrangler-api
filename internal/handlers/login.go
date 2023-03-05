@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
@@ -13,55 +12,49 @@ import (
 )
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
-	userData := r.Context().Value("user").(models.User)
-	validatorErrors := validateLoginData(userData)
-	errMsg := "Either the user doesn't exist, or the password is incorrect"
-	var responseData = make(map[string]string)
-	var dbUser models.User
+	handler := structs.Handler{
+		ErrorMessage: "Invalid credentials",
+		Writer:       w,
+		Request:      r,
+		ResponseType: "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := db.GetDB()
+			userData := r.Context().Value("user").(models.User)
+			validatorErrors := validateLoginData(userData)
+			var dbUser models.User
 
-	if len(validatorErrors.Errors) > 0 {
-		handler_logger.Print(validatorErrors)
-		utils.WriteValidatorErrorResponse(w, validatorErrors, 400)
-		return
+			if len(validatorErrors.Errors) > 0 {
+				return http.StatusBadRequest, nil
+			}
+
+			err := db.Model(models.User{}).Where("username = ?", userData.Username).First(&dbUser).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(userData.Password))
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			jwt, refreshToken, err := utils.GenerateJWT(dbUser.ID)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: false, Path: "/"}
+			refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/"}
+
+			http.SetCookie(w, &accessTokenCookie)
+			http.SetCookie(w, &refreshTokenCookie)
+
+			w.WriteHeader(200)
+
+			return 0, nil
+		},
 	}
 
-	err := db.Model(models.User{}).Where("username = ?", userData.Username).First(&dbUser).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(userData.Password))
-	if err != nil {
-		handler_logger.Print(err.Error(), r)
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	jwt, refreshToken, err := utils.GenerateJWT(dbUser.ID)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteErrorResponse(w, err, 500)
-		return
-	}
-
-	responseBytes, err := json.Marshal(responseData)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteErrorResponse(w, err, 500)
-		return
-	}
-
-	accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: false, Path: "/"}
-	refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/"}
-
-	http.SetCookie(w, &accessTokenCookie)
-	http.SetCookie(w, &refreshTokenCookie)
-
-	w.WriteHeader(200)
-	w.Write(responseBytes)
+	HandleRequest(handler)
 }
 
 func validateLoginData(userData models.User) structs.ValidatorError {

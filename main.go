@@ -87,14 +87,13 @@ func initRoutes() *chi.Mux {
 
 	// Login Router
 	loginRouter := chi.NewRouter()
-	loginRouter.Use(middleware.SetBodyData)
-	loginRouter.Post("/", handlers.Login)
+	loginRouter.With(middleware.SetBodyData, middleware.ValidateLoginData).Post("/", handlers.Login)
 	rootRouter.Mount("/api/login", loginRouter)
 
 	// Logout router
 	logoutRouter := chi.NewRouter()
 	logoutRouter.Use(middleware.RevokeRefreshToken)
-	logoutRouter.Post("/", handlers.Logout)
+	logoutRouter.With(middleware.RevokeRefreshToken).Post("/", handlers.Logout)
 	rootRouter.Mount("/api/logout", logoutRouter)
 
 	// Receipt Router

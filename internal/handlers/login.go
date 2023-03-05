@@ -3,12 +3,10 @@ package handlers
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -18,21 +16,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
 			userData := r.Context().Value("user").(models.User)
-			validatorErrors := validateLoginData(userData)
 			var dbUser models.User
 
-			if len(validatorErrors.Errors) > 0 {
-				return http.StatusBadRequest, nil
-			}
-
-			err := db.Model(models.User{}).Where("username = ?", userData.Username).First(&dbUser).Error
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(userData.Password))
+			dbUser, err := services.LoginUser(userData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -55,20 +42,4 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	HandleRequest(handler)
-}
-
-func validateLoginData(userData models.User) structs.ValidatorError {
-	err := structs.ValidatorError{
-		Errors: make(map[string]string),
-	}
-
-	if len(userData.Username) == 0 {
-		err.Errors["username"] = "Username is required"
-	}
-
-	if len(userData.Password) == 0 {
-		err.Errors["password"] = "Password is required"
-	}
-
-	return err
 }

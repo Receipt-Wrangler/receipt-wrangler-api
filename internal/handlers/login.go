@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
@@ -13,7 +14,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Invalid credentials",
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userData := r.Context().Value("user").(models.User)
 			var dbUser models.User
@@ -23,7 +24,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			jwt, refreshToken, err := utils.GenerateJWT(dbUser.ID)
+			jwt, refreshToken, accessTokenClaims, err := utils.GenerateJWT(dbUser.ID)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			services.PrepareAccessTokenClaims(accessTokenClaims)
+			bytes, err := utils.MarshalResponseData(accessTokenClaims)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -34,6 +41,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			http.SetCookie(w, &refreshTokenCookie)
 
 			w.WriteHeader(200)
+			w.Write(bytes)
 
 			return 0, nil
 		},

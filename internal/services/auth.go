@@ -5,6 +5,7 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/utils"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -31,4 +32,9 @@ func BuildTokenCookies(jwt string, refreshToken string) (http.Cookie, http.Cooki
 	refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, Secure: true, HttpOnly: true, Path: "/"}
 
 	return accessTokenCookie, refreshTokenCookie
+}
+
+func PrepareAccessTokenClaims(accessTokenClaims utils.Claims) {
+	accessTokenClaims.Issuer = ""
+	accessTokenClaims.Audience = make([]string, 0)
 }

@@ -11,7 +11,15 @@ import (
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	oldRefreshToken := r.Context().Value("refreshToken").(*validator.ValidatedClaims).CustomClaims.(*utils.Claims)
 
-	jwt, refreshToken, err := utils.GenerateJWT(oldRefreshToken.UserId)
+	jwt, refreshToken, accessTokenClaims, err := utils.GenerateJWT(oldRefreshToken.UserId)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteErrorResponse(w, err, 500)
+		return
+	}
+
+	services.PrepareAccessTokenClaims(accessTokenClaims)
+	bytes, err := utils.MarshalResponseData(accessTokenClaims)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteErrorResponse(w, err, 500)
@@ -24,4 +32,5 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &refreshTokenCookie)
 
 	w.WriteHeader(200)
+	w.Write(bytes)
 }

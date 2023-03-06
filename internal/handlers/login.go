@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
@@ -29,8 +28,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: false, Path: "/"}
-			refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/"}
+			accessTokenCookie, refreshTokenCookie := services.BuildTokenCookies(jwt, refreshToken)
 
 			http.SetCookie(w, &accessTokenCookie)
 			http.SetCookie(w, &refreshTokenCookie)

@@ -137,6 +137,7 @@ func initRoutes() *chi.Mux {
 	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.ResetPassword)
 	userRouter.With(middleware.ValidateRole(models.ADMIN)).Delete("/{id}", handlers.DeleteUser)
 	userRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
+	userRouter.Get("/getUserClaims", handlers.GetClaimsForLoggedInUser)
 	rootRouter.Mount("/api/user", userRouter)
 
 	// Add validaiton on update group that at least one user has owner, and that must have at least 1 user

@@ -35,17 +35,17 @@ func customClaims() validator.CustomClaims {
 	return &Claims{}
 }
 
-func GenerateJWT(userId uint) (string, string, error) {
+func GenerateJWT(userId uint) (string, string, Claims, error) {
 	db := db.GetDB()
 	config := config.GetConfig()
 	var user models.User
 
 	err := db.Model(models.User{}).Where("id = ?", userId).First(&user).Error
 	if err != nil {
-		return "", "", err
+		return "", "", Claims{}, err
 	}
 
-	claims := &Claims{
+	accessTokenClaims := Claims{
 		UserId:      user.ID,
 		Displayname: user.DisplayName,
 		Username:    user.Username,
@@ -57,11 +57,11 @@ func GenerateJWT(userId uint) (string, string, error) {
 		},
 	}
 
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, accessTokenClaims)
 	signedString, err := accessToken.SignedString([]byte(config.SecretKey))
 
 	if err != nil {
-		return "", "", err
+		return "", "", Claims{}, err
 	}
 
 	refreshTokenClaims := Claims{
@@ -77,7 +77,7 @@ func GenerateJWT(userId uint) (string, string, error) {
 	refreshTokenString, err := refreshToken.SignedString([]byte(config.SecretKey))
 
 	if err != nil {
-		return "", "", err
+		return "", "", Claims{}, err
 	}
 
 	token := models.RefreshToken{
@@ -89,10 +89,10 @@ func GenerateJWT(userId uint) (string, string, error) {
 	err = db.Model(&models.RefreshToken{}).Create(&token).Error
 
 	if err != nil {
-		return "", "", err
+		return "", "", Claims{}, err
 	}
 
-	return signedString, refreshTokenString, nil
+	return signedString, refreshTokenString, accessTokenClaims, nil
 }
 
 func GetJWT(r *http.Request) *Claims {

@@ -14,7 +14,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Invalid credentials",
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userData := r.Context().Value("user").(models.User)
 			var dbUser models.User
@@ -24,18 +24,24 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			jwt, refreshToken, err := utils.GenerateJWT(dbUser.ID)
+			jwt, refreshToken, accessTokenClaims, err := utils.GenerateJWT(dbUser.ID)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: false, Path: "/"}
-			refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/"}
+			services.PrepareAccessTokenClaims(accessTokenClaims)
+			bytes, err := utils.MarshalResponseData(accessTokenClaims)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			accessTokenCookie, refreshTokenCookie := services.BuildTokenCookies(jwt, refreshToken)
 
 			http.SetCookie(w, &accessTokenCookie)
 			http.SetCookie(w, &refreshTokenCookie)
 
 			w.WriteHeader(200)
+			w.Write(bytes)
 
 			return 0, nil
 		},

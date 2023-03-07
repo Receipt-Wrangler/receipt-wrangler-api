@@ -98,7 +98,7 @@ func initRoutes() *chi.Mux {
 
 	// Receipt Router
 	receiptRouter := chi.NewRouter()
-	receiptRouter.Use(tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
+	receiptRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
 	receiptRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/group/{groupId}", handlers.GetReceiptsForGroup)
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceipt)
 	receiptRouter.With(middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
@@ -109,7 +109,7 @@ func initRoutes() *chi.Mux {
 
 	// Receipt Image Router
 	receiptImageRouter := chi.NewRouter()
-	receiptImageRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	receiptImageRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
 	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceiptImage)
 	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.EDITOR)).Delete("/{id}", handlers.RemoveReceiptImage)
 	receiptImageRouter.With(middleware.SetReceiptImageData, middleware.ValidateGroupRole(models.EDITOR)).Post("/", handlers.UploadReceiptImage)
@@ -117,19 +117,19 @@ func initRoutes() *chi.Mux {
 
 	// Tag Router
 	tagRouter := chi.NewRouter()
-	tagRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	tagRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
 	tagRouter.Get("/", handlers.GetAllTags)
 	rootRouter.Mount("/api/tag", tagRouter)
 
 	// Category Router
 	categoryRouter := chi.NewRouter()
-	categoryRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	categoryRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
 	categoryRouter.Get("/", handlers.GetAllCategories)
 	rootRouter.Mount("/api/category", categoryRouter)
 
 	// User Router
 	userRouter := chi.NewRouter()
-	userRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	userRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
 	userRouter.Get("/", handlers.GetAllUsers)
 	userRouter.Get("/{username}", handlers.GetUsernameCount)
 	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN), middleware.ValidateUserData(true)).Post("/", handlers.CreateUser)
@@ -137,12 +137,13 @@ func initRoutes() *chi.Mux {
 	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.ResetPassword)
 	userRouter.With(middleware.ValidateRole(models.ADMIN)).Delete("/{id}", handlers.DeleteUser)
 	userRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
+	userRouter.Get("/getUserClaims", handlers.GetClaimsForLoggedInUser)
 	rootRouter.Mount("/api/user", userRouter)
 
 	// Add validaiton on update group that at least one user has owner, and that must have at least 1 user
 	// Group Router
 	groupRouter := chi.NewRouter()
-	groupRouter.Use(tokenValidatorMiddleware.CheckJWT)
+	groupRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
 	groupRouter.Get("/", handlers.GetGroupsForUser)
 	groupRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/{groupId}", handlers.GetGroupById)
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{})).Post("/", handlers.CreateGroup)

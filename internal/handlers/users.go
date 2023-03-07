@@ -189,26 +189,32 @@ func GetUsernameCount(w http.ResponseWriter, r *http.Request) {
 }
 
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
-	errMsg := "Error resetting password."
-	id := chi.URLParam(r, "id")
-	resetPasswordData := r.Context().Value("reset_password").(structs.ResetPassword)
+	handler := structs.Handler{
+		ErrorMessage: "Error resetting password.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := db.GetDB()
+			id := chi.URLParam(r, "id")
+			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPassword)
 
-	hashedPassword, err := utils.HashPassword(resetPasswordData.Password)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+			hashedPassword, err := utils.HashPassword(resetPasswordData.Password)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = db.Model(models.User{}).Where("id = ?", id).UpdateColumn("password", hashedPassword).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			return 0, nil
+		},
 	}
 
-	err = db.Model(models.User{}).Where("id = ?", id).UpdateColumn("password", hashedPassword).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(200)
+	HandleRequest(handler)
 }
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {

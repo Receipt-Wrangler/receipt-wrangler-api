@@ -92,7 +92,6 @@ func initRoutes() *chi.Mux {
 
 	// Logout router
 	logoutRouter := chi.NewRouter()
-	logoutRouter.Use(middleware.RevokeRefreshToken)
 	logoutRouter.With(middleware.RevokeRefreshToken).Post("/", handlers.Logout)
 	rootRouter.Mount("/api/logout", logoutRouter)
 
@@ -133,8 +132,8 @@ func initRoutes() *chi.Mux {
 	userRouter.Get("/", handlers.GetAllUsers)
 	userRouter.Get("/{username}", handlers.GetUsernameCount)
 	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN), middleware.ValidateUserData(true)).Post("/", handlers.CreateUser)
-	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.UpdateUser)
-	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}", handlers.ResetPassword)
+	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Put("/{id}", handlers.UpdateUser)
+	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}/resetPassword", handlers.ResetPassword)
 	userRouter.With(middleware.ValidateRole(models.ADMIN)).Delete("/{id}", handlers.DeleteUser)
 	userRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
 	userRouter.Get("/getUserClaims", handlers.GetClaimsForLoggedInUser)

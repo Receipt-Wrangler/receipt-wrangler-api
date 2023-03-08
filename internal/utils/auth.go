@@ -53,7 +53,7 @@ func GenerateJWT(userId uint) (string, string, Claims, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
-			ExpiresAt: SetAccessTokenExpiryDate(),
+			ExpiresAt: GetAccessTokenExpiryDate(),
 		},
 	}
 
@@ -69,7 +69,7 @@ func GenerateJWT(userId uint) (string, string, Claims, error) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
-			ExpiresAt: SetRefreshTokenExpiryDate(),
+			ExpiresAt: GetRefreshTokenExpiryDate(),
 		},
 	}
 
@@ -99,11 +99,11 @@ func GetJWT(r *http.Request) *Claims {
 	return r.Context().Value(jwtmiddleware.ContextKey{}).(*validator.ValidatedClaims).CustomClaims.(*Claims)
 }
 
-func SetRefreshTokenExpiryDate() *jwt.NumericDate {
+func GetRefreshTokenExpiryDate() *jwt.NumericDate {
 	return jwt.NewNumericDate(time.Now().Add(24 * time.Hour))
 }
 
-func SetAccessTokenExpiryDate() *jwt.NumericDate {
+func GetAccessTokenExpiryDate() *jwt.NumericDate {
 	return jwt.NewNumericDate(time.Now().Add(20 * time.Minute))
 }
 

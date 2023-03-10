@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 
 func run(m *testing.M) (code int, err error) {
 	os.Args = append(os.Args, "-env=test")
-	config.SetConfig()
+	config.SetConfigs()
 	containerId := db.InitTestDb()
 	db.Connect()
 	db.MakeMigrations()
@@ -69,7 +69,7 @@ func TestGenerateJWTGeneratesJWTCorrectly(t *testing.T) {
 		printTestError(t, err.Error(), nil)
 	}
 
-	jwt, _, err := GenerateJWT(user.ID)
+	jwt, _, _, err := GenerateJWT(user.ID)
 	if err != nil {
 		printTestError(t, jwt, "jwt token")
 	}
@@ -133,7 +133,7 @@ func TestGenerateRefreshTokenCorrectly(t *testing.T) {
 		printTestError(t, err.Error(), nil)
 	}
 
-	_, refreshToken, err := GenerateJWT(user.ID)
+	_, refreshToken, _, err := GenerateJWT(user.ID)
 	if err != nil {
 		printTestError(t, refreshToken, "refresh token")
 	}

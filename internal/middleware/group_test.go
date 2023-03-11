@@ -195,3 +195,36 @@ func TestValidateGroupeRoleShouldDeny3(t *testing.T) {
 		utils.PrintTestError(t, w.Result().StatusCode, 403)
 	}
 }
+
+func TestCanDeleteGroupShouldReject1(t *testing.T) {
+	createFakeHandler()
+	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
+
+	CanDeleteGroup(fakeHandler)
+
+	if w.Result().StatusCode != 500 {
+		utils.PrintTestError(t, w.Result().StatusCode, 500)
+	}
+}
+
+func TestCanDeleteGroupShouldReject2(t *testing.T) {
+	createFakeHandler()
+	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
+	groupMembers := make([]models.GroupMember, 1)
+	groupMembers = append(groupMembers, models.GroupMember{UserID: 1, GroupRole: models.OWNER})
+
+	group := models.Group{
+		Name:         "Another group",
+		GroupMembers: groupMembers,
+	}
+
+	db.GetDB().Create(&group)
+
+	CanDeleteGroup(fakeHandler)
+
+	db.GetDB().Delete(&group)
+
+	if w.Result().StatusCode != 200 {
+		utils.PrintTestError(t, w.Result().StatusCode, 200)
+	}
+}

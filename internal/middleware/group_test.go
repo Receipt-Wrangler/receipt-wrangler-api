@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"os"
 	db "receipt-wrangler/api/internal/database"
-	config "receipt-wrangler/api/internal/env"
-	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
@@ -31,12 +29,8 @@ func TestMain(m *testing.M) {
 }
 
 func run(m *testing.M) (code int, err error) {
-	os.Args = append(os.Args, "-env=test")
-	config.SetConfigs()
-	logging.InitLog()
+	utils.SetUpTestEnv()
 	InitMiddlewareLogger()
-	db.InitTestDb()
-	db.MakeMigrations()
 	setup()
 
 	defer func() {

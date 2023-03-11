@@ -33,15 +33,13 @@ func TestMain(m *testing.M) {
 func run(m *testing.M) (code int, err error) {
 	os.Args = append(os.Args, "-env=test")
 	config.SetConfigs()
-	containerId := db.InitTestDb()
-	db.Connect()
-	db.MakeMigrations()
 	logging.InitLog()
 	InitMiddlewareLogger()
+	db.InitTestDb()
+	db.MakeMigrations()
 	setup()
 
 	defer func() {
-		db.TeardownTestDb(containerId)
 	}()
 
 	return m.Run(), nil

@@ -23,7 +23,7 @@ func TestGetBodyDataGetsData(t *testing.T) {
 	json.Unmarshal(bytes, &unmarshalResult)
 
 	if testString != unmarshalResult {
-		// printTestError(t, unmarshalResult, testString)
+		// PrintTestError(t, unmarshalResult, testString)
 	}
 }
 
@@ -37,14 +37,14 @@ func TestWriteErrorResponseWritesReponse(t *testing.T) {
 	WriteErrorResponse(w, err, 500)
 
 	if w.Result().StatusCode != 500 {
-		printTestError(t, w.Result().StatusCode, 500)
+		PrintTestError(t, w.Result().StatusCode, 500)
 	}
 
 	w.Body.Read(errBytes)
 	json.Unmarshal(errBytes[0:25], &errMap)
 
 	if errMap[errKey] != "Test error" {
-		printTestError(t, errMap[errKey], "Test error")
+		PrintTestError(t, errMap[errKey], "Test error")
 	}
 }
 
@@ -59,14 +59,14 @@ func TestWriteCustomErrorResponseWritesResponse(t *testing.T) {
 	WriteCustomErrorResponse(w, customMsg, 200)
 
 	if w.Result().StatusCode != 200 {
-		printTestError(t, w.Result().StatusCode, 200)
+		PrintTestError(t, w.Result().StatusCode, 200)
 	}
 
 	w.Body.Read(errBytes)
 	json.Unmarshal(errBytes[0:26], &errMap)
 
 	if errMap[errKey] != customMsg {
-		printTestError(t, errMap[errKey], customMsg)
+		PrintTestError(t, errMap[errKey], customMsg)
 	}
 }
 
@@ -87,13 +87,13 @@ func TestWriteValidatorErrorResponseWritesResponse(t *testing.T) {
 	WriteValidatorErrorResponse(w, vErr, 400)
 
 	if w.Result().StatusCode != 400 {
-		printTestError(t, w.Result().StatusCode, 400)
+		PrintTestError(t, w.Result().StatusCode, 400)
 	}
 
 	w.Body.Read(errBytes)
 	json.Unmarshal(errBytes[0:50], &bodyVErr)
 
 	if reflect.DeepEqual(vErr, bodyVErr) {
-		printTestError(t, vErr, bodyVErr)
+		PrintTestError(t, vErr, bodyVErr)
 	}
 }

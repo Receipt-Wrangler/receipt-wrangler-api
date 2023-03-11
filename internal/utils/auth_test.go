@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"os"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"testing"
@@ -10,27 +11,23 @@ import (
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 )
 
-// func TestMain(m *testing.M) {
-// 	code, err := run(m)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	os.Exit(code)
-// }
+func TestMain(m *testing.M) {
+	code, err := run(m)
+	if err != nil {
+		fmt.Println(err)
+	}
+	os.Exit(code)
+}
 
-// func run(m *testing.M) (code int, err error) {
-// 	os.Args = append(os.Args, "-env=test")
-// 	config.SetConfigs()
-// 	containerId := db.InitTestDb()
-// 	db.Connect()
-// 	db.MakeMigrations()
+func run(m *testing.M) (code int, err error) {
+	os.Args = append(os.Args, "-env=test")
+	SetUpTestEnv()
 
-// 	defer func() {
-// 		db.TeardownTestDb(containerId)
-// 	}()
+	defer func() {
+	}()
 
-// 	return m.Run(), nil
-// }
+	return m.Run(), nil
+}
 
 func TestInitTokenValidatorReturnsValidator(t *testing.T) {
 	v, err := InitTokenValidator()

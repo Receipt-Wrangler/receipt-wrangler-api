@@ -5,12 +5,12 @@ import "database/sql/driver"
 type UserRole string
 
 const (
-	ADMIN  UserRole = "ADMIN"
-	USER UserRole = "USER"
+	ADMIN UserRole = "ADMIN"
+	USER  UserRole = "USER"
 )
 
-func (self *UserRole) Scan(value interface{}) error {
-	*self = UserRole(value.([]byte))
+func (self *UserRole) Scan(value string) error {
+	*self = UserRole(value)
 	return nil
 }
 

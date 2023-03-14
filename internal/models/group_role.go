@@ -1,6 +1,9 @@
 package models
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+	"fmt"
+)
 
 type GroupRole string
 
@@ -10,8 +13,9 @@ const (
 	EDITOR GroupRole = "EDITOR"
 )
 
-func (self *GroupRole) Scan(value interface{}) error {
-	*self = GroupRole(value.([]byte))
+func (self *GroupRole) Scan(value string) error {
+	fmt.Println(value)
+	*self = GroupRole(value)
 	return nil
 }
 

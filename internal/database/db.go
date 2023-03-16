@@ -33,7 +33,9 @@ func MakeMigrations() {
 		&models.Tag{},
 		&models.Category{},
 		&models.Group{},
-		&models.GroupMember{})
+		&models.GroupMember{},
+		&models.Comment{},
+	)
 }
 
 func GetDB() *gorm.DB {

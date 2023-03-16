@@ -2,7 +2,7 @@ package models
 
 type Comment struct {
 	BaseModel
-	Comment        string  `gorm:"type:varchar(500)" json:"comment"`
+	Comment        string  `gorm:"type:varchar(500); not null" json:"comment"`
 	Receipt        Receipt `json:"-"`
 	ReceiptId      uint    `json:"receiptId"`
 	User           User    `json:"-"`

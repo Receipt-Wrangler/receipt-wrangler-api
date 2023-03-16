@@ -62,6 +62,7 @@ func SetReceiptGroupId(next http.Handler) http.Handler {
 
 func ValidateReceipt(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := utils.GetJWT(r)
 		err := structs.ValidatorError{
 			Errors: make(map[string]string),
 		}
@@ -82,6 +83,18 @@ func ValidateReceipt(next http.Handler) http.Handler {
 			err.Errors["date"] = "Date is required"
 		}
 
+		// Validate that users aren't commenting as other users on create by manipulating the body data
+		if r.Method == "POST" {
+			for i, comment := range receipt.Comments {
+				basePath := fmt.Sprintf("comments.%s", fmt.Sprint(i))
+
+				if *comment.UserId != token.UserId {
+					err.Errors[basePath+".userId"] = "User cannot comment as anyone other than themselves."
+				}
+			}
+		}
+
+		// Validate the receipt data
 		for i, item := range receipt.ReceiptItems {
 			basePath := fmt.Sprintf("receiptItems.%s", fmt.Sprint(i))
 

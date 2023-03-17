@@ -114,6 +114,12 @@ func initRoutes() *chi.Mux {
 	receiptImageRouter.With(middleware.SetReceiptImageData, middleware.ValidateGroupRole(models.EDITOR)).Post("/", handlers.UploadReceiptImage)
 	rootRouter.Mount("/api/receiptImage", receiptImageRouter)
 
+	// Comment Router
+	commentRouter := chi.NewRouter()
+	commentRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
+	commentRouter.With(middleware.SetGeneralBodyData("comment", models.Comment{})).Post("/", handlers.AddComment)
+	rootRouter.Mount("/api/comment", commentRouter)
+
 	// Tag Router
 	tagRouter := chi.NewRouter()
 	tagRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)

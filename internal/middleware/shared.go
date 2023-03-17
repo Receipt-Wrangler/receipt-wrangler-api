@@ -27,6 +27,15 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 					return
 				}
 				serveWithContext(r, w, h, contextKey, group)
+			case models.Comment:
+				var comment models.Comment
+				err = json.Unmarshal(bodyData, &comment)
+				shouldReturn := checkError(err, w)
+				if shouldReturn {
+					return
+				}
+				serveWithContext(r, w, h, contextKey, comment)
+
 			default:
 				return
 			}

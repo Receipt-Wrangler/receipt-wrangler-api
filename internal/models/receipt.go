@@ -22,6 +22,7 @@ type Receipt struct {
 	Categories   []Category      `gorm:"many2many:receipt_categories" json:"categories"`
 	ImageFiles   []FileData      `json:"imageFiles"`
 	ReceiptItems []Item          `json:"receiptItems"`
+	Comments     []Comment       `json:"comments"`
 }
 
 func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {

@@ -117,7 +117,7 @@ func initRoutes() *chi.Mux {
 	// Comment Router
 	commentRouter := chi.NewRouter()
 	commentRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
-	commentRouter.With(middleware.SetGeneralBodyData("comment", models.Comment{})).Post("/", handlers.AddComment)
+	commentRouter.With(middleware.SetGeneralBodyData("comment", models.Comment{}), middleware.ValidateCommentUserId).Post("/", handlers.AddComment)
 	rootRouter.Mount("/api/comment", commentRouter)
 
 	// Tag Router

@@ -26,7 +26,10 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				if shouldReturn {
 					return
 				}
-				serveWithContext(r, w, h, contextKey, group)
+
+				ctx := context.WithValue(r.Context(), contextKey, group)
+				serveWithContext(r, w, h, ctx)
+
 			case models.Comment:
 				var comment models.Comment
 				err = json.Unmarshal(bodyData, &comment)
@@ -34,7 +37,10 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				if shouldReturn {
 					return
 				}
-				serveWithContext(r, w, h, contextKey, comment)
+
+				ctx := context.WithValue(r.Context(), "receiptId", comment.ReceiptId)
+				ctx = context.WithValue(ctx, contextKey, comment)
+				serveWithContext(r, w, h, ctx)
 
 			default:
 				return
@@ -53,7 +59,6 @@ func checkError(err error, w http.ResponseWriter) bool {
 	return false
 }
 
-func serveWithContext(r *http.Request, w http.ResponseWriter, h http.Handler, contextKey string, content interface{}) {
-	ctx := context.WithValue(r.Context(), contextKey, content)
+func serveWithContext(r *http.Request, w http.ResponseWriter, h http.Handler, ctx context.Context) {
 	h.ServeHTTP(w, r.WithContext(ctx))
 }

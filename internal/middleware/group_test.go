@@ -58,8 +58,9 @@ func createFakeGroupHandler() (http.HandlerFunc, *http.Request, *httptest.Respon
 
 func teardownGroupTest() {
 	db := db.GetDB()
-	utils.TruncateTable(db, "Group")
-	utils.TruncateTable(db, "User")
+	utils.TruncateTable(db, "group_members")
+	utils.TruncateTable(db, "groups")
+	utils.TruncateTable(db, "users")
 }
 
 func TestValidateGroupeRoleShouldAuthorize1(t *testing.T) {

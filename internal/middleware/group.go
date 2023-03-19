@@ -62,7 +62,7 @@ func CanDeleteGroup(next http.Handler) http.Handler {
 			return
 		}
 
-		if len(groupMembers) == 1 {
+		if len(groupMembers) <= 1 {
 			middleware_logger.Print(errMsg, r)
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 			return

@@ -1,12 +1,13 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"testing"
 
-	db "receipt-wrangler/api/internal/database"
+	"gorm.io/gorm"
 )
 
 func PrintTestError(t *testing.T, actual any, expected any) {
@@ -17,6 +18,9 @@ func SetUpTestEnv() {
 	os.Args = append(os.Args, "-env=test")
 	config.SetConfigs()
 	logging.InitLog()
-	db.InitTestDb()
-	db.MakeMigrations()
+}
+
+func TruncateTable(db *gorm.DB, tableName string) error {
+	query := fmt.Sprintf("DELETE FROM %s", tableName)
+	return db.Exec(query).Error
 }

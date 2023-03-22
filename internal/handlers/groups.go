@@ -86,7 +86,7 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	group := r.Context().Value("group").(models.Group)
 	groupId := chi.URLParam(r, "groupId")
 
-	err := repositories.UpdateGroup(group, groupId)
+	updatedGroup, err := repositories.UpdateGroup(group, groupId)
 
 	if err != nil {
 		handler_logger.Println(err.Error())
@@ -94,7 +94,7 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes, err := utils.MarshalResponseData(group)
+	bytes, err := utils.MarshalResponseData(updatedGroup)
 	if err != nil {
 		handler_logger.Println(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

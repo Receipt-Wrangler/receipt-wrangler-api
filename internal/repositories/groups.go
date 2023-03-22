@@ -43,21 +43,27 @@ func CreateGroup(group models.Group, userId uint) (models.Group, error) {
 	return returnGroup, nil
 }
 
-func UpdateGroup(group models.Group, groupId string) error {
+func UpdateGroup(group models.Group, groupId string) (models.Group, error) {
 	db := db.GetDB()
+
 	u64Id, err := utils.StringToUint64(groupId)
 	if err != nil {
-		return err
+		return models.Group{}, err
 	}
 
 	group.ID = uint(u64Id)
 
 	err = db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&group).Updates(&group).Error
 	if err != nil {
-		return err
+		return models.Group{}, err
 	}
 
-	return nil
+	returnGroup, err := GetGroupById(groupId, true)
+	if err != nil {
+		return models.Group{}, err
+	}
+
+	return returnGroup, nil
 }
 
 func GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {

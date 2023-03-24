@@ -3,10 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
 
@@ -178,4 +180,78 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
+}
+
+func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error duplicating receipt",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := db.GetDB()
+			newReceipt := models.Receipt{}
+
+			receiptId := chi.URLParam(r, "id")
+			receipt, err := repositories.GetFullyLoadedReceiptById(receiptId)
+
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			newReceipt.Name = receipt.Name
+			newReceipt.Amount = receipt.Amount
+			newReceipt.Date = receipt.Date
+			newReceipt.PaidByUserID = receipt.PaidByUserID
+			newReceipt.IsResolved = receipt.IsResolved
+			newReceipt.GroupId = receipt.GroupId
+			newReceipt.Tags = make([]models.Tag, len(receipt.Tags))
+			newReceipt.Categories = make([]models.Category, len(receipt.Categories))
+			newReceipt.ReceiptItems = make([]models.Item, len(receipt.ReceiptItems))
+			newReceipt.Comments = make([]models.Comment, len(receipt.Comments))
+			copy(newReceipt.Tags, receipt.Tags)
+			copy(newReceipt.Categories, receipt.Categories)
+			copy(newReceipt.ReceiptItems, receipt.ReceiptItems)
+			copy(newReceipt.Comments, receipt.Comments)
+			//newReceipt.Tags = receipt.Tags
+			// newReceipt.Categories = receipt.Categories
+			// newReceipt.ReceiptItems = receipt.ReceiptItems
+			// newReceipt.Comments = receipt.Comments
+
+			// // Remove fks from any related data
+			// for _, fileData := range newReceipt.ImageFiles {
+			// 	fileData.ReceiptId = 0
+			// 	fileData.Receipt = models.Receipt{}
+			// }
+
+			// for _, item := range newReceipt.ReceiptItems {
+			// 	item.ReceiptId = 0
+			// 	item.Receipt = models.Receipt{}
+			// }
+
+			// for _, comment := range newReceipt.Comments {
+			// 	comment.ReceiptId = 0
+			// 	comment.Receipt = models.Receipt{}
+			// }
+
+			err = db.Model(models.Receipt{}).Select("*").Create(&newReceipt).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(newReceipt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			// before we can create again we need to clear out all the fks
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
 }

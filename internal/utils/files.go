@@ -47,6 +47,29 @@ func WriteFile(path string, data []byte) error {
 	return nil
 }
 
+func ReadFile(path string) ([]byte, error) {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil
+	}
+
+	return bytes, nil
+}
+
+func GetBytesForFileData(fileData models.FileData) ([]byte, error) {
+	path, err := BuildFilePath(UintToString(fileData.ReceiptId), UintToString(fileData.ID), fileData.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
+}
+
 func DirectoryExists(dir string, createIfNotExist bool) error {
 	_, err := os.Stat(dir)
 	if errors.Is(err, os.ErrNotExist) && createIfNotExist {

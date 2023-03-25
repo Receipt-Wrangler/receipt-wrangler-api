@@ -126,7 +126,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bytes, err := os.ReadFile(path)
+	bytes, err := utils.ReadFile(path)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

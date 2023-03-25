@@ -203,20 +203,22 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			copier.Copy(&newReceipt, receipt)
 
 			newReceipt.ID = 0
+			newReceipt.ImageFiles = make([]models.FileData, 0)
 			newReceipt.ReceiptItems = make([]models.Item, 0)
 			newReceipt.Comments = make([]models.Comment, 0)
 
 			// Remove fks from any related data
-			// for _, fileData := range receipt.ImageFiles {
-			// 	var newFileData models.FileData
-			// 	copier.Copy(&newFileData, fileData)
+			for _, fileData := range receipt.ImageFiles {
+				var newFileData models.FileData
+				copier.Copy(&newFileData, fileData)
 
-			// 	fileData.ID = 0
-			// 	fileData.ReceiptId = 0
-			// 	fileData.Receipt = models.Receipt{}
-			// 	fileData.Receipt.ImageFiles = append(fileData.Receipt.ImageFiles, newFileData)
-			// }
+				newFileData.ID = 0
+				newFileData.ReceiptId = 0
+				newFileData.Receipt = models.Receipt{}
+				newReceipt.ImageFiles = append(newReceipt.ImageFiles, newFileData)
+			}
 
+			// Copy items
 			for _, item := range receipt.ReceiptItems {
 				var newItem models.Item
 				copier.Copy(&newItem, item)
@@ -227,6 +229,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 				newReceipt.ReceiptItems = append(newReceipt.ReceiptItems, newItem)
 			}
 
+			// Copy comments
 			for _, comment := range receipt.Comments {
 				var newComment models.Comment
 				copier.Copy(&newComment, comment)
@@ -240,6 +243,25 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			err = db.Create(&newReceipt).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
+			}
+
+			// Copy receipt images
+			for i, fileData := range newReceipt.ImageFiles {
+				srcFileData := receipt.ImageFiles[i]
+				srcImageBytes, err := utils.GetBytesForFileData(srcFileData)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				dstPath, err := utils.BuildFilePath(utils.UintToString(newReceipt.ID), utils.UintToString(fileData.ID), fileData.Name)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				err = utils.WriteFile(dstPath, srcImageBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 			}
 
 			responseBytes, err := utils.MarshalResponseData(newReceipt)

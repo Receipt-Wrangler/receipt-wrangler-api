@@ -201,25 +201,20 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			}
 
 			copier.Copy(&newReceipt, receipt)
+
 			newReceipt.ID = 0
-			//newReceipt.Tags = make([]models.Tag, len(receipt.Tags))
-			//newReceipt.Categories = make([]models.Category, len(receipt.Categories))
 			newReceipt.ReceiptItems = make([]models.Item, 0)
 			newReceipt.Comments = make([]models.Comment, 0)
-			// copy(newReceipt.Tags, receipt.Tags)
-			// copy(newReceipt.Categories, receipt.Categories)
-			// copy(newReceipt.ReceiptItems, receipt.ReceiptItems)
-			// copy(newReceipt.Comments, receipt.Comments)
-			//newReceipt.Tags = receipt.Tags
-			// newReceipt.Categories = receipt.Categories
-			// newReceipt.ReceiptItems = receipt.ReceiptItems
-			// newReceipt.Comments = receipt.Comments
 
-			// // Remove fks from any related data
+			// Remove fks from any related data
 			// for _, fileData := range receipt.ImageFiles {
+			// 	var newFileData models.FileData
+			// 	copier.Copy(&newFileData, fileData)
+
 			// 	fileData.ID = 0
 			// 	fileData.ReceiptId = 0
 			// 	fileData.Receipt = models.Receipt{}
+			// 	fileData.Receipt.ImageFiles = append(fileData.Receipt.ImageFiles, newFileData)
 			// }
 
 			for _, item := range receipt.ReceiptItems {

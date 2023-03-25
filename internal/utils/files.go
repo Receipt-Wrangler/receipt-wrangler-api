@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	db "receipt-wrangler/api/internal/database"
@@ -34,4 +35,30 @@ func BuildFilePath(rid string, fId string, fname string) (string, error) {
 	path := filepath.Join(basePath, "data", groupPath, fileName)
 
 	return path, nil
+}
+
+func WriteFile(path string, data []byte) error {
+	// TODO: Fix perms
+	err := os.WriteFile(path, data, 777)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DirectoryExists(dir string, createIfNotExist bool) error {
+	_, err := os.Stat(dir)
+	if errors.Is(err, os.ErrNotExist) && createIfNotExist {
+		err = os.Mkdir(dir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	return nil
 }

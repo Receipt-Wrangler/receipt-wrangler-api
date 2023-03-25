@@ -32,13 +32,11 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if data path exists
-	if _, err := os.Stat(basePath + "/data"); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(basePath+"/data", os.ModePerm)
-		if err != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
+	err = utils.DirectoryExists(basePath+"/data", true)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
 	}
 
 	// Get initial group directory to see if it exists
@@ -60,13 +58,11 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if group's path exists
-	if _, err := os.Stat(groupDir); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(groupDir, os.ModePerm)
-		if err != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
+	err = utils.DirectoryExists(groupDir, true)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, 500)
+		return
 	}
 
 	// Rebuild file path with correct file id
@@ -77,8 +73,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Fix perms
-	err = os.WriteFile(filePath, fileData.ImageData, 777)
+	err = utils.WriteFile(filePath, fileData.ImageData)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

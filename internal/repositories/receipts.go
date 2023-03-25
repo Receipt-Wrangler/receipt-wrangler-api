@@ -3,6 +3,8 @@ package repositories
 import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+
+	"gorm.io/gorm/clause"
 )
 
 func GetReceiptById(receiptId string) (models.Receipt, error) {
@@ -39,4 +41,16 @@ func GetReceiptGroupIdByReceiptId(id string) (uint, error) {
 	}
 
 	return receipt.GroupId, nil
+}
+
+func GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
+	db := db.GetDB()
+	var receipt models.Receipt
+
+	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Find(&receipt).Error
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	return receipt, nil
 }

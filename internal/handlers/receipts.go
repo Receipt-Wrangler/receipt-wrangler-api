@@ -203,6 +203,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			copier.Copy(&newReceipt, receipt)
 
 			newReceipt.ID = 0
+			newReceipt.Name = newReceipt.Name + " duplicate"
 			newReceipt.ImageFiles = make([]models.FileData, 0)
 			newReceipt.ReceiptItems = make([]models.Item, 0)
 			newReceipt.Comments = make([]models.Comment, 0)

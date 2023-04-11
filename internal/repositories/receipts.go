@@ -1,24 +1,22 @@
 package repositories
 
 import (
-	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
-	"strconv"
+	"receipt-wrangler/api/internal/structs"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-func PaginateReceipts(r *http.Request) func(db *gorm.DB) *gorm.DB {
+func PaginateReceipts(pagedRequest structs.PagedRequest) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		q := r.URL.Query()
-		page, _ := strconv.Atoi(q.Get("page"))
+		page := pagedRequest.Page
 		if page <= 0 {
 			page = 1
 		}
 
-		pageSize, _ := strconv.Atoi(q.Get("pageSize"))
+		pageSize := pagedRequest.PageSize
 		switch {
 		case pageSize > 100:
 			pageSize = 100
@@ -43,11 +41,11 @@ func GetReceiptById(receiptId string) (models.Receipt, error) {
 	return receipt, nil
 }
 
-func GetPagedReceiptsByGroupId(groupId string, r *http.Request) ([]models.Receipt, error) {
+func GetPagedReceiptsByGroupId(groupId string, pagedRequest structs.PagedRequest) ([]models.Receipt, error) {
 	db := db.GetDB()
 	var receipts []models.Receipt
 
-	err := db.Scopes(PaginateReceipts(r)).Model(models.Receipt{}).Where("group_id = ?", groupId).Preload("Tags").Preload("Categories").Find(&receipts).Error
+	err := db.Scopes(PaginateReceipts(pagedRequest)).Model(models.Receipt{}).Where("group_id = ?", groupId).Preload("Tags").Preload("Categories").Order("date desc").Find(&receipts).Error
 	if err != nil {
 		return nil, err
 	}

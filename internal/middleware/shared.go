@@ -3,9 +3,11 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
 
@@ -41,6 +43,20 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 
 				ctx := context.WithValue(r.Context(), "receiptId", utils.UintToString(comment.ReceiptId))
 				ctx = context.WithValue(ctx, contextKey, comment)
+				serveWithContext(r, w, h, ctx)
+
+			case structs.PagedRequest:
+				var pagedRequest structs.PagedRequest
+				err = json.Unmarshal(bodyData, &pagedRequest)
+
+				fmt.Println(pagedRequest)
+				fmt.Println(bodyData)
+				shouldReturn := checkError(err, w)
+				if shouldReturn {
+					return
+				}
+
+				ctx := context.WithValue(r.Context(), contextKey, pagedRequest)
 				serveWithContext(r, w, h, ctx)
 
 			default:

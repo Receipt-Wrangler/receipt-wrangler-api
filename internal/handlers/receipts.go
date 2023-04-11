@@ -26,9 +26,10 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			groupId := chi.URLParam(r, "groupId")
+			pagedRequest := r.Context().Value("pagedRequest").(structs.PagedRequest)
 			pagedData := structs.PagedData{}
 
-			receipts, err := repositories.GetPagedReceiptsByGroupId(groupId, r)
+			receipts, err := repositories.GetPagedReceiptsByGroupId(groupId, pagedRequest)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -55,6 +55,18 @@ func GetPagedReceiptsByGroupId(groupId string, r *http.Request) ([]models.Receip
 	return receipts, nil
 }
 
+func GetGroupReceiptCount(groupId string) (int64, error) {
+	db := db.GetDB()
+	var result int64
+
+	err := db.Model(models.Receipt{}).Where("group_id = ?", groupId).Count(&result).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return result, nil
+}
+
 func GetReceiptGroupIdByReceiptId(id string) (uint, error) {
 	db := db.GetDB()
 	var receipt models.Receipt

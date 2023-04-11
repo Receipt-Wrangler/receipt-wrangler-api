@@ -26,13 +26,28 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			groupId := chi.URLParam(r, "groupId")
+			pagedData := structs.PagedData{}
 
 			receipts, err := repositories.GetPagedReceiptsByGroupId(groupId, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			bytes, err := utils.MarshalResponseData(receipts)
+			anyData := make([]any, len(receipts))
+			for i := 0; i < len(receipts); i++ {
+				anyData[i] = receipts[i]
+			}
+
+			pagedData.Data = anyData
+
+			count, err := repositories.GetGroupReceiptCount(groupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			pagedData.TotalCount = count
+
+			bytes, err := utils.MarshalResponseData(pagedData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
@@ -45,12 +46,50 @@ func GetPagedReceiptsByGroupId(groupId string, pagedRequest structs.PagedRequest
 	db := db.GetDB()
 	var receipts []models.Receipt
 
-	err := db.Scopes(PaginateReceipts(pagedRequest)).Model(models.Receipt{}).Where("group_id = ?", groupId).Preload("Tags").Preload("Categories").Order("date desc").Find(&receipts).Error
+	query := db.Scopes(PaginateReceipts(pagedRequest)).Model(models.Receipt{}).Where("group_id = ?", groupId).Preload("Tags").Preload("Categories")
+	if isTrustedValue(pagedRequest) {
+		orderBy := pagedRequest.OrderBy
+		switch pagedRequest.OrderBy {
+		case "isResolved":
+			orderBy = "is_resolved"
+		case "paidBy":
+			orderBy = "paid_by_user_id"
+		}
+		query = query.Order(orderBy + " " + pagedRequest.SortDirection)
+	} else {
+		return nil, errors.New("untrusted value " + pagedRequest.OrderBy + " " + pagedRequest.SortDirection)
+	}
+
+	err := query.Find(&receipts).Error
 	if err != nil {
 		return nil, err
 	}
 
 	return receipts, nil
+}
+
+func isTrustedValue(pagedRequest structs.PagedRequest) bool {
+	orderByTrusted := [7]string{"date", "name", "paidBy", "amount", "categories", "tags", "isResolved"}
+	directionTrusted := [3]string{"asc", "desc", ""}
+
+	isOrderByTrusted := false
+	isDirectionTrusted := false
+
+	for i := 0; i < len(orderByTrusted); i++ {
+		if orderByTrusted[i] == pagedRequest.OrderBy {
+			isOrderByTrusted = true
+			break
+		}
+	}
+
+	for i := 0; i < len(directionTrusted); i++ {
+		if directionTrusted[i] == pagedRequest.SortDirection {
+			isDirectionTrusted = true
+			break
+		}
+	}
+
+	return isOrderByTrusted && isDirectionTrusted
 }
 
 func GetGroupReceiptCount(groupId string) (int64, error) {

@@ -10,6 +10,7 @@ import (
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -97,13 +98,13 @@ func initRoutes() *chi.Mux {
 
 	// Receipt Router
 	receiptRouter := chi.NewRouter()
-	receiptRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT, middleware.SetReceiptBodyData)
-	receiptRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/group/{groupId}", handlers.GetReceiptsForGroup)
+	receiptRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
+	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", structs.PagedRequest{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceipt)
-	receiptRouter.With(middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
-	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Put("/{id}/toggleIsResolved", handlers.ToggleIsResolved)
-	receiptRouter.With(middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Post("/", handlers.CreateReceipt)
-	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Post("/{id}/duplicate", handlers.DuplicateReceipt)
+	receiptRouter.With(middleware.SetReceiptBodyData, middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
+	receiptRouter.With(middleware.SetReceiptBodyData, middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Put("/{id}/toggleIsResolved", handlers.ToggleIsResolved)
+	receiptRouter.With(middleware.SetReceiptBodyData, middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Post("/", handlers.CreateReceipt)
+	receiptRouter.With(middleware.SetReceiptBodyData, middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Post("/{id}/duplicate", handlers.DuplicateReceipt)
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Delete("/{id}", handlers.DeleteReceipt)
 	rootRouter.Mount("/api/receipt", receiptRouter)
 

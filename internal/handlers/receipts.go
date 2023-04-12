@@ -18,27 +18,49 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func GetReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
-	// re add user id in claim??
-	errMsg := "Error retrieving receipts."
-	groupId := chi.URLParam(r, "groupId")
+func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting receipts",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			groupId := chi.URLParam(r, "groupId")
+			pagedRequest := r.Context().Value("pagedRequest").(structs.PagedRequest)
+			pagedData := structs.PagedData{}
 
-	receipts, err := repositories.GetReceiptsByGroupId(groupId)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			receipts, err := repositories.GetPagedReceiptsByGroupId(groupId, pagedRequest)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			anyData := make([]any, len(receipts))
+			for i := 0; i < len(receipts); i++ {
+				anyData[i] = receipts[i]
+			}
+
+			pagedData.Data = anyData
+
+			count, err := repositories.GetGroupReceiptCount(groupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			pagedData.TotalCount = count
+
+			bytes, err := utils.MarshalResponseData(pagedData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := utils.MarshalResponseData(receipts)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {

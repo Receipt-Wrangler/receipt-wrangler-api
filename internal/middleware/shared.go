@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -49,8 +48,6 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				var pagedRequest structs.PagedRequest
 				err = json.Unmarshal(bodyData, &pagedRequest)
 
-				fmt.Println(pagedRequest)
-				fmt.Println(bodyData)
 				shouldReturn := checkError(err, w)
 				if shouldReturn {
 					return

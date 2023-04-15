@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
@@ -189,6 +190,53 @@ func ToggleIsResolved(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
+}
+
+func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error resolving receipts",
+		Writer:       w,
+		Request:      r,
+		ResponseType: "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			bulkResolve := r.Context().Value("bulkResolve").(structs.BulkResolve)
+
+			err := db.GetDB().Transaction(func(tx *gorm.DB) error {
+				tErr := tx.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Update("is_resolved", true).Error
+				if tErr != nil {
+					return tErr
+				}
+
+				if len(bulkResolve.Comment) > 0 {
+					token := utils.GetJWT(r)
+					comments := make([]models.Comment, len(bulkResolve.ReceiptIds))
+
+					for i := 0; i < len(bulkResolve.ReceiptIds); i++ {
+						comments[i] = models.Comment{ReceiptId: bulkResolve.ReceiptIds[i], Comment: bulkResolve.Comment, UserId: &token.UserId}
+					}
+
+					fmt.Println(len(comments))
+
+					tErr = tx.Create(&comments).Error
+					if tErr != nil {
+						return tErr
+					}
+				}
+
+				return nil
+			})
+
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
 }
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {

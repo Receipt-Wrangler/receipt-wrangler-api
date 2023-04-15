@@ -44,6 +44,18 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				ctx = context.WithValue(ctx, contextKey, comment)
 				serveWithContext(r, w, h, ctx)
 
+			case structs.BulkResolve:
+				var bulkResolve structs.BulkResolve
+				err = json.Unmarshal(bodyData, &bulkResolve)
+
+				shouldReturn := checkError(err, w)
+				if shouldReturn {
+					return
+				}
+
+				ctx := context.WithValue(r.Context(), contextKey, bulkResolve)
+				serveWithContext(r, w, h, ctx)
+
 			case structs.PagedRequest:
 				var pagedRequest structs.PagedRequest
 				err = json.Unmarshal(bodyData, &pagedRequest)

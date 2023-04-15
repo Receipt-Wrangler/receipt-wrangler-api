@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -46,7 +47,7 @@ func SetReceiptBodyData(next http.Handler) http.Handler {
 func SetReceiptGroupId(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		errMsg := "Unauthorized access to receipt."
+		errMsg := "Error accessing receipt."
 
 		groupId, err := repositories.GetReceiptGroupIdByReceiptId(id)
 		if err != nil {
@@ -56,6 +57,30 @@ func SetReceiptGroupId(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), "groupId", utils.UintToString(groupId))
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func SetReceiptGroupIds(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		db := db.GetDB()
+		receiptIds := r.Context().Value("receiptIds").([]uint)
+		groupIds := make([]string, len(receiptIds))
+		errMsg := "Error accessing receipt."
+		var receipts []models.Receipt
+
+		err := db.Model(models.Receipt{}).Where("id IN ?", receiptIds).Select("group_id").Find(&receipts).Error
+		if err != nil {
+			middleware_logger.Print(err.Error())
+			utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
+			return
+		}
+
+		for i := 0; i < len(receiptIds); i++ {
+			groupIds[i] = utils.UintToString(receipts[i].GroupId)
+		}
+
+		ctx := context.WithValue(r.Context(), "groupIds", groupIds)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

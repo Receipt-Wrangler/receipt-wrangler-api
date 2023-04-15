@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
@@ -214,8 +213,6 @@ func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 					for i := 0; i < len(bulkResolve.ReceiptIds); i++ {
 						comments[i] = models.Comment{ReceiptId: bulkResolve.ReceiptIds[i], Comment: bulkResolve.Comment, UserId: &token.UserId}
 					}
-
-					fmt.Println(len(comments))
 
 					tErr = tx.Create(&comments).Error
 					if tErr != nil {

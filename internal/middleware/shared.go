@@ -54,6 +54,7 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				}
 
 				ctx := context.WithValue(r.Context(), contextKey, bulkResolve)
+				ctx = context.WithValue(ctx, "receiptIds", bulkResolve.ReceiptIds)
 				serveWithContext(r, w, h, ctx)
 
 			case structs.PagedRequest:

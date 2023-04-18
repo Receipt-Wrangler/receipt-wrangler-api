@@ -174,7 +174,7 @@ func ToggleIsResolved(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error toggling is resolved receipt."
 	id := chi.URLParam(r, "id")
 
-	err = db.Model(models.Receipt{}).Select("id, is_resolved").Where("id = ?", id).Find(&receipt).Error
+	err = db.Model(models.Receipt{}).Select("id, is_resolved, resolved_date").Where("id = ?", id).Find(&receipt).Error
 
 	if err != nil {
 		handler_logger.Print(err)

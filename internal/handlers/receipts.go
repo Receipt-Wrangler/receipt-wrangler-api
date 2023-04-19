@@ -196,14 +196,26 @@ func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error resolving receipts",
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := db.GetDB()
 			bulkResolve := r.Context().Value("bulkResolve").(structs.BulkResolve)
+			var receipts []models.Receipt
 
-			err := db.GetDB().Transaction(func(tx *gorm.DB) error {
-				tErr := tx.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Update("is_resolved", true).Error
+			err := db.Transaction(func(tx *gorm.DB) error {
+				tErr := tx.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id", "is_resolved", "resolved_date").Find(&receipts).Error
 				if tErr != nil {
 					return tErr
+				}
+
+				if len(receipts) > 0 {
+					for i := 0; i < len(receipts); i++ {
+						receipt := receipts[i]
+						tErr = tx.Model(&receipt).Updates(map[string]interface{}{"is_resolved": true}).Error
+						if tErr != nil {
+							return tErr
+						}
+					}
 				}
 
 				if len(bulkResolve.Comment) > 0 {
@@ -222,12 +234,22 @@ func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 
 				return nil
 			})
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
+			err = db.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Preload("Categories").Preload("Tags").Find(&receipts).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(&receipts)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
 			w.WriteHeader(200)
+			w.Write(bytes)
 
 			return 0, nil
 		},

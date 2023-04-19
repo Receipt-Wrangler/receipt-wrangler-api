@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -34,11 +33,9 @@ func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {
 	}
 
 	if r.ID > 0 && r.IsResolved && r.ResolvedDate == nil {
-		fmt.Println("if")
 		now := time.Now().UTC()
 		err = tx.Table("receipts").Where("id = ?", r.ID).Update("resolved_date", now).Error
 	} else if r.ID > 0 && !r.IsResolved && r.ResolvedDate != nil {
-		fmt.Println("else")
 		err = tx.Table("receipts").Where("id = ?", r.ID).Update("resolved_date", nil).Error
 	}
 	if err != nil {

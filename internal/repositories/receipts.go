@@ -71,7 +71,7 @@ func GetPagedReceiptsByGroupId(groupId string, pagedRequest structs.PagedRequest
 }
 
 func isTrustedValue(pagedRequest structs.PagedRequest) bool {
-	orderByTrusted := [8]string{"date", "name", "paidBy", "amount", "categories", "tags", "isResolved", "resolvedDate"}
+	orderByTrusted := [9]string{"date", "name", "paidBy", "amount", "categories", "tags", "isResolved", "status", "resolvedDate"}
 	directionTrusted := [3]string{"asc", "desc", ""}
 
 	isOrderByTrusted := false

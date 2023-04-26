@@ -178,7 +178,7 @@ func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 			var receipts []models.Receipt
 
 			err := db.Transaction(func(tx *gorm.DB) error {
-				tErr := tx.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id", "is_resolved", "resolved_date").Find(&receipts).Error
+				tErr := tx.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id", "status", "resolved_date").Find(&receipts).Error
 				if tErr != nil {
 					return tErr
 				}
@@ -186,7 +186,7 @@ func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 				if len(receipts) > 0 {
 					for i := 0; i < len(receipts); i++ {
 						receipt := receipts[i]
-						tErr = tx.Model(&receipt).Updates(map[string]interface{}{"is_resolved": true}).Error
+						tErr = tx.Model(&receipt).Updates(map[string]interface{}{"status": bulkResolve.Status}).Error
 						if tErr != nil {
 							return tErr
 						}
@@ -213,7 +213,7 @@ func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			err = db.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id, resolved_date, is_resolved").Find(&receipts).Error
+			err = db.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id, resolved_date, status").Find(&receipts).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

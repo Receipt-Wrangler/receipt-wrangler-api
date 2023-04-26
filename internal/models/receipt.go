@@ -17,7 +17,7 @@ type Receipt struct {
 	PaidByUserID uint            `json:"paidByUserId"`
 	PaidByUser   User            `json:"-"`
 	IsResolved   bool            `gorm:"default: false" json:"isResolved"`
-	Status       ReceiptStatus   `json:"status"`
+	Status       ReceiptStatus   `gorm:"default:'OPEN'; not null" json:"status"`
 	GroupId      uint            `gorm:"not null" json:"groupId"`
 	Group        Group           `json:"-"`
 	Tags         []Tag           `gorm:"many2many:receipt_tags" json:"tags"`
@@ -33,10 +33,10 @@ func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {
 		return err
 	}
 
-	if r.ID > 0 && r.IsResolved && r.ResolvedDate == nil {
+	if r.ID > 0 && r.Status == RESOLVED && r.ResolvedDate == nil {
 		now := time.Now().UTC()
 		err = tx.Table("receipts").Where("id = ?", r.ID).Update("resolved_date", now).Error
-	} else if r.ID > 0 && !r.IsResolved && r.ResolvedDate != nil {
+	} else if r.ID > 0 && r.Status != RESOLVED && r.ResolvedDate != nil {
 		err = tx.Table("receipts").Where("id = ?", r.ID).Update("resolved_date", nil).Error
 	}
 	if err != nil {

@@ -44,8 +44,8 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				ctx = context.WithValue(ctx, contextKey, comment)
 				serveWithContext(r, w, h, ctx)
 
-			case structs.BulkResolve:
-				var bulkResolve structs.BulkResolve
+			case structs.BulkStatusUpdate:
+				var bulkResolve structs.BulkStatusUpdate
 				err = json.Unmarshal(bodyData, &bulkResolve)
 
 				shouldReturn := checkError(err, w)

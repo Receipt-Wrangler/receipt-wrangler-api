@@ -167,7 +167,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
+func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error resolving receipts",
 		Writer:       w,
@@ -175,7 +175,7 @@ func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := db.GetDB()
-			bulkResolve := r.Context().Value("bulkResolve").(structs.BulkResolve)
+			bulkResolve := r.Context().Value("bulkStatusUpdate").(structs.BulkStatusUpdate)
 			var receipts []models.Receipt
 
 			if len(bulkResolve.Status) == 0 {

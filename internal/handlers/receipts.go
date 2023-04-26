@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
@@ -176,6 +177,14 @@ func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 			db := db.GetDB()
 			bulkResolve := r.Context().Value("bulkResolve").(structs.BulkResolve)
 			var receipts []models.Receipt
+
+			if len(bulkResolve.Status) == 0 {
+				return http.StatusBadRequest, errors.New("Status required")
+			}
+
+			if !utils.Contains(constants.ReceiptStatuses(), bulkResolve.Status) {
+				return http.StatusBadRequest, errors.New("Invalid status")
+			}
 
 			err := db.Transaction(func(tx *gorm.DB) error {
 				tErr := tx.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id", "status", "resolved_date").Find(&receipts).Error

@@ -166,49 +166,6 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
-func ToggleIsResolved(w http.ResponseWriter, r *http.Request) {
-	handler := structs.Handler{
-		ErrorMessage: "Error resolving receipt",
-		Writer:       w,
-		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
-		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-
-			db := db.GetDB()
-			var err error
-			var receipt models.Receipt
-			id := chi.URLParam(r, "id")
-
-			err = db.Model(models.Receipt{}).Select("id, is_resolved, resolved_date").Where("id = ?", id).Find(&receipt).Error
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			err = db.Model(&receipt).Update("is_resolved", !receipt.IsResolved).Error
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			err = db.Model(&receipt).Select("id, is_resolved, resolved_date").Where("id = ?", id).Find(&receipt).Error
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			bytes, err := utils.MarshalResponseData(receipt)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			w.WriteHeader(200)
-			w.Write(bytes)
-
-			return 0, nil
-		},
-	}
-
-	HandleRequest(handler)
-}
-
 func BulkResolveReceipts(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error resolving receipts",

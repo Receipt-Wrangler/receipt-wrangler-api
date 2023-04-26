@@ -5,6 +5,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -71,25 +72,11 @@ func GetPagedReceiptsByGroupId(groupId string, pagedRequest structs.PagedRequest
 }
 
 func isTrustedValue(pagedRequest structs.PagedRequest) bool {
-	orderByTrusted := [9]string{"date", "name", "paidBy", "amount", "categories", "tags", "isResolved", "status", "resolvedDate"}
-	directionTrusted := [3]string{"asc", "desc", ""}
+	orderByTrusted := []interface{}{"date", "name", "paidBy", "amount", "categories", "tags", "isResolved", "status", "resolvedDate"}
+	directionTrusted := []interface{}{"asc", "desc", ""}
 
-	isOrderByTrusted := false
-	isDirectionTrusted := false
-
-	for i := 0; i < len(orderByTrusted); i++ {
-		if orderByTrusted[i] == pagedRequest.OrderBy {
-			isOrderByTrusted = true
-			break
-		}
-	}
-
-	for i := 0; i < len(directionTrusted); i++ {
-		if directionTrusted[i] == pagedRequest.SortDirection {
-			isDirectionTrusted = true
-			break
-		}
-	}
+	isOrderByTrusted := utils.Contains(orderByTrusted, pagedRequest.OrderBy)
+	isDirectionTrusted := utils.Contains(directionTrusted, pagedRequest.SortDirection)
 
 	return isOrderByTrusted && isDirectionTrusted
 }

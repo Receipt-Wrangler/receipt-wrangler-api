@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -95,6 +96,7 @@ func ValidateReceipt(next http.Handler) http.Handler {
 
 		requiredNameMsg := "Name is required"
 		requiredAmountMsg := "Amount must be greater than zero"
+		requiredStatusMsg := "Status is required"
 
 		if len(receipt.Name) == 0 {
 			err.Errors["name"] = requiredNameMsg
@@ -102,6 +104,14 @@ func ValidateReceipt(next http.Handler) http.Handler {
 
 		if receipt.Amount.LessThanOrEqual(decimal.Zero) {
 			err.Errors["amount"] = requiredAmountMsg
+		}
+
+		if len(receipt.Status) == 0 {
+			err.Errors["status"] = requiredStatusMsg
+		}
+
+		if !utils.Contains(constants.ReceiptStatuses(), receipt.Status) {
+			err.Errors["status"] = "Invalid status"
 		}
 
 		if receipt.Date.IsZero() {

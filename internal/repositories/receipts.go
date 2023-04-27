@@ -51,8 +51,7 @@ func GetPagedReceiptsByGroupId(groupId string, pagedRequest structs.PagedRequest
 	if isTrustedValue(pagedRequest) {
 		orderBy := pagedRequest.OrderBy
 		switch pagedRequest.OrderBy {
-		case "isResolved":
-			orderBy = "is_resolved"
+
 		case "paidBy":
 			orderBy = "paid_by_user_id"
 		case "resolvedDate":
@@ -72,7 +71,7 @@ func GetPagedReceiptsByGroupId(groupId string, pagedRequest structs.PagedRequest
 }
 
 func isTrustedValue(pagedRequest structs.PagedRequest) bool {
-	orderByTrusted := []interface{}{"date", "name", "paidBy", "amount", "categories", "tags", "isResolved", "status", "resolvedDate"}
+	orderByTrusted := []interface{}{"date", "name", "paidBy", "amount", "categories", "tags", "status", "resolvedDate"}
 	directionTrusted := []interface{}{"asc", "desc", ""}
 
 	isOrderByTrusted := utils.Contains(orderByTrusted, pagedRequest.OrderBy)

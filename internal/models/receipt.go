@@ -16,7 +16,6 @@ type Receipt struct {
 	ImgPath      string          `json:"-"`
 	PaidByUserID uint            `json:"paidByUserId"`
 	PaidByUser   User            `json:"-"`
-	IsResolved   bool            `gorm:"default: false" json:"isResolved"`
 	Status       ReceiptStatus   `gorm:"default:'OPEN'; not null" json:"status"`
 	GroupId      uint            `gorm:"not null" json:"groupId"`
 	Group        Group           `json:"-"`

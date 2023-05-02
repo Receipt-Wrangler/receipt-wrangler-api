@@ -164,5 +164,11 @@ func initRoutes() *chi.Mux {
 	featureConfigRouter.Get("/", handlers.GetFeatureConfig)
 	rootRouter.Mount("/api/featureConfig", featureConfigRouter)
 
+	// Migration router
+	migrationRouter := chi.NewRouter()
+	migrationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT, middleware.ValidateRole(models.ADMIN))
+	migrationRouter.Get("/isResolvedToStatus", handlers.MigratetionMigrateIsResolvedToStatus)
+	rootRouter.Mount("/api/migrate", migrationRouter)
+
 	return rootRouter
 }

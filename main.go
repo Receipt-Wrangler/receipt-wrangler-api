@@ -102,8 +102,7 @@ func initRoutes() *chi.Mux {
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceipt)
 	receiptRouter.With(middleware.SetReceiptBodyData, middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
 	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", structs.PagedRequest{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)
-	receiptRouter.With(middleware.SetGeneralBodyData("bulkResolve", structs.BulkResolve{}), middleware.SetReceiptGroupIds, middleware.BulkValidateGroupRole(models.EDITOR)).Post("/bulkResolve", handlers.BulkResolveReceipts)
-	receiptRouter.With(middleware.SetReceiptBodyData, middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Put("/{id}/toggleIsResolved", handlers.ToggleIsResolved)
+	receiptRouter.With(middleware.SetGeneralBodyData("bulkStatusUpdate", structs.BulkStatusUpdate{}), middleware.SetReceiptGroupIds, middleware.BulkValidateGroupRole(models.EDITOR)).Post("/bulkStatusUpdate", handlers.BulkReceiptStatusUpdate)
 	receiptRouter.With(middleware.SetReceiptBodyData, middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Post("/", handlers.CreateReceipt)
 	receiptRouter.With(middleware.SetReceiptBodyData, middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Post("/{id}/duplicate", handlers.DuplicateReceipt)
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Delete("/{id}", handlers.DeleteReceipt)
@@ -164,6 +163,12 @@ func initRoutes() *chi.Mux {
 	featureConfigRouter := chi.NewRouter()
 	featureConfigRouter.Get("/", handlers.GetFeatureConfig)
 	rootRouter.Mount("/api/featureConfig", featureConfigRouter)
+
+	// Migration router
+	migrationRouter := chi.NewRouter()
+	migrationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT, middleware.ValidateRole(models.ADMIN))
+	migrationRouter.Get("/isResolvedToStatus", handlers.MigratetionMigrateIsResolvedToStatus)
+	rootRouter.Mount("/api/migrate", migrationRouter)
 
 	return rootRouter
 }

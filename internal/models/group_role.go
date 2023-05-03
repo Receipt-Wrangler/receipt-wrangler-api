@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql/driver"
-	"fmt"
 )
 
 type GroupRole string
@@ -14,7 +13,6 @@ const (
 )
 
 func (self *GroupRole) Scan(value string) error {
-	fmt.Println(value)
 	*self = GroupRole(value)
 	return nil
 }

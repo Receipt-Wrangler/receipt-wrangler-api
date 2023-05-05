@@ -66,9 +66,11 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
+	token := utils.GetJWT(r)
 
 	errMsg := "Error creating receipts."
 	bodyData := r.Context().Value("receipt").(models.Receipt)
+	bodyData.CreatedBy = &token.UserId
 
 	err := db.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
 	if err != nil {

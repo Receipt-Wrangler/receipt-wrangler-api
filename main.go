@@ -170,5 +170,11 @@ func initRoutes() *chi.Mux {
 	migrationRouter.Get("/isResolvedToStatus", handlers.MigratetionMigrateIsResolvedToStatus)
 	rootRouter.Mount("/api/migrate", migrationRouter)
 
+	// Search router
+	searchRouter := chi.NewRouter()
+	searchRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
+	searchRouter.Get("/", handlers.Search)
+	rootRouter.Mount("/api/search", searchRouter)
+
 	return rootRouter
 }

@@ -1,7 +1,7 @@
 package structs
 
 type SearchResult struct {
-	ID   uint
-	Name string
-	Type string
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+	Type string `json:"type"`
 }

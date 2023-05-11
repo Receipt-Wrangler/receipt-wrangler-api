@@ -33,7 +33,7 @@ func Search(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				err = db.Table("receipts").Where("group_id IN ? AND name LIKE ?", groupIds, searchTerm).Limit(5).Find(&receipts).Error
+				err = db.Table("receipts").Where("group_id IN ? AND name LIKE ?", groupIds, searchTerm).Limit(100).Order("date desc").Find(&receipts).Error
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

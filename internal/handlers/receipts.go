@@ -30,7 +30,9 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 			pagedRequest := r.Context().Value("pagedRequest").(structs.PagedRequest)
 			pagedData := structs.PagedData{}
 
-			receipts, err := repositories.GetPagedReceiptsByGroupId(groupId, pagedRequest)
+			token := utils.GetJWT(r)
+
+			receipts, err := repositories.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -42,7 +44,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 
 			pagedData.Data = anyData
 
-			count, err := repositories.GetGroupReceiptCount(groupId)
+			count, err := repositories.GetGroupReceiptCount(token.UserId, groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

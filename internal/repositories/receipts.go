@@ -43,11 +43,20 @@ func GetReceiptById(receiptId string) (models.Receipt, error) {
 	return receipt, nil
 }
 
-func GetPagedReceiptsByGroupId(groupId string, pagedRequest structs.PagedRequest) ([]models.Receipt, error) {
+func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs.PagedRequest) ([]models.Receipt, error) {
 	db := db.GetDB()
 	var receipts []models.Receipt
 
-	query := db.Scopes(PaginateReceipts(pagedRequest)).Model(models.Receipt{}).Where("group_id = ?", groupId).Preload("Tags").Preload("Categories")
+	query := db.Scopes(PaginateReceipts(pagedRequest)).Model(models.Receipt{}).Preload("Tags").Preload("Categories")
+	if groupId == "all" {
+		groupIds, err := GetGroupIdsByUserId(utils.UintToString(userId))
+		if err != nil {
+			return nil, err
+		}
+		query = query.Where("group_id IN ?", groupIds)
+	} else {
+		query = query.Where("group_id = ?", groupId)
+	}
 	if isTrustedValue(pagedRequest) {
 		orderBy := pagedRequest.OrderBy
 		switch pagedRequest.OrderBy {
@@ -80,11 +89,22 @@ func isTrustedValue(pagedRequest structs.PagedRequest) bool {
 	return isOrderByTrusted && isDirectionTrusted
 }
 
-func GetGroupReceiptCount(groupId string) (int64, error) {
+func GetGroupReceiptCount(userId uint, groupId string) (int64, error) {
 	db := db.GetDB()
 	var result int64
+	var err error
 
-	err := db.Model(models.Receipt{}).Where("group_id = ?", groupId).Count(&result).Error
+	if groupId == "all" {
+		groupIds, err := GetGroupIdsByUserId(utils.UintToString(userId))
+		if err != nil {
+			return 0, err
+		}
+
+		err = db.Model(models.Receipt{}).Where("group_id IN ?", groupIds).Count(&result).Error
+	} else {
+		err = db.Model(models.Receipt{}).Where("group_id = ?", groupId).Count(&result).Error
+	}
+
 	if err != nil {
 		return 0, err
 	}

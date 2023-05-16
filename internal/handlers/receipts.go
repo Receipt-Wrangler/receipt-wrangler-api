@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
@@ -57,6 +58,66 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 			}
 
 			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting receipts",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			var err error
+			var receipts []models.Receipt
+			var groupIds []string
+
+			token := utils.GetJWT(r)
+
+			r.ParseForm()
+
+			groupIds, ok := r.Form["groupIds"]
+			if !ok {
+				return http.StatusInternalServerError, err
+			}
+
+			fmt.Println(groupIds)
+
+			if false {
+
+			} else {
+				userGroupIds, err := repositories.GetGroupIdsByUserId(utils.UintToString(token.UserId))
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+				var userGroupIdInterfaces = make([]interface{}, len(userGroupIds))
+				for i := range userGroupIds {
+					userGroupIdInterfaces[i] = userGroupIds[i]
+				}
+
+				// if !utils.Contains(userGroupIdInterfaces, groupIds) {
+				// 	return http.StatusForbidden, errors.New("not allowed to access group")
+				// }
+
+				receipts, err = repositories.GetReceiptsByGroupIds(groupIds)
+			}
+
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(receipts)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
 			return 0, nil

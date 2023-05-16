@@ -135,3 +135,15 @@ func GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
 
 	return receipt, nil
 }
+
+func GetReceiptsByGroupIds(groupIds []string) ([]models.Receipt, error) {
+	db := db.GetDB()
+	var receipts []models.Receipt
+
+	err := db.Model(models.Receipt{}).Where("group_id IN ?", groupIds).Preload(clause.Associations).Preload().Find(&receipts).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return receipts, nil
+}

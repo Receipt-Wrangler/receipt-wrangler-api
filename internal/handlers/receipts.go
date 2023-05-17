@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
@@ -74,6 +73,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			// TODO: validate group access and fully implement. Was being used but no longer being used. Will probably need this down the road.
 			var err error
 			var receipts []models.Receipt
 			var groupIds []string
@@ -86,8 +86,6 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return http.StatusInternalServerError, err
 			}
-
-			fmt.Println(groupIds)
 
 			if false {
 

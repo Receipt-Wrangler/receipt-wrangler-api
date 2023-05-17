@@ -15,9 +15,6 @@ require (
 )
 
 require (
-	github.com/Microsoft/go-winio v0.6.0 // indirect
-	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/glebarez/go-sqlite v1.21.1 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect

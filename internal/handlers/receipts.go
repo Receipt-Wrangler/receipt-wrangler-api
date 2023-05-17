@@ -30,7 +30,9 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 			pagedRequest := r.Context().Value("pagedRequest").(structs.PagedRequest)
 			pagedData := structs.PagedData{}
 
-			receipts, err := repositories.GetPagedReceiptsByGroupId(groupId, pagedRequest)
+			token := utils.GetJWT(r)
+
+			receipts, err := repositories.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -42,7 +44,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 
 			pagedData.Data = anyData
 
-			count, err := repositories.GetGroupReceiptCount(groupId)
+			count, err := repositories.GetGroupReceiptCount(token.UserId, groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -55,6 +57,65 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 			}
 
 			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting receipts",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			// TODO: validate group access and fully implement. Was being used but no longer being used. Will probably need this down the road.
+			var err error
+			var receipts []models.Receipt
+			var groupIds []string
+
+			token := utils.GetJWT(r)
+
+			r.ParseForm()
+
+			groupIds, ok := r.Form["groupIds"]
+			if !ok {
+				return http.StatusInternalServerError, err
+			}
+
+			if false {
+
+			} else {
+				userGroupIds, err := repositories.GetGroupIdsByUserId(utils.UintToString(token.UserId))
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+				var userGroupIdInterfaces = make([]interface{}, len(userGroupIds))
+				for i := range userGroupIds {
+					userGroupIdInterfaces[i] = userGroupIds[i]
+				}
+
+				// if !utils.Contains(userGroupIdInterfaces, groupIds) {
+				// 	return http.StatusForbidden, errors.New("not allowed to access group")
+				// }
+
+				receipts, err = repositories.GetReceiptsByGroupIds(groupIds)
+			}
+
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(receipts)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
 			return 0, nil

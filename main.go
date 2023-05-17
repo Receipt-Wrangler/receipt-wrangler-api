@@ -100,6 +100,7 @@ func initRoutes() *chi.Mux {
 	receiptRouter := chi.NewRouter()
 	receiptRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceipt)
+	// receiptRouter.Get("/", handlers.GetReceiptsForGroupIds)
 	receiptRouter.With(middleware.SetReceiptBodyData, middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
 	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", structs.PagedRequest{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)
 	receiptRouter.With(middleware.SetGeneralBodyData("bulkStatusUpdate", structs.BulkStatusUpdate{}), middleware.SetReceiptGroupIds, middleware.BulkValidateGroupRole(models.EDITOR)).Post("/bulkStatusUpdate", handlers.BulkReceiptStatusUpdate)

@@ -140,7 +140,7 @@ func GetReceiptsByGroupIds(groupIds []string) ([]models.Receipt, error) {
 	db := db.GetDB()
 	var receipts []models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("group_id IN ?", groupIds).Preload(clause.Associations).Preload().Find(&receipts).Error
+	err := db.Model(models.Receipt{}).Where("group_id IN ?", groupIds).Preload(clause.Associations).Find(&receipts).Error
 	if err != nil {
 		return nil, err
 	}

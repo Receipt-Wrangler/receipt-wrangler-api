@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -287,6 +288,34 @@ func GetClaimsForLoggedInUser(w http.ResponseWriter, r *http.Request) {
 			return 0, nil
 		},
 	}
-	HandleRequest(handler)
 
+	HandleRequest(handler)
+}
+
+func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error updating user profile",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := utils.GetJWT(r)
+			db := db.GetDB()
+			updateProfileCommand := r.Context().Value("updateProfileCommand").(commands.UpdateProfileCommand)
+
+			if len(updateProfileCommand.DisplayName) == 0 {
+				return http.StatusBadRequest, errors.New("displayName is undefined")
+			}
+
+			err := db.Table("users").Where("id = ?", token.UserId).Update("display_name", updateProfileCommand.DisplayName).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
 }

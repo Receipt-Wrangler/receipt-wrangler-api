@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"net/http"
-	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 )
 
 func Logout(w http.ResponseWriter, r *http.Request) {
@@ -13,8 +13,8 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: "", HttpOnly: false, Path: "/", MaxAge: -1}
-			refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: "", HttpOnly: true, Path: "/", MaxAge: -1}
+			accessTokenCookie := utils.GetEmptyAccessTokenCookie()
+			refreshTokenCookie := utils.GetEmptyRefreshTokenCookie()
 
 			http.SetCookie(w, &accessTokenCookie)
 			http.SetCookie(w, &refreshTokenCookie)

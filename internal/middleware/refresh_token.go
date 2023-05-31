@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -58,8 +59,15 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 		}
 
 		if dbToken.IsUsed {
+			emptyAccessTokenCookie := utils.GetEmptyAccessTokenCookie()
+			emptyRefreshTokenCookie := utils.GetEmptyRefreshTokenCookie()
+
+			http.SetCookie(w, &emptyAccessTokenCookie)
+			http.SetCookie(w, &emptyRefreshTokenCookie)
+
 			utils.WriteCustomErrorResponse(w, errMessage, 500)
 			middleware_logger.Println("Refresh token has been used already.", r, dbToken)
+
 			return
 		} else {
 			err = db.Model(&dbToken).Update("is_used", true).Error
@@ -68,6 +76,8 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 				middleware_logger.Println(err.Error())
 				return
 			}
+
+			fmt.Println("marked as used")
 		}
 
 		next.ServeHTTP(w, r)

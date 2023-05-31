@@ -3,7 +3,6 @@ package utils
 import (
 	"context"
 	"net/http"
-	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
@@ -115,12 +114,4 @@ func HashPassword(password string) ([]byte, error) {
 	}
 
 	return bytes, nil
-}
-
-func GetEmptyAccessTokenCookie() http.Cookie {
-	return http.Cookie{Name: constants.JWT_KEY, Value: "", HttpOnly: false, Path: "/", MaxAge: -1}
-}
-
-func GetEmptyRefreshTokenCookie() http.Cookie {
-	return http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: "", HttpOnly: true, Path: "/", MaxAge: -1}
 }

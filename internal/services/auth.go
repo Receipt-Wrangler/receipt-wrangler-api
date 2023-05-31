@@ -38,3 +38,11 @@ func PrepareAccessTokenClaims(accessTokenClaims utils.Claims) {
 	accessTokenClaims.Issuer = ""
 	accessTokenClaims.Audience = make([]string, 0)
 }
+
+func GetEmptyAccessTokenCookie() http.Cookie {
+	return http.Cookie{Name: constants.JWT_KEY, Value: "", HttpOnly: false, Path: "/", MaxAge: -1}
+}
+
+func GetEmptyRefreshTokenCookie() http.Cookie {
+	return http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: "", HttpOnly: true, Path: "/", MaxAge: -1}
+}

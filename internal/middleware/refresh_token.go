@@ -6,6 +6,7 @@ import (
 	"net/http"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
 )
 
@@ -59,8 +60,8 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 		}
 
 		if dbToken.IsUsed {
-			emptyAccessTokenCookie := utils.GetEmptyAccessTokenCookie()
-			emptyRefreshTokenCookie := utils.GetEmptyRefreshTokenCookie()
+			emptyAccessTokenCookie := services.GetEmptyAccessTokenCookie()
+			emptyRefreshTokenCookie := services.GetEmptyRefreshTokenCookie()
 
 			http.SetCookie(w, &emptyAccessTokenCookie)
 			http.SetCookie(w, &emptyRefreshTokenCookie)

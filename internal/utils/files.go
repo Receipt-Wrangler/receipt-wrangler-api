@@ -17,7 +17,7 @@ func BuildFilePath(rid string, fid string, fname string) (string, error) {
 		return "", err
 	}
 
-	groupPath, err := BuildGroupPath(receipt.GroupId)
+	groupPath, err := BuildGroupPath(receipt.GroupId, "")
 	if err != nil {
 		return "", err
 	}
@@ -32,22 +32,28 @@ func BuildFileName(rid string, fid string, fname string) string {
 	return rid + "-" + fid + "-" + fname
 }
 
-func BuildGroupPath(groupId uint) (string, error) {
+func BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
 	db := db.GetDB()
-	var group models.Group
+	var groupNameToUse string
 
 	basePath, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 
-	err = db.Model(models.Group{}).Where("id = ?", groupId).Select("id", "name").Find(&group).Error
-	if err != nil {
-		return "", err
+	if len(alternateGroupName) > 0 {
+		groupNameToUse = alternateGroupName
+	} else {
+		var group models.Group
+		err = db.Model(models.Group{}).Where("id = ?", groupId).Select("name").Find(&group).Error
+		if err != nil {
+			return "", err
+		}
+		groupNameToUse = group.Name
 	}
 
-	strGroupId := UintToString(group.ID)
-	groupPath := strGroupId + "-" + group.Name
+	strGroupId := UintToString(groupId)
+	groupPath := strGroupId + "-" + groupNameToUse
 
 	return filepath.Join(basePath, "data", groupPath), nil
 }

@@ -4,7 +4,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/utils"
+	"receipt-wrangler/api/internal/simpleutils"
 
 	"gorm.io/gorm"
 )
@@ -47,7 +47,7 @@ func DeleteGroup(groupId string) error {
 		}
 
 		for i := 0; i < len(receipts); i++ {
-			txErr = DeleteReceipt(utils.UintToString(receipts[i].ID))
+			txErr = DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
 			if txErr != nil {
 				return txErr
 			}

@@ -5,6 +5,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
 
@@ -50,7 +51,7 @@ func DeleteReceipt(id string) error {
 		}
 
 		for _, f := range receipt.ImageFiles {
-			path, _ := utils.BuildFilePath(utils.UintToString(f.ReceiptId), utils.UintToString(f.ID), f.Name)
+			path, _ := utils.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
 			os.Remove(path)
 		}
 

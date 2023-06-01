@@ -10,6 +10,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
@@ -117,7 +118,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 	groupId := chi.URLParam(r, "groupId")
 
 	if groupId == "all" {
-		groupIds, err := repositories.GetGroupIdsByUserId(utils.UintToString(token.UserId))
+		groupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 		if err != nil {
 			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -250,7 +251,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			token := utils.GetJWT(r)
-			if utils.UintToString(token.UserId) == id {
+			if simpleutils.UintToString(token.UserId) == id {
 				return 500, errors.New("user cannot delete itself")
 			}
 

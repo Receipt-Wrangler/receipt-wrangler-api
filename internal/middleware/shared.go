@@ -7,6 +7,7 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -41,7 +42,7 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 					return
 				}
 
-				ctx := context.WithValue(r.Context(), "receiptId", utils.UintToString(comment.ReceiptId))
+				ctx := context.WithValue(r.Context(), "receiptId", simpleutils.UintToString(comment.ReceiptId))
 				ctx = context.WithValue(ctx, contextKey, comment)
 				serveWithContext(r, w, h, ctx)
 
@@ -109,7 +110,7 @@ func SetGroupIdByReceiptId(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "groupId", utils.UintToString(receipt.GroupId))
+		ctx := context.WithValue(r.Context(), "groupId", simpleutils.UintToString(receipt.GroupId))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

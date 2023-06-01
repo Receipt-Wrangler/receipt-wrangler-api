@@ -7,6 +7,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -29,14 +30,14 @@ func SetReceiptImageData(next http.Handler) http.Handler {
 			return
 		}
 
-		receipt, err := repositories.GetReceiptById(utils.UintToString(fileData.ReceiptId))
+		receipt, err := repositories.GetReceiptById(simpleutils.UintToString(fileData.ReceiptId))
 		if err != nil {
 			utils.WriteErrorResponse(w, marshalErr, 500)
 			return
 		}
 
 		ctx := context.WithValue(r.Context(), "fileData", fileData)
-		ctx = context.WithValue(ctx, "groupId", utils.UintToString(receipt.GroupId))
+		ctx = context.WithValue(ctx, "groupId", simpleutils.UintToString(receipt.GroupId))
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -54,7 +55,7 @@ func SetReceiptImageGroupId(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "groupId", utils.UintToString(receipt.GroupId))
+		ctx := context.WithValue(r.Context(), "groupId", simpleutils.UintToString(receipt.GroupId))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

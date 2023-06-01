@@ -58,7 +58,7 @@ func DeleteGroup(groupId string) error {
 			return txErr
 		}
 
-		txErr = db.Model(models.Group{}).Delete(&group).Error
+		txErr = db.Model(&group).Delete(&group).Error
 		if txErr != nil {
 			return txErr
 		}

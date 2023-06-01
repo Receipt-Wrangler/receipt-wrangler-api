@@ -46,3 +46,19 @@ func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {
 
 	return nil
 }
+
+func (deletedGroup *Group) AfterDelete(tx *gorm.DB) (err error) {
+	if deletedGroup.ID > 0 {
+		dataPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(deletedGroup.ID), deletedGroup.Name)
+		if err != nil {
+			return err
+		}
+
+		err = os.RemoveAll(dataPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

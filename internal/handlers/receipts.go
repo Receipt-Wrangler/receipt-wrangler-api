@@ -194,7 +194,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 	bodyData.ID = uint(u64Id)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID").Where("id = ?", uint(u64Id)).Save(bodyData).Error
+		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID", "created_by").Where("id = ?", uint(u64Id)).Save(bodyData).Error
 		if txErr != nil {
 			handler_logger.Print(txErr.Error())
 			return txErr

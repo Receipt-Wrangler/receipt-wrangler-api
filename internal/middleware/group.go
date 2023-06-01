@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -26,7 +27,7 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 			if len(groupId) > 0 {
 				token := utils.GetJWT(r)
 
-				groupMember, err := repositories.GetGroupMemberByUserIdAndGroupId(utils.UintToString(token.UserId), groupId)
+				groupMember, err := repositories.GetGroupMemberByUserIdAndGroupId(simpleutils.UintToString(token.UserId), groupId)
 				if err != nil {
 					middleware_logger.Print(err.Error())
 					utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
@@ -60,7 +61,7 @@ func BulkValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Ha
 				for i := 0; i < len(groupIds); i++ {
 					groupId := groupIds[i]
 
-					groupMember, err := repositories.GetGroupMemberByUserIdAndGroupId(utils.UintToString(token.UserId), groupId)
+					groupMember, err := repositories.GetGroupMemberByUserIdAndGroupId(simpleutils.UintToString(token.UserId), groupId)
 					if err != nil {
 						middleware_logger.Print(err.Error())
 						utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
@@ -96,7 +97,7 @@ func CanDeleteGroup(next http.Handler) http.Handler {
 		token := utils.GetJWT(r)
 		errMsg := "User must be a part of at least one group."
 
-		groupMembers, err := repositories.GetGroupMembersByUserId(utils.UintToString(token.UserId))
+		groupMembers, err := repositories.GetGroupMembersByUserId(simpleutils.UintToString(token.UserId))
 		if err != nil {
 			middleware_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

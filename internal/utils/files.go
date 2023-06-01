@@ -45,7 +45,7 @@ func BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
 		groupNameToUse = group.Name
 	}
 
-	strGroupId := UintToString(groupId)
+	strGroupId := simpleutils.UintToString(groupId)
 	groupPath, err := simpleutils.BuildGroupPathString(strGroupId, groupNameToUse)
 	if err != nil {
 		return "", err
@@ -74,7 +74,7 @@ func ReadFile(path string) ([]byte, error) {
 }
 
 func GetBytesForFileData(fileData models.FileData) ([]byte, error) {
-	path, err := BuildFilePath(UintToString(fileData.ReceiptId), UintToString(fileData.ID), fileData.Name)
+	path, err := BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
 	if err != nil {
 		return nil, err
 	}

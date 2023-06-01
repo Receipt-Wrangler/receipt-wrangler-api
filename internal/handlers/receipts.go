@@ -9,6 +9,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
@@ -90,7 +91,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 			if false {
 
 			} else {
-				userGroupIds, err := repositories.GetGroupIdsByUserId(utils.UintToString(token.UserId))
+				userGroupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -390,7 +391,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				dstPath, err := utils.BuildFilePath(utils.UintToString(newReceipt.ID), utils.UintToString(fileData.ID), fileData.Name)
+				dstPath, err := utils.BuildFilePath(simpleutils.UintToString(newReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

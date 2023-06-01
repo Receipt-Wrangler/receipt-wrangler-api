@@ -9,6 +9,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -36,7 +37,7 @@ func SetReceiptBodyData(next http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), "receipt", receipt)
-			ctx = context.WithValue(ctx, "groupId", utils.UintToString(receipt.GroupId))
+			ctx = context.WithValue(ctx, "groupId", simpleutils.UintToString(receipt.GroupId))
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
@@ -57,7 +58,7 @@ func SetReceiptGroupId(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "groupId", utils.UintToString(groupId))
+		ctx := context.WithValue(r.Context(), "groupId", simpleutils.UintToString(groupId))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -78,7 +79,7 @@ func SetReceiptGroupIds(next http.Handler) http.Handler {
 		}
 
 		for i := 0; i < len(receiptIds); i++ {
-			groupIds[i] = utils.UintToString(receipts[i].GroupId)
+			groupIds[i] = simpleutils.UintToString(receipts[i].GroupId)
 		}
 
 		ctx := context.WithValue(r.Context(), "groupIds", groupIds)

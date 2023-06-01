@@ -6,6 +6,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -16,7 +17,7 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error retrieving groups."
 	token := utils.GetJWT(r)
 
-	groups, err := services.GetGroupsForUser(utils.UintToString(token.UserId))
+	groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
 	if err != nil {
 		handler_logger.Println(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

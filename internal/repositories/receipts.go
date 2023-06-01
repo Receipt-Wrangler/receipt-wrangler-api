@@ -4,6 +4,7 @@ import (
 	"errors"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -49,7 +50,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 
 	query := db.Scopes(PaginateReceipts(pagedRequest)).Model(models.Receipt{}).Preload("Tags").Preload("Categories")
 	if groupId == "all" {
-		groupIds, err := GetGroupIdsByUserId(utils.UintToString(userId))
+		groupIds, err := GetGroupIdsByUserId(simpleutils.UintToString(userId))
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +96,7 @@ func GetGroupReceiptCount(userId uint, groupId string) (int64, error) {
 	var err error
 
 	if groupId == "all" {
-		groupIds, err := GetGroupIdsByUserId(utils.UintToString(userId))
+		groupIds, err := GetGroupIdsByUserId(simpleutils.UintToString(userId))
 		if err != nil {
 			return 0, err
 		}

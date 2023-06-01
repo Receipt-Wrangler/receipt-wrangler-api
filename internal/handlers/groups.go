@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -57,28 +59,44 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateGroup(w http.ResponseWriter, r *http.Request) {
-	errMsg := "Error creating group."
-	token := utils.GetJWT(r)
-	group := r.Context().Value("group").(models.Group)
+	handler := structs.Handler{
+		ErrorMessage: "Error creating group",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := utils.GetJWT(r)
+			group := r.Context().Value("group").(models.Group)
 
-	group, err := repositories.CreateGroup(group, token.UserId)
+			group, err := repositories.CreateGroup(group, token.UserId)
 
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(group)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			groupPath, err := utils.BuildGroupPath(group.ID, "")
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = utils.MakeDirectory(groupPath)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := utils.MarshalResponseData(group)
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
-	}
-
-	utils.SetJSONResponseHeaders(w)
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func UpdateGroup(w http.ResponseWriter, r *http.Request) {

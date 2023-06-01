@@ -1,6 +1,9 @@
 package models
 
 import (
+	"os"
+	"receipt-wrangler/api/internal/simpleutils"
+
 	"gorm.io/gorm"
 )
 
@@ -15,13 +18,29 @@ func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {
 	if groupToUpdate.ID > 0 {
 		var dbGroup Group
 
-		err := tx.Table("groups").Where("id = ?", groupToUpdate.ID).Select("Name").Error
+		err := tx.Table("groups").Where("id = ?", groupToUpdate.ID).Select("id", "name").Find(&dbGroup).Error
 		if err != nil {
 			return err
 		}
 
 		if groupToUpdate.Name != dbGroup.Name {
-			// oldGroupPath, err := utils.BuildGroupPath(dbGroup.ID, dbGroup.Name)
+			oldGroupId := simpleutils.UintToString(dbGroup.ID)
+			newGroupId := simpleutils.UintToString(groupToUpdate.ID)
+
+			oldGroupPath, err := simpleutils.BuildGroupPathString(oldGroupId, dbGroup.Name)
+			if err != nil {
+				return err
+			}
+
+			newGroupPath, err := simpleutils.BuildGroupPathString(newGroupId, groupToUpdate.Name)
+			if err != nil {
+				return err
+			}
+
+			err = os.Rename(oldGroupPath, newGroupPath)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

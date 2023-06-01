@@ -79,7 +79,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			groupPath, err := utils.BuildGroupPath(group.ID)
+			groupPath, err := utils.BuildGroupPath(group.ID, "")
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

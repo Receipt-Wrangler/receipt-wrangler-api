@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/simpleutils"
 )
 
 func BuildFilePath(rid string, fid string, fname string) (string, error) {
@@ -36,26 +37,25 @@ func BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
 	db := db.GetDB()
 	var groupNameToUse string
 
-	basePath, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
 	if len(alternateGroupName) > 0 {
 		groupNameToUse = alternateGroupName
 	} else {
 		var group models.Group
-		err = db.Model(models.Group{}).Where("id = ?", groupId).Select("name").Find(&group).Error
+		err := db.Model(models.Group{}).Where("id = ?", groupId).Select("name").Find(&group).Error
 		if err != nil {
 			return "", err
 		}
+
 		groupNameToUse = group.Name
 	}
 
 	strGroupId := UintToString(groupId)
-	groupPath := strGroupId + "-" + groupNameToUse
+	groupPath, err := simpleutils.BuildGroupPathString(strGroupId, groupNameToUse)
+	if err != nil {
+		return "", err
+	}
 
-	return filepath.Join(basePath, "data", groupPath), nil
+	return groupPath, nil
 }
 
 func WriteFile(path string, data []byte) error {

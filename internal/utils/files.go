@@ -23,14 +23,10 @@ func BuildFilePath(rid string, fid string, fname string) (string, error) {
 		return "", err
 	}
 
-	fileName := BuildFileName(rid, fid, fname)
+	fileName := simpleutils.BuildFileName(rid, fid, fname)
 	path := filepath.Join(groupPath, fileName)
 
 	return path, nil
-}
-
-func BuildFileName(rid string, fid string, fname string) string {
-	return rid + "-" + fid + "-" + fname
 }
 
 func BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {

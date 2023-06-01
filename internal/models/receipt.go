@@ -1,6 +1,9 @@
 package models
 
 import (
+	"os"
+	"path/filepath"
+	"receipt-wrangler/api/internal/simpleutils"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -24,6 +27,57 @@ type Receipt struct {
 	ImageFiles   []FileData      `json:"imageFiles"`
 	ReceiptItems []Item          `json:"receiptItems"`
 	Comments     []Comment       `json:"comments"`
+}
+
+func (receiptToUpdate *Receipt) BeforeUpdate(tx *gorm.DB) (err error) {
+	if receiptToUpdate.ID > 0 {
+		var oldReceipt Receipt
+
+		err := tx.Table("receipts").Where("id = ?", receiptToUpdate.ID).Preload("ImageFiles").Find(&oldReceipt).Error
+		if err != nil {
+			return err
+		}
+
+		if receiptToUpdate.GroupId != oldReceipt.GroupId && len(oldReceipt.ImageFiles) > 0 {
+			var oldGroup Group
+			var newGroup Group
+
+			err = tx.Table("groups").Where("id = ?", oldReceipt.GroupId).Select("id", "name").Find(&oldGroup).Error
+			if err != nil {
+				return err
+			}
+
+			err = tx.Table("groups").Where("id = ?", receiptToUpdate.GroupId).Select("id", "name").Find(&newGroup).Error
+			if err != nil {
+				return err
+			}
+
+			oldGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(oldGroup.ID), oldGroup.Name)
+			if err != nil {
+				return err
+			}
+
+			newGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(newGroup.ID), newGroup.Name)
+			if err != nil {
+				return err
+			}
+
+			for _, fileData := range oldReceipt.ImageFiles {
+				filename := simpleutils.BuildFileName(simpleutils.UintToString(oldReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+
+				oldFilePath := filepath.Join(oldGroupPath, filename)
+				newFilePathPath := filepath.Join(newGroupPath, filename)
+
+				err := os.Rename(oldFilePath, newFilePathPath)
+				if err != nil {
+					return err
+				}
+			}
+
+		}
+	}
+
+	return nil
 }
 
 func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {

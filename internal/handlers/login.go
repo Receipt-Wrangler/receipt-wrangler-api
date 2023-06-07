@@ -24,6 +24,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
+			if dbUser.IsDummyUser {
+				return http.StatusInternalServerError, err
+			}
+
 			jwt, refreshToken, accessTokenClaims, err := utils.GenerateJWT(dbUser.ID)
 			if err != nil {
 				return http.StatusInternalServerError, err

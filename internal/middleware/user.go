@@ -84,7 +84,7 @@ func ValidateUserData(roleRequired bool) (mw func(http.Handler) http.Handler) {
 				}
 			}
 
-			if len(userData.Password) == 0 {
+			if len(userData.Password) == 0 && !userData.IsDummyUser {
 				err.Errors["password"] = "Password is required"
 			}
 

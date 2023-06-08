@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
@@ -25,7 +26,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if dbUser.IsDummyUser {
-				return http.StatusInternalServerError, err
+				return http.StatusInternalServerError, errors.New("dummy users cannot log in")
 			}
 
 			jwt, refreshToken, accessTokenClaims, err := utils.GenerateJWT(dbUser.ID)

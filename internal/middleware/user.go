@@ -41,7 +41,7 @@ func SetResetPasswordData(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		errMsg := "Error updating user."
 		// TODO: Come up with a better way to handdle this
-		var resetPasswordData structs.ResetPassword
+		var resetPasswordData structs.ResetPasswordCommand
 		bodyData, err := utils.GetBodyData(w, r)
 
 		if err != nil {

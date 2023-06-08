@@ -213,7 +213,7 @@ func GetUsernameCount(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func ResetPassword(w http.ResponseWriter, r *http.Request) {
+func ResetPasswordCommand(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error resetting password.",
 		Writer:       w,
@@ -222,7 +222,36 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := db.GetDB()
 			id := chi.URLParam(r, "id")
-			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPassword)
+			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPasswordCommand)
+
+			hashedPassword, err := utils.HashPassword(resetPasswordData.Password)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = db.Model(models.User{}).Where("id = ?", id).UpdateColumn("password", hashedPassword).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func ConvertDummyUserToNormalUser(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error converting user.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := db.GetDB()
+			id := chi.URLParam(r, "id")
+			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPasswordCommand)
 
 			hashedPassword, err := utils.HashPassword(resetPasswordData.Password)
 			if err != nil {

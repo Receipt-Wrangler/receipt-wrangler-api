@@ -222,7 +222,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := db.GetDB()
 			id := chi.URLParam(r, "id")
-			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPassword)
+			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPasswordCommand)
 
 			hashedPassword, err := utils.HashPassword(resetPasswordData.Password)
 			if err != nil {
@@ -233,6 +233,51 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
+
+			w.WriteHeader(200)
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func ConvertDummyUserToNormalUser(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error converting user.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			var dbUser models.User
+			db := db.GetDB()
+			id := chi.URLParam(r, "id")
+			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPasswordCommand)
+
+			err := db.Table("users").Where("id = ?", id).Find(&dbUser).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			if !dbUser.IsDummyUser {
+				return http.StatusInternalServerError, errors.New("user is already a normal user")
+			}
+
+			if len(resetPasswordData.Password) == 0 {
+				return http.StatusInternalServerError, errors.New("password cannot be empty")
+			}
+
+			hashedPassword, err := utils.HashPassword(resetPasswordData.Password)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = db.Model(models.User{}).Where("id = ?", id).Updates(map[string]interface{}{"password": hashedPassword, "is_dummy_user": false}).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			
 
 			w.WriteHeader(200)
 			return 0, nil

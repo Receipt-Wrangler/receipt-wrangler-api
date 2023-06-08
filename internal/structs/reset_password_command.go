@@ -1,5 +1,5 @@
 package structs
 
-type ResetPassword struct {
+type ResetPasswordCommand struct {
 	Password string
 }

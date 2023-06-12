@@ -96,5 +96,37 @@ func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {
 		return err
 	}
 
+	if r.Status == RESOLVED && r.ID > 0 {
+		err := updateItemsToResolved(tx, r)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func updateItemsToResolved(tx *gorm.DB, r *Receipt) error {
+	var items []Item
+	var itemIdsToUpdate []uint
+
+	err := tx.Table("items").Where("receipt_id = ?", r.ID).Find(&items).Error
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if item.Status != ITEM_RESOLVED {
+			itemIdsToUpdate = append(itemIdsToUpdate, item.ID)
+		}
+	}
+
+	if len(itemIdsToUpdate) > 0 {
+		err := tx.Table("items").Where("id IN ?", itemIdsToUpdate).UpdateColumn("status", ITEM_RESOLVED).Error
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

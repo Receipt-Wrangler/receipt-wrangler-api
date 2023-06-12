@@ -125,28 +125,28 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, receipts.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id IN ? AND receipts.status=?", id, id, groupIds, models.OPEN).Scan(&itemsOwed).Error
+		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id IN ? AND items.status=?", id, id, groupIds, models.ITEM_OPEN).Scan(&itemsOwed).Error
 		if err != nil {
 			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
 		}
 
-		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, receipts.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id IN ? AND receipts.status=?", id, id, groupIds, models.OPEN).Scan(&itemsOthersOwe).Error
+		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id IN ? AND items.status=?", id, id, groupIds, models.ITEM_OPEN).Scan(&itemsOthersOwe).Error
 		if err != nil {
 			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
 		}
 	} else {
-		err := db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, receipts.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id =? AND receipts.status=?", id, id, groupId, models.OPEN).Scan(&itemsOwed).Error
+		err := db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id =? AND items.status=?", id, id, groupId, models.ITEM_OPEN).Scan(&itemsOwed).Error
 		if err != nil {
 			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
 		}
 
-		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, receipts.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id =? AND receipts.status=?", id, id, groupId, models.OPEN).Scan(&itemsOthersOwe).Error
+		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id =? AND items.status=?", id, id, groupId, models.ITEM_OPEN).Scan(&itemsOthersOwe).Error
 		if err != nil {
 			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -276,8 +276,6 @@ func ConvertDummyUserToNormalUser(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-
-			
 
 			w.WriteHeader(200)
 			return 0, nil

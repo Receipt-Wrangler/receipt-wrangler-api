@@ -47,3 +47,45 @@ func MigratetionMigrateIsResolvedToStatus(w http.ResponseWriter, r *http.Request
 
 	HandleRequest(handler)
 }
+
+func MigrationUpdateReceiptItemStatuses(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error migrating resolved receipts' items",
+		Writer:       w,
+		Request:      r,
+		ResponseType: "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			err := db.GetDB().Transaction(func(tx *gorm.DB) error {
+				var receipts []models.Receipt
+				itemIds := []uint{}
+
+				err := tx.Model(models.Receipt{}).Where("status = ?", models.RESOLVED).Preload("ReceiptItems").Find(&receipts).Error
+				if err != nil {
+					return err
+				}
+
+				for _, r := range receipts {
+					for _, item := range r.ReceiptItems {
+						itemIds = append(itemIds, item.ID)
+					}
+				}
+
+				err = tx.Table("items").Where("id IN ?", itemIds).UpdateColumn("status", models.ITEM_RESOLVED).Error
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
+
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

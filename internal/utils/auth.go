@@ -46,10 +46,11 @@ func GenerateJWT(userId uint) (string, string, Claims, error) {
 	}
 
 	accessTokenClaims := Claims{
-		UserId:      user.ID,
-		Displayname: user.DisplayName,
-		Username:    user.Username,
-		UserRole:    user.UserRole,
+		DefaultAvatarColor: user.DefaultAvatarColor,
+		Displayname:        user.DisplayName,
+		UserId:             user.ID,
+		Username:           user.Username,
+		UserRole:           user.UserRole,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},

@@ -8,10 +8,11 @@ import (
 )
 
 type Claims struct {
-	UserId      uint
-	Username    string
-	Displayname string
-	UserRole models.UserRole
+	DefaultAvatarColor string
+	Displayname        string
+	UserId             uint
+	Username           string
+	UserRole           models.UserRole
 	jwt.RegisteredClaims
 }
 

@@ -2,9 +2,10 @@ package models
 
 type User struct {
 	BaseModel
-	Username    string `gorm:"not null; uniqueIndex"`
-	Password    string `gorm:"not null"`
-	DisplayName string `json:"displayName"`
-	IsDummyUser bool `json:"isDummyUser"`
-	UserRole UserRole `gorm:"default:'USER'" json:"userRole"` 
+	DefaultAvatarColor string   `json:"defaultAvatarColor"`
+	DisplayName        string   `json:"displayName"`
+	IsDummyUser        bool     `json:"isDummyUser"`
+	Password           string   `gorm:"not null"`
+	Username           string   `gorm:"not null; uniqueIndex"`
+	UserRole           UserRole `gorm:"default:'USER'" json:"userRole"`
 }

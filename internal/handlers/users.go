@@ -30,7 +30,7 @@ type ItemView struct {
 func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
 	errMsg := "Error retrieving users."
-	var users []structs.APIUser
+	var users []structs.UserView
 
 	err := db.Model(models.User{}).Find(&users).Error
 	if err != nil {
@@ -52,7 +52,7 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
-	var apiUser structs.APIUser
+	var UserView structs.UserView
 	bodyData := r.Context().Value("user").(models.User)
 	errMsg := "Error creating user."
 	createdUser, err := repositories.CreateUser(bodyData)
@@ -62,14 +62,14 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.Model(models.User{}).Where("id = ?", createdUser.ID).Find(&apiUser).Error
+	err = db.Model(models.User{}).Where("id = ?", createdUser.ID).Find(&UserView).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 		return
 	}
 
-	bytes, err := utils.MarshalResponseData(apiUser)
+	bytes, err := utils.MarshalResponseData(UserView)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
@@ -351,7 +351,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, errors.New("displayName is undefined")
 			}
 
-			err := db.Table("users").Where("id = ?", token.UserId).Update("display_name", updateProfileCommand.DisplayName).Error
+			err := db.Table("users").Where("id = ?", token.UserId).Updates(map[string]interface{}{"display_name": updateProfileCommand.DisplayName, "default_avatar_color": updateProfileCommand.DefaultAvatarColor}).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

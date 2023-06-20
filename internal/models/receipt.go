@@ -38,7 +38,7 @@ func (receiptToUpdate *Receipt) BeforeUpdate(tx *gorm.DB) (err error) {
 			return err
 		}
 
-		if receiptToUpdate.GroupId != oldReceipt.GroupId && len(oldReceipt.ImageFiles) > 0 {
+		if receiptToUpdate.GroupId > 0 && receiptToUpdate.GroupId != oldReceipt.GroupId && len(oldReceipt.ImageFiles) > 0 {
 			var oldGroup Group
 			var newGroup Group
 

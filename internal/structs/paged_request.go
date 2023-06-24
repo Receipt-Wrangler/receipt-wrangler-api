@@ -31,7 +31,7 @@ type FilterOperation string
 const (
 	CONTAINS     FilterOperation = "CONTAINS"
 	EQUALS       FilterOperation = "EQUALS"
-	GREATER_THAN FilterOperation = "GREATER_TAHN"
+	GREATER_THAN FilterOperation = "GREATER_THAN"
 	LESS_THAN    FilterOperation = "LESS_THAN"
 )
 

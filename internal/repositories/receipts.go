@@ -98,6 +98,12 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 		query = buildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
 	}
 
+	// Amount
+	amount := pagedRequest.Filter.Amount.Value.(float64)
+	if amount > 0 {
+		query = buildFilterQuery(query, amount, pagedRequest.Filter.Amount.Operation, "amount", false)
+	}
+
 	status := pagedRequest.Filter.Status.Value.([]interface{})
 	if len(status) > 0 {
 		operation := pagedRequest.Filter.Status.Operation
@@ -130,6 +136,14 @@ func buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation struct
 
 	if operation == structs.CONTAINS && isArray {
 		return runningQuery.Where(fmt.Sprintf("%v IN ?", fieldName), value)
+	}
+
+	if operation == structs.GREATER_THAN && !isArray {
+		return runningQuery.Where(fmt.Sprintf("%v > ?", fieldName), value)
+	}
+
+	if operation == structs.LESS_THAN && !isArray {
+		return runningQuery.Where(fmt.Sprintf("%v < ?", fieldName), value)
 	}
 
 	return runningQuery

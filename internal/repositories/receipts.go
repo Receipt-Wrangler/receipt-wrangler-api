@@ -98,6 +98,20 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 		query = buildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
 	}
 
+	categories := pagedRequest.Filter.Categories.Value.([]interface{})
+	if len(categories) > 0 {
+		if pagedRequest.Filter.Categories.Operation == structs.CONTAINS {
+			query = query.Where("id IN (?)", db.Table("receipt_categories").Select("receipt_id").Where("category_id IN ?", categories))
+		}
+	}
+
+	tags := pagedRequest.Filter.Tags.Value.([]interface{})
+	if len(tags) > 0 {
+		if pagedRequest.Filter.Tags.Operation == structs.CONTAINS {
+			query = query.Where("id IN (?)", db.Table("receipt_tags").Select("receipt_id").Where("tag_id IN ?", tags))
+		}
+	}
+
 	// Amount
 	amount := pagedRequest.Filter.Amount.Value.(float64)
 	if amount > 0 {
@@ -106,11 +120,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 
 	status := pagedRequest.Filter.Status.Value.([]interface{})
 	if len(status) > 0 {
-		operation := pagedRequest.Filter.Status.Operation
-
-		if operation == structs.CONTAINS {
-			query = query.Where("status IN ?", status)
-		}
+		query = buildFilterQuery(query, status, pagedRequest.Filter.Status.Operation, "status", true)
 	}
 
 	// Run Query

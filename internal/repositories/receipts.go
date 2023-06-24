@@ -98,6 +98,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 		query = buildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
 	}
 
+	// Categories
 	categories := pagedRequest.Filter.Categories.Value.([]interface{})
 	if len(categories) > 0 {
 		if pagedRequest.Filter.Categories.Operation == structs.CONTAINS {
@@ -105,6 +106,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 		}
 	}
 
+	// Tags
 	tags := pagedRequest.Filter.Tags.Value.([]interface{})
 	if len(tags) > 0 {
 		if pagedRequest.Filter.Tags.Operation == structs.CONTAINS {
@@ -118,9 +120,16 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 		query = buildFilterQuery(query, amount, pagedRequest.Filter.Amount.Operation, "amount", false)
 	}
 
+	// Status
 	status := pagedRequest.Filter.Status.Value.([]interface{})
 	if len(status) > 0 {
 		query = buildFilterQuery(query, status, pagedRequest.Filter.Status.Operation, "status", true)
+	}
+
+	// Resolved Date
+	resolvedDate := pagedRequest.Filter.ResolvedDate.Value.(string)
+	if len(resolvedDate) > 0 {
+		query = buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
 	}
 
 	// Run Query

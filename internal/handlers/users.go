@@ -174,7 +174,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 		if ok {
 			resultMap[item.ChargedToUserId] = amount.Sub(item.ItemAmount)
 		} else {
-			resultMap[item.ChargedToUserId] = amount.Mul(decimal.NewFromInt(-1))
+			resultMap[item.ChargedToUserId] = item.ItemAmount
 		}
 	}
 

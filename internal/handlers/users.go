@@ -159,6 +159,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 		item := itemsOwed[i]
 		total = total.Add(item.ItemAmount)
 		amount, ok := resultMap[item.PaidByUserId]
+		
 		if ok {
 			resultMap[item.PaidByUserId] = amount.Add(item.ItemAmount)
 		} else {
@@ -171,10 +172,11 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 		item := itemsOthersOwe[i]
 		total = total.Sub(item.ItemAmount)
 		amount, ok := resultMap[item.ChargedToUserId]
+		
 		if ok {
 			resultMap[item.ChargedToUserId] = amount.Sub(item.ItemAmount)
 		} else {
-			resultMap[item.ChargedToUserId] = item.ItemAmount
+			resultMap[item.ChargedToUserId] = item.ItemAmount.Mul(decimal.NewFromInt(-1))
 		}
 	}
 

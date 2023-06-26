@@ -6,3 +6,10 @@ To run the api for local development:
 4. Add a config and a feature config, copy pasta the samples and modify as needed
 5. Once configs are added, and db is up, run ``` go run . ``` in the root directory of the project to run the api
    
+## Tech overview
+This project uses:
+* Go as the language
+* Mariadb for database
+* GORM as the ORM (currently no migration tracking. Any needed data backpops/fixes are done after deployment via endpont)
+* No framework except chi routers and some other dependencies for auth. Mostly raw go.
+* Eventually will add OpenAPI specs, and unit tests 

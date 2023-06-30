@@ -35,6 +35,7 @@ func MakeMigrations() {
 		&models.Group{},
 		&models.GroupMember{},
 		&models.Comment{},
+		&models.Notification{},
 	)
 }
 

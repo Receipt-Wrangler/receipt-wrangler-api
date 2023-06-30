@@ -11,7 +11,7 @@ import (
 func BuildNotificationRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	notificationRouter := chi.NewRouter()
 	notificationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
-	notificationRouter.Get("/", handlers.Search)
+	notificationRouter.Get("/", handlers.GetNotificationsForUser)
 
 	return notificationRouter
 }

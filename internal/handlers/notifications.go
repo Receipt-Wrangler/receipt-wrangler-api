@@ -36,3 +36,26 @@ func GetNotificationsForUser(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func DeleteAllNotificationsForUser(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting notifications",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := utils.GetJWT(r)
+
+			err := repositories.DeleteAllNotificationsForUser(token.UserId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

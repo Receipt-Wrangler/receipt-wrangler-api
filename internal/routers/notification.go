@@ -12,6 +12,7 @@ func BuildNotificationRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.M
 	notificationRouter := chi.NewRouter()
 	notificationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 	notificationRouter.Get("/", handlers.GetNotificationsForUser)
+	notificationRouter.Delete("/", handlers.DeleteAllNotificationsForUser)
 
 	return notificationRouter
 }

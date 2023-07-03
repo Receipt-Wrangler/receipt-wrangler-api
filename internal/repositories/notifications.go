@@ -13,3 +13,10 @@ func GetNotificationsForUser(userId uint) ([]models.Notification, error) {
 
 	return notifications, err
 }
+
+func DeleteAllNotificationsForUser(userId uint) error {
+	db := db.GetDB()
+	err := db.Delete(models.Notification{}, "user_id = ?", userId).Error
+
+	return err
+}

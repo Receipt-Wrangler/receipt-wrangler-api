@@ -14,9 +14,25 @@ func GetNotificationsForUser(userId uint) ([]models.Notification, error) {
 	return notifications, err
 }
 
+func GetNotificationById(notificationId string) (models.Notification, error) {
+	db := db.GetDB()
+	var notification models.Notification
+
+	err := db.Table("notifications").Where("id = ?", notificationId).Find(&notification).Error
+
+	return notification, err
+}
+
 func DeleteAllNotificationsForUser(userId uint) error {
 	db := db.GetDB()
 	err := db.Delete(models.Notification{}, "user_id = ?", userId).Error
+
+	return err
+}
+
+func DeleteNotificationById(notificationId string) error {
+	db := db.GetDB()
+	err := db.Delete(models.Notification{}, "id = ?", notificationId).Error
 
 	return err
 }

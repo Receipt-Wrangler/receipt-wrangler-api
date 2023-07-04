@@ -11,6 +11,7 @@ import (
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -180,6 +181,10 @@ func initRoutes() *chi.Mux {
 	searchRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
 	searchRouter.Get("/", handlers.Search)
 	rootRouter.Mount("/api/search", searchRouter)
+
+	// Notification router
+	notificationRouter := routers.BuildNotificationRouter(tokenValidatorMiddleware)
+	rootRouter.Mount("/api/notifications", notificationRouter)
 
 	return rootRouter
 }

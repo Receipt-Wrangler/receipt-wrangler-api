@@ -40,6 +40,35 @@ func GetNotificationsForUser(w http.ResponseWriter, r *http.Request) {
 	HandleRequest(handler)
 }
 
+func GetNotificationCountForUser(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting notificationCount",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := utils.GetJWT(r)
+
+			result, err := repositories.GetNotificationCountForUser(token.UserId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(result)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
 func DeleteAllNotificationsForUser(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error deleting notifications",

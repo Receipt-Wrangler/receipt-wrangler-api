@@ -14,6 +14,15 @@ func GetNotificationsForUser(userId uint) ([]models.Notification, error) {
 	return notifications, err
 }
 
+func GetNotificationCountForUser(userId uint) (int64, error) {
+	db := db.GetDB()
+	var count int64
+
+	err := db.Table("notifications").Where("user_id = ?", userId).Count(&count).Error
+
+	return count, err
+}
+
 func GetNotificationById(notificationId string) (models.Notification, error) {
 	db := db.GetDB()
 	var notification models.Notification

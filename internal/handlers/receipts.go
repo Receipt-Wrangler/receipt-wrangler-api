@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
@@ -134,7 +135,18 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	bodyData := r.Context().Value("receipt").(models.Receipt)
 	bodyData.CreatedBy = &token.UserId
 
-	err := db.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
+	err := db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
+		if err != nil {
+			return err
+		}
+
+		notificationBody := fmt.Sprintf("A receipt has been added in the group %s. Check it out!", repositories.BuildParamaterisedString("groupId", bodyData.GroupId, "name", "link"))
+		repositories.SendNotificationToGroup(bodyData.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL)
+
+		return nil
+	})
+
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

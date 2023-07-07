@@ -56,9 +56,47 @@ func SendNotificationToGroup(groupId uint, title string, body string, notificati
 		return err
 	}
 
+	fmt.Print(len(notifications), "To group")
+
 	err = db.Table("notifications").CreateInBatches(notifications, 20).Error
 
 	return err
+}
+
+func SendNotificationToUsers(userIds []uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) error {
+	db := db.GetDB()
+	notifications, err := BuildNotificationsForUsers(userIds, title, body, notificationType, usersToOmit)
+	if err != nil {
+		return nil
+	}
+
+	fmt.Print(len(notifications), "Usrs")
+
+	err = db.Table("notifications").CreateInBatches(&notifications, 20).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func BuildNotificationsForUsers(userIds []uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) ([]models.Notification, error) {
+	notifications := make([]models.Notification, 0)
+
+	for _, id := range userIds {
+		if !utils.Contains(usersToOmit, id) {
+			notification := models.Notification{
+				Title:  title,
+				Body:   body,
+				Type:   notificationType,
+				UserId: id,
+			}
+			notifications = append(notifications, notification)
+		}
+
+	}
+
+	return notifications, nil
 }
 
 func BuildNotificationForGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) ([]models.Notification, error) {

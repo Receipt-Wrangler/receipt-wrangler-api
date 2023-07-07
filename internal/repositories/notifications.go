@@ -82,7 +82,6 @@ func BuildNotificationForGroup(groupId uint, title string, body string, notifica
 		}
 
 	}
-	fmt.Println(notifications, len(notifications))
 
 	return notifications, nil
 }

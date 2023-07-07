@@ -1,8 +1,11 @@
 package repositories
 
 import (
+	"fmt"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 )
 
 func GetNotificationsForUser(userId uint) ([]models.Notification, error) {
@@ -44,4 +47,45 @@ func DeleteNotificationById(notificationId string) error {
 	err := db.Delete(models.Notification{}, "id = ?", notificationId).Error
 
 	return err
+}
+
+func SendNotificationToGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) error {
+	db := db.GetDB()
+	notifications, err := BuildNotificationForGroup(groupId, title, body, notificationType, usersToOmit)
+	if err != nil {
+		return err
+	}
+
+	err = db.Table("notifications").CreateInBatches(notifications, 20).Error
+
+	return err
+}
+
+func BuildNotificationForGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) ([]models.Notification, error) {
+	groupMembers, err := GetsGroupMembersByGroupId(simpleutils.UintToString(groupId))
+	if err != nil {
+		return nil, err
+	}
+
+	notifications := make([]models.Notification, 0)
+	for i := 0; i < len(groupMembers); i++ {
+		groupMember := groupMembers[i]
+		if !utils.Contains(usersToOmit, groupMember.UserID) {
+			notification := models.Notification{
+				Title:  title,
+				Body:   body,
+				Type:   notificationType,
+				UserId: groupMember.UserID,
+			}
+
+			notifications = append(notifications, notification)
+		}
+
+	}
+
+	return notifications, nil
+}
+
+func BuildParamaterisedString(idType string, id uint, displayKey string, typeOfData string) string {
+	return fmt.Sprintf("${%s:%s.%s:%s}", idType, simpleutils.UintToString(id), displayKey, typeOfData)
 }

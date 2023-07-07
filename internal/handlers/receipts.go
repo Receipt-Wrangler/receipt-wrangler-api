@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
@@ -127,29 +128,50 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
-	token := utils.GetJWT(r)
+	handler := structs.Handler{
+		ErrorMessage: "Error creating receipts.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := db.GetDB()
+			token := utils.GetJWT(r)
 
-	errMsg := "Error creating receipts."
-	bodyData := r.Context().Value("receipt").(models.Receipt)
-	bodyData.CreatedBy = &token.UserId
+			bodyData := r.Context().Value("receipt").(models.Receipt)
+			bodyData.CreatedBy = &token.UserId
 
-	err := db.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			err := db.Transaction(func(tx *gorm.DB) error {
+				err := tx.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
+				if err != nil {
+					return err
+				}
+
+				var userIdsToOmit []interface{} = make([]interface{}, 1)
+				userIdsToOmit = append(userIdsToOmit, *bodyData.CreatedBy)
+
+				notificationBody := fmt.Sprintf("A receipt has been added in the group %s. Check it out! %s", repositories.BuildParamaterisedString("groupId", bodyData.GroupId, "name", "string"), repositories.BuildParamaterisedString("receiptId", bodyData.ID, "", "link"))
+				repositories.SendNotificationToGroup(bodyData.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
+
+				return nil
+			})
+
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := json.Marshal(bodyData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := json.Marshal(bodyData)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func GetReceipt(w http.ResponseWriter, r *http.Request) {

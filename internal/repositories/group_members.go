@@ -44,3 +44,15 @@ func GetGroupMemberByUserIdAndGroupId(userId string, groupId string) (models.Gro
 
 	return groupMember, nil
 }
+
+func GetsGroupMembersByGroupId(groupId string) ([]models.GroupMember, error) {
+	db := db.GetDB()
+	var groupMembers []models.GroupMember
+
+	err := db.Model(models.GroupMember{}).Where("group_id = ?", groupId).Find(&groupMembers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return groupMembers, nil
+}

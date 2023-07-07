@@ -146,8 +146,11 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 					return err
 				}
 
+				var userIdsToOmit []interface{} = make([]interface{}, 1)
+				userIdsToOmit = append(userIdsToOmit, *bodyData.CreatedBy)
+
 				notificationBody := fmt.Sprintf("A receipt has been added in the group %s. Check it out! %s", repositories.BuildParamaterisedString("groupId", bodyData.GroupId, "name", "string"), repositories.BuildParamaterisedString("receiptId", bodyData.ID, "", "link"))
-				repositories.SendNotificationToGroup(bodyData.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL)
+				repositories.SendNotificationToGroup(bodyData.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
 
 				return nil
 			})

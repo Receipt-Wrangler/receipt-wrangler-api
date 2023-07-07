@@ -5,6 +5,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 )
 
 func GetNotificationsForUser(userId uint) ([]models.Notification, error) {
@@ -48,9 +49,9 @@ func DeleteNotificationById(notificationId string) error {
 	return err
 }
 
-func SendNotificationToGroup(groupId uint, title string, body string, notificationType models.NotificationType) error {
+func SendNotificationToGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) error {
 	db := db.GetDB()
-	notifications, err := BuildNotificationForGroup(groupId, title, body, notificationType)
+	notifications, err := BuildNotificationForGroup(groupId, title, body, notificationType, usersToOmit)
 	if err != nil {
 		return err
 	}
@@ -60,24 +61,28 @@ func SendNotificationToGroup(groupId uint, title string, body string, notificati
 	return err
 }
 
-func BuildNotificationForGroup(groupId uint, title string, body string, notificationType models.NotificationType) ([]models.Notification, error) {
+func BuildNotificationForGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) ([]models.Notification, error) {
 	groupMembers, err := GetsGroupMembersByGroupId(simpleutils.UintToString(groupId))
 	if err != nil {
 		return nil, err
 	}
 
-	notifications := make([]models.Notification, len(groupMembers))
+	notifications := make([]models.Notification, 0)
 	for i := 0; i < len(groupMembers); i++ {
 		groupMember := groupMembers[i]
-		notification := models.Notification{
-			Title:  title,
-			Body:   body,
-			Type:   notificationType,
-			UserId: groupMember.UserID,
+		if !utils.Contains(usersToOmit, groupMember.UserID) {
+			notification := models.Notification{
+				Title:  title,
+				Body:   body,
+				Type:   notificationType,
+				UserId: groupMember.UserID,
+			}
+
+			notifications = append(notifications, notification)
 		}
 
-		notifications[i] = notification
 	}
+	fmt.Println(notifications, len(notifications))
 
 	return notifications, nil
 }

@@ -5,6 +5,7 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -34,7 +35,7 @@ func AddComment(comment models.Comment) (models.Comment, error) {
 				return err
 			}
 
-			err = SendNotificationToUsers(threadUsers, "Comment Replied", fmt.Sprintf("%s has replied to a comment thread that you are a part of.", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
+			err = SendNotificationToUsers(threadUsers, "Comment Replied", fmt.Sprintf("%s has replied to a thread that you are a part of.", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
 			if err != nil {
 				return err
 			}
@@ -52,10 +53,12 @@ func AddComment(comment models.Comment) (models.Comment, error) {
 
 func GetUsersInCommentThread(comment models.Comment) ([]uint, error) {
 	db := db.GetDB()
-	userIds := make([]uint, 0)
+	userIds := make([]interface{}, 0)
+	result := make([]uint, 0)
 
 	if *comment.UserId > 0 {
 		userIds = append(userIds, *comment.UserId)
+		result = append(result, *comment.UserId)
 	}
 
 	if *comment.CommentId > 0 {
@@ -72,16 +75,19 @@ func GetUsersInCommentThread(comment models.Comment) ([]uint, error) {
 			return nil, err
 		}
 
-		if *parentComment.UserId > 0 {
+		if *parentComment.UserId > 0 && !utils.Contains(userIds, *parentComment.UserId) {
 			userIds = append(userIds, *parentComment.UserId)
+			result = append(result, *parentComment.UserId)
 		}
 
 		for _, comment := range threadComments {
-			if comment.ID > 0 {
+			if comment.ID > 0 && !utils.Contains(userIds, *comment.UserId) {
 				userIds = append(userIds, *comment.UserId)
+				result = append(result, *comment.UserId)
+
 			}
 		}
 	}
 
-	return userIds, nil
+	return result, nil
 }

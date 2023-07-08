@@ -4,7 +4,8 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 
-	"github.com/glebarez/sqlite"
+	"gorm.io/driver/sqlite"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

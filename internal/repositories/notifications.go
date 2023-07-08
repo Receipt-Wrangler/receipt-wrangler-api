@@ -56,8 +56,6 @@ func SendNotificationToGroup(groupId uint, title string, body string, notificati
 		return err
 	}
 
-	fmt.Print(len(notifications), "To group")
-
 	err = db.Table("notifications").CreateInBatches(notifications, 20).Error
 
 	return err
@@ -69,8 +67,6 @@ func SendNotificationToUsers(userIds []uint, title string, body string, notifica
 	if err != nil {
 		return nil
 	}
-
-	fmt.Print(len(notifications), "Usrs")
 
 	err = db.Table("notifications").CreateInBatches(&notifications, 20).Error
 	if err != nil {

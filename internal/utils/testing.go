@@ -24,3 +24,7 @@ func TruncateTable(db *gorm.DB, tableName string) error {
 	query := fmt.Sprintf("DELETE FROM %s", tableName)
 	return db.Exec(query).Error
 }
+
+func TestTeardown() {
+	os.RemoveAll("./logs")
+}

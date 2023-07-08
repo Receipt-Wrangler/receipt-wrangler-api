@@ -20,8 +20,9 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			bodyData := r.Context().Value("comment").(models.Comment)
+			commentRepository := repositories.NewCommentRepository(nil)
 
-			comment, err := repositories.AddComment(bodyData)
+			comment, err := commentRepository.AddComment(bodyData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

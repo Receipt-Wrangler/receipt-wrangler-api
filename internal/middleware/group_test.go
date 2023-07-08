@@ -203,6 +203,8 @@ func TestCanDeleteGroupShouldReject1(t *testing.T) {
 	handler := CanDeleteGroup(fakeHandler)
 	handler.ServeHTTP(w, r)
 
+	teardownGroupTest()
+
 	if w.Result().StatusCode != 500 {
 		utils.PrintTestError(t, w.Result().StatusCode, 500)
 	}

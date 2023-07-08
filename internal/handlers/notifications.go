@@ -19,8 +19,9 @@ func GetNotificationsForUser(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := utils.GetJWT(r)
+			notificationRepository := repositories.NewNotificationRepository(nil)
 
-			notifications, err := repositories.GetNotificationsForUser(token.UserId)
+			notifications, err := notificationRepository.GetNotificationsForUser(token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -48,8 +49,9 @@ func GetNotificationCountForUser(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := utils.GetJWT(r)
+			notificationRepository := repositories.NewNotificationRepository(nil)
 
-			result, err := repositories.GetNotificationCountForUser(token.UserId)
+			result, err := notificationRepository.GetNotificationCountForUser(token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -77,8 +79,9 @@ func DeleteAllNotificationsForUser(w http.ResponseWriter, r *http.Request) {
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := utils.GetJWT(r)
+			notificationRepository := repositories.NewNotificationRepository(nil)
 
-			err := repositories.DeleteAllNotificationsForUser(token.UserId)
+			err := notificationRepository.DeleteAllNotificationsForUser(token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -101,8 +104,9 @@ func DeleteNotification(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			token := utils.GetJWT(r)
+			notificationRepository := repositories.NewNotificationRepository(nil)
 
-			notification, err := repositories.GetNotificationById(id)
+			notification, err := notificationRepository.GetNotificationById(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -111,7 +115,7 @@ func DeleteNotification(w http.ResponseWriter, r *http.Request) {
 				return http.StatusForbidden, errors.New("user cannot delete other user's notifications")
 			}
 
-			err = repositories.DeleteNotificationById(id)
+			err = notificationRepository.DeleteNotificationById(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

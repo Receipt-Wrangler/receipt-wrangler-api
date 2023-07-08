@@ -92,7 +92,7 @@ func (repository CommentRepository) sendNotificationsToUsers(comment models.Comm
 	var receipt models.Receipt
 	usersToOmit := make([]interface{}, 0)
 	usersToOmit = append(usersToOmit, *comment.UserId)
-	notificationRepository := NewNotificationRepository(repository.DB, repository.TX)
+	notificationRepository := NewNotificationRepository(repository.TX)
 
 	receipt, err := GetReceiptById(simpleutils.UintToString(comment.ReceiptId))
 	if err != nil {

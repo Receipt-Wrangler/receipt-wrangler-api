@@ -136,11 +136,13 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := db.GetDB()
 			token := utils.GetJWT(r)
+			notificationRepository := repositories.NewNotificationRepository(nil)
 
 			bodyData := r.Context().Value("receipt").(models.Receipt)
 			bodyData.CreatedBy = &token.UserId
 
 			err := db.Transaction(func(tx *gorm.DB) error {
+				notificationRepository.TX = tx
 				err := tx.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
 				if err != nil {
 					return err
@@ -150,7 +152,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 				userIdsToOmit = append(userIdsToOmit, *bodyData.CreatedBy)
 
 				notificationBody := fmt.Sprintf("A receipt has been added in the group %s. Check it out! %s", repositories.BuildParamaterisedString("groupId", bodyData.GroupId, "name", "string"), repositories.BuildParamaterisedString("receiptId", bodyData.ID, "", "link"))
-				repositories.SendNotificationToGroup(bodyData.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
+				notificationRepository.SendNotificationToGroup(bodyData.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
 
 				return nil
 			})

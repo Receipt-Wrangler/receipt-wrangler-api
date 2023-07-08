@@ -17,6 +17,5 @@ RUN mkdir data
 VOLUME /go/api/data
 
 # Run
-RUN ls .
 RUN ./api --env prod
 EXPOSE 8081

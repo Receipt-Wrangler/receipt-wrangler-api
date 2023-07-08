@@ -12,33 +12,16 @@ import (
 
 func AddComment(comment models.Comment) (models.Comment, error) {
 	db := db.GetDB()
-	var receipt models.Receipt
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&comment).Create(&comment).Error
-		receipt, err = GetReceiptById(simpleutils.UintToString(comment.ReceiptId))
 		if err != nil {
 			return err
 		}
 
-		usersToOmit := make([]interface{}, 0)
-		usersToOmit = append(usersToOmit, *comment.UserId)
-
-		if comment.CommentId == nil {
-			err := SendNotificationToGroup(receipt.GroupId, "Comment Added", fmt.Sprintf("%s has added a comment to a receipt in group %s. %s", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string"), BuildParamaterisedString("groupId", receipt.GroupId, "name", "string"), BuildParamaterisedString("receiptId", comment.ReceiptId, "noop", "link")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
-			if err != nil {
-				return err
-			}
-		} else {
-			threadUsers, err := GetUsersInCommentThread(comment)
-			if err != nil {
-				return err
-			}
-
-			err = SendNotificationToUsers(threadUsers, "Comment Replied", fmt.Sprintf("%s has replied to a thread that you are a part of.", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
-			if err != nil {
-				return err
-			}
+		err = sendNotificationsToUsers(comment)
+		if err != nil {
+			return err
 		}
 
 		return nil
@@ -90,4 +73,34 @@ func GetUsersInCommentThread(comment models.Comment) ([]uint, error) {
 	}
 
 	return result, nil
+}
+
+func sendNotificationsToUsers(comment models.Comment) error {
+	var receipt models.Receipt
+	usersToOmit := make([]interface{}, 0)
+	usersToOmit = append(usersToOmit, *comment.UserId)
+
+	receipt, err := GetReceiptById(simpleutils.UintToString(comment.ReceiptId))
+	if err != nil {
+		return err
+	}
+
+	if comment.CommentId == nil {
+		err := SendNotificationToGroup(receipt.GroupId, "Comment Added", fmt.Sprintf("%s has added a comment to a receipt in group %s. %s", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string"), BuildParamaterisedString("groupId", receipt.GroupId, "name", "string"), BuildParamaterisedString("receiptId", comment.ReceiptId, "noop", "link")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
+		if err != nil {
+			return err
+		}
+	} else {
+		threadUsers, err := GetUsersInCommentThread(comment)
+		if err != nil {
+			return err
+		}
+
+		err = SendNotificationToUsers(threadUsers, "Comment Replied", fmt.Sprintf("%s has replied to a thread that you are a part of.", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

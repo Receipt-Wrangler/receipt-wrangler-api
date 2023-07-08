@@ -56,7 +56,7 @@ func SendNotificationToGroup(groupId uint, title string, body string, notificati
 		return err
 	}
 
-	err = db.Table("notifications").CreateInBatches(notifications, 20).Error
+	err = db.Table("notifications").CreateInBatches(&notifications, 20).Error
 
 	return err
 }

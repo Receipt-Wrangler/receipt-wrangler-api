@@ -44,7 +44,7 @@ func GetDB() *gorm.DB {
 }
 
 func InitTestDb() {
-	sqlite, err := gorm.Open(sqlite.Open(":memory:?_pragma=foreign_keys(1)"), &gorm.Config{})
+	sqlite, err := gorm.Open(sqlite.Open("file:test.db?_pragma=foreign_keys(1)"), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}

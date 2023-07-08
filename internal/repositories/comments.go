@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"fmt"
+	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
@@ -13,9 +14,9 @@ type CommentRepository struct {
 	BaseRepository
 }
 
-func NewCommentRepository(db *gorm.DB, tx *gorm.DB) CommentRepository {
+func NewCommentRepository(tx *gorm.DB) CommentRepository {
 	repository := CommentRepository{BaseRepository: BaseRepository{
-		DB: db,
+		DB: db.GetDB(),
 		TX: tx,
 	}}
 	return repository

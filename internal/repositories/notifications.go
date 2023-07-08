@@ -2,14 +2,27 @@ package repositories
 
 import (
 	"fmt"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
+
+	"gorm.io/gorm"
 )
 
-func GetNotificationsForUser(userId uint) ([]models.Notification, error) {
-	db := db.GetDB()
+type NotificationRepository struct {
+	BaseRepository
+}
+
+func NewNotificationRepository(db *gorm.DB, tx *gorm.DB) NotificationRepository {
+	repository := NotificationRepository{BaseRepository: BaseRepository{
+		DB: db,
+		TX: tx,
+	}}
+	return repository
+}
+
+func (repository NotificationRepository) GetNotificationsForUser(userId uint) ([]models.Notification, error) {
+	db := repository.GetDB()
 	var notifications []models.Notification
 
 	err := db.Table("notifications").Where("user_id = ?", userId).Find(&notifications).Error
@@ -17,8 +30,8 @@ func GetNotificationsForUser(userId uint) ([]models.Notification, error) {
 	return notifications, err
 }
 
-func GetNotificationCountForUser(userId uint) (int64, error) {
-	db := db.GetDB()
+func (repository NotificationRepository) GetNotificationCountForUser(userId uint) (int64, error) {
+	db := repository.GetDB()
 	var count int64
 
 	err := db.Table("notifications").Where("user_id = ?", userId).Count(&count).Error
@@ -26,8 +39,8 @@ func GetNotificationCountForUser(userId uint) (int64, error) {
 	return count, err
 }
 
-func GetNotificationById(notificationId string) (models.Notification, error) {
-	db := db.GetDB()
+func (repository NotificationRepository) GetNotificationById(notificationId string) (models.Notification, error) {
+	db := repository.GetDB()
 	var notification models.Notification
 
 	err := db.Table("notifications").Where("id = ?", notificationId).Find(&notification).Error
@@ -35,22 +48,22 @@ func GetNotificationById(notificationId string) (models.Notification, error) {
 	return notification, err
 }
 
-func DeleteAllNotificationsForUser(userId uint) error {
-	db := db.GetDB()
+func (repository NotificationRepository) DeleteAllNotificationsForUser(userId uint) error {
+	db := repository.GetDB()
 	err := db.Delete(models.Notification{}, "user_id = ?", userId).Error
 
 	return err
 }
 
-func DeleteNotificationById(notificationId string) error {
-	db := db.GetDB()
+func (repository NotificationRepository) DeleteNotificationById(notificationId string) error {
+	db := repository.GetDB()
 	err := db.Delete(models.Notification{}, "id = ?", notificationId).Error
 
 	return err
 }
 
-func SendNotificationToGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) error {
-	db := db.GetDB()
+func (repository NotificationRepository) SendNotificationToGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) error {
+	db := repository.GetDB()
 	notifications, err := BuildNotificationForGroup(groupId, title, body, notificationType, usersToOmit)
 	if err != nil {
 		return err
@@ -61,8 +74,8 @@ func SendNotificationToGroup(groupId uint, title string, body string, notificati
 	return err
 }
 
-func SendNotificationToUsers(userIds []uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) error {
-	db := db.GetDB()
+func (repository NotificationRepository) SendNotificationToUsers(userIds []uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) error {
+	db := repository.GetDB()
 	notifications, err := BuildNotificationsForUsers(userIds, title, body, notificationType, usersToOmit)
 	if err != nil {
 		return nil

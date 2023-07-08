@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"fmt"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
@@ -10,16 +9,30 @@ import (
 	"gorm.io/gorm"
 )
 
-func AddComment(comment models.Comment) (models.Comment, error) {
-	db := db.GetDB()
+type CommentRepository struct {
+	BaseRepository
+}
+
+func NewCommentRepository(db *gorm.DB, tx *gorm.DB) CommentRepository {
+	repository := CommentRepository{BaseRepository: BaseRepository{
+		DB: db,
+		TX: tx,
+	}}
+	return repository
+}
+
+func (repository CommentRepository) AddComment(comment models.Comment) (models.Comment, error) {
+	db := repository.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
+		repository.TX = tx
+
 		err := tx.Model(&comment).Create(&comment).Error
 		if err != nil {
 			return err
 		}
 
-		err = sendNotificationsToUsers(comment)
+		err = repository.sendNotificationsToUsers(comment)
 		if err != nil {
 			return err
 		}
@@ -34,8 +47,8 @@ func AddComment(comment models.Comment) (models.Comment, error) {
 	return comment, nil
 }
 
-func GetUsersInCommentThread(comment models.Comment) ([]uint, error) {
-	db := db.GetDB()
+func (repository CommentRepository) GetUsersInCommentThread(comment models.Comment) ([]uint, error) {
+	db := repository.GetDB()
 	userIds := make([]interface{}, 0)
 	result := make([]uint, 0)
 
@@ -75,10 +88,11 @@ func GetUsersInCommentThread(comment models.Comment) ([]uint, error) {
 	return result, nil
 }
 
-func sendNotificationsToUsers(comment models.Comment) error {
+func (repository CommentRepository) sendNotificationsToUsers(comment models.Comment) error {
 	var receipt models.Receipt
 	usersToOmit := make([]interface{}, 0)
 	usersToOmit = append(usersToOmit, *comment.UserId)
+	notificationRepository := NewNotificationRepository(repository.DB, repository.TX)
 
 	receipt, err := GetReceiptById(simpleutils.UintToString(comment.ReceiptId))
 	if err != nil {
@@ -86,17 +100,17 @@ func sendNotificationsToUsers(comment models.Comment) error {
 	}
 
 	if comment.CommentId == nil {
-		err := SendNotificationToGroup(receipt.GroupId, "Comment Added", fmt.Sprintf("%s has added a comment to a receipt in group %s. %s", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string"), BuildParamaterisedString("groupId", receipt.GroupId, "name", "string"), BuildParamaterisedString("receiptId", comment.ReceiptId, "noop", "link")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
+		err := notificationRepository.SendNotificationToGroup(receipt.GroupId, "Comment Added", fmt.Sprintf("%s has added a comment to a receipt in group %s. %s", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string"), BuildParamaterisedString("groupId", receipt.GroupId, "name", "string"), BuildParamaterisedString("receiptId", comment.ReceiptId, "noop", "link")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
 		if err != nil {
 			return err
 		}
 	} else {
-		threadUsers, err := GetUsersInCommentThread(comment)
+		threadUsers, err := repository.GetUsersInCommentThread(comment)
 		if err != nil {
 			return err
 		}
 
-		err = SendNotificationToUsers(threadUsers, "Comment Replied", fmt.Sprintf("%s has replied to a thread that you are a part of.", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
+		err = notificationRepository.SendNotificationToUsers(threadUsers, "Comment Replied", fmt.Sprintf("%s has replied to a thread that you are a part of.", BuildParamaterisedString("userId", *comment.UserId, "displayName", "string")), models.NOTIFICATION_TYPE_NORMAL, usersToOmit)
 		if err != nil {
 			return err
 		}

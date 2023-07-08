@@ -7,9 +7,12 @@ import (
 	"testing"
 )
 
+var commentRepository CommentRepository
+
 func setupCommentTest() {
 	utils.CreateTestGroupWithUsers()
 	createTestReceipt()
+	commentRepository = NewCommentRepository(db.GetDB(), nil)
 }
 
 func createTestReceipt() {
@@ -39,7 +42,7 @@ func TestShouldAddComment(t *testing.T) {
 		UserId:    &userId,
 	}
 
-	_, err := AddComment(comment)
+	_, err := commentRepository.AddComment(comment)
 	if err != nil {
 		utils.PrintTestError(t, err, nil)
 		return

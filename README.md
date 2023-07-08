@@ -1,3 +1,4 @@
+[![Build](https://github.com/Noah231515/receipt-wrangler-api/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Noah231515/receipt-wrangler-api/actions/workflows/docker-image.yml) [![codecov](https://codecov.io/gh/Noah231515/receipt-wrangler-api/branch/main/graph/badge.svg?token=EUQMLBEKPK)](https://codecov.io/gh/Noah231515/receipt-wrangler-api)
 ## Development
 To run the api for local development:
 1. Clone the repository

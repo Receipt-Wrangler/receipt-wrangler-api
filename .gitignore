@@ -5,3 +5,4 @@
 /data/*
 /logs/*
 ./api
+./coverage.out

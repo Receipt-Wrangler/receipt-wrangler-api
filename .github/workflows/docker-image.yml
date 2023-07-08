@@ -16,7 +16,16 @@ jobs:
       - name: Build
         run: go build -v ./...
       - name: Test
-        run: go test -p 1 -v ./...
+        run: go test -coverprofile=coverage.out -covermode=atomic -p 1 -v ./...
+      - name: Upload Coverage Report to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.out
+          flags: unittests # optional
+          name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
 
   build:
     needs: test

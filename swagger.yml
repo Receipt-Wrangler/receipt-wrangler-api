@@ -1,3 +1,6 @@
+basePath: /api
+consumes:
+    - application/json
 definitions:
     BaseModel:
         properties:
@@ -493,6 +496,13 @@ definitions:
     UserRole:
         type: string
         x-go-package: receipt-wrangler/api/internal/models
+info:
+    license:
+        name: GPLV3
+        url: https://www.gnu.org/licenses/gpl-3.0.en.html
+    termsOfService: there are no TOS at this moment, use at your own risk we take no responsibility
+    title: Receipt Wrangler API.
+    version: 0.0.1
 paths:
     /api/notifications:
         get:
@@ -517,4 +527,15 @@ paths:
             summary: List notifications for logged in user
             tags:
                 - Notifications
+produces:
+    - application/json
+schemes:
+    - https
+security:
+    - api_key: []
+securityDefinitions:
+    api_key:
+        in: header
+        name: jwt
+        type: string
 swagger: "2.0"

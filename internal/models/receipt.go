@@ -10,23 +10,65 @@ import (
 	"gorm.io/gorm"
 )
 
+// Receipt
+//
+// swagger:model
 type Receipt struct {
 	BaseModel
-	Name         string          `gorm:"not null" json:"name"`
-	Amount       decimal.Decimal `gorm:"not null" json:"amount" sql:"type:decimal(20,3);"`
-	Date         time.Time       `gorm:"not null" json:"date"`
-	ResolvedDate *time.Time      `json:"resolvedDate"`
-	ImgPath      string          `json:"-"`
-	PaidByUserID uint            `json:"paidByUserId"`
-	PaidByUser   User            `json:"-"`
-	Status       ReceiptStatus   `gorm:"default:'OPEN'; not null" json:"status"`
-	GroupId      uint            `gorm:"not null" json:"groupId"`
-	Group        Group           `json:"-"`
-	Tags         []Tag           `gorm:"many2many:receipt_tags" json:"tags"`
-	Categories   []Category      `gorm:"many2many:receipt_categories" json:"categories"`
-	ImageFiles   []FileData      `json:"imageFiles"`
-	ReceiptItems []Item          `json:"receiptItems"`
-	Comments     []Comment       `json:"comments"`
+
+	// Receipt name
+	//
+	// required: true
+	Name string `gorm:"not null" json:"name"`
+
+	// Reciept total amount
+	//
+	// required: true
+	Amount decimal.Decimal `gorm:"not null" json:"amount" sql:"type:decimal(20,3);"`
+
+	// Receipt date
+	//
+	// required: true
+	Date time.Time `gorm:"not null" json:"date"`
+
+	// Date resolved
+	//
+	// required: false
+	ResolvedDate *time.Time `json:"resolvedDate"`
+
+	// User paid foreign key
+	//
+	// required: true
+	PaidByUserID uint `json:"paidByUserId"`
+
+	PaidByUser User `json:"-"`
+
+	// Receipt status
+	//
+	// required: ture
+	Status ReceiptStatus `gorm:"default:'OPEN'; not null" json:"status"`
+
+	// Group foreign key
+	//
+	// required: true
+	GroupId uint `gorm:"not null" json:"groupId"`
+
+	Group Group `json:"-"`
+
+	// Tags associated to receipt
+	Tags []Tag `gorm:"many2many:receipt_tags" json:"tags"`
+
+	// Categories associated to receipt
+	Categories []Category `gorm:"many2many:receipt_categories" json:"categories"`
+
+	// Files associated to receipt
+	ImageFiles []FileData `json:"imageFiles"`
+
+	// Items associated to receipt
+	ReceiptItems []Item `json:"receiptItems"`
+
+	// Comments associated to receipt
+	Comments []Comment `json:"comments"`
 }
 
 func (receiptToUpdate *Receipt) BeforeUpdate(tx *gorm.DB) (err error) {

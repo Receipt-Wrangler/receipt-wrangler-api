@@ -155,13 +155,7 @@ func initRoutes() *chi.Mux {
 
 	// Add validaiton on update group that at least one user has owner, and that must have at least 1 user
 	// Group Router
-	groupRouter := chi.NewRouter()
-	groupRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
-	groupRouter.Get("/", handlers.GetGroupsForUser)
-	groupRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/{groupId}", handlers.GetGroupById)
-	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{})).Post("/", handlers.CreateGroup)
-	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{}), middleware.ValidateGroupRole(models.OWNER)).Put("/{groupId}", handlers.UpdateGroup)
-	groupRouter.With(middleware.ValidateGroupRole(models.OWNER), middleware.CanDeleteGroup).Delete("/{groupId}", handlers.DeleteGroup)
+	groupRouter := routers.BuildGroupRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/group", groupRouter)
 
 	// Feature Config Router

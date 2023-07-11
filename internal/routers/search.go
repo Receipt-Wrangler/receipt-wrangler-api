@@ -13,7 +13,7 @@ func BuildSearchRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 
 	searchRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 
-	// swagger:route GET /search Search search
+	// swagger:route GET /search/ Search search
 	//
 	// Receipt Search
 	//

@@ -177,9 +177,7 @@ func initRoutes() *chi.Mux {
 	rootRouter.Mount("/api/migrate", migrationRouter)
 
 	// Search router
-	searchRouter := chi.NewRouter()
-	searchRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
-	searchRouter.Get("/", handlers.Search)
+	searchRouter := routers.BuildSearchRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/search", searchRouter)
 
 	// Notification router

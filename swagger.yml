@@ -83,6 +83,33 @@ paths:
             summary: Get all user notifications
             tags:
                 - Notifications
+    /search:
+        get:
+            consumes:
+                - text/plain
+            description: This will search for receipts based on a search term
+            operationId: search
+            parameters:
+                - description: search term
+                  in: query
+                  name: searchTerm
+                  required: true
+                  type: string
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Receipt Search
+            tags:
+                - Search
 produces:
     - application/json
 schemes:

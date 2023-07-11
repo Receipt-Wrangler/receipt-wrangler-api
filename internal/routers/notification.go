@@ -13,9 +13,9 @@ func BuildNotificationRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.M
 
 	notificationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 
-	// swagger:route GET /api/notifications Notifications listNotifications
+	// swagger:route GET /notifications Notifications listNotifications
 	//
-	// List notifications for logged in user
+	// Get all user notifications
 	//
 	// This will get all the notifications for the currently logged in user
 	//
@@ -35,12 +35,68 @@ func BuildNotificationRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.M
 	//
 	//
 	//     Responses:
-	//       default: genericError
 	//       200: Ok
 	//       500: Internal Server Error
 	notificationRouter.Get("/", handlers.GetNotificationsForUser)
+
+	// swagger:route GET /notificationCount Notifications notificationCount
+	//
+	// Notification count
+	//
+	// This will get the notification count for the currently logged in user
+	//
+	//
+	//     Produces:
+	//     - text/plain
+	//
+	//     Schemes: https
+	//
+	//     Deprecated: false
+	//
+	//     Security:
+	//       api_key:
+	//
+	//     Responses:
+	//       200: Ok
+	//       500: Internal Server Error
 	notificationRouter.Get("/notificationCount", handlers.GetNotificationCountForUser)
+
+	// swagger:route DELETE / Notifications notificationCount
+	//
+	// Delete all notifications for user
+	//
+	// This deletes all notifications for a user
+	//
+	//
+	//     Schemes: https
+	//
+	//     Deprecated: false
+	//
+	//     Security:
+	//       api_key:
+	//
+	//     Responses:
+	//       200: Ok
+	//       500: Internal Server Error
 	notificationRouter.Delete("/", handlers.DeleteAllNotificationsForUser)
+
+	// swagger:route DELETE /{id} Notifications notificationCount
+	//
+	// Delete notification by id
+	//
+	// This deletes a notification by id
+	//
+	//
+	//     Schemes: https
+	//
+	//     Deprecated: false
+	//
+	//     Security:
+	//       api_key:
+	//
+	//     Responses:
+	//       200: Ok
+	//       500: Internal Server Error
 	notificationRouter.Delete("/{id}", handlers.DeleteNotification)
 
 	return notificationRouter

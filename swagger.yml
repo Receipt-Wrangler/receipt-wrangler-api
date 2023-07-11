@@ -1,501 +1,6 @@
 basePath: /api
 consumes:
     - application/json
-definitions:
-    BaseModel:
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    Category:
-        description: Category to relate receipts to
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            name:
-                description: |-
-                    Name of the category
-
-                    required: ture
-                type: string
-                x-go-name: Name
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    Comment:
-        description: User comment left on receipts
-        properties:
-            additionalInfo:
-                description: Additional information about the comment
-                type: string
-                x-go-name: AdditionalInfo
-            comment:
-                description: Comment itself
-                type: string
-                x-go-name: Comment
-            commentId:
-                description: Comment foreign key used for repleis
-                format: uint64
-                type: integer
-                x-go-name: CommentId
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            receiptId:
-                description: Receipt foreign key
-                format: uint64
-                type: integer
-                x-go-name: ReceiptId
-            replies:
-                description: Comment's replies
-                items:
-                    $ref: '#/definitions/Comment'
-                type: array
-                x-go-name: Replies
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-            userId:
-                description: User foreign key
-                format: uint64
-                type: integer
-                x-go-name: UserId
-        required:
-            - comment
-            - receiptId
-            - userId
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    FileData:
-        description: File data for images on a receipt
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            fileType:
-                description: MIME file type
-                type: string
-                x-go-name: FileType
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            imageData:
-                description: Image data
-                items:
-                    format: uint8
-                    type: integer
-                type: array
-                x-go-name: ImageData
-            name:
-                description: File name
-                type: string
-                x-go-name: Name
-            receiptId:
-                description: Receipt foreign key
-                format: uint64
-                type: integer
-                x-go-name: ReceiptId
-            size:
-                description: File size
-                format: uint64
-                type: integer
-                x-go-name: Size
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - imageData
-            - receiptId
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    Group:
-        description: Group in the system
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            groupMembers:
-                description: Members of the group
-                items:
-                    $ref: '#/definitions/GroupMember'
-                type: array
-                x-go-name: GroupMembers
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            isDefault:
-                description: Is default group (not used yet)
-                type: boolean
-                x-go-name: IsDefaultGroup
-            name:
-                description: Name of the group
-                type: string
-                x-go-name: Name
-            status:
-                $ref: '#/definitions/GroupStatus'
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - name
-            - status
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    GroupMember:
-        description: Group member
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            groupId:
-                description: Group compound primary key
-                format: uint64
-                type: integer
-                x-go-name: GroupID
-            groupRole:
-                $ref: '#/definitions/GroupRole'
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-            userId:
-                description: User compound primary key
-                format: uint64
-                type: integer
-                x-go-name: UserID
-        required:
-            - userId
-            - groupId
-            - groupRole
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    GroupRole:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    GroupStatus:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    Item:
-        description: Itemized item on a receipt
-        properties:
-            IsTaxed:
-                description: Is taxed (not used)
-                type: boolean
-            amount:
-                description: Amount the item costs
-                type: string
-                x-go-name: Amount
-            chargedToUserId:
-                description: User foreign key
-                format: uint64
-                type: integer
-                x-go-name: ChargedToUserId
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            name:
-                description: Item name
-                type: string
-                x-go-name: Name
-            receiptId:
-                description: Receipt foreign key
-                format: uint64
-                type: integer
-                x-go-name: ReceiptId
-            status:
-                $ref: '#/definitions/ItemStatus'
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - amount
-            - chargedToUserId
-            - name
-            - receiptId
-            - status
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    ItemStatus:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    Notification:
-        description: Notification
-        properties:
-            body:
-                description: |-
-                    Notification body
-
-                    requried: true
-                type: string
-                x-go-name: Body
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            title:
-                description: Title
-                type: string
-                x-go-name: Title
-            type:
-                $ref: '#/definitions/NotificationType'
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-            userId:
-                description: User foreign key
-                format: uint64
-                type: integer
-                x-go-name: UserId
-        required:
-            - type
-            - title
-            - userId
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    NotificationType:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    Receipt:
-        description: Receipt
-        properties:
-            amount:
-                description: Reciept total amount
-                type: string
-                x-go-name: Amount
-            categories:
-                description: Categories associated to receipt
-                items:
-                    $ref: '#/definitions/Category'
-                type: array
-                x-go-name: Categories
-            comments:
-                description: Comments associated to receipt
-                items:
-                    $ref: '#/definitions/Comment'
-                type: array
-                x-go-name: Comments
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            date:
-                description: Receipt date
-                format: date-time
-                type: string
-                x-go-name: Date
-            groupId:
-                description: Group foreign key
-                format: uint64
-                type: integer
-                x-go-name: GroupId
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            imageFiles:
-                description: Files associated to receipt
-                items:
-                    $ref: '#/definitions/FileData'
-                type: array
-                x-go-name: ImageFiles
-            name:
-                description: Receipt name
-                type: string
-                x-go-name: Name
-            paidByUserId:
-                description: User paid foreign key
-                format: uint64
-                type: integer
-                x-go-name: PaidByUserID
-            receiptItems:
-                description: Items associated to receipt
-                items:
-                    $ref: '#/definitions/Item'
-                type: array
-                x-go-name: ReceiptItems
-            resolvedDate:
-                description: Date resolved
-                format: date-time
-                type: string
-                x-go-name: ResolvedDate
-            status:
-                $ref: '#/definitions/ReceiptStatus'
-            tags:
-                description: Tags associated to receipt
-                items:
-                    $ref: '#/definitions/Tag'
-                type: array
-                x-go-name: Tags
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - name
-            - amount
-            - date
-            - paidByUserId
-            - groupId
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    ReceiptStatus:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    Tag:
-        description: Tag to relate receipts to
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            name:
-                description: Tag name
-                type: string
-                x-go-name: Name
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - name
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    User:
-        description: User in the system
-        properties:
-            Password:
-                description: |-
-                    User's password
-
-                    required true
-                type: string
-            Username:
-                description: User's username used to login
-                type: string
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            defaultAvatarColor:
-                description: Default avatar color
-                type: string
-                x-go-name: DefaultAvatarColor
-            displayName:
-                description: Display name
-                type: string
-                x-go-name: DisplayName
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            isDummyUser:
-                description: Is dummy user
-                type: boolean
-                x-go-name: IsDummyUser
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-            userRole:
-                $ref: '#/definitions/UserRole'
-        required:
-            - displayName
-            - isDummyUser
-            - Username
-            - userRole
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    UserRole:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
 info:
     license:
         name: GPLV3
@@ -504,7 +9,60 @@ info:
     title: Receipt Wrangler API.
     version: 0.0.1
 paths:
-    /api/notifications:
+    /:
+        delete:
+            description: This deletes all notifications for a user
+            operationId: notificationCount
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Delete all notifications for user
+            tags:
+                - Notifications
+    /{id}:
+        delete:
+            description: This deletes a notification by id
+            operationId: notificationCount
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Delete notification by id
+            tags:
+                - Notifications
+    /notificationCount:
+        get:
+            description: This will get the notification count for the currently logged in user
+            operationId: notificationCount
+            produces:
+                - text/plain
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Notification count
+            tags:
+                - Notifications
+    /notifications:
         get:
             consumes:
                 - application/json
@@ -518,13 +76,11 @@ paths:
                 "500":
                     $ref: '#/responses/Internal'
                     description: Server Error
-                default:
-                    $ref: '#/responses/genericError'
             schemes:
                 - https
             security:
                 - api_key: []
-            summary: List notifications for logged in user
+            summary: Get all user notifications
             tags:
                 - Notifications
 produces:

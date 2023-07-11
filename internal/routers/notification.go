@@ -13,7 +13,7 @@ func BuildNotificationRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.M
 
 	notificationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 
-	// swagger:route GET /notifications Notifications listNotifications
+	// swagger:route GET /notifications/ Notifications listNotifications
 	//
 	// Get all user notifications
 	//
@@ -39,7 +39,7 @@ func BuildNotificationRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.M
 	//       500: Internal Server Error
 	notificationRouter.Get("/", handlers.GetNotificationsForUser)
 
-	// swagger:route GET /notificationCount Notifications notificationCount
+	// swagger:route GET /notifications/notificationCount Notifications notificationCount
 	//
 	// Notification count
 	//
@@ -61,7 +61,7 @@ func BuildNotificationRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.M
 	//       500: Internal Server Error
 	notificationRouter.Get("/notificationCount", handlers.GetNotificationCountForUser)
 
-	// swagger:route DELETE / Notifications notificationCount
+	// swagger:route DELETE /notifications/ Notifications notificationCount
 	//
 	// Delete all notifications for user
 	//
@@ -80,7 +80,7 @@ func BuildNotificationRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.M
 	//       500: Internal Server Error
 	notificationRouter.Delete("/", handlers.DeleteAllNotificationsForUser)
 
-	// swagger:route DELETE /{id} Notifications notificationCount
+	// swagger:route DELETE /notifications/{id} Notifications notificationCount
 	//
 	// Delete notification by id
 	//

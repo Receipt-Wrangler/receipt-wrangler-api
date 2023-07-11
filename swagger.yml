@@ -9,7 +9,7 @@ info:
     title: Receipt Wrangler API.
     version: 0.0.1
 paths:
-    /:
+    /notifications/:
         delete:
             description: This deletes all notifications for a user
             operationId: notificationCount
@@ -26,43 +26,6 @@ paths:
             summary: Delete all notifications for user
             tags:
                 - Notifications
-    /{id}:
-        delete:
-            description: This deletes a notification by id
-            operationId: notificationCount
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Delete notification by id
-            tags:
-                - Notifications
-    /notificationCount:
-        get:
-            description: This will get the notification count for the currently logged in user
-            operationId: notificationCount
-            produces:
-                - text/plain
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Notification count
-            tags:
-                - Notifications
-    /notifications:
         get:
             consumes:
                 - application/json
@@ -81,6 +44,42 @@ paths:
             security:
                 - api_key: []
             summary: Get all user notifications
+            tags:
+                - Notifications
+    /notifications/{id}:
+        delete:
+            description: This deletes a notification by id
+            operationId: notificationCount
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Delete notification by id
+            tags:
+                - Notifications
+    /notifications/notificationCount:
+        get:
+            description: This will get the notification count for the currently logged in user
+            operationId: notificationCount
+            produces:
+                - text/plain
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Notification count
             tags:
                 - Notifications
     /search:

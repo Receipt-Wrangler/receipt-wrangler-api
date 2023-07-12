@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"receipt-wrangler/api/internal/commands"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers"
@@ -139,18 +138,7 @@ func initRoutes() *chi.Mux {
 	rootRouter.Mount("/api/category", categoryRouter)
 
 	// User Router
-	userRouter := chi.NewRouter()
-	userRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
-	userRouter.Get("/", handlers.GetAllUsers)
-	userRouter.Get("/{username}", handlers.GetUsernameCount)
-	userRouter.With(middleware.SetGeneralBodyData("updateProfileCommand", commands.UpdateProfileCommand{})).Put("/updateUserProfile", handlers.UpdateUserProfile)
-	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN), middleware.ValidateUserData(true)).Post("/", handlers.CreateUser)
-	userRouter.With(middleware.SetUserData, middleware.ValidateRole(models.ADMIN)).Put("/{id}", handlers.UpdateUser)
-	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}/resetPassword", handlers.ResetPassword)
-	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}/convertDummyUserToNormaluser", handlers.ConvertDummyUserToNormalUser)
-	userRouter.With(middleware.ValidateRole(models.ADMIN)).Delete("/{id}", handlers.DeleteUser)
-	userRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
-	userRouter.Get("/getUserClaims", handlers.GetClaimsForLoggedInUser)
+	userRouter := routers.BuildUserRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/user", userRouter)
 
 	// Add validaiton on update group that at least one user has owner, and that must have at least 1 user

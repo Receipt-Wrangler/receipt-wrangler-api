@@ -700,6 +700,198 @@ paths:
             summary: Receipt Search
             tags:
                 - Search
+    /users/:
+        get:
+            description: This will get all the users in the system and return a view without sensative information
+            operationId: user
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get users
+            tags:
+                - User
+        post:
+            consumes:
+                - application/json
+            description: This will to create a user, [SYSTEM ADMIN]
+            operationId: user
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Create user
+            tags:
+                - User
+    /users/{id}:
+        delete:
+            description: This will delete a system user by id [SYSTEM ADMIN]
+            operationId: user
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Delete user
+            tags:
+                - User
+        put:
+            consumes:
+                - application/json
+            description: This will update a user by id, [SYSTEM ADMIN]
+            operationId: user
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Update user by id
+            tags:
+                - User
+    /users/{id}/convertDummyUserToNormalUser:
+        post:
+            description: This will convert a dummy user to a normal system user, [SYSTEM ADMIN]
+            operationId: user
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Converts dummy user
+            tags:
+                - User
+    /users/{id}/resetPassword:
+        put:
+            consumes:
+                - application/json
+            description: This will reset a password for a user, [SYSTEM ADMIN]
+            operationId: user
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Reset password
+            tags:
+                - User
+    /users/{username}:
+        get:
+            consumes:
+                - text/plain
+            description: This will return the number of users in the system with the same username
+            operationId: user
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get username count
+            tags:
+                - User
+    /users/amountOwedForUser/{groupId}:
+        get:
+            description: This will return the amount owed for the logged in user, in the specified group, [SYSTEM USER]
+            operationId: user
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get amount owed for user
+            tags:
+                - User
+    /users/getUserClaims/:
+        get:
+            description: This will return the user's token claims for the currently logged in user [SYSTEM USER]
+            operationId: user
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get claims for logged in user
+            tags:
+                - User
+    /users/updateUserProfile:
+        put:
+            consumes:
+                - application/json
+            description: This will update the logged in user's user profile
+            operationId: user
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Update user profile
+            tags:
+                - User
 produces:
     - application/json
 schemes:

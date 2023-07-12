@@ -657,6 +657,23 @@ paths:
             summary: Update a group
             tags:
                 - Groups
+    /logout/:
+        post:
+            description: This will log a user out of the system and revoke their token [SYSTEM USER]
+            operationId: auth
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Logout
+            tags:
+                - Auth
     /notifications/:
         delete:
             description: This deletes all notifications for a user

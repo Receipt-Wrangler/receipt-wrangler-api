@@ -523,6 +523,44 @@ paths:
             summary: Get all categories
             tags:
                 - Category
+    /comment/:
+        post:
+            consumes:
+                - application/json
+            description: This will add a comment to a receipt, [SYSTEM USER]
+            operationId: comment
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Add comment
+            tags:
+                - Comment
+    /comment/{commentId}:
+        delete:
+            description: This will delete a comment by id [SYSTEM User]
+            operationId: comment
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Delete comment
+            tags:
+                - Comment
     /groups/:
         get:
             description: This will get groups for the currently logged in user

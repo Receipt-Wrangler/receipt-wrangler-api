@@ -730,6 +730,147 @@ paths:
             summary: Notification count
             tags:
                 - Notifications
+    /receipt/:
+        post:
+            consumes:
+                - application/json
+            description: This will create a receipt [SYSTEM USER]
+            operationId: receipt
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Create receipt
+            tags:
+                - Receipt
+    /receipt/{id}:
+        delete:
+            description: This will delete a receipt by id [SYSTEM USER]
+            operationId: receipt
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Delete receipt
+            tags:
+                - Receipt
+        get:
+            description: This will get a receipt by receipt id[SYSTEM USER]
+            operationId: receipt
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get receipt
+            tags:
+                - Receipt
+        put:
+            consumes:
+                - application/json
+            description: This will update a receipt by receipt id [SYSTEM USER]
+            operationId: receipt
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Update receipt
+            tags:
+                - Receipt
+    /receipt/{id}/duplicate:
+        post:
+            consumes:
+                - application/json
+            description: This will duplicate a receipt [SYSTEM USER]
+            operationId: receipt
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Duplicate receipt
+            tags:
+                - Receipt
+    /receipt/bulkStatusUpdate:
+        post:
+            consumes:
+                - application/json
+            description: This will bulk update receipt statuses with the option of adding a comment to each [SYSTEM USER]
+            operationId: receipt
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Bulk receipt status update
+            tags:
+                - Receipt
+    /receipt/group/{groupId}:
+        post:
+            consumes:
+                - application/json
+            description: This will return receipts with the option to sort and filter [SYSTEM USER]
+            operationId: receipt
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Gets receipts
+            tags:
+                - Receipt
     /receiptImage/:
         post:
             description: This will upload a receipt image, [SYSTEM USER]

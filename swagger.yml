@@ -504,6 +504,25 @@ info:
     title: Receipt Wrangler API.
     version: 0.0.1
 paths:
+    /category/:
+        get:
+            description: This will return all categories in the system
+            operationId: category
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get all categories
+            tags:
+                - Category
     /groups/:
         get:
             description: This will get groups for the currently logged in user
@@ -700,6 +719,25 @@ paths:
             summary: Receipt Search
             tags:
                 - Search
+    /tag/:
+        get:
+            description: This will return all tags in the system
+            operationId: tag
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get all tags
+            tags:
+                - Tag
     /users/:
         get:
             description: This will get all the users in the system and return a view without sensative information
@@ -852,7 +890,7 @@ paths:
             summary: Get amount owed for user
             tags:
                 - User
-    /users/getUserClaims/:
+    /users/getUserClaims:
         get:
             description: This will return the user's token claims for the currently logged in user [SYSTEM USER]
             operationId: user

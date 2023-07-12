@@ -126,15 +126,11 @@ func initRoutes() *chi.Mux {
 	rootRouter.Mount("/api/comment", commentRouter)
 
 	// Tag Router
-	tagRouter := chi.NewRouter()
-	tagRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
-	tagRouter.Get("/", handlers.GetAllTags)
+	tagRouter := routers.BuildTagRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/tag", tagRouter)
 
 	// Category Router
-	categoryRouter := chi.NewRouter()
-	categoryRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
-	categoryRouter.Get("/", handlers.GetAllCategories)
+	categoryRouter := routers.BuildCategoryRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/category", categoryRouter)
 
 	// User Router

@@ -730,6 +730,58 @@ paths:
             summary: Notification count
             tags:
                 - Notifications
+    /receiptImage/:
+        post:
+            description: This will upload a receipt image, [SYSTEM USER]
+            operationId: user
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Uploads a receipt image
+            tags:
+                - User
+    /receiptImage/{id}:
+        delete:
+            description: This will delete a receipt image by id [SYSTEM USER]
+            operationId: user
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Delete receipt image
+            tags:
+                - User
+        get:
+            description: This will get a receipt image by id, [SYSTEM USER]
+            operationId: receiptImage
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get receipt image
+            tags:
+                - ReceiptImage
     /search/:
         get:
             consumes:

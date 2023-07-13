@@ -561,6 +561,25 @@ paths:
             summary: Delete comment
             tags:
                 - Comment
+    /featureConfig:
+        get:
+            description: This will get the server's feature config
+            operationId: featureConfig
+            produces:
+                - application/json
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get feature config
+            tags:
+                - FeatureConfig
     /groups/:
         get:
             description: This will get groups for the currently logged in user
@@ -988,6 +1007,25 @@ paths:
             summary: Receipt Search
             tags:
                 - Search
+    /signUp/:
+        post:
+            consumes:
+                - application/json
+            description: This will log a user into the system
+            operationId: auth
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Registers a user
+            tags:
+                - Auth
     /tag/:
         get:
             description: This will return all tags in the system
@@ -1007,6 +1045,23 @@ paths:
             summary: Get all tags
             tags:
                 - Tag
+    /token/:
+        post:
+            description: This will get a fresh token pair for the user
+            operationId: auth
+            responses:
+                "200":
+                    $ref: '#/responses/Ok'
+                "500":
+                    $ref: '#/responses/Internal'
+                    description: Server Error
+            schemes:
+                - https
+            security:
+                - api_key: []
+            summary: Get fresh tokens
+            tags:
+                - Auth
     /users/:
         get:
             description: This will get all the users in the system and return a view without sensative information

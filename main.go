@@ -73,16 +73,12 @@ func initRoutes() *chi.Mux {
 	rootRouter := chi.NewRouter()
 
 	// Token Refresh Router
-	refreshRouter := chi.NewRouter()
-	refreshRouter.Use(middleware.ValidateRefreshToken, middleware.RevokeRefreshToken)
-	refreshRouter.Post("/", handlers.RefreshToken)
+	refreshRouter := routers.BuildTokenRefreshRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/token", refreshRouter)
 
 	// Signup Router
 	if featureConfig.EnableLocalSignUp {
-		signUpRouter := chi.NewRouter()
-		signUpRouter.Use(middleware.SetBodyData, middleware.ValidateUserData(false))
-		signUpRouter.Post("/", handlers.SignUp)
+		signUpRouter := routers.BuildSignUpRouter(tokenValidatorMiddleware)
 		rootRouter.Mount("/api/signup", signUpRouter)
 	}
 
@@ -124,8 +120,7 @@ func initRoutes() *chi.Mux {
 	rootRouter.Mount("/api/group", groupRouter)
 
 	// Feature Config Router
-	featureConfigRouter := chi.NewRouter()
-	featureConfigRouter.Get("/", handlers.GetFeatureConfig)
+	featureConfigRouter := routers.BuildFeatureConfigRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/featureConfig", featureConfigRouter)
 
 	// Migration router

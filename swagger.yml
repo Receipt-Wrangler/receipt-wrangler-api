@@ -1,1268 +1,1064 @@
-basePath: /api
-consumes:
-    - application/json
-definitions:
-    BaseModel:
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    Category:
-        description: Category to relate receipts to
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            name:
-                description: |-
-                    Name of the category
-
-                    required: ture
-                type: string
-                x-go-name: Name
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    Comment:
-        description: User comment left on receipts
-        properties:
-            additionalInfo:
-                description: Additional information about the comment
-                type: string
-                x-go-name: AdditionalInfo
-            comment:
-                description: Comment itself
-                type: string
-                x-go-name: Comment
-            commentId:
-                description: Comment foreign key used for repleis
-                format: uint64
-                type: integer
-                x-go-name: CommentId
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            receiptId:
-                description: Receipt foreign key
-                format: uint64
-                type: integer
-                x-go-name: ReceiptId
-            replies:
-                description: Comment's replies
-                items:
-                    $ref: '#/definitions/Comment'
-                type: array
-                x-go-name: Replies
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-            userId:
-                description: User foreign key
-                format: uint64
-                type: integer
-                x-go-name: UserId
-        required:
-            - comment
-            - receiptId
-            - userId
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    FileData:
-        description: File data for images on a receipt
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            fileType:
-                description: MIME file type
-                type: string
-                x-go-name: FileType
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            imageData:
-                description: Image data
-                items:
-                    format: uint8
-                    type: integer
-                type: array
-                x-go-name: ImageData
-            name:
-                description: File name
-                type: string
-                x-go-name: Name
-            receiptId:
-                description: Receipt foreign key
-                format: uint64
-                type: integer
-                x-go-name: ReceiptId
-            size:
-                description: File size
-                format: uint64
-                type: integer
-                x-go-name: Size
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - imageData
-            - receiptId
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    Group:
-        description: Group in the system
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            groupMembers:
-                description: Members of the group
-                items:
-                    $ref: '#/definitions/GroupMember'
-                type: array
-                x-go-name: GroupMembers
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            isDefault:
-                description: Is default group (not used yet)
-                type: boolean
-                x-go-name: IsDefaultGroup
-            name:
-                description: Name of the group
-                type: string
-                x-go-name: Name
-            status:
-                $ref: '#/definitions/GroupStatus'
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - name
-            - status
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    GroupMember:
-        description: Group member
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            groupId:
-                description: Group compound primary key
-                format: uint64
-                type: integer
-                x-go-name: GroupID
-            groupRole:
-                $ref: '#/definitions/GroupRole'
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-            userId:
-                description: User compound primary key
-                format: uint64
-                type: integer
-                x-go-name: UserID
-        required:
-            - userId
-            - groupId
-            - groupRole
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    GroupRole:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    GroupStatus:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    Item:
-        description: Itemized item on a receipt
-        properties:
-            IsTaxed:
-                description: Is taxed (not used)
-                type: boolean
-            amount:
-                description: Amount the item costs
-                type: string
-                x-go-name: Amount
-            chargedToUserId:
-                description: User foreign key
-                format: uint64
-                type: integer
-                x-go-name: ChargedToUserId
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            name:
-                description: Item name
-                type: string
-                x-go-name: Name
-            receiptId:
-                description: Receipt foreign key
-                format: uint64
-                type: integer
-                x-go-name: ReceiptId
-            status:
-                $ref: '#/definitions/ItemStatus'
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - amount
-            - chargedToUserId
-            - name
-            - receiptId
-            - status
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    ItemStatus:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    Notification:
-        description: Notification
-        properties:
-            body:
-                description: |-
-                    Notification body
-
-                    requried: true
-                type: string
-                x-go-name: Body
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            title:
-                description: Title
-                type: string
-                x-go-name: Title
-            type:
-                $ref: '#/definitions/NotificationType'
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-            userId:
-                description: User foreign key
-                format: uint64
-                type: integer
-                x-go-name: UserId
-        required:
-            - type
-            - title
-            - userId
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    NotificationType:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    Receipt:
-        description: Receipt
-        properties:
-            amount:
-                description: Reciept total amount
-                type: string
-                x-go-name: Amount
-            categories:
-                description: Categories associated to receipt
-                items:
-                    $ref: '#/definitions/Category'
-                type: array
-                x-go-name: Categories
-            comments:
-                description: Comments associated to receipt
-                items:
-                    $ref: '#/definitions/Comment'
-                type: array
-                x-go-name: Comments
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            date:
-                description: Receipt date
-                format: date-time
-                type: string
-                x-go-name: Date
-            groupId:
-                description: Group foreign key
-                format: uint64
-                type: integer
-                x-go-name: GroupId
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            imageFiles:
-                description: Files associated to receipt
-                items:
-                    $ref: '#/definitions/FileData'
-                type: array
-                x-go-name: ImageFiles
-            name:
-                description: Receipt name
-                type: string
-                x-go-name: Name
-            paidByUserId:
-                description: User paid foreign key
-                format: uint64
-                type: integer
-                x-go-name: PaidByUserID
-            receiptItems:
-                description: Items associated to receipt
-                items:
-                    $ref: '#/definitions/Item'
-                type: array
-                x-go-name: ReceiptItems
-            resolvedDate:
-                description: Date resolved
-                format: date-time
-                type: string
-                x-go-name: ResolvedDate
-            status:
-                $ref: '#/definitions/ReceiptStatus'
-            tags:
-                description: Tags associated to receipt
-                items:
-                    $ref: '#/definitions/Tag'
-                type: array
-                x-go-name: Tags
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - name
-            - amount
-            - date
-            - paidByUserId
-            - groupId
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    ReceiptStatus:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
-    Tag:
-        description: Tag to relate receipts to
-        properties:
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            name:
-                description: Tag name
-                type: string
-                x-go-name: Name
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-        required:
-            - name
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    User:
-        description: User in the system
-        properties:
-            Password:
-                description: |-
-                    User's password
-
-                    required true
-                type: string
-            Username:
-                description: User's username used to login
-                type: string
-            createdAt:
-                format: date-time
-                type: string
-                x-go-name: CreatedAt
-            createdBy:
-                format: uint64
-                type: integer
-                x-go-name: CreatedBy
-            defaultAvatarColor:
-                description: Default avatar color
-                type: string
-                x-go-name: DefaultAvatarColor
-            displayName:
-                description: Display name
-                type: string
-                x-go-name: DisplayName
-            id:
-                format: uint64
-                type: integer
-                x-go-name: ID
-            isDummyUser:
-                description: Is dummy user
-                type: boolean
-                x-go-name: IsDummyUser
-            updatedAt:
-                format: date-time
-                type: string
-                x-go-name: UpdatedAt
-            userRole:
-                $ref: '#/definitions/UserRole'
-        required:
-            - displayName
-            - isDummyUser
-            - Username
-            - userRole
-        type: object
-        x-go-package: receipt-wrangler/api/internal/models
-    UserRole:
-        type: string
-        x-go-package: receipt-wrangler/api/internal/models
+openapi: 3.0.1
 info:
-    license:
-        name: GPLV3
-        url: https://www.gnu.org/licenses/gpl-3.0.en.html
-    termsOfService: there are no TOS at this moment, use at your own risk we take no responsibility
-    title: Receipt Wrangler API.
-    version: 0.0.1
-paths:
-    /category/:
-        get:
-            description: This will return all categories in the system
-            operationId: category
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get all categories
-            tags:
-                - Category
-    /comment/:
-        post:
-            consumes:
-                - application/json
-            description: This will add a comment to a receipt, [SYSTEM USER]
-            operationId: comment
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Add comment
-            tags:
-                - Comment
-    /comment/{commentId}:
-        delete:
-            description: This will delete a comment by id [SYSTEM User]
-            operationId: comment
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Delete comment
-            tags:
-                - Comment
-    /featureConfig:
-        get:
-            description: This will get the server's feature config
-            operationId: featureConfig
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get feature config
-            tags:
-                - FeatureConfig
-    /groups/:
-        get:
-            description: This will get groups for the currently logged in user
-            operationId: group
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get groups for user
-            tags:
-                - Groups
-        post:
-            consumes:
-                - application/json
-            description: This will create a group
-            operationId: group
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Create group
-            tags:
-                - Groups
-    /groups/{groupId}:
-        delete:
-            description: This will delete a group by id
-            operationId: group
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Delete group
-            tags:
-                - Groups
-        get:
-            description: This will get a group by Id
-            operationId: group
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Gets a group by Id
-            tags:
-                - Groups
-        put:
-            consumes:
-                - application/json
-            description: This will update a group
-            operationId: group
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Update a group
-            tags:
-                - Groups
-    /login/:
-        post:
-            consumes:
-                - application/json
-            description: This will log a user into the system
-            operationId: auth
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Login
-            tags:
-                - Auth
-    /logout/:
-        post:
-            description: This will log a user out of the system and revoke their token [SYSTEM USER]
-            operationId: auth
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Logout
-            tags:
-                - Auth
-    /notifications/:
-        delete:
-            description: This deletes all notifications for a user
-            operationId: notificationCount
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Delete all notifications for user
-            tags:
-                - Notifications
-        get:
-            consumes:
-                - application/json
-            description: This will get all the notifications for the currently logged in user
-            operationId: listNotifications
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get all user notifications
-            tags:
-                - Notifications
-    /notifications/{id}:
-        delete:
-            description: This deletes a notification by id
-            operationId: notificationCount
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Delete notification by id
-            tags:
-                - Notifications
-    /notifications/notificationCount:
-        get:
-            description: This will get the notification count for the currently logged in user
-            operationId: notificationCount
-            produces:
-                - text/plain
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Notification count
-            tags:
-                - Notifications
-    /receipt/:
-        post:
-            consumes:
-                - application/json
-            description: This will create a receipt [SYSTEM USER]
-            operationId: receipt
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Create receipt
-            tags:
-                - Receipt
-    /receipt/{id}:
-        delete:
-            description: This will delete a receipt by id [SYSTEM USER]
-            operationId: receipt
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Delete receipt
-            tags:
-                - Receipt
-        get:
-            description: This will get a receipt by receipt id[SYSTEM USER]
-            operationId: receipt
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get receipt
-            tags:
-                - Receipt
-        put:
-            consumes:
-                - application/json
-            description: This will update a receipt by receipt id [SYSTEM USER]
-            operationId: receipt
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Update receipt
-            tags:
-                - Receipt
-    /receipt/{id}/duplicate:
-        post:
-            consumes:
-                - application/json
-            description: This will duplicate a receipt [SYSTEM USER]
-            operationId: receipt
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Duplicate receipt
-            tags:
-                - Receipt
-    /receipt/bulkStatusUpdate:
-        post:
-            consumes:
-                - application/json
-            description: This will bulk update receipt statuses with the option of adding a comment to each [SYSTEM USER]
-            operationId: receipt
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Bulk receipt status update
-            tags:
-                - Receipt
-    /receipt/group/{groupId}:
-        post:
-            consumes:
-                - application/json
-            description: This will return receipts with the option to sort and filter [SYSTEM USER]
-            operationId: receipt
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Gets receipts
-            tags:
-                - Receipt
-    /receiptImage/:
-        post:
-            description: This will upload a receipt image, [SYSTEM USER]
-            operationId: user
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Uploads a receipt image
-            tags:
-                - User
-    /receiptImage/{id}:
-        delete:
-            description: This will delete a receipt image by id [SYSTEM USER]
-            operationId: user
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Delete receipt image
-            tags:
-                - User
-        get:
-            description: This will get a receipt image by id, [SYSTEM USER]
-            operationId: receiptImage
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get receipt image
-            tags:
-                - ReceiptImage
-    /search/:
-        get:
-            consumes:
-                - text/plain
-            description: This will search for receipts based on a search term
-            operationId: search
-            parameters:
-                - description: search term
-                  in: query
-                  name: searchTerm
-                  required: true
-                  type: string
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Receipt Search
-            tags:
-                - Search
-    /signUp/:
-        post:
-            consumes:
-                - application/json
-            description: This will log a user into the system
-            operationId: auth
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Registers a user
-            tags:
-                - Auth
-    /tag/:
-        get:
-            description: This will return all tags in the system
-            operationId: tag
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get all tags
-            tags:
-                - Tag
-    /token/:
-        post:
-            description: This will get a fresh token pair for the user
-            operationId: auth
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get fresh tokens
-            tags:
-                - Auth
-    /users/:
-        get:
-            description: This will get all the users in the system and return a view without sensative information
-            operationId: user
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get users
-            tags:
-                - User
-        post:
-            consumes:
-                - application/json
-            description: This will to create a user, [SYSTEM ADMIN]
-            operationId: user
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Create user
-            tags:
-                - User
-    /users/{id}:
-        delete:
-            description: This will delete a system user by id [SYSTEM ADMIN]
-            operationId: user
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Delete user
-            tags:
-                - User
-        put:
-            consumes:
-                - application/json
-            description: This will update a user by id, [SYSTEM ADMIN]
-            operationId: user
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Update user by id
-            tags:
-                - User
-    /users/{id}/convertDummyUserToNormalUser:
-        post:
-            description: This will convert a dummy user to a normal system user, [SYSTEM ADMIN]
-            operationId: user
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Converts dummy user
-            tags:
-                - User
-    /users/{id}/resetPassword:
-        put:
-            consumes:
-                - application/json
-            description: This will reset a password for a user, [SYSTEM ADMIN]
-            operationId: user
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Reset password
-            tags:
-                - User
-    /users/{username}:
-        get:
-            consumes:
-                - text/plain
-            description: This will return the number of users in the system with the same username
-            operationId: user
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get username count
-            tags:
-                - User
-    /users/amountOwedForUser/{groupId}:
-        get:
-            description: This will return the amount owed for the logged in user, in the specified group, [SYSTEM USER]
-            operationId: user
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get amount owed for user
-            tags:
-                - User
-    /users/getUserClaims:
-        get:
-            description: This will return the user's token claims for the currently logged in user [SYSTEM USER]
-            operationId: user
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Get claims for logged in user
-            tags:
-                - User
-    /users/updateUserProfile:
-        put:
-            consumes:
-                - application/json
-            description: This will update the logged in user's user profile
-            operationId: user
-            produces:
-                - application/json
-            responses:
-                "200":
-                    $ref: '#/responses/Ok'
-                "500":
-                    $ref: '#/responses/Internal'
-                    description: Server Error
-            schemes:
-                - https
-            security:
-                - api_key: []
-            summary: Update user profile
-            tags:
-                - User
-produces:
-    - application/json
-schemes:
-    - https
+  title: Receipt Wrangler API.
+  termsOfService: there are no TOS at this moment, use at your own risk we take no
+    responsibility
+  license:
+    name: GPLV3
+    url: https://www.gnu.org/licenses/gpl-3.0.en.html
+  version: 0.0.1
+servers:
+- url: /api
 security:
-    - api_key: []
-securityDefinitions:
-    api_key:
-        in: header
-        name: jwt
-        type: string
-swagger: "2.0"
+- api_key: []
+paths:
+  /category/:
+    get:
+      tags:
+      - Category
+      summary: Get all categories
+      description: This will return all categories in the system
+      operationId: category
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /comment/:
+    post:
+      tags:
+      - Comment
+      summary: Add comment
+      description: This will add a comment to a receipt, [SYSTEM USER]
+      operationId: comment
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /comment/{commentId}:
+    delete:
+      tags:
+      - Comment
+      summary: Delete comment
+      description: This will delete a comment by id [SYSTEM User]
+      operationId: comment
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /featureConfig:
+    get:
+      tags:
+      - FeatureConfig
+      summary: Get feature config
+      description: This will get the server's feature config
+      operationId: featureConfig
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /groups/:
+    get:
+      tags:
+      - Groups
+      summary: Get groups for user
+      description: This will get groups for the currently logged in user
+      operationId: group
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    post:
+      tags:
+      - Groups
+      summary: Create group
+      description: This will create a group
+      operationId: group
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /groups/{groupId}:
+    get:
+      tags:
+      - Groups
+      summary: Gets a group by Id
+      description: This will get a group by Id
+      operationId: group
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    put:
+      tags:
+      - Groups
+      summary: Update a group
+      description: This will update a group
+      operationId: group
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    delete:
+      tags:
+      - Groups
+      summary: Delete group
+      description: This will delete a group by id
+      operationId: group
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /login/:
+    post:
+      tags:
+      - Auth
+      summary: Login
+      description: This will log a user into the system
+      operationId: auth
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /logout/:
+    post:
+      tags:
+      - Auth
+      summary: Logout
+      description: This will log a user out of the system and revoke their token [SYSTEM
+        USER]
+      operationId: auth
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /notifications/:
+    get:
+      tags:
+      - Notifications
+      summary: Get all user notifications
+      description: This will get all the notifications for the currently logged in
+        user
+      operationId: listNotifications
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    delete:
+      tags:
+      - Notifications
+      summary: Delete all notifications for user
+      description: This deletes all notifications for a user
+      operationId: notificationCount
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /notifications/{id}:
+    delete:
+      tags:
+      - Notifications
+      summary: Delete notification by id
+      description: This deletes a notification by id
+      operationId: notificationCount
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /notifications/notificationCount:
+    get:
+      tags:
+      - Notifications
+      summary: Notification count
+      description: This will get the notification count for the currently logged in
+        user
+      operationId: notificationCount
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /receipt/:
+    post:
+      tags:
+      - Receipt
+      summary: Create receipt
+      description: This will create a receipt [SYSTEM USER]
+      operationId: receipt
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /receipt/{id}:
+    get:
+      tags:
+      - Receipt
+      summary: Get receipt
+      description: This will get a receipt by receipt id[SYSTEM USER]
+      operationId: receipt
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    put:
+      tags:
+      - Receipt
+      summary: Update receipt
+      description: This will update a receipt by receipt id [SYSTEM USER]
+      operationId: receipt
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    delete:
+      tags:
+      - Receipt
+      summary: Delete receipt
+      description: This will delete a receipt by id [SYSTEM USER]
+      operationId: receipt
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /receipt/{id}/duplicate:
+    post:
+      tags:
+      - Receipt
+      summary: Duplicate receipt
+      description: This will duplicate a receipt [SYSTEM USER]
+      operationId: receipt
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /receipt/bulkStatusUpdate:
+    post:
+      tags:
+      - Receipt
+      summary: Bulk receipt status update
+      description: This will bulk update receipt statuses with the option of adding
+        a comment to each [SYSTEM USER]
+      operationId: receipt
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /receipt/group/{groupId}:
+    post:
+      tags:
+      - Receipt
+      summary: Gets receipts
+      description: This will return receipts with the option to sort and filter [SYSTEM
+        USER]
+      operationId: receipt
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /receiptImage/:
+    post:
+      tags:
+      - User
+      summary: Uploads a receipt image
+      description: This will upload a receipt image, [SYSTEM USER]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /receiptImage/{id}:
+    get:
+      tags:
+      - ReceiptImage
+      summary: Get receipt image
+      description: This will get a receipt image by id, [SYSTEM USER]
+      operationId: receiptImage
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    delete:
+      tags:
+      - User
+      summary: Delete receipt image
+      description: This will delete a receipt image by id [SYSTEM USER]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /search/:
+    get:
+      tags:
+      - Search
+      summary: Receipt Search
+      description: This will search for receipts based on a search term
+      operationId: search
+      parameters:
+      - name: searchTerm
+        in: query
+        description: search term
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /signUp/:
+    post:
+      tags:
+      - Auth
+      summary: Registers a user
+      description: This will log a user into the system
+      operationId: auth
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /tag/:
+    get:
+      tags:
+      - Tag
+      summary: Get all tags
+      description: This will return all tags in the system
+      operationId: tag
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /token/:
+    post:
+      tags:
+      - Auth
+      summary: Get fresh tokens
+      description: This will get a fresh token pair for the user
+      operationId: auth
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /users/:
+    get:
+      tags:
+      - User
+      summary: Get users
+      description: This will get all the users in the system and return a view without
+        sensative information
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    post:
+      tags:
+      - User
+      summary: Create user
+      description: This will to create a user, [SYSTEM ADMIN]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /users/{id}:
+    put:
+      tags:
+      - User
+      summary: Update user by id
+      description: This will update a user by id, [SYSTEM ADMIN]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+    delete:
+      tags:
+      - User
+      summary: Delete user
+      description: This will delete a system user by id [SYSTEM ADMIN]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /users/{id}/convertDummyUserToNormalUser:
+    post:
+      tags:
+      - User
+      summary: Converts dummy user
+      description: This will convert a dummy user to a normal system user, [SYSTEM
+        ADMIN]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /users/{id}/resetPassword:
+    put:
+      tags:
+      - User
+      summary: Reset password
+      description: This will reset a password for a user, [SYSTEM ADMIN]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /users/{username}:
+    get:
+      tags:
+      - User
+      summary: Get username count
+      description: This will return the number of users in the system with the same
+        username
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /users/amountOwedForUser/{groupId}:
+    get:
+      tags:
+      - User
+      summary: Get amount owed for user
+      description: This will return the amount owed for the logged in user, in the
+        specified group, [SYSTEM USER]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /users/getUserClaims:
+    get:
+      tags:
+      - User
+      summary: Get claims for logged in user
+      description: This will return the user's token claims for the currently logged
+        in user [SYSTEM USER]
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+  /users/updateUserProfile:
+    put:
+      tags:
+      - User
+      summary: Update user profile
+      description: This will update the logged in user's user profile
+      operationId: user
+      responses:
+        200:
+          $ref: '#/components/responses/Ok'
+        500:
+          $ref: '#/components/responses/Internal'
+      security:
+      - api_key: []
+components:
+  schemas:
+    BaseModel:
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+      x-go-package: receipt-wrangler/api/internal/models
+    Category:
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        name:
+          type: string
+          description: |-
+            Name of the category
+
+            required: ture
+          x-go-name: Name
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+      description: Category to relate receipts to
+      x-go-package: receipt-wrangler/api/internal/models
+    Comment:
+      required:
+      - comment
+      - receiptId
+      - userId
+      type: object
+      properties:
+        additionalInfo:
+          type: string
+          description: Additional information about the comment
+          x-go-name: AdditionalInfo
+        comment:
+          type: string
+          description: Comment itself
+          x-go-name: Comment
+        commentId:
+          type: integer
+          description: Comment foreign key used for repleis
+          format: uint64
+          x-go-name: CommentId
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        receiptId:
+          type: integer
+          description: Receipt foreign key
+          format: uint64
+          x-go-name: ReceiptId
+        replies:
+          type: array
+          description: Comment's replies
+          items:
+            $ref: '#/components/schemas/Comment'
+          x-go-name: Replies
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+        userId:
+          type: integer
+          description: User foreign key
+          format: uint64
+          x-go-name: UserId
+      description: User comment left on receipts
+      x-go-package: receipt-wrangler/api/internal/models
+    FileData:
+      required:
+      - imageData
+      - receiptId
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        fileType:
+          type: string
+          description: MIME file type
+          x-go-name: FileType
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        imageData:
+          type: array
+          description: Image data
+          items:
+            type: integer
+            format: uint8
+          x-go-name: ImageData
+        name:
+          type: string
+          description: File name
+          x-go-name: Name
+        receiptId:
+          type: integer
+          description: Receipt foreign key
+          format: uint64
+          x-go-name: ReceiptId
+        size:
+          type: integer
+          description: File size
+          format: uint64
+          x-go-name: Size
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+      description: File data for images on a receipt
+      x-go-package: receipt-wrangler/api/internal/models
+    Group:
+      required:
+      - name
+      - status
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        groupMembers:
+          type: array
+          description: Members of the group
+          items:
+            $ref: '#/components/schemas/GroupMember'
+          x-go-name: GroupMembers
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        isDefault:
+          type: boolean
+          description: Is default group (not used yet)
+          x-go-name: IsDefaultGroup
+        name:
+          type: string
+          description: Name of the group
+          x-go-name: Name
+        status:
+          $ref: '#/components/schemas/GroupStatus'
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+      description: Group in the system
+      x-go-package: receipt-wrangler/api/internal/models
+    GroupMember:
+      required:
+      - groupId
+      - groupRole
+      - userId
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        groupId:
+          type: integer
+          description: Group compound primary key
+          format: uint64
+          x-go-name: GroupID
+        groupRole:
+          $ref: '#/components/schemas/GroupRole'
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+        userId:
+          type: integer
+          description: User compound primary key
+          format: uint64
+          x-go-name: UserID
+      description: Group member
+      x-go-package: receipt-wrangler/api/internal/models
+    GroupRole:
+      type: string
+      x-go-package: receipt-wrangler/api/internal/models
+    GroupStatus:
+      type: string
+      x-go-package: receipt-wrangler/api/internal/models
+    Item:
+      required:
+      - amount
+      - chargedToUserId
+      - name
+      - receiptId
+      - status
+      type: object
+      properties:
+        IsTaxed:
+          type: boolean
+          description: Is taxed (not used)
+        amount:
+          type: string
+          description: Amount the item costs
+          x-go-name: Amount
+        chargedToUserId:
+          type: integer
+          description: User foreign key
+          format: uint64
+          x-go-name: ChargedToUserId
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        name:
+          type: string
+          description: Item name
+          x-go-name: Name
+        receiptId:
+          type: integer
+          description: Receipt foreign key
+          format: uint64
+          x-go-name: ReceiptId
+        status:
+          $ref: '#/components/schemas/ItemStatus'
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+      description: Itemized item on a receipt
+      x-go-package: receipt-wrangler/api/internal/models
+    ItemStatus:
+      type: string
+      x-go-package: receipt-wrangler/api/internal/models
+    Notification:
+      required:
+      - title
+      - type
+      - userId
+      type: object
+      properties:
+        body:
+          type: string
+          description: |-
+            Notification body
+
+            requried: true
+          x-go-name: Body
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        title:
+          type: string
+          description: Title
+          x-go-name: Title
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+        userId:
+          type: integer
+          description: User foreign key
+          format: uint64
+          x-go-name: UserId
+      description: Notification
+      x-go-package: receipt-wrangler/api/internal/models
+    NotificationType:
+      type: string
+      x-go-package: receipt-wrangler/api/internal/models
+    Receipt:
+      required:
+      - amount
+      - date
+      - groupId
+      - name
+      - paidByUserId
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Reciept total amount
+          x-go-name: Amount
+        categories:
+          type: array
+          description: Categories associated to receipt
+          items:
+            $ref: '#/components/schemas/Category'
+          x-go-name: Categories
+        comments:
+          type: array
+          description: Comments associated to receipt
+          items:
+            $ref: '#/components/schemas/Comment'
+          x-go-name: Comments
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        date:
+          type: string
+          description: Receipt date
+          format: date-time
+          x-go-name: Date
+        groupId:
+          type: integer
+          description: Group foreign key
+          format: uint64
+          x-go-name: GroupId
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        imageFiles:
+          type: array
+          description: Files associated to receipt
+          items:
+            $ref: '#/components/schemas/FileData'
+          x-go-name: ImageFiles
+        name:
+          type: string
+          description: Receipt name
+          x-go-name: Name
+        paidByUserId:
+          type: integer
+          description: User paid foreign key
+          format: uint64
+          x-go-name: PaidByUserID
+        receiptItems:
+          type: array
+          description: Items associated to receipt
+          items:
+            $ref: '#/components/schemas/Item'
+          x-go-name: ReceiptItems
+        resolvedDate:
+          type: string
+          description: Date resolved
+          format: date-time
+          x-go-name: ResolvedDate
+        status:
+          $ref: '#/components/schemas/ReceiptStatus'
+        tags:
+          type: array
+          description: Tags associated to receipt
+          items:
+            $ref: '#/components/schemas/Tag'
+          x-go-name: Tags
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+      description: Receipt
+      x-go-package: receipt-wrangler/api/internal/models
+    ReceiptStatus:
+      type: string
+      x-go-package: receipt-wrangler/api/internal/models
+    Tag:
+      required:
+      - name
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        name:
+          type: string
+          description: Tag name
+          x-go-name: Name
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+      description: Tag to relate receipts to
+      x-go-package: receipt-wrangler/api/internal/models
+    User:
+      required:
+      - Username
+      - displayName
+      - isDummyUser
+      - userRole
+      type: object
+      properties:
+        Password:
+          type: string
+          description: |-
+            User's password
+
+            required true
+        Username:
+          type: string
+          description: User's username used to login
+        createdAt:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+          x-go-name: CreatedBy
+        defaultAvatarColor:
+          type: string
+          description: Default avatar color
+          x-go-name: DefaultAvatarColor
+        displayName:
+          type: string
+          description: Display name
+          x-go-name: DisplayName
+        id:
+          type: integer
+          format: uint64
+          x-go-name: ID
+        isDummyUser:
+          type: boolean
+          description: Is dummy user
+          x-go-name: IsDummyUser
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+        userRole:
+          $ref: '#/components/schemas/UserRole'
+      description: User in the system
+      x-go-package: receipt-wrangler/api/internal/models
+    UserRole:
+      type: string
+      x-go-package: receipt-wrangler/api/internal/models

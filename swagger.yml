@@ -18,7 +18,7 @@ paths:
       - Category
       summary: Get all categories
       description: This will return all categories in the system
-      operationId: category
+      operationId: getAllCategories
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -32,7 +32,7 @@ paths:
       - Comment
       summary: Add comment
       description: This will add a comment to a receipt, [SYSTEM USER]
-      operationId: comment
+      operationId: addComment
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -46,7 +46,7 @@ paths:
       - Comment
       summary: Delete comment
       description: This will delete a comment by id [SYSTEM User]
-      operationId: comment
+      operationId: deleteComment
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -60,7 +60,7 @@ paths:
       - FeatureConfig
       summary: Get feature config
       description: This will get the server's feature config
-      operationId: featureConfig
+      operationId: getFeatureConfig
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -74,7 +74,7 @@ paths:
       - Groups
       summary: Get groups for user
       description: This will get groups for the currently logged in user
-      operationId: group
+      operationId: getGroupsForuser
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -87,7 +87,7 @@ paths:
       - Groups
       summary: Create group
       description: This will create a group
-      operationId: group
+      operationId: createGroup
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -101,7 +101,7 @@ paths:
       - Groups
       summary: Gets a group by Id
       description: This will get a group by Id
-      operationId: group
+      operationId: getGroupById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -114,7 +114,7 @@ paths:
       - Groups
       summary: Update a group
       description: This will update a group
-      operationId: group
+      operationId: updateGroup
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -127,7 +127,7 @@ paths:
       - Groups
       summary: Delete group
       description: This will delete a group by id
-      operationId: group
+      operationId: deleteGroup
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -141,7 +141,7 @@ paths:
       - Auth
       summary: Login
       description: This will log a user into the system
-      operationId: auth
+      operationId: login
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -156,7 +156,7 @@ paths:
       summary: Logout
       description: This will log a user out of the system and revoke their token [SYSTEM
         USER]
-      operationId: auth
+      operationId: logout
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -171,7 +171,7 @@ paths:
       summary: Get all user notifications
       description: This will get all the notifications for the currently logged in
         user
-      operationId: listNotifications
+      operationId: getNotificationsForuser
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -184,7 +184,7 @@ paths:
       - Notifications
       summary: Delete all notifications for user
       description: This deletes all notifications for a user
-      operationId: notificationCount
+      operationId: deleteAllNotificationsForUser
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -198,7 +198,7 @@ paths:
       - Notifications
       summary: Delete notification by id
       description: This deletes a notification by id
-      operationId: notificationCount
+      operationId: deleteNotificationById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -213,7 +213,7 @@ paths:
       summary: Notification count
       description: This will get the notification count for the currently logged in
         user
-      operationId: notificationCount
+      operationId: getNotificationCount
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -227,7 +227,7 @@ paths:
       - Receipt
       summary: Create receipt
       description: This will create a receipt [SYSTEM USER]
-      operationId: receipt
+      operationId: createReceipt
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -240,8 +240,8 @@ paths:
       tags:
       - Receipt
       summary: Get receipt
-      description: This will get a receipt by receipt id[SYSTEM USER]
-      operationId: receipt
+      description: This will get a receipt by receipt id [SYSTEM USER]
+      operationId: getReceiptById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -254,7 +254,7 @@ paths:
       - Receipt
       summary: Update receipt
       description: This will update a receipt by receipt id [SYSTEM USER]
-      operationId: receipt
+      operationId: updateReceipt
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -267,7 +267,7 @@ paths:
       - Receipt
       summary: Delete receipt
       description: This will delete a receipt by id [SYSTEM USER]
-      operationId: receipt
+      operationId: deleteReceiptById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -281,7 +281,7 @@ paths:
       - Receipt
       summary: Duplicate receipt
       description: This will duplicate a receipt [SYSTEM USER]
-      operationId: receipt
+      operationId: duplicateReceipt
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -296,7 +296,7 @@ paths:
       summary: Bulk receipt status update
       description: This will bulk update receipt statuses with the option of adding
         a comment to each [SYSTEM USER]
-      operationId: receipt
+      operationId: bulkReceiptStatusUpdate
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -311,7 +311,7 @@ paths:
       summary: Gets receipts
       description: This will return receipts with the option to sort and filter [SYSTEM
         USER]
-      operationId: receipt
+      operationId: getReceiptsForGroup
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -322,10 +322,10 @@ paths:
   /receiptImage/:
     post:
       tags:
-      - User
+      - ReceiptImage
       summary: Uploads a receipt image
       description: This will upload a receipt image, [SYSTEM USER]
-      operationId: user
+      operationId: receiptImage
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -339,7 +339,7 @@ paths:
       - ReceiptImage
       summary: Get receipt image
       description: This will get a receipt image by id, [SYSTEM USER]
-      operationId: receiptImage
+      operationId: getReceiptImageById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -349,10 +349,10 @@ paths:
       - api_key: []
     delete:
       tags:
-      - User
+      - ReceiptImage
       summary: Delete receipt image
       description: This will delete a receipt image by id [SYSTEM USER]
-      operationId: user
+      operationId: deleteReceiptImageById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -366,7 +366,7 @@ paths:
       - Search
       summary: Receipt Search
       description: This will search for receipts based on a search term
-      operationId: search
+      operationId: receiptSearch
       parameters:
       - name: searchTerm
         in: query
@@ -385,9 +385,9 @@ paths:
     post:
       tags:
       - Auth
-      summary: Registers a user
-      description: This will log a user into the system
-      operationId: auth
+      summary: Signs up
+      description: This will sign a user up for the system
+      operationId: signUp
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -401,7 +401,7 @@ paths:
       - Tag
       summary: Get all tags
       description: This will return all tags in the system
-      operationId: tag
+      operationId: getAllTags
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -415,7 +415,7 @@ paths:
       - Auth
       summary: Get fresh tokens
       description: This will get a fresh token pair for the user
-      operationId: auth
+      operationId: getTokens
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -430,7 +430,7 @@ paths:
       summary: Get users
       description: This will get all the users in the system and return a view without
         sensative information
-      operationId: user
+      operationId: getUsers
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -443,7 +443,7 @@ paths:
       - User
       summary: Create user
       description: This will to create a user, [SYSTEM ADMIN]
-      operationId: user
+      operationId: createUser
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -457,7 +457,7 @@ paths:
       - User
       summary: Update user by id
       description: This will update a user by id, [SYSTEM ADMIN]
-      operationId: user
+      operationId: updateUserById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -470,7 +470,7 @@ paths:
       - User
       summary: Delete user
       description: This will delete a system user by id [SYSTEM ADMIN]
-      operationId: user
+      operationId: deleteUserById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -485,7 +485,7 @@ paths:
       summary: Converts dummy user
       description: This will convert a dummy user to a normal system user, [SYSTEM
         ADMIN]
-      operationId: user
+      operationId: convertDummyUserById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -499,7 +499,7 @@ paths:
       - User
       summary: Reset password
       description: This will reset a password for a user, [SYSTEM ADMIN]
-      operationId: user
+      operationId: resetPasswordById
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -514,7 +514,7 @@ paths:
       summary: Get username count
       description: This will return the number of users in the system with the same
         username
-      operationId: user
+      operationId: getUsernameCount
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -529,7 +529,7 @@ paths:
       summary: Get amount owed for user
       description: This will return the amount owed for the logged in user, in the
         specified group, [SYSTEM USER]
-      operationId: user
+      operationId: getAmountOwedForUser
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -544,7 +544,7 @@ paths:
       summary: Get claims for logged in user
       description: This will return the user's token claims for the currently logged
         in user [SYSTEM USER]
-      operationId: user
+      operationId: getUserClaims
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -558,7 +558,7 @@ paths:
       - User
       summary: Update user profile
       description: This will update the logged in user's user profile
-      operationId: user
+      operationId: updateUserProfile
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -567,6 +567,11 @@ paths:
       security:
       - api_key: []
 components:
+  responses:
+    Ok:
+      description: Request was successfully processed
+    Internal:
+      description: There was an error processing the request
   schemas:
     BaseModel:
       type: object

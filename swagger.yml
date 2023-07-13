@@ -32,6 +32,13 @@ paths:
       - Comment
       summary: Add comment
       description: This will add a comment to a receipt, [SYSTEM USER]
+      requestBody:
+        description: Comment to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
       operationId: addComment
       responses:
         200:
@@ -94,6 +101,13 @@ paths:
       - Groups
       summary: Create group
       description: This will create a group
+      requestBody:
+        description: Group to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Group'
       operationId: createGroup
       responses:
         200:
@@ -128,6 +142,13 @@ paths:
       - Groups
       summary: Update a group
       description: This will update a group
+      requestBody:
+        description: Group to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Group'
       operationId: updateGroup
       responses:
         200:
@@ -248,6 +269,13 @@ paths:
       - Receipt
       summary: Create receipt
       description: This will create a receipt [SYSTEM USER]
+      requestBody:
+        description: Receipt to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Receipt'
       operationId: createReceipt
       responses:
         200:
@@ -282,6 +310,13 @@ paths:
       - Receipt
       summary: Update receipt
       description: This will update a receipt by receipt id [SYSTEM USER]
+      requestBody:
+        description: Receipt to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Receipt'
       operationId: updateReceipt
       responses:
         200:
@@ -367,6 +402,13 @@ paths:
       - ReceiptImage
       summary: Uploads a receipt image
       description: This will upload a receipt image, [SYSTEM USER]
+      requestBody:
+        description: Receipt image to upload
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FileData'
       operationId: receiptImage
       responses:
         200:
@@ -492,6 +534,13 @@ paths:
       - User
       summary: Create user
       description: This will to create a user, [SYSTEM ADMIN]
+      requestBody:
+        description: User to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
       operationId: createUser
       responses:
         200:
@@ -506,6 +555,13 @@ paths:
       - User
       summary: Update user by id
       description: This will update a user by id, [SYSTEM ADMIN]
+      requestBody:
+        description: User to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
       parameters:
         - in: path
           name: userId
@@ -649,6 +705,13 @@ paths:
       - User
       summary: Update user profile
       description: This will update the logged in user's user profile
+      requestBody:
+        description: User profile to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
       operationId: updateUserProfile
       responses:
         200:

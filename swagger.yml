@@ -604,6 +604,13 @@ paths:
       summary: Converts dummy user
       description: This will convert a dummy user to a normal system user, [SYSTEM
         ADMIN]
+      requestBody:
+        description: Login credentials for new user
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordCommand'
       parameters:
         - in: path
           name: userId
@@ -711,7 +718,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: '#/components/schemas/UpdateProfileCommand'
       operationId: updateUserProfile
       responses:
         200:
@@ -1226,3 +1233,26 @@ components:
     UserRole:
       type: string
       x-go-package: receipt-wrangler/api/internal/models
+    UpdateProfileCommand:
+      required:
+      - displayName
+      - defaultAvatarColor
+      type: object
+      properties:
+        displayName:
+          type: string
+          description: User's displayName
+        defaultAvatarColor:
+          type: string
+          description: Color of default avatar
+      description: Command to update user's profile
+      
+    ResetPasswordCommand:
+      required:
+      - password
+      type: object
+      properties:
+        password:
+          type: string
+          description: User's new password
+      description: Command to reset user's password profile

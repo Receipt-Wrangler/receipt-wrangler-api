@@ -3,17 +3,17 @@ package repositories
 import (
 	"errors"
 	"fmt"
+	"receipt-wrangler/api/internal/commands"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
-	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-func PaginateReceipts(pagedRequest structs.PagedRequest) func(db *gorm.DB) *gorm.DB {
+func PaginateReceipts(pagedRequest commands.PagedRequestCommand) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		page := pagedRequest.Page
 		if page <= 0 {
@@ -45,7 +45,7 @@ func GetReceiptById(receiptId string) (models.Receipt, error) {
 	return receipt, nil
 }
 
-func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs.PagedRequest) ([]models.Receipt, error) {
+func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.PagedRequestCommand) ([]models.Receipt, error) {
 	db := db.GetDB()
 	var receipts []models.Receipt
 
@@ -101,7 +101,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 	// Categories
 	categories := pagedRequest.Filter.Categories.Value.([]interface{})
 	if len(categories) > 0 {
-		if pagedRequest.Filter.Categories.Operation == structs.CONTAINS {
+		if pagedRequest.Filter.Categories.Operation == commands.CONTAINS {
 			query = query.Where("id IN (?)", db.Table("receipt_categories").Select("receipt_id").Where("category_id IN ?", categories))
 		}
 	}
@@ -109,7 +109,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 	// Tags
 	tags := pagedRequest.Filter.Tags.Value.([]interface{})
 	if len(tags) > 0 {
-		if pagedRequest.Filter.Tags.Operation == structs.CONTAINS {
+		if pagedRequest.Filter.Tags.Operation == commands.CONTAINS {
 			query = query.Where("id IN (?)", db.Table("receipt_tags").Select("receipt_id").Where("tag_id IN ?", tags))
 		}
 	}
@@ -141,34 +141,34 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest structs
 	return receipts, nil
 }
 
-func buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation structs.FilterOperation, fieldName string, isArray bool) *gorm.DB {
+func buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation commands.FilterOperation, fieldName string, isArray bool) *gorm.DB {
 
-	if operation == structs.EQUALS && !isArray {
+	if operation == commands.EQUALS && !isArray {
 		return runningQuery.Where(fmt.Sprintf("%v = ?", fieldName), value)
 	}
 
-	if operation == structs.CONTAINS && !isArray {
+	if operation == commands.CONTAINS && !isArray {
 		searchValue := value.(string)
 		searchValue = "%" + searchValue + "%"
 		return runningQuery.Where(fmt.Sprintf("%v LIKE ?", fieldName), searchValue)
 	}
 
-	if operation == structs.CONTAINS && isArray {
+	if operation == commands.CONTAINS && isArray {
 		return runningQuery.Where(fmt.Sprintf("%v IN ?", fieldName), value)
 	}
 
-	if operation == structs.GREATER_THAN && !isArray {
+	if operation == commands.GREATER_THAN && !isArray {
 		return runningQuery.Where(fmt.Sprintf("%v > ?", fieldName), value)
 	}
 
-	if operation == structs.LESS_THAN && !isArray {
+	if operation == commands.LESS_THAN && !isArray {
 		return runningQuery.Where(fmt.Sprintf("%v < ?", fieldName), value)
 	}
 
 	return runningQuery
 }
 
-func isTrustedValue(pagedRequest structs.PagedRequest) bool {
+func isTrustedValue(pagedRequest commands.PagedRequestCommand) bool {
 	orderByTrusted := []interface{}{"date", "name", "paidBy", "amount", "categories", "tags", "status", "resolvedDate"}
 	directionTrusted := []interface{}{"asc", "desc", ""}
 

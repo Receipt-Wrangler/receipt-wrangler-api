@@ -1,8 +1,8 @@
-package structs
+package commands
 
 import "database/sql/driver"
 
-type PagedRequest struct {
+type PagedRequestCommand struct {
 	Page          int                `json:"page"`
 	PageSize      int                `json:"pageSize"`
 	OrderBy       string             `json:"orderBy"`
@@ -20,6 +20,7 @@ type PagedRequestFilter struct {
 	Status       PagedRequestField `json:"status"`
 	ResolvedDate PagedRequestField `json:"ResolvedDate"`
 }
+
 
 type PagedRequestField struct {
 	Operation FilterOperation `json:"operation"`

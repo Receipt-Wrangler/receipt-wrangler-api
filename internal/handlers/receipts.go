@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -29,7 +30,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			groupId := chi.URLParam(r, "groupId")
-			pagedRequest := r.Context().Value("pagedRequest").(structs.PagedRequest)
+			pagedRequest := r.Context().Value("pagedRequest").(commands.PagedRequestCommand)
 			pagedData := structs.PagedData{}
 
 			token := utils.GetJWT(r)
@@ -263,7 +264,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := db.GetDB()
-			bulkResolve := r.Context().Value("bulkStatusUpdate").(structs.BulkStatusUpdate)
+			bulkResolve := r.Context().Value("BulkStatusUpdateCommand").(commands.BulkStatusUpdateCommand)
 			var receipts []models.Receipt
 
 			if len(bulkResolve.Status) == 0 {

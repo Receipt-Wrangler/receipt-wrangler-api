@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/utils"
 )
 
 func SetBodyData(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var user models.User
+		var user commands.LoginCommand
 		bodyData, err := utils.GetBodyData(w, r)
 
 		if err != nil {

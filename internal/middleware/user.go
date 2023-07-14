@@ -63,6 +63,7 @@ func SetResetPasswordData(next http.Handler) http.Handler {
 	})
 }
 
+// TODO: REFACTOR
 func ValidateUserData(roleRequired bool) (mw func(http.Handler) http.Handler) {
 
 	mw = func(h http.Handler) http.Handler {

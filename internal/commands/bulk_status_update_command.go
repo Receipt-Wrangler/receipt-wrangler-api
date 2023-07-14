@@ -1,8 +1,8 @@
-package structs
+package commands
 
 import "receipt-wrangler/api/internal/models"
 
-type BulkStatusUpdate struct {
+type BulkStatusUpdateCommand struct {
 	Comment    string
 	Status     models.ReceiptStatus
 	ReceiptIds []uint

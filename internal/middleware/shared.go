@@ -8,7 +8,6 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
-	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
 
@@ -46,8 +45,8 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				ctx = context.WithValue(ctx, contextKey, comment)
 				serveWithContext(r, w, h, ctx)
 
-			case structs.BulkStatusUpdate:
-				var bulkResolve structs.BulkStatusUpdate
+			case commands.BulkStatusUpdateCommand:
+				var bulkResolve commands.BulkStatusUpdateCommand
 				err = json.Unmarshal(bodyData, &bulkResolve)
 
 				shouldReturn := checkError(err, w)
@@ -59,8 +58,8 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				ctx = context.WithValue(ctx, "receiptIds", bulkResolve.ReceiptIds)
 				serveWithContext(r, w, h, ctx)
 
-			case structs.PagedRequest:
-				var pagedRequest structs.PagedRequest
+			case commands.PagedRequestCommand:
+				var pagedRequest commands.PagedRequestCommand
 				err = json.Unmarshal(bodyData, &pagedRequest)
 
 				shouldReturn := checkError(err, w)
@@ -73,6 +72,18 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 
 			case commands.UpdateProfileCommand:
 				var command commands.UpdateProfileCommand
+				err = json.Unmarshal(bodyData, &command)
+
+				shouldReturn := checkError(err, w)
+				if shouldReturn {
+					return
+				}
+
+				ctx := context.WithValue(r.Context(), contextKey, command)
+				serveWithContext(r, w, h, ctx)
+
+			case commands.SignUpCommand:
+				var command commands.SignUpCommand
 				err = json.Unmarshal(bodyData, &command)
 
 				shouldReturn := checkError(err, w)

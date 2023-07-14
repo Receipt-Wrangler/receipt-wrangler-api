@@ -2,14 +2,14 @@ package middleware
 
 import (
 	"net/http"
-	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
 
 func ValidateLoginData(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userData := r.Context().Value("user").(models.User)
+		userData := r.Context().Value("user").(commands.LoginCommand)
 		err := structs.ValidatorError{
 			Errors: make(map[string]string),
 		}

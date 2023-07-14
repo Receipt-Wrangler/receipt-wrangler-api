@@ -30,7 +30,7 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 		if len(value) == 0 {
 			var usrCnt int64
 			// Set user's role
-			db.Model(models.User{}).Count(&usrCnt)
+			tx.Model(models.User{}).Count(&usrCnt)
 			// Save User
 			if usrCnt == 0 {
 				user.UserRole = models.ADMIN
@@ -39,7 +39,7 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 			}
 		}
 
-		err = db.Create(&userData).Error
+		err = tx.Create(&user).Error
 
 		if err != nil {
 			return err

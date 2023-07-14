@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/middleware"
 
@@ -10,7 +11,9 @@ import (
 
 func BuildSignUpRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	signUpRouter := chi.NewRouter()
-	signUpRouter.Use(middleware.SetBodyData, middleware.ValidateUserData(false))
+
+	// TODO: refactor user validate
+	signUpRouter.Use(middleware.SetGeneralBodyData("signUpCommand", commands.SignUpCommand{}))
 
 	// swagger:route POST /signUp/ Auth auth
 	//

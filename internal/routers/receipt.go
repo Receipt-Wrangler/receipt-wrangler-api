@@ -161,7 +161,7 @@ func BuildReceiptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	//     Responses:
 	//       200: Ok
 	//       500: Internal Server Error
-	receiptRouter.With(middleware.SetReceiptBodyData, middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Post("/{id}/duplicate", handlers.DuplicateReceipt)
+	receiptRouter.With(middleware.ValidateGroupRole(models.EDITOR)).Post("/{id}/duplicate", handlers.DuplicateReceipt)
 
 	// swagger:route DELETE /receipt/{id} Receipt receipt
 	//

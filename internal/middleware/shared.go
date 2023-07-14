@@ -83,6 +83,18 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				ctx := context.WithValue(r.Context(), contextKey, command)
 				serveWithContext(r, w, h, ctx)
 
+			case commands.SignUpCommand:
+				var command commands.SignUpCommand
+				err = json.Unmarshal(bodyData, &command)
+
+				shouldReturn := checkError(err, w)
+				if shouldReturn {
+					return
+				}
+
+				ctx := context.WithValue(r.Context(), contextKey, command)
+				serveWithContext(r, w, h, ctx)
+
 			default:
 				return
 			}

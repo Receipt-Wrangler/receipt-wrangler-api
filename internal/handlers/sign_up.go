@@ -12,7 +12,7 @@ import (
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error signing up"
-	userData := r.Context().Value("user").(commands.SignUpCommand)
+	userData := r.Context().Value("signUpCommand").(commands.SignUpCommand)
 	_, err := repositories.CreateUser(userData)
 
 	if err != nil {

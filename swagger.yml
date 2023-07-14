@@ -176,14 +176,19 @@ paths:
       - Auth
       summary: Login
       description: This will log a user into the system
+      requestBody:
+        description: Login data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCommand'
       operationId: login
       responses:
         200:
           $ref: '#/components/responses/Ok'
         500:
           $ref: '#/components/responses/Internal'
-      security:
-      - bearerAuth: []
   /logout/:
     post:
       tags:
@@ -479,6 +484,13 @@ paths:
       summary: Signs up
       description: This will sign a user up for the system
       operationId: signUp
+      requestBody:
+        description: Sign up data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpCommand'
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -1246,7 +1258,6 @@ components:
           type: string
           description: Color of default avatar
       description: Command to update user's profile
-      
     ResetPasswordCommand:
       required:
       - password
@@ -1256,3 +1267,32 @@ components:
           type: string
           description: User's new password
       description: Command to reset user's password profile
+    LoginCommand:
+      required:
+      - username
+      - password
+      type: object
+      properties:
+        username:
+          type: string
+          description: User's username
+        password:
+          type: string
+          description: User's password
+    SignUpCommand:
+      required:
+      - username
+      - password
+      - displayname
+      type: object
+      properties:
+        username:
+          type: string
+          description: User's username
+        password:
+          type: string
+          description: User's password
+        displayname:
+          type: string
+          description: User's displayname
+    

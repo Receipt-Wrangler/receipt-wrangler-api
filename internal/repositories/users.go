@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"receipt-wrangler/api/internal/commands"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
@@ -8,18 +9,23 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateUser(userData models.User) (models.User, error) {
+func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 	db := db.GetDB()
+	user := models.User{
+		Username:    userData.Username,
+		DisplayName: userData.Displayname,
+		Password:    userData.Password,
+	}
 
 	// Hash password
-	bytes, err := utils.HashPassword(userData.Password)
+	bytes, err := utils.HashPassword(user.Password)
 	if err != nil {
 		return models.User{}, err
 	}
-	userData.Password = string(bytes)
+	user.Password = string(bytes)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		value := userData.UserRole
+		value := user.UserRole
 
 		if len(value) == 0 {
 			var usrCnt int64
@@ -27,9 +33,9 @@ func CreateUser(userData models.User) (models.User, error) {
 			db.Model(models.User{}).Count(&usrCnt)
 			// Save User
 			if usrCnt == 0 {
-				userData.UserRole = models.ADMIN
+				user.UserRole = models.ADMIN
 			} else {
-				userData.UserRole = models.USER
+				user.UserRole = models.USER
 			}
 		}
 
@@ -40,7 +46,7 @@ func CreateUser(userData models.User) (models.User, error) {
 		}
 
 		var groupMembers = make([]models.GroupMember, 1)
-		groupMembers = append(groupMembers, models.GroupMember{UserID: userData.ID, GroupRole: models.OWNER})
+		groupMembers = append(groupMembers, models.GroupMember{UserID: user.ID, GroupRole: models.OWNER})
 		// Create default group with user as group member
 		group := models.Group{
 			Name:           "Home",
@@ -60,5 +66,5 @@ func CreateUser(userData models.User) (models.User, error) {
 		return models.User{}, nil
 	}
 
-	return userData, nil
+	return user, nil
 }

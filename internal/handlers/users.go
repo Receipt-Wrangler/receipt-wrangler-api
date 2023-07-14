@@ -53,7 +53,7 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 	db := db.GetDB()
 	var UserView structs.UserView
-	bodyData := r.Context().Value("user").(models.User)
+	bodyData := r.Context().Value("user").(commands.SignUpCommand)
 	errMsg := "Error creating user."
 	createdUser, err := repositories.CreateUser(bodyData)
 
@@ -159,7 +159,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 		item := itemsOwed[i]
 		total = total.Add(item.ItemAmount)
 		amount, ok := resultMap[item.PaidByUserId]
-		
+
 		if ok {
 			resultMap[item.PaidByUserId] = amount.Add(item.ItemAmount)
 		} else {
@@ -172,7 +172,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 		item := itemsOthersOwe[i]
 		total = total.Sub(item.ItemAmount)
 		amount, ok := resultMap[item.ChargedToUserId]
-		
+
 		if ok {
 			resultMap[item.ChargedToUserId] = amount.Sub(item.ItemAmount)
 		} else {

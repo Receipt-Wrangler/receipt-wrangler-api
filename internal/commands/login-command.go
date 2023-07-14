@@ -1,6 +1,6 @@
 package commands
 
 type LoginCommand struct {
-	Username string `json:"userName"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }

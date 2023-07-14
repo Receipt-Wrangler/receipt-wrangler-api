@@ -1,35 +1,44 @@
 openapi: 3.0.1
 info:
   title: Receipt Wrangler API.
-  termsOfService: there are no TOS at this moment, use at your own risk we take no
+  termsOfService:
+    there are no TOS at this moment, use at your own risk we take no
     responsibility
   license:
     name: GPLV3
     url: https://www.gnu.org/licenses/gpl-3.0.en.html
   version: 0.0.1
 servers:
-- url: /api
+  - url: /api
 security:
-- bearerAuth: []
+  - bearerAuth: []
+definitions:
+  Colors:
+    type: string
+    enum: &FILTEROPERATION
+      - CONTAINS
+      - EQUALS
+      - GREATER_THAN
+      - LESS_THAN
 paths:
   /category/:
     get:
       tags:
-      - Category
+        - Category
       summary: Get all categories
       description: This will return all categories in the system
       operationId: getAllCategories
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /comment/:
     post:
       tags:
-      - Comment
+        - Comment
       summary: Add comment
       description: This will add a comment to a receipt, [SYSTEM USER]
       requestBody:
@@ -38,19 +47,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Comment'
+              $ref: "#/components/schemas/Comment"
       operationId: addComment
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /comment/{commentId}:
     delete:
       tags:
-      - Comment
+        - Comment
       summary: Delete comment
       description: This will delete a comment by id [SYSTEM User]
       parameters:
@@ -63,42 +72,42 @@ paths:
       operationId: deleteComment
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /featureConfig:
     get:
       tags:
-      - FeatureConfig
+        - FeatureConfig
       summary: Get feature config
       description: This will get the server's feature config
       operationId: getFeatureConfig
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /groups/:
     get:
       tags:
-      - Groups
+        - Groups
       summary: Get groups for user
       description: This will get groups for the currently logged in user
       operationId: getGroupsForuser
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     post:
       tags:
-      - Groups
+        - Groups
       summary: Create group
       description: This will create a group
       requestBody:
@@ -107,15 +116,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Group'
+              $ref: "#/components/schemas/Group"
       operationId: createGroup
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /groups/{groupId}:
     parameters:
       - in: path
@@ -126,20 +135,20 @@ paths:
         description: Group Id to get
     get:
       tags:
-      - Groups
+        - Groups
       summary: Gets a group by Id
       description: This will get a group by Id
       operationId: getGroupById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     put:
       tags:
-      - Groups
+        - Groups
       summary: Update a group
       description: This will update a group
       requestBody:
@@ -148,32 +157,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Group'
+              $ref: "#/components/schemas/Group"
       operationId: updateGroup
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     delete:
       tags:
-      - Groups
+        - Groups
       summary: Delete group
       description: This will delete a group by id
       operationId: deleteGroup
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /login/:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Login
       description: This will log a user into the system
       requestBody:
@@ -182,60 +191,62 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginCommand'
+              $ref: "#/components/schemas/LoginCommand"
       operationId: login
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
   /logout/:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Logout
-      description: This will log a user out of the system and revoke their token [SYSTEM
+      description:
+        This will log a user out of the system and revoke their token [SYSTEM
         USER]
       operationId: logout
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /notifications/:
     get:
       tags:
-      - Notifications
+        - Notifications
       summary: Get all user notifications
-      description: This will get all the notifications for the currently logged in
+      description:
+        This will get all the notifications for the currently logged in
         user
       operationId: getNotificationsForuser
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     delete:
       tags:
-      - Notifications
+        - Notifications
       summary: Delete all notifications for user
       description: This deletes all notifications for a user
       operationId: deleteAllNotificationsForUser
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /notifications/{notificationId}:
     delete:
       tags:
-      - Notifications
+        - Notifications
       summary: Delete notification by id
       description: This deletes a notification by id
       parameters:
@@ -248,30 +259,31 @@ paths:
       operationId: deleteNotificationById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /notifications/notificationCount:
     get:
       tags:
-      - Notifications
+        - Notifications
       summary: Notification count
-      description: This will get the notification count for the currently logged in
+      description:
+        This will get the notification count for the currently logged in
         user
       operationId: getNotificationCount
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /receipt/:
     post:
       tags:
-      - Receipt
+        - Receipt
       summary: Create receipt
       description: This will create a receipt [SYSTEM USER]
       requestBody:
@@ -280,39 +292,39 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Receipt'
+              $ref: "#/components/schemas/Receipt"
       operationId: createReceipt
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /receipt/{receiptId}:
     parameters:
-    - in: path
-      name: receiptId
-      schema:
-        type: integer
-      required: true
-      description: Id of receipt to get
+      - in: path
+        name: receiptId
+        schema:
+          type: integer
+        required: true
+        description: Id of receipt to get
     get:
       tags:
-      - Receipt
+        - Receipt
       summary: Get receipt
       description: This will get a receipt by receipt id [SYSTEM USER]
       operationId: getReceiptById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     put:
       tags:
-      - Receipt
+        - Receipt
       summary: Update receipt
       description: This will update a receipt by receipt id [SYSTEM USER]
       requestBody:
@@ -321,32 +333,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Receipt'
+              $ref: "#/components/schemas/Receipt"
       operationId: updateReceipt
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     delete:
       tags:
-      - Receipt
+        - Receipt
       summary: Delete receipt
       description: This will delete a receipt by id [SYSTEM USER]
       operationId: deleteReceiptById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /receipt/{receiptId}/duplicate:
     post:
       tags:
-      - Receipt
+        - Receipt
       summary: Duplicate receipt
       description: This will duplicate a receipt [SYSTEM USER]
       parameters:
@@ -359,17 +371,18 @@ paths:
       operationId: duplicateReceipt
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /receipt/bulkStatusUpdate:
     post:
       tags:
-      - Receipt
+        - Receipt
       summary: Bulk receipt status update
-      description: This will bulk update receipt statuses with the option of adding
+      description:
+        This will bulk update receipt statuses with the option of adding
         a comment to each [SYSTEM USER]
       operationId: bulkReceiptStatusUpdate
       requestBody:
@@ -378,21 +391,28 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BulkStatusUpdateCommand'
+              $ref: "#/components/schemas/BulkStatusUpdateCommand"
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /receipt/group/{groupId}:
     post:
       tags:
-      - Receipt
+        - Receipt
       summary: Gets receipts
-      description: This will return receipts with the option to sort and filter [SYSTEM
+      description:
+        This will return receipts with the option to sort and filter [SYSTEM
         USER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
       parameters:
         - in: path
           name: groupId
@@ -403,15 +423,15 @@ paths:
       operationId: getReceiptsForGroup
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /receiptImage/:
     post:
       tags:
-      - ReceiptImage
+        - ReceiptImage
       summary: Uploads a receipt image
       description: This will upload a receipt image, [SYSTEM USER]
       requestBody:
@@ -420,15 +440,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FileData'
+              $ref: "#/components/schemas/FileData"
       operationId: receiptImage
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /receiptImage/{receiptImageId}:
     parameters:
       - in: path
@@ -439,55 +459,55 @@ paths:
         description: Id of receipt image to get
     get:
       tags:
-      - ReceiptImage
+        - ReceiptImage
       summary: Get receipt image
       description: This will get a receipt image by id, [SYSTEM USER]
       operationId: getReceiptImageById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     delete:
       tags:
-      - ReceiptImage
+        - ReceiptImage
       summary: Delete receipt image
       description: This will delete a receipt image by id [SYSTEM USER]
       operationId: deleteReceiptImageById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /search/:
     get:
       tags:
-      - Search
+        - Search
       summary: Receipt Search
       description: This will search for receipts based on a search term
       operationId: receiptSearch
       parameters:
-      - name: searchTerm
-        in: query
-        description: search term
-        required: true
-        schema:
-          type: string
+        - name: searchTerm
+          in: query
+          description: search term
+          required: true
+          schema:
+            type: string
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /signUp/:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Signs up
       description: This will sign a user up for the system
       operationId: signUp
@@ -497,60 +517,61 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SignUpCommand'
+              $ref: "#/components/schemas/SignUpCommand"
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /tag/:
     get:
       tags:
-      - Tag
+        - Tag
       summary: Get all tags
       description: This will return all tags in the system
       operationId: getAllTags
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /token/:
     post:
       tags:
-      - Auth
+        - Auth
       summary: Get fresh tokens
       description: This will get a fresh token pair for the user
       operationId: getTokens
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /users/:
     get:
       tags:
-      - User
+        - User
       summary: Get users
-      description: This will get all the users in the system and return a view without
+      description:
+        This will get all the users in the system and return a view without
         sensative information
       operationId: getUsers
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     post:
       tags:
-      - User
+        - User
       summary: Create user
       description: This will to create a user, [SYSTEM ADMIN]
       requestBody:
@@ -559,19 +580,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: "#/components/schemas/User"
       operationId: createUser
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /users/{userId}:
     put:
       tags:
-      - User
+        - User
       summary: Update user by id
       description: This will update a user by id, [SYSTEM ADMIN]
       requestBody:
@@ -580,7 +601,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: "#/components/schemas/User"
       parameters:
         - in: path
           name: userId
@@ -591,14 +612,14 @@ paths:
       operationId: updateUserById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
     delete:
       tags:
-      - User
+        - User
       summary: Delete user
       description: This will delete a system user by id [SYSTEM ADMIN]
       parameters:
@@ -611,17 +632,18 @@ paths:
       operationId: deleteUserById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /users/{userId}/convertDummyUserToNormalUser:
     post:
       tags:
-      - User
+        - User
       summary: Converts dummy user
-      description: This will convert a dummy user to a normal system user, [SYSTEM
+      description:
+        This will convert a dummy user to a normal system user, [SYSTEM
         ADMIN]
       requestBody:
         description: Login credentials for new user
@@ -629,7 +651,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ResetPasswordCommand'
+              $ref: "#/components/schemas/ResetPasswordCommand"
       parameters:
         - in: path
           name: userId
@@ -640,15 +662,15 @@ paths:
       operationId: convertDummyUserById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /users/{userId}/resetPassword:
     put:
       tags:
-      - User
+        - User
       summary: Reset password
       description: This will reset a password for a user, [SYSTEM ADMIN]
       parameters:
@@ -661,17 +683,18 @@ paths:
       operationId: resetPasswordById
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /users/{username}:
     get:
       tags:
-      - User
+        - User
       summary: Get username count
-      description: This will return the number of users in the system with the same
+      description:
+        This will return the number of users in the system with the same
         username
       parameters:
         - in: path
@@ -683,17 +706,18 @@ paths:
       operationId: getUsernameCount
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /users/amountOwedForUser/{groupId}:
     get:
       tags:
-      - User
+        - User
       summary: Get amount owed for user
-      description: This will return the amount owed for the logged in user, in the
+      description:
+        This will return the amount owed for the logged in user, in the
         specified group, [SYSTEM USER]
       parameters:
         - in: path
@@ -705,30 +729,31 @@ paths:
       operationId: getAmountOwedForUser
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /users/getUserClaims:
     get:
       tags:
-      - User
+        - User
       summary: Get claims for logged in user
-      description: This will return the user's token claims for the currently logged
+      description:
+        This will return the user's token claims for the currently logged
         in user [SYSTEM USER]
       operationId: getUserClaims
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
   /users/updateUserProfile:
     put:
       tags:
-      - User
+        - User
       summary: Update user profile
       description: This will update the logged in user's user profile
       requestBody:
@@ -737,15 +762,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateProfileCommand'
+              $ref: "#/components/schemas/UpdateProfileCommand"
       operationId: updateUserProfile
       responses:
         200:
-          $ref: '#/components/responses/Ok'
+          $ref: "#/components/responses/Ok"
         500:
-          $ref: '#/components/responses/Internal'
+          $ref: "#/components/responses/Internal"
       security:
-      - bearerAuth: []
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -808,9 +833,9 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     Comment:
       required:
-      - comment
-      - receiptId
-      - userId
+        - comment
+        - receiptId
+        - userId
       type: object
       properties:
         additionalInfo:
@@ -847,7 +872,7 @@ components:
           type: array
           description: Comment's replies
           items:
-            $ref: '#/components/schemas/Comment'
+            $ref: "#/components/schemas/Comment"
           x-go-name: Replies
         updatedAt:
           type: string
@@ -862,8 +887,8 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     FileData:
       required:
-      - imageData
-      - receiptId
+        - imageData
+        - receiptId
       type: object
       properties:
         createdAt:
@@ -911,8 +936,8 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     Group:
       required:
-      - name
-      - status
+        - name
+        - status
       type: object
       properties:
         createdAt:
@@ -927,7 +952,7 @@ components:
           type: array
           description: Members of the group
           items:
-            $ref: '#/components/schemas/GroupMember'
+            $ref: "#/components/schemas/GroupMember"
           x-go-name: GroupMembers
         id:
           type: integer
@@ -942,7 +967,7 @@ components:
           description: Name of the group
           x-go-name: Name
         status:
-          $ref: '#/components/schemas/GroupStatus'
+          $ref: "#/components/schemas/GroupStatus"
         updatedAt:
           type: string
           format: date-time
@@ -951,9 +976,9 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     GroupMember:
       required:
-      - groupId
-      - groupRole
-      - userId
+        - groupId
+        - groupRole
+        - userId
       type: object
       properties:
         createdAt:
@@ -966,7 +991,7 @@ components:
           format: uint64
           x-go-name: GroupID
         groupRole:
-          $ref: '#/components/schemas/GroupRole'
+          $ref: "#/components/schemas/GroupRole"
         updatedAt:
           type: string
           format: date-time
@@ -986,11 +1011,11 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     Item:
       required:
-      - amount
-      - chargedToUserId
-      - name
-      - receiptId
-      - status
+        - amount
+        - chargedToUserId
+        - name
+        - receiptId
+        - status
       type: object
       properties:
         IsTaxed:
@@ -1027,7 +1052,7 @@ components:
           format: uint64
           x-go-name: ReceiptId
         status:
-          $ref: '#/components/schemas/ItemStatus'
+          $ref: "#/components/schemas/ItemStatus"
         updatedAt:
           type: string
           format: date-time
@@ -1039,9 +1064,9 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     Notification:
       required:
-      - title
-      - type
-      - userId
+        - title
+        - type
+        - userId
       type: object
       properties:
         body:
@@ -1068,7 +1093,7 @@ components:
           description: Title
           x-go-name: Title
         type:
-          $ref: '#/components/schemas/NotificationType'
+          $ref: "#/components/schemas/NotificationType"
         updatedAt:
           type: string
           format: date-time
@@ -1085,11 +1110,11 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     Receipt:
       required:
-      - amount
-      - date
-      - groupId
-      - name
-      - paidByUserId
+        - amount
+        - date
+        - groupId
+        - name
+        - paidByUserId
       type: object
       properties:
         amount:
@@ -1100,13 +1125,13 @@ components:
           type: array
           description: Categories associated to receipt
           items:
-            $ref: '#/components/schemas/Category'
+            $ref: "#/components/schemas/Category"
           x-go-name: Categories
         comments:
           type: array
           description: Comments associated to receipt
           items:
-            $ref: '#/components/schemas/Comment'
+            $ref: "#/components/schemas/Comment"
           x-go-name: Comments
         createdAt:
           type: string
@@ -1134,7 +1159,7 @@ components:
           type: array
           description: Files associated to receipt
           items:
-            $ref: '#/components/schemas/FileData'
+            $ref: "#/components/schemas/FileData"
           x-go-name: ImageFiles
         name:
           type: string
@@ -1149,7 +1174,7 @@ components:
           type: array
           description: Items associated to receipt
           items:
-            $ref: '#/components/schemas/Item'
+            $ref: "#/components/schemas/Item"
           x-go-name: ReceiptItems
         resolvedDate:
           type: string
@@ -1157,12 +1182,12 @@ components:
           format: date-time
           x-go-name: ResolvedDate
         status:
-          $ref: '#/components/schemas/ReceiptStatus'
+          $ref: "#/components/schemas/ReceiptStatus"
         tags:
           type: array
           description: Tags associated to receipt
           items:
-            $ref: '#/components/schemas/Tag'
+            $ref: "#/components/schemas/Tag"
           x-go-name: Tags
         updatedAt:
           type: string
@@ -1175,7 +1200,7 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     Tag:
       required:
-      - name
+        - name
       type: object
       properties:
         createdAt:
@@ -1202,10 +1227,10 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     User:
       required:
-      - Username
-      - displayName
-      - isDummyUser
-      - userRole
+        - Username
+        - displayName
+        - isDummyUser
+        - userRole
       type: object
       properties:
         Password:
@@ -1246,7 +1271,7 @@ components:
           format: date-time
           x-go-name: UpdatedAt
         userRole:
-          $ref: '#/components/schemas/UserRole'
+          $ref: "#/components/schemas/UserRole"
       description: User in the system
       x-go-package: receipt-wrangler/api/internal/models
     UserRole:
@@ -1254,8 +1279,8 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     UpdateProfileCommand:
       required:
-      - displayName
-      - defaultAvatarColor
+        - displayName
+        - defaultAvatarColor
       type: object
       properties:
         displayName:
@@ -1267,7 +1292,7 @@ components:
       description: Command to update user's profile
     ResetPasswordCommand:
       required:
-      - password
+        - password
       type: object
       properties:
         password:
@@ -1276,8 +1301,8 @@ components:
       description: Command to reset user's password profile
     LoginCommand:
       required:
-      - username
-      - password
+        - username
+        - password
       type: object
       properties:
         username:
@@ -1288,9 +1313,9 @@ components:
           description: User's password
     SignUpCommand:
       required:
-      - username
-      - password
-      - displayname
+        - username
+        - password
+        - displayname
       type: object
       properties:
         username:
@@ -1304,8 +1329,8 @@ components:
           description: User's displayname
     BulkStatusUpdateCommand:
       required:
-      - status
-      - receiptIds
+        - status
+        - receiptIds
       type: object
       properties:
         comment:
@@ -1319,4 +1344,52 @@ components:
           items:
             $ref: integer
           description: Receipt ids to update
-    
+    PagedRequestCommand:
+      required:
+        - page
+        - pageSize
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Page number
+        pageSize:
+          type: integer
+          description: Number of records per page
+        orderBy:
+          type: string
+          description: field to order on
+        filter:
+          $ref: "#/components/schemas/PagedRequestFilter"
+    PagedRequestFilter:
+      type: object
+      properties:
+        date:
+          $ref: "#/components/schemas/PagedRequestField"
+        amount:
+          $ref: "#/components/schemas/PagedRequestField"
+        name:
+          $ref: "#/components/schemas/PagedRequestField"
+        paidBy:
+          $ref: "#/components/schemas/PagedRequestField"
+        categories:
+          $ref: "#/components/schemas/PagedRequestField"
+        tags:
+          $ref: "#/components/schemas/PagedRequestField"
+        status:
+          $ref: "#/components/schemas/PagedRequestField"
+        resolvedDate:
+          $ref: "#/components/schemas/PagedRequestField"
+    PagedRequestField:
+      required:
+        - value
+        - operation
+      type: object
+      properties:
+        operation:
+          type: string
+          enum: *FILTEROPERATION
+          description: Filter operation
+        value:
+          type: string
+          description: Field value

@@ -30,7 +30,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			groupId := chi.URLParam(r, "groupId")
-			pagedRequest := r.Context().Value("pagedRequest").(structs.PagedRequest)
+			pagedRequest := r.Context().Value("pagedRequest").(commands.PagedRequestCommand)
 			pagedData := structs.PagedData{}
 
 			token := utils.GetJWT(r)

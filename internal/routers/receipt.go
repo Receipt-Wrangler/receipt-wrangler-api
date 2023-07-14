@@ -5,7 +5,6 @@ import (
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/structs"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/go-chi/chi/v5"
@@ -87,7 +86,7 @@ func BuildReceiptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	//     Responses:
 	//       200: Ok
 	//       500: Internal Server Error
-	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", structs.PagedRequest{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)
+	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", commands.PagedRequestCommand{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)
 
 	// swagger:route POST /receipt/BulkStatusUpdateCommand Receipt receipt
 	//

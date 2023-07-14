@@ -8,7 +8,6 @@ import (
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
-	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
 
@@ -59,8 +58,8 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				ctx = context.WithValue(ctx, "receiptIds", bulkResolve.ReceiptIds)
 				serveWithContext(r, w, h, ctx)
 
-			case structs.PagedRequest:
-				var pagedRequest structs.PagedRequest
+			case commands.PagedRequestCommand:
+				var pagedRequest commands.PagedRequestCommand
 				err = json.Unmarshal(bodyData, &pagedRequest)
 
 				shouldReturn := checkError(err, w)

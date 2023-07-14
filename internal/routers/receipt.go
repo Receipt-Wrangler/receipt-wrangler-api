@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/models"
@@ -88,7 +89,7 @@ func BuildReceiptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	//       500: Internal Server Error
 	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", structs.PagedRequest{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)
 
-	// swagger:route POST /receipt/bulkStatusUpdate Receipt receipt
+	// swagger:route POST /receipt/BulkStatusUpdateCommand Receipt receipt
 	//
 	// Bulk receipt status update
 	//
@@ -111,7 +112,7 @@ func BuildReceiptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	//     Responses:
 	//       200: Ok
 	//       500: Internal Server Error
-	receiptRouter.With(middleware.SetGeneralBodyData("bulkStatusUpdate", structs.BulkStatusUpdate{}), middleware.SetReceiptGroupIds, middleware.BulkValidateGroupRole(models.EDITOR)).Post("/bulkStatusUpdate", handlers.BulkReceiptStatusUpdate)
+	receiptRouter.With(middleware.SetGeneralBodyData("BulkStatusUpdateCommand", commands.BulkStatusUpdateCommand{}), middleware.SetReceiptGroupIds, middleware.BulkValidateGroupRole(models.EDITOR)).Post("/BulkStatusUpdateCommand", handlers.BulkReceiptStatusUpdate)
 
 	// swagger:route POST /receipt/ Receipt receipt
 	//

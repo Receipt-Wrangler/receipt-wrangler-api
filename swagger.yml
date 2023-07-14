@@ -372,6 +372,13 @@ paths:
       description: This will bulk update receipt statuses with the option of adding
         a comment to each [SYSTEM USER]
       operationId: bulkReceiptStatusUpdate
+      requestBody:
+        description: Bulk status data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkStatusUpdateCommand'
       responses:
         200:
           $ref: '#/components/responses/Ok'
@@ -1295,4 +1302,21 @@ components:
         displayname:
           type: string
           description: User's displayname
+    BulkStatusUpdateCommand:
+      required:
+      - status
+      - receiptIds
+      type: object
+      properties:
+        comment:
+          type: string
+          description: Optional comment to leave on each receipt
+        status:
+          type: string
+          description: Status to update to
+        receiptIds:
+          type: array
+          items:
+            $ref: integer
+          description: Receipt ids to update
     

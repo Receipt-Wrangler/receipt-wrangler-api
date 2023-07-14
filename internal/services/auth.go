@@ -2,6 +2,7 @@ package services
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
@@ -10,7 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func LoginUser(loginAttempt models.User) (models.User, error) {
+func LoginUser(loginAttempt commands.LoginCommand) (models.User, error) {
 	db := db.GetDB()
 	var dbUser models.User
 

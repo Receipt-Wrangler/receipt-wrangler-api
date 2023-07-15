@@ -13,13 +13,18 @@ servers:
 security:
   - bearerAuth: []
 definitions:
-  Colors:
+  FilterOperations:
     type: string
     enum: &FILTEROPERATION
       - CONTAINS
       - EQUALS
       - GREATER_THAN
       - LESS_THAN
+  UserRole:
+    type: string
+    enum: &USERROLE
+      - ADMIN
+      - USER
 paths:
   /category/:
     get:
@@ -545,7 +550,7 @@ paths:
         - Auth
       summary: Get fresh tokens
       description: This will get a fresh token pair for the user
-      operationId: getTokens
+      operationId: getNewRefreshToken
       responses:
         200:
           $ref: "#/components/responses/Ok"
@@ -1227,29 +1232,25 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     User:
       required:
-        - Username
+        - username
         - displayName
         - isDummyUser
         - userRole
+        - id
       type: object
       properties:
-        Password:
+        password:
           type: string
-          description: |-
-            User's password
-
-            required true
-        Username:
+          description: User's password
+        username:
           type: string
           description: User's username used to login
         createdAt:
           type: string
           format: date-time
-          x-go-name: CreatedAt
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         defaultAvatarColor:
           type: string
           description: Default avatar color
@@ -1260,8 +1261,6 @@ components:
           x-go-name: DisplayName
         id:
           type: integer
-          format: uint64
-          x-go-name: ID
         isDummyUser:
           type: boolean
           description: Is dummy user
@@ -1271,7 +1270,9 @@ components:
           format: date-time
           x-go-name: UpdatedAt
         userRole:
-          $ref: "#/components/schemas/UserRole"
+          type: string
+          enum: *USERROLE
+          description: User's role
       description: User in the system
       x-go-package: receipt-wrangler/api/internal/models
     UserRole:

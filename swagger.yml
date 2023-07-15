@@ -504,7 +504,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /signUp/:
+  /signUp:
     post:
       tags:
         - Auth

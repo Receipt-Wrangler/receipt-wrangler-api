@@ -79,7 +79,7 @@ func initRoutes() *chi.Mux {
 	// Signup Router
 	if featureConfig.EnableLocalSignUp {
 		signUpRouter := routers.BuildSignUpRouter(tokenValidatorMiddleware)
-		rootRouter.Mount("/api/signup", signUpRouter)
+		rootRouter.Mount("/api/signUp", signUpRouter)
 	}
 
 	// Login Router

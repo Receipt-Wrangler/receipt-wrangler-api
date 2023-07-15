@@ -35,7 +35,12 @@ paths:
       operationId: getAllCategories
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -539,7 +544,12 @@ paths:
       operationId: getAllTags
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
         500:
           $ref: "#/components/responses/Internal"
       security:

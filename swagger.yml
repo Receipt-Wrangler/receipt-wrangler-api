@@ -568,7 +568,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/:
+  /user:
     get:
       tags:
         - User
@@ -579,7 +579,12 @@ paths:
       operationId: getUsers
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserView"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -604,7 +609,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/{userId}:
+  /user/{userId}:
     put:
       tags:
         - User
@@ -652,7 +657,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/{userId}/convertDummyUserToNormalUser:
+  /user/{userId}/convertDummyUserToNormalUser:
     post:
       tags:
         - User
@@ -682,7 +687,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/{userId}/resetPassword:
+  /user/{userId}/resetPassword:
     put:
       tags:
         - User
@@ -703,7 +708,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/{username}:
+  /user/{username}:
     get:
       tags:
         - User
@@ -721,12 +726,15 @@ paths:
       operationId: getUsernameCount
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: integer
         500:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/amountOwedForUser/{groupId}:
+  /user/amountOwedForUser/{groupId}:
     get:
       tags:
         - User
@@ -749,7 +757,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/getUserClaims:
+  /user/getUserClaims:
     get:
       tags:
         - User
@@ -765,7 +773,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/updateUserProfile:
+  /user/updateUserProfile:
     put:
       tags:
         - User
@@ -1285,6 +1293,48 @@ components:
           description: User's role
       description: User in the system
       x-go-package: receipt-wrangler/api/internal/models
+    UserView:
+      required:
+        - username
+        - displayName
+        - isDummyUser
+        - userRole
+        - id
+      type: object
+      properties:
+        username:
+          type: string
+          description: User's username used to login
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: integer
+          format: uint64
+        defaultAvatarColor:
+          type: string
+          description: Default avatar color
+          x-go-name: DefaultAvatarColor
+        displayName:
+          type: string
+          description: Display name
+          x-go-name: DisplayName
+        id:
+          type: integer
+        isDummyUser:
+          type: boolean
+          description: Is dummy user
+          x-go-name: IsDummyUser
+        updatedAt:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+        userRole:
+          type: string
+          enum: *USERROLE
+          description: User's role
+      description: User in the system
+      x-go-package: receipt-wrangler/api/internal/models
     UserRole:
       type: string
       x-go-package: receipt-wrangler/api/internal/models
@@ -1338,6 +1388,13 @@ components:
         displayname:
           type: string
           description: User's displayname
+        isDummyUser:
+          type: boolean
+          description: Whether the user is a dummy user
+        userRole:
+          type: boolean
+          enum: *USERROLE
+          description: User's role
     BulkStatusUpdateCommand:
       required:
         - status

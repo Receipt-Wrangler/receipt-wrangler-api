@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"receipt-wrangler/api/internal/commands"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
@@ -15,7 +16,7 @@ func SetUserData(next http.Handler) http.Handler {
 
 		errMsg := "Error updating user."
 		// TODO: Come up with a better way to handdle this
-		var user models.User
+		var user commands.SignUpCommand
 		bodyData, err := utils.GetBodyData(w, r)
 
 		if err != nil {
@@ -69,7 +70,7 @@ func ValidateUserData(roleRequired bool) (mw func(http.Handler) http.Handler) {
 	mw = func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			db := db.GetDB()
-			userData := r.Context().Value("user").(models.User)
+			userData := r.Context().Value("user").(commands.SignUpCommand)
 			err := structs.ValidatorError{
 				Errors: make(map[string]string),
 			}
@@ -89,7 +90,7 @@ func ValidateUserData(roleRequired bool) (mw func(http.Handler) http.Handler) {
 				err.Errors["password"] = "Password is required"
 			}
 
-			if len(userData.DisplayName) == 0 {
+			if len(userData.Displayname) == 0 {
 				err.Errors["displayName"] = "Displayname is required"
 			}
 

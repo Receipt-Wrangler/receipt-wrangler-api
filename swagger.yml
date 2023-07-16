@@ -688,11 +688,18 @@ paths:
       security:
         - bearerAuth: []
   /user/{userId}/resetPassword:
-    put:
+    post:
       tags:
         - User
       summary: Reset password
       description: This will reset a password for a user, [SYSTEM ADMIN]
+      requestBody:
+        description: Login credentials for new user
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordCommand"
       parameters:
         - in: path
           name: userId

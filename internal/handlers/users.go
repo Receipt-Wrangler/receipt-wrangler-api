@@ -13,7 +13,6 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/shopspring/decimal"
@@ -86,17 +85,9 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error updating user."
 	id := chi.URLParam(r, "id")
 
-	u64Id, err := strconv.ParseUint(id, 10, 32)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
-	}
+	bodyData := r.Context().Value("user").(commands.SignUpCommand)
 
-	bodyData := r.Context().Value("user").(models.User)
-	bodyData.ID = uint(u64Id)
-
-	err = db.Model(&bodyData).Select("username", "display_name", "user_role").Updates(&bodyData).Error
+	err := db.Model(models.User{}).Select("username", "display_name", "user_role").Where("id = ?", id).Updates(&bodyData).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

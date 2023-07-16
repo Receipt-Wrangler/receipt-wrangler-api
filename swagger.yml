@@ -101,7 +101,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /groups/:
+  /group:
     get:
       tags:
         - Groups
@@ -110,7 +110,12 @@ paths:
       operationId: getGroupsForuser
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Group"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -135,7 +140,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /groups/{groupId}:
+  /group/{groupId}:
     parameters:
       - in: path
         name: groupId
@@ -968,6 +973,8 @@ components:
       required:
         - name
         - status
+        - id
+        - groupMembers
       type: object
       properties:
         createdAt:

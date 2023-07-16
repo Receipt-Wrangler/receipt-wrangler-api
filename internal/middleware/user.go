@@ -90,7 +90,7 @@ func ValidateUserData(roleRequired bool) (mw func(http.Handler) http.Handler) {
 				err.Errors["password"] = "Password is required"
 			}
 
-			if len(userData.Displayname) == 0 {
+			if len(userData.DisplayName) == 0 {
 				err.Errors["displayName"] = "Displayname is required"
 			}
 

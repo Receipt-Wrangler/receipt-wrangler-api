@@ -1392,7 +1392,7 @@ components:
         password:
           type: string
           description: User's password
-        displayname:
+        displayName:
           type: string
           description: User's displayname
         isDummyUser:

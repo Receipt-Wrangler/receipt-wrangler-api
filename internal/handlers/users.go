@@ -87,7 +87,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	bodyData := r.Context().Value("user").(commands.SignUpCommand)
 
-	err := db.Model(models.User{}).Select("username", "display_name", "user_role").Where("id = ?", id).Updates(&bodyData).Error
+	err := db.Table("users").Select("username", "display_name", "user_role").Where("id = ?", id).Updates(&bodyData).Error
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

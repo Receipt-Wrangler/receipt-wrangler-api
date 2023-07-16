@@ -55,6 +55,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	var UserView structs.UserView
 	bodyData := r.Context().Value("user").(commands.SignUpCommand)
 	errMsg := "Error creating user."
+
 	createdUser, err := repositories.CreateUser(bodyData)
 
 	if err != nil {

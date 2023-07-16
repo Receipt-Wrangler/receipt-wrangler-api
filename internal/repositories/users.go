@@ -15,6 +15,7 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 		Username:    userData.Username,
 		DisplayName: userData.Displayname,
 		Password:    userData.Password,
+		IsDummyUser: userData.IsDummyUser,
 	}
 
 	// Hash password

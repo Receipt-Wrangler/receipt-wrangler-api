@@ -7,27 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// Group in the system
-//
-// swagger:model
 type Group struct {
 	BaseModel
-
-	// Name of the group
-	//
-	// required: true
-	Name string `gorm:"not null" json:"name"`
-
-	// Is default group (not used yet)
-	IsDefaultGroup bool `json:"isDefault"`
-
-	// Members of the group
-	GroupMembers []GroupMember `json:"groupMembers"`
-
-	// Current status fo the group
-	//
-	// required: true
-	Status GroupStatus `gorm:"default:'ACTIVE'; not null" json:"status"`
+	Name           string        `gorm:"not null" json:"name"`
+	IsDefaultGroup bool          `json:"isDefault"`
+	GroupMembers   []GroupMember `json:"groupMembers"`
+	Status         GroupStatus   `gorm:"default:'ACTIVE'; not null" json:"status"`
 }
 
 func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {

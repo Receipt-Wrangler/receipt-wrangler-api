@@ -111,7 +111,7 @@ func BuildReceiptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	//     Responses:
 	//       200: Ok
 	//       500: Internal Server Error
-	receiptRouter.With(middleware.SetGeneralBodyData("BulkStatusUpdateCommand", commands.BulkStatusUpdateCommand{}), middleware.SetReceiptGroupIds, middleware.BulkValidateGroupRole(models.EDITOR)).Post("/BulkStatusUpdateCommand", handlers.BulkReceiptStatusUpdate)
+	receiptRouter.With(middleware.SetGeneralBodyData("BulkStatusUpdateCommand", commands.BulkStatusUpdateCommand{}), middleware.SetReceiptGroupIds, middleware.BulkValidateGroupRole(models.EDITOR)).Post("/bulkStatusUpdate", handlers.BulkReceiptStatusUpdate)
 
 	// swagger:route POST /receipt/ Receipt receipt
 	//

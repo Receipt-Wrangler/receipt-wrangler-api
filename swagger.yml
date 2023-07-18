@@ -13,13 +13,46 @@ servers:
 security:
   - bearerAuth: []
 definitions:
-  Colors:
+  ReceiptStatus:
+    type: string
+    enum: &RECEIPTSTATUS
+      - "OPEN"
+      - "NEEDS_ATTENTION"
+      - "RESOLVED"
+  ItemStatus:
+    type: string
+    enum: &ITEMSTATUS
+      - "OPEN"
+      - "RESOLVED"
+  GroupStatus:
+    type: string
+    enum: &GROUPSTATUS
+      - "ACTIVE"
+      - "ARCHIVED"
+    GroupRole:
+      type: string
+      enum: &GROUPROLE
+        - "OWNER"
+        - "VIEWER"
+        - "EDITOR"
+  FilterOperations:
     type: string
     enum: &FILTEROPERATION
       - CONTAINS
       - EQUALS
       - GREATER_THAN
       - LESS_THAN
+  UserRole:
+    type: string
+    enum: &USERROLE
+      - ADMIN
+      - USER
+  SortDirection:
+    type: string
+    enum: &SORTDIRECTION
+      - asc
+      - desc
+      - ""
 paths:
   /category/:
     get:
@@ -30,7 +63,12 @@ paths:
       operationId: getAllCategories
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -91,7 +129,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /groups/:
+  /group:
     get:
       tags:
         - Groups
@@ -100,7 +138,12 @@ paths:
       operationId: getGroupsForuser
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Group"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -125,7 +168,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /groups/{groupId}:
+  /group/{groupId}:
     parameters:
       - in: path
         name: groupId
@@ -225,7 +268,12 @@ paths:
       operationId: getNotificationsForuser
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -275,7 +323,10 @@ paths:
       operationId: getNotificationCount
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: integer
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -317,7 +368,10 @@ paths:
       operationId: getReceiptById
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -394,7 +448,12 @@ paths:
               $ref: "#/components/schemas/BulkStatusUpdateCommand"
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receipt"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -441,7 +500,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/FileData"
-      operationId: receiptImage
+      operationId: uploadReceiptImage
       responses:
         200:
           $ref: "#/components/responses/Ok"
@@ -465,7 +524,10 @@ paths:
       operationId: getReceiptImageById
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileData"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -499,12 +561,17 @@ paths:
             type: string
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchResult"
         500:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /signUp/:
+  /signUp:
     post:
       tags:
         - Auth
@@ -534,7 +601,12 @@ paths:
       operationId: getAllTags
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tag"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -545,7 +617,7 @@ paths:
         - Auth
       summary: Get fresh tokens
       description: This will get a fresh token pair for the user
-      operationId: getTokens
+      operationId: getNewRefreshToken
       responses:
         200:
           $ref: "#/components/responses/Ok"
@@ -553,7 +625,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/:
+  /user:
     get:
       tags:
         - User
@@ -564,7 +636,12 @@ paths:
       operationId: getUsers
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserView"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -589,7 +666,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/{userId}:
+  /user/{userId}:
     put:
       tags:
         - User
@@ -637,7 +714,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/{userId}/convertDummyUserToNormalUser:
+  /user/{userId}/convertDummyUserToNormalUser:
     post:
       tags:
         - User
@@ -667,12 +744,19 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/{userId}/resetPassword:
-    put:
+  /user/{userId}/resetPassword:
+    post:
       tags:
         - User
       summary: Reset password
       description: This will reset a password for a user, [SYSTEM ADMIN]
+      requestBody:
+        description: Login credentials for new user
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordCommand"
       parameters:
         - in: path
           name: userId
@@ -688,7 +772,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/{username}:
+  /user/{username}:
     get:
       tags:
         - User
@@ -706,12 +790,15 @@ paths:
       operationId: getUsernameCount
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: integer
         500:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/amountOwedForUser/{groupId}:
+  /user/amountOwedForUser/{groupId}:
     get:
       tags:
         - User
@@ -734,7 +821,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/getUserClaims:
+  /user/getUserClaims:
     get:
       tags:
         - User
@@ -750,7 +837,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /users/updateUserProfile:
+  /user/updateUserProfile:
     put:
       tags:
         - User
@@ -788,7 +875,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -800,7 +887,7 @@ components:
           x-go-name: ID
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       x-go-package: receipt-wrangler/api/internal/models
     Category:
@@ -808,7 +895,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -827,7 +914,7 @@ components:
           x-go-name: Name
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Category to relate receipts to
       x-go-package: receipt-wrangler/api/internal/models
@@ -836,6 +923,8 @@ components:
         - comment
         - receiptId
         - userId
+        - replies
+        - id
       type: object
       properties:
         additionalInfo:
@@ -853,7 +942,7 @@ components:
           x-go-name: CommentId
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -876,7 +965,7 @@ components:
           x-go-name: Replies
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userId:
           type: integer
@@ -889,11 +978,12 @@ components:
       required:
         - imageData
         - receiptId
+        - id
       type: object
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -930,7 +1020,7 @@ components:
           x-go-name: Size
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: File data for images on a receipt
       x-go-package: receipt-wrangler/api/internal/models
@@ -938,11 +1028,13 @@ components:
       required:
         - name
         - status
+        - id
+        - groupMembers
       type: object
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -967,10 +1059,11 @@ components:
           description: Name of the group
           x-go-name: Name
         status:
-          $ref: "#/components/schemas/GroupStatus"
+          type: string
+          enum: *GROUPSTATUS
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Group in the system
       x-go-package: receipt-wrangler/api/internal/models
@@ -983,7 +1076,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         groupId:
           type: integer
@@ -991,10 +1084,11 @@ components:
           format: uint64
           x-go-name: GroupID
         groupRole:
-          $ref: "#/components/schemas/GroupRole"
+          type: string
+          enum: *GROUPROLE
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userId:
           type: integer
@@ -1002,12 +1096,6 @@ components:
           format: uint64
           x-go-name: UserID
       description: Group member
-      x-go-package: receipt-wrangler/api/internal/models
-    GroupRole:
-      type: string
-      x-go-package: receipt-wrangler/api/internal/models
-    GroupStatus:
-      type: string
       x-go-package: receipt-wrangler/api/internal/models
     Item:
       required:
@@ -1032,7 +1120,7 @@ components:
           x-go-name: ChargedToUserId
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1052,10 +1140,11 @@ components:
           format: uint64
           x-go-name: ReceiptId
         status:
-          $ref: "#/components/schemas/ItemStatus"
+          type: string
+          enum: *ITEMSTATUS
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Itemized item on a receipt
       x-go-package: receipt-wrangler/api/internal/models
@@ -1067,6 +1156,8 @@ components:
         - title
         - type
         - userId
+        - id
+        - body
       type: object
       properties:
         body:
@@ -1078,7 +1169,7 @@ components:
           x-go-name: Body
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1096,7 +1187,7 @@ components:
           $ref: "#/components/schemas/NotificationType"
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userId:
           type: integer
@@ -1115,6 +1206,8 @@ components:
         - groupId
         - name
         - paidByUserId
+        - status
+        - id
       type: object
       properties:
         amount:
@@ -1135,7 +1228,7 @@ components:
           x-go-name: Comments
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1144,7 +1237,7 @@ components:
         date:
           type: string
           description: Receipt date
-          format: date-time
+          
           x-go-name: Date
         groupId:
           type: integer
@@ -1179,10 +1272,11 @@ components:
         resolvedDate:
           type: string
           description: Date resolved
-          format: date-time
+          
           x-go-name: ResolvedDate
         status:
-          $ref: "#/components/schemas/ReceiptStatus"
+          type: string
+          enum: *RECEIPTSTATUS
         tags:
           type: array
           description: Tags associated to receipt
@@ -1191,12 +1285,9 @@ components:
           x-go-name: Tags
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Receipt
-      x-go-package: receipt-wrangler/api/internal/models
-    ReceiptStatus:
-      type: string
       x-go-package: receipt-wrangler/api/internal/models
     Tag:
       required:
@@ -1205,7 +1296,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1221,35 +1312,31 @@ components:
           x-go-name: Name
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Tag to relate receipts to
       x-go-package: receipt-wrangler/api/internal/models
     User:
       required:
-        - Username
+        - username
         - displayName
         - isDummyUser
         - userRole
+        - id
       type: object
       properties:
-        Password:
+        password:
           type: string
-          description: |-
-            User's password
-
-            required true
-        Username:
+          description: User's password
+        username:
           type: string
           description: User's username used to login
         createdAt:
           type: string
-          format: date-time
-          x-go-name: CreatedAt
+          
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         defaultAvatarColor:
           type: string
           description: Default avatar color
@@ -1260,18 +1347,60 @@ components:
           x-go-name: DisplayName
         id:
           type: integer
-          format: uint64
-          x-go-name: ID
         isDummyUser:
           type: boolean
           description: Is dummy user
           x-go-name: IsDummyUser
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userRole:
-          $ref: "#/components/schemas/UserRole"
+          type: string
+          enum: *USERROLE
+          description: User's role
+      description: User in the system
+      x-go-package: receipt-wrangler/api/internal/models
+    UserView:
+      required:
+        - username
+        - displayName
+        - isDummyUser
+        - userRole
+        - id
+      type: object
+      properties:
+        username:
+          type: string
+          description: User's username used to login
+        createdAt:
+          type: string
+          
+        createdBy:
+          type: integer
+          format: uint64
+        defaultAvatarColor:
+          type: string
+          description: Default avatar color
+          x-go-name: DefaultAvatarColor
+        displayName:
+          type: string
+          description: Display name
+          x-go-name: DisplayName
+        id:
+          type: integer
+        isDummyUser:
+          type: boolean
+          description: Is dummy user
+          x-go-name: IsDummyUser
+        updatedAt:
+          type: string
+          
+          x-go-name: UpdatedAt
+        userRole:
+          type: string
+          enum: *USERROLE
+          description: User's role
       description: User in the system
       x-go-package: receipt-wrangler/api/internal/models
     UserRole:
@@ -1324,9 +1453,16 @@ components:
         password:
           type: string
           description: User's password
-        displayname:
+        displayName:
           type: string
           description: User's displayname
+        isDummyUser:
+          type: boolean
+          description: Whether the user is a dummy user
+        userRole:
+          type: boolean
+          enum: *USERROLE
+          description: User's role
     BulkStatusUpdateCommand:
       required:
         - status
@@ -1359,6 +1495,9 @@ components:
         orderBy:
           type: string
           description: field to order on
+        sortDirection:
+          type: string
+          enum: *SORTDIRECTION
         filter:
           $ref: "#/components/schemas/PagedRequestFilter"
     PagedRequestFilter:
@@ -1391,5 +1530,45 @@ components:
           enum: *FILTEROPERATION
           description: Filter operation
         value:
-          type: string
+          oneOf:
+            - type: string
+            - type: integer
+            - type: array
+              items:
+                type: string
+            - type: array
+              items:
+                type: integer
           description: Field value
+    SearchResult:
+      required:
+        - id
+        - name
+        - type
+        - groupId
+        - date
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        groupId:
+          type: integer
+        date:
+          type: string
+
+    PagedData:
+      required:
+        - data
+        - totalCount
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        totalCount:
+          type: integer

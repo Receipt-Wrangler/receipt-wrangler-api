@@ -36,7 +36,7 @@ definitions:
     enum: &SORTDIRECTION
       - asc
       - desc
-      - ''
+      - ""
 paths:
   /category/:
     get:
@@ -252,7 +252,12 @@ paths:
       operationId: getNotificationsForuser
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -302,7 +307,10 @@ paths:
       operationId: getNotificationCount
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: integer
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -476,7 +484,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/FileData"
-      operationId: receiptImage
+      operationId: uploadReceiptImage
       responses:
         200:
           $ref: "#/components/responses/Ok"
@@ -500,7 +508,10 @@ paths:
       operationId: getReceiptImageById
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileData"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -534,7 +545,12 @@ paths:
             type: string
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchResult"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1127,6 +1143,8 @@ components:
         - title
         - type
         - userId
+        - id
+        - body
       type: object
       properties:
         body:
@@ -1509,3 +1527,22 @@ components:
               items:
                 type: integer
           description: Field value
+    SearchResult:
+      required:
+        - id
+        - name
+        - type
+        - groupId
+        - date
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        groupId:
+          type: integer
+        date:
+          type: string

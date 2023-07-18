@@ -13,6 +13,12 @@ servers:
 security:
   - bearerAuth: []
 definitions:
+  ReceiptStatus:
+    type: string
+    enum: &RECEIPTSTATUS
+      - "OPEN"
+      - "NEEDS_ATTENTION"
+      - "RESOLVED"
   FilterOperations:
     type: string
     enum: &FILTEROPERATION
@@ -25,6 +31,12 @@ definitions:
     enum: &USERROLE
       - ADMIN
       - USER
+  SortDirection:
+    type: string
+    enum: &SORTDIRECTION
+      - asc
+      - desc
+      - ''
 paths:
   /category/:
     get:
@@ -332,7 +344,10 @@ paths:
       operationId: getReceiptById
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -409,7 +424,12 @@ paths:
               $ref: "#/components/schemas/BulkStatusUpdateCommand"
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receipt"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -871,6 +891,8 @@ components:
         - comment
         - receiptId
         - userId
+        - replies
+        - id
       type: object
       properties:
         additionalInfo:
@@ -924,6 +946,7 @@ components:
       required:
         - imageData
         - receiptId
+        - id
       type: object
       properties:
         createdAt:
@@ -1152,6 +1175,8 @@ components:
         - groupId
         - name
         - paidByUserId
+        - status
+        - id
       type: object
       properties:
         amount:
@@ -1219,7 +1244,8 @@ components:
           format: date-time
           x-go-name: ResolvedDate
         status:
-          $ref: "#/components/schemas/ReceiptStatus"
+          type: string
+          enum: *RECEIPTSTATUS
         tags:
           type: array
           description: Tags associated to receipt
@@ -1231,9 +1257,6 @@ components:
           format: date-time
           x-go-name: UpdatedAt
       description: Receipt
-      x-go-package: receipt-wrangler/api/internal/models
-    ReceiptStatus:
-      type: string
       x-go-package: receipt-wrangler/api/internal/models
     Tag:
       required:
@@ -1441,6 +1464,9 @@ components:
         orderBy:
           type: string
           description: field to order on
+        sortDirection:
+          type: string
+          enum: *SORTDIRECTION
         filter:
           $ref: "#/components/schemas/PagedRequestFilter"
     PagedRequestFilter:
@@ -1473,5 +1499,13 @@ components:
           enum: *FILTEROPERATION
           description: Filter operation
         value:
-          type: string
+          oneOf:
+            - type: string
+            - type: integer
+            - type: array
+              items:
+                type: string
+            - type: array
+              items:
+                type: integer
           description: Field value

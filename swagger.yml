@@ -19,6 +19,22 @@ definitions:
       - "OPEN"
       - "NEEDS_ATTENTION"
       - "RESOLVED"
+  ItemStatus:
+    type: string
+    enum: &ITEMSTATUS
+      - "OPEN"
+      - "RESOLVED"
+  GroupStatus:
+    type: string
+    enum: &GROUPSTATUS
+      - "ACTIVE"
+      - "ARCHIVED"
+    GroupRole:
+      type: string
+      enum: &GROUPROLE
+        - "OWNER"
+        - "VIEWER"
+        - "EDITOR"
   FilterOperations:
     type: string
     enum: &FILTEROPERATION
@@ -1043,7 +1059,8 @@ components:
           description: Name of the group
           x-go-name: Name
         status:
-          $ref: "#/components/schemas/GroupStatus"
+          type: string
+          enum: *GROUPSTATUS
         updatedAt:
           type: string
           format: date-time
@@ -1067,7 +1084,8 @@ components:
           format: uint64
           x-go-name: GroupID
         groupRole:
-          $ref: "#/components/schemas/GroupRole"
+          type: string
+          enum: *GROUPROLE
         updatedAt:
           type: string
           format: date-time
@@ -1078,12 +1096,6 @@ components:
           format: uint64
           x-go-name: UserID
       description: Group member
-      x-go-package: receipt-wrangler/api/internal/models
-    GroupRole:
-      type: string
-      x-go-package: receipt-wrangler/api/internal/models
-    GroupStatus:
-      type: string
       x-go-package: receipt-wrangler/api/internal/models
     Item:
       required:
@@ -1128,7 +1140,8 @@ components:
           format: uint64
           x-go-name: ReceiptId
         status:
-          $ref: "#/components/schemas/ItemStatus"
+          type: string
+          enum: *ITEMSTATUS
         updatedAt:
           type: string
           format: date-time
@@ -1546,3 +1559,16 @@ components:
           type: integer
         date:
           type: string
+
+    PagedData:
+      required:
+        - data
+        - totalCount
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        totalCount:
+          type: integer

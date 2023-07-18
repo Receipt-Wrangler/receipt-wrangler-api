@@ -875,7 +875,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -887,7 +887,7 @@ components:
           x-go-name: ID
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       x-go-package: receipt-wrangler/api/internal/models
     Category:
@@ -895,7 +895,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -914,7 +914,7 @@ components:
           x-go-name: Name
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Category to relate receipts to
       x-go-package: receipt-wrangler/api/internal/models
@@ -942,7 +942,7 @@ components:
           x-go-name: CommentId
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -965,7 +965,7 @@ components:
           x-go-name: Replies
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userId:
           type: integer
@@ -983,7 +983,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1020,7 +1020,7 @@ components:
           x-go-name: Size
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: File data for images on a receipt
       x-go-package: receipt-wrangler/api/internal/models
@@ -1034,7 +1034,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1063,7 +1063,7 @@ components:
           enum: *GROUPSTATUS
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Group in the system
       x-go-package: receipt-wrangler/api/internal/models
@@ -1076,7 +1076,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         groupId:
           type: integer
@@ -1088,7 +1088,7 @@ components:
           enum: *GROUPROLE
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userId:
           type: integer
@@ -1120,7 +1120,7 @@ components:
           x-go-name: ChargedToUserId
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1144,7 +1144,7 @@ components:
           enum: *ITEMSTATUS
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Itemized item on a receipt
       x-go-package: receipt-wrangler/api/internal/models
@@ -1169,7 +1169,7 @@ components:
           x-go-name: Body
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1187,7 +1187,7 @@ components:
           $ref: "#/components/schemas/NotificationType"
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userId:
           type: integer
@@ -1228,7 +1228,7 @@ components:
           x-go-name: Comments
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1237,7 +1237,7 @@ components:
         date:
           type: string
           description: Receipt date
-          format: date-time
+          
           x-go-name: Date
         groupId:
           type: integer
@@ -1272,7 +1272,7 @@ components:
         resolvedDate:
           type: string
           description: Date resolved
-          format: date-time
+          
           x-go-name: ResolvedDate
         status:
           type: string
@@ -1285,7 +1285,7 @@ components:
           x-go-name: Tags
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Receipt
       x-go-package: receipt-wrangler/api/internal/models
@@ -1296,7 +1296,7 @@ components:
       properties:
         createdAt:
           type: string
-          format: date-time
+          
           x-go-name: CreatedAt
         createdBy:
           type: integer
@@ -1312,7 +1312,7 @@ components:
           x-go-name: Name
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
       description: Tag to relate receipts to
       x-go-package: receipt-wrangler/api/internal/models
@@ -1333,7 +1333,7 @@ components:
           description: User's username used to login
         createdAt:
           type: string
-          format: date-time
+          
         createdBy:
           type: integer
           format: uint64
@@ -1353,7 +1353,7 @@ components:
           x-go-name: IsDummyUser
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userRole:
           type: string
@@ -1375,7 +1375,7 @@ components:
           description: User's username used to login
         createdAt:
           type: string
-          format: date-time
+          
         createdBy:
           type: integer
           format: uint64
@@ -1395,7 +1395,7 @@ components:
           x-go-name: IsDummyUser
         updatedAt:
           type: string
-          format: date-time
+          
           x-go-name: UpdatedAt
         userRole:
           type: string

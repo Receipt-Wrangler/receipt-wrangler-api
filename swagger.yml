@@ -525,9 +525,9 @@ paths:
       responses:
         200:
           content:
-            application/json:
+            text/plain:
               schema:
-                $ref: "#/components/schemas/FileData"
+                type: string
         500:
           $ref: "#/components/responses/Internal"
       security:

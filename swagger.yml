@@ -525,9 +525,9 @@ paths:
       responses:
         200:
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: "#/components/schemas/EncodedImage"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1559,7 +1559,6 @@ components:
           type: integer
         date:
           type: string
-
     PagedData:
       required:
         - data
@@ -1572,3 +1571,10 @@ components:
             type: object
         totalCount:
           type: integer
+    EncodedImage:
+      required:
+        - encodedImage
+      type: object
+      properties:
+        encodedImage:
+          type: string

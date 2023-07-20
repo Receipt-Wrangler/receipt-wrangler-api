@@ -104,6 +104,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "id")
 			var fileData models.FileData
 			var receipt models.Receipt
+			result := make(map[string]string)
 
 			err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
 			if err != nil {
@@ -121,9 +122,15 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			imageData := "data:" + fileData.FileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
+			result["encodedImage"] = imageData
+
+			resultBytes, err := utils.MarshalResponseData(result)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
 			w.WriteHeader(200)
-			w.Write([]byte(imageData))
+			w.Write([]byte(resultBytes))
 
 			return 0, nil
 		},

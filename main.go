@@ -34,6 +34,12 @@ func main() {
 		os.Exit(0)
 	}
 
+	err = config.ReadEnvVariables()
+	if err != nil {
+		logger.Print(err.Error())
+		os.Exit(0)
+	}
+
 	err = db.Connect()
 	if err != nil {
 		logger.Print(err.Error())

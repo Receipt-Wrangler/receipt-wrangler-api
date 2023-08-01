@@ -14,6 +14,7 @@ var config structs.Config
 var featureConfig structs.FeatureConfig
 var basePath string
 var env string
+var envVariables = make(map[string]string)
 
 func GetConfig() structs.Config {
 	return config
@@ -25,6 +26,10 @@ func GetFeatureConfig() structs.FeatureConfig {
 
 func GetBasePath() string {
 	return basePath
+}
+
+func GetEnvVariables() map[string]string {
+	return envVariables
 }
 
 func SetConfigs() error {
@@ -41,6 +46,15 @@ func SetConfigs() error {
 		return err
 	}
 
+	return nil
+}
+
+func ReadEnvVariables() error {
+	envKeys := []string{"MYSQL_ROOT_PASSWORD", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE", "MYSQL_HOST"}
+	for _, key := range envKeys {
+		value := os.Getenv(key)
+		envVariables[key] = value
+	}
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 
@@ -12,9 +13,14 @@ import (
 
 var db *gorm.DB
 
+func BuildConnectionString() string {
+	envVariables := config.GetEnvVariables()
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", envVariables["MYSQL_USER"], envVariables["MYSQL_PASSWORD"], envVariables["MYSQL_HOST"], envVariables["MYSQL_DATABASE"])
+	return connectionString
+}
+
 func Connect() error {
-	config := config.GetConfig()
-	connectedDb, err := gorm.Open(mysql.Open(config.ConnectionString), &gorm.Config{})
+	connectedDb, err := gorm.Open(mysql.Open(BuildConnectionString()), &gorm.Config{})
 
 	if err != nil {
 		return err

@@ -98,89 +98,111 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
-	errMsg := "Error calculating amount owed."
-	var itemsOwed []ItemView
-	var itemsOthersOwe []ItemView
-	total := decimal.NewFromInt(0)
-	token := utils.GetJWT(r)
-	id := token.UserId
-	resultMap := make(map[uint]decimal.Decimal)
+	handler := structs.Handler{
+		ErrorMessage: "Error calculating amount owed.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := db.GetDB()
+			var itemsOwed []ItemView
+			var itemsOthersOwe []ItemView
+			total := decimal.NewFromInt(0)
+			token := utils.GetJWT(r)
+			id := token.UserId
+			resultMap := make(map[uint]decimal.Decimal)
+			totalReceiptIds := make([]uint, 0)
+			totalGroupIds := make([]string, 0)
 
-	groupId := chi.URLParam(r, "groupId")
+			groupId := r.URL.Query().Get("groupId")
+			if groupId == "all" {
+				userGroupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 
-	if groupId == "all" {
-		groupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
-		if err != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
+				for _, userGroupId := range userGroupIds {
+					totalGroupIds = append(totalGroupIds, simpleutils.UintToString(userGroupId))
+				}
+			}
+			if len(groupId) > 0 {
+				if groupId != "all" {
+					totalGroupIds = append(totalGroupIds, groupId)
+				}
+				groupReceiptIds, err := repositories.GetReceiptsByGroupIds(totalGroupIds, "id", "")
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 
-		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id IN ? AND items.status=?", id, id, groupIds, models.ITEM_OPEN).Scan(&itemsOwed).Error
-		if err != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
+				for _, receipt := range groupReceiptIds {
+					totalReceiptIds = append(totalReceiptIds, receipt.ID)
+				}
+			}
 
-		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id IN ? AND items.status=?", id, id, groupIds, models.ITEM_OPEN).Scan(&itemsOthersOwe).Error
-		if err != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
-	} else {
-		err := db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id =? AND items.status=?", id, id, groupId, models.ITEM_OPEN).Scan(&itemsOwed).Error
-		if err != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
+			err := r.ParseForm()
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
-		err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id =? AND items.status=?", id, id, groupId, models.ITEM_OPEN).Scan(&itemsOthersOwe).Error
-		if err != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, errMsg, 500)
-			return
-		}
+			receiptIds := r.Form["receiptIds"]
+			for _, receiptId := range receiptIds {
+				receiptIdUint, err := simpleutils.StringToUint(receiptId)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				totalReceiptIds = append(totalReceiptIds, receiptIdUint)
+			}
+
+			err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.id IN ? AND items.status=?", id, id, totalReceiptIds, models.ITEM_OPEN).Scan(&itemsOwed).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.id IN ? AND items.status=?", id, id, totalReceiptIds, models.ITEM_OPEN).Scan(&itemsOthersOwe).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			// These are items from receipts that I did not pay for, so I owe these
+			for i := 0; i < len(itemsOwed); i++ {
+				item := itemsOwed[i]
+				total = total.Add(item.ItemAmount)
+				amount, ok := resultMap[item.PaidByUserId]
+
+				if ok {
+					resultMap[item.PaidByUserId] = amount.Add(item.ItemAmount)
+				} else {
+					resultMap[item.PaidByUserId] = item.ItemAmount
+				}
+			}
+
+			// These are items from receipts that I paid for, so they owe me
+			for i := 0; i < len(itemsOthersOwe); i++ {
+				item := itemsOthersOwe[i]
+				total = total.Sub(item.ItemAmount)
+				amount, ok := resultMap[item.ChargedToUserId]
+
+				if ok {
+					resultMap[item.ChargedToUserId] = amount.Sub(item.ItemAmount)
+				} else {
+					resultMap[item.ChargedToUserId] = item.ItemAmount.Mul(decimal.NewFromInt(-1))
+				}
+			}
+
+			bytes, err := json.Marshal(resultMap)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	// These are items from receipts that I did not pay for, so I owe these
-	for i := 0; i < len(itemsOwed); i++ {
-		item := itemsOwed[i]
-		total = total.Add(item.ItemAmount)
-		amount, ok := resultMap[item.PaidByUserId]
-
-		if ok {
-			resultMap[item.PaidByUserId] = amount.Add(item.ItemAmount)
-		} else {
-			resultMap[item.PaidByUserId] = item.ItemAmount
-		}
-	}
-
-	// These are items from receipts that I paid for, so they owe me
-	for i := 0; i < len(itemsOthersOwe); i++ {
-		item := itemsOthersOwe[i]
-		total = total.Sub(item.ItemAmount)
-		amount, ok := resultMap[item.ChargedToUserId]
-
-		if ok {
-			resultMap[item.ChargedToUserId] = amount.Sub(item.ItemAmount)
-		} else {
-			resultMap[item.ChargedToUserId] = item.ItemAmount.Mul(decimal.NewFromInt(-1))
-		}
-	}
-
-	bytes, err := json.Marshal(resultMap)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func GetUsernameCount(w http.ResponseWriter, r *http.Request) {

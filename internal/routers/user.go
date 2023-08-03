@@ -22,7 +22,7 @@ func BuildUserRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}/resetPassword", handlers.ResetPassword)
 	userRouter.With(middleware.SetResetPasswordData, middleware.ValidateRole(models.ADMIN)).Post("/{id}/convertDummyUserToNormalUser", handlers.ConvertDummyUserToNormalUser)
 	userRouter.With(middleware.ValidateRole(models.ADMIN)).Delete("/{id}", handlers.DeleteUser)
-	userRouter.With(middleware.ValidateGroupRole(models.VIEWER)).Get("/amountOwedForUser/{groupId}", handlers.GetAmountOwedForUser)
+	userRouter.Get("/amountOwedForUser", handlers.GetAmountOwedForUser)
 	userRouter.Get("/getUserClaims", handlers.GetClaimsForLoggedInUser)
 
 	return userRouter

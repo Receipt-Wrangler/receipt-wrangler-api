@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -112,46 +111,57 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			token := utils.GetJWT(r)
 			id := token.UserId
 			resultMap := make(map[uint]decimal.Decimal)
+			totalReceiptIds := make([]uint, 0)
+			totalGroupIds := make([]string, 0)
 
 			groupId := r.URL.Query().Get("groupId")
+			if groupId == "all" {
+				userGroupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				for _, userGroupId := range userGroupIds {
+					totalGroupIds = append(totalGroupIds, simpleutils.UintToString(userGroupId))
+				}
+			}
+			if len(groupId) > 0 {
+				if groupId != "all" {
+					totalGroupIds = append(totalGroupIds, groupId)
+				}
+				groupReceiptIds, err := repositories.GetReceiptsByGroupIds(totalGroupIds, "id", "")
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				for _, receipt := range groupReceiptIds {
+					totalReceiptIds = append(totalReceiptIds, receipt.ID)
+				}
+			}
 
 			err := r.ParseForm()
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			receiptIds, ok := r.Form["receiptIds"]
-			if !ok {
-				return http.StatusInternalServerError, errors.New("Error parsing form.")
+			receiptIds := r.Form["receiptIds"]
+			for _, receiptId := range receiptIds {
+				receiptIdUint, err := simpleutils.StringToUint(receiptId)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				totalReceiptIds = append(totalReceiptIds, receiptIdUint)
 			}
 
-			fmt.Println(receiptIds)
+			err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.id IN ? AND items.status=?", id, id, totalReceiptIds, models.ITEM_OPEN).Scan(&itemsOwed).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
-			if groupId == "all" {
-				groupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id IN ? AND items.status=?", id, id, groupIds, models.ITEM_OPEN).Scan(&itemsOwed).Error
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id IN ? AND items.status=?", id, id, groupIds, models.ITEM_OPEN).Scan(&itemsOthersOwe).Error
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-			} else {
-				err := db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.group_id =? AND items.status=?", id, id, groupId, models.ITEM_OPEN).Scan(&itemsOwed).Error
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.group_id =? AND items.status=?", id, id, groupId, models.ITEM_OPEN).Scan(&itemsOthersOwe).Error
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
+			err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.id IN ? AND items.status=?", id, id, totalReceiptIds, models.ITEM_OPEN).Scan(&itemsOthersOwe).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
 			}
 
 			// These are items from receipts that I did not pay for, so I owe these

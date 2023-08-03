@@ -106,7 +106,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 				// 	return http.StatusForbidden, errors.New("not allowed to access group")
 				// }
 
-				receipts, err = repositories.GetReceiptsByGroupIds(groupIds)
+				receipts, err = repositories.GetReceiptsByGroupIds(groupIds, "*", clause.Associations)
 			}
 
 			if err != nil {

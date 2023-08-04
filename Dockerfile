@@ -1,5 +1,5 @@
 # Pull in source code to container
-FROM golang:1.19.5-alpine3.17
+FROM golang:1.20.7-bullseye
 WORKDIR .
 RUN mkdir api
 WORKDIR api
@@ -7,6 +7,9 @@ COPY . .
 
 # Set up config volume
 VOLUME /go/api/config
+
+# Install tesseract dependencies
+RUN ./set-up-tesseract-env.sh
 
 # Build api
 WORKDIR /go/api

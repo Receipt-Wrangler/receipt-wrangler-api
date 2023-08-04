@@ -124,7 +124,10 @@ paths:
       operationId: getFeatureConfig
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureConfig"
         500:
           $ref: "#/components/responses/Internal"
       security:

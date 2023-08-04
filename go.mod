@@ -25,6 +25,7 @@ require (
 	github.com/otiai10/gosseract/v2 v2.4.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/sashabaranov/go-openai v1.14.1 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	modernc.org/libc v1.22.3 // indirect

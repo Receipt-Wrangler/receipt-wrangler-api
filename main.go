@@ -11,6 +11,7 @@ import (
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/routers"
+	"receipt-wrangler/api/internal/tesseract"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -46,6 +47,9 @@ func main() {
 		os.Exit(0)
 	}
 	db.MakeMigrations()
+
+	tesseract.InitClient()
+	defer tesseract.GetClient().Close()
 
 	router := initRoutes()
 	serve(router)

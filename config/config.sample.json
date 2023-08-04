@@ -1,4 +1,4 @@
 {
-  "connectionString": "db connection string here",
-  "secretKey": "secret key for jwts here"
+  "secretKey": "secret key for jwts here",
+  "openAiKey": "open ai key if using AI powered receipts"
 }

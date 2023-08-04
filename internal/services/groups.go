@@ -1,10 +1,12 @@
 package services
 
 import (
+	"errors"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -67,6 +69,22 @@ func DeleteGroup(groupId string) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func ValidateGroupRole(role models.GroupRole, groupId string, userId string) error {
+	groupMap := utils.BuildGroupMap()
+
+	groupMember, err := repositories.GetGroupMemberByUserIdAndGroupId(userId, groupId)
+	if err != nil {
+		return err
+	}
+
+	var hasAccess = groupMap[groupMember.GroupRole] >= groupMap[role]
+	if !hasAccess {
+		return errors.New("user does not have access to this group")
 	}
 
 	return nil

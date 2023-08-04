@@ -5,8 +5,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
@@ -175,4 +178,58 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
+}
+
+func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error performing magic fill.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			receiptImageId := r.URL.Query().Get("receiptImageId")
+			errCode, err := validateReceiptImageAccess(r, models.VIEWER, receiptImageId)
+			if err != nil {
+				return errCode, err
+			}
+
+			filledReceipt, err := services.ReadReceiptImage(receiptImageId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(filledReceipt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func validateReceiptImageAccess(r *http.Request, groupRole models.GroupRole, receiptImageId string) (int, error) {
+	token := utils.GetJWT(r)
+	receiptImageIdUint, err := simpleutils.StringToUint(receiptImageId)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	receiptImageRepository := repositories.NewReceiptImageRepository(nil)
+
+	receiptImage, err := receiptImageRepository.GetReceiptImageById(receiptImageIdUint)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	err = services.ValidateGroupRole(groupRole, simpleutils.UintToString(receiptImage.Receipt.GroupId), simpleutils.UintToString(token.UserId))
+	if err != nil {
+		return http.StatusForbidden, err
+	}
+
+	return 0, nil
 }

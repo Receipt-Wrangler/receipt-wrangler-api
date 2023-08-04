@@ -9,11 +9,11 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 )
 
-func BuildFilePath(rid string, fid string, fname string) (string, error) {
+func BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName string) (string, error) {
 	db := db.GetDB()
 	var receipt models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("id = ?", rid).Select("group_id").Find(&receipt).Error
+	err := db.Model(models.Receipt{}).Where("id = ?", receiptId).Select("group_id").Find(&receipt).Error
 	if err != nil {
 		return "", err
 	}
@@ -23,7 +23,7 @@ func BuildFilePath(rid string, fid string, fname string) (string, error) {
 		return "", err
 	}
 
-	fileName := simpleutils.BuildFileName(rid, fid, fname)
+	fileName := simpleutils.BuildFileName(receiptId, receiptImageId, receiptImageFileName)
 	path := filepath.Join(groupPath, fileName)
 
 	return path, nil

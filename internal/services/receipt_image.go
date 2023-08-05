@@ -37,5 +37,6 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		return models.Receipt{}, err
 	}
 
+
 	return result, nil
 }

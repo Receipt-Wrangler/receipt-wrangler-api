@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/simpleutils"
+	"time"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -22,6 +25,7 @@ func GetClient() *openai.Client {
 
 func ReadReceiptData(ocrText string) (models.Receipt, error) {
 	var result models.Receipt
+	logger := logging.GetLogger()
 
 	client := GetClient()
 	resp, err := client.CreateChatCompletion(
@@ -43,30 +47,32 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 	}
 
 	openAiResponse := resp.Choices[0].Message.Content
+	logger.Print(openAiResponse, "raw response")
+
 	err = json.Unmarshal([]byte(openAiResponse), &result)
 	if err != nil {
-		return models.Receipt{}, nil
+		return models.Receipt{}, err
 	}
 
 	return result, nil
 }
 
 func getPrompt(ocrText string) string {
-	return fmt.Sprintf(`Could you find the total cost of this receipt, the name of the store, and the date of the receipt?
-	Please respond with nothing else other than the data.
-	Please format the data as follows:
+	currentYear := simpleutils.UintToString(uint(time.Now().Year()))
+	return fmt.Sprintf(`
+	Find the name of the receipt, total cost of the receipt, and receipt date.
+	Format the data in valid json as follows:
 	
 	{
-		name: store name here,
-		amount: receipt amount here,
-		date: receipt date here
+		Name: store name here,
+		Amount: receipt amount here,
+		Date: receipt date here
 	}
 	
-	If these values cannot be found confidently, please enter "null" instead of making up a value.
-	The date must be a valid date.
+	If the data cannot be found with confidence, do not make up a value, omit the value from the results.
+	The date must be a valid date, formatted in zulu time. If no year is provided, assume it is the year %s. Assume time values are empty.
 	The amount must be a valid float, or integer.
-	The data must be valid JSON.
 
 	%s
-	`, ocrText)
+	`, currentYear, ocrText)
 }

@@ -1,6 +1,6 @@
 package structs
 
 type FeatureConfig struct {
-	EnableLocalSignUp bool
-	AiPoweredReceipts bool
+	EnableLocalSignUp bool `json:"enableLocalSignUp"`
+	AiPoweredReceipts bool `json:"aiPoweredReceipts"`
 }

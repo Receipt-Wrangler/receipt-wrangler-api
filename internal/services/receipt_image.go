@@ -37,6 +37,21 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		return models.Receipt{}, err
 	}
 
+	return result, nil
+}
+
+func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
+	var result models.Receipt
+
+	ocrText, err := tesseract.ReadImage(path)
+	if err != nil {
+		return result, nil
+	}
+
+	result, err = ai.ReadReceiptData(ocrText)
+	if err != nil {
+		return models.Receipt{}, err
+	}
 
 	return result, nil
 }

@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	db "receipt-wrangler/api/internal/database"
+	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -188,14 +191,43 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			receiptImageId := r.URL.Query().Get("receiptImageId")
-			errCode, err := validateReceiptImageAccess(r, models.VIEWER, receiptImageId)
-			if err != nil {
-				return errCode, err
-			}
+			filledReceipt := models.Receipt{}
 
-			filledReceipt, err := services.ReadReceiptImage(receiptImageId)
+			body, err := utils.GetBodyData(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
+			}
+
+			if len(receiptImageId) > 0 {
+				errCode, err := validateReceiptImageAccess(r, models.VIEWER, receiptImageId)
+				if err != nil {
+					return errCode, err
+				}
+
+				filledReceipt, err = services.ReadReceiptImage(receiptImageId)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+			} else if len(body) > 0 {
+				var magicFillCommand commands.MagicFillCommand
+
+				err := json.Unmarshal(body, &magicFillCommand)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				tempPath := config.GetBasePath() + "/temp"
+				utils.MakeDirectory(tempPath)
+
+				filePath := tempPath + "/" + magicFillCommand.Filename
+				utils.WriteFile(filePath, []byte(magicFillCommand.ImageData))
+
+				filledReceipt, err = services.ReadReceiptImageFromFileOnly(filePath)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				os.Remove(filePath)
 			}
 
 			bytes, err := utils.MarshalResponseData(filledReceipt)

@@ -512,18 +512,24 @@ paths:
       security:
         - bearerAuth: []
   /receiptImage/magicFill:
-    get:
+    post:
       tags:
         - ReceiptImage
       summary: Reads a receipt image and returns the parsed results
       description: This will parse and read a receipt image, [SYSTEM USER]
       operationId: magicFillReceipt
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagicFillCommand"
       parameters:
         - in: query
           name: receiptImageId
           schema:
             type: integer
-          required: true
+          required: false
           description: Id of receipt image to perform magic fill on
       responses:
         200:
@@ -1626,3 +1632,17 @@ components:
         EnableLocalSignUp:
           type: boolean
           description: Whether local sign up is enabled
+    MagicFillCommand:
+      required:
+        - imageData
+        - filename
+      type: object
+      properties:
+        ImageData:
+          type: array
+          items:
+            type: integer
+          description: Image data
+        Filename:
+          type: string
+          description: Name of file

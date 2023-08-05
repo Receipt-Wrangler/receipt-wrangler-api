@@ -4,5 +4,6 @@
 !/config/config.sample.json
 /data/*
 /logs/*
+/temp/*
 ./api
 ./coverage.out

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"receipt-wrangler/api/internal/ai"
 	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers"
@@ -48,8 +49,12 @@ func main() {
 	}
 	db.MakeMigrations()
 
-	tesseract.InitClient()
-	defer tesseract.GetClient().Close()
+	if config.GetFeatureConfig().AiPoweredReceipts {
+		tesseract.InitClient()
+		defer tesseract.GetClient().Close()
+
+		ai.InitOpenAIClient()
+	}
 
 	router := initRoutes()
 	serve(router)

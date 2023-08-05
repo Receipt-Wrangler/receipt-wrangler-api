@@ -1,3 +1,4 @@
 {
-  "enableLocalSignUp": true
+  "enableLocalSignUp": true,
+  "aiPoweredReceipts": true
 }

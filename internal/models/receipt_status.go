@@ -8,7 +8,7 @@ type ReceiptStatus string
 
 const (
 	OPEN            ReceiptStatus = "OPEN"
-	NEEDS_ATTENTION ReceiptStatus = "NEEDS_ATTENTION"
+	NEEDS_ATTENTION ReceiptStatus = "NEEDSATTENTION"
 	RESOLVED        ReceiptStatus = "RESOLVED"
 )
 

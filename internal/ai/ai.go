@@ -64,18 +64,10 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 }
 
 func getPrompt(ocrText string) (string, error) {
-	categoryRepository := repositories.NewCategoryRepository(nil)
-	categories, err := categoryRepository.GetAllCategories("id, name")
+	categoriesString, err := getCategoriesString()
 	if err != nil {
 		return "", err
 	}
-
-	categoriesBytes, err := json.Marshal(categories)
-	if err != nil {
-		return "", err
-	}
-
-	categoriesString := string(categoriesBytes)
 
 	currentYear := simpleutils.UintToString(uint(time.Now().Year()))
 	prompt := fmt.Sprintf(`
@@ -103,4 +95,19 @@ func getPrompt(ocrText string) (string, error) {
 `, currentYear, categoriesString, ocrText)
 
 	return prompt, nil
+}
+
+func getCategoriesString() (string, error) {
+	categoryRepository := repositories.NewCategoryRepository(nil)
+	categories, err := categoryRepository.GetAllCategories("id, name")
+	if err != nil {
+		return "", err
+	}
+
+	categoriesBytes, err := json.Marshal(categories)
+	if err != nil {
+		return "", err
+	}
+
+	return string(categoriesBytes), nil
 }

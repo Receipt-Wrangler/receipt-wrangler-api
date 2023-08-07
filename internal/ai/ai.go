@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"time"
 
@@ -64,48 +64,74 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 }
 
 func getPrompt(ocrText string) (string, error) {
-	var categories []models.Category
-	db := db.GetDB()
-	db.Model(models.Category{}).Select("id", "name").Find(&categories)
+	categoriesString, err := getCategoriesString()
+	if err != nil {
+		return "", err
+	}
+
+	tagsString, err := getTagsString()
+	if err != nil {
+		return "", err
+	}
+
+	currentYear := simpleutils.UintToString(uint(time.Now().Year()))
+	prompt := fmt.Sprintf(`
+	Find the receipt's name, total cost, and date. Format as:
+	{
+		Name: store name,
+		Amount: amount,
+		Date: date in zulu,
+		Categories: categories,
+		Tags: tags
+	}
+
+	Omit any value if not found with confidence. Assume the date is in the year %s if not provided, and assume time values are empty. The amount must be a float or integer.
+
+	Choose up to 2 categories from the given list based on the receipt's items and store name. If none fit, omit the result. Select only the id, like:
+	{
+		Id: category id
+	}
+
+	Emphasize the relationship between the category and the receipt.
+
+	Categories: %s
+
+	Follow the same process as described for categories for tags.
+
+	Tags: %s
+
+	Receipt text: %s
+`, currentYear, categoriesString, tagsString, ocrText)
+
+	return prompt, nil
+}
+
+func getCategoriesString() (string, error) {
+	categoryRepository := repositories.NewCategoryRepository(nil)
+	categories, err := categoryRepository.GetAllCategories("id, name")
+	if err != nil {
+		return "", err
+	}
 
 	categoriesBytes, err := json.Marshal(categories)
 	if err != nil {
 		return "", err
 	}
 
-	categoriesString := string(categoriesBytes)
+	return string(categoriesBytes), nil
+}
 
-	currentYear := simpleutils.UintToString(uint(time.Now().Year()))
-	prompt := fmt.Sprintf(`
-	Find the name of the receipt, total cost of the receipt, and receipt date.
-	Format the data in valid json as follows:
-	
-	{
-		Name: store name here,
-		Amount: receipt amount here,
-		Date: receipt date here
-		Categories: categories here
-	}
-	
-	If the data cannot be found with confidence, do not make up a value, omit the value from the results.
-	The date must be a valid date, formatted in zulu time. If no year is provided, assume it is the year %s. Assume time values are empty.
-	The amount must be a valid float, or integer.
-
-	Next, I will give you a list of categories. Based on the data found, choose a maximum of 2 categories that best categorises the receipt based on the items of the receipt, and the receipt's store name. If none are suitable, please omit the result.
-	Use the name of the category to make your selections.
-	Select only the id, and format the results as follows:
-	{
-		Id: id of category here
+func getTagsString() (string, error) {
+	tagsRepository := repositories.NewTagsRepository(nil)
+	tags, err := tagsRepository.GetAllTags("id, name")
+	if err != nil {
+		return "", err
 	}
 
-	It is not required to select the maximum number of categories, but try to emphasize the relationship between the category and the receipt based on the data found.
+	tagsBytes, err := json.Marshal(tags)
+	if err != nil {
+		return "", err
+	}
 
-	Categories to choose from: 
-	%s
-
-	Receipt text:
-	%s
-	`, currentYear, categoriesString, ocrText)
-
-	return prompt, nil
+	return string(tagsBytes), nil
 }

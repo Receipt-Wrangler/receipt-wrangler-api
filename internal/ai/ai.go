@@ -69,6 +69,11 @@ func getPrompt(ocrText string) (string, error) {
 		return "", err
 	}
 
+	tagsString, err := getTagsString()
+	if err != nil {
+		return "", err
+	}
+
 	currentYear := simpleutils.UintToString(uint(time.Now().Year()))
 	prompt := fmt.Sprintf(`
 	Find the receipt's name, total cost, and date. Format as:
@@ -76,7 +81,8 @@ func getPrompt(ocrText string) (string, error) {
 		Name: store name,
 		Amount: amount,
 		Date: date in zulu,
-		Categories: categories
+		Categories: categories,
+		Tags: tags
 	}
 
 	Omit any value if not found with confidence. Assume the date is in the year %s if not provided, and assume time values are empty. The amount must be a float or integer.
@@ -90,9 +96,12 @@ func getPrompt(ocrText string) (string, error) {
 
 	Categories: %s
 
-	Receipt text:
-	%s
-`, currentYear, categoriesString, ocrText)
+	Follow the same process as described for categories for tags.
+
+	Tags: %s
+
+	Receipt text: %s
+`, currentYear, categoriesString, tagsString, ocrText)
 
 	return prompt, nil
 }
@@ -110,4 +119,19 @@ func getCategoriesString() (string, error) {
 	}
 
 	return string(categoriesBytes), nil
+}
+
+func getTagsString() (string, error) {
+	tagsRepository := repositories.NewTagsRepository(nil)
+	tags, err := tagsRepository.GetAllTags("id, name")
+	if err != nil {
+		return "", err
+	}
+
+	tagsBytes, err := json.Marshal(tags)
+	if err != nil {
+		return "", err
+	}
+
+	return string(tagsBytes), nil
 }

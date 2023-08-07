@@ -35,7 +35,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 
 			token := utils.GetJWT(r)
 
-			receipts, err := repositories.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
+			receipts, count, err := repositories.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -46,12 +46,6 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 			}
 
 			pagedData.Data = anyData
-
-			count, err := repositories.GetGroupReceiptCount(token.UserId, groupId)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
 			pagedData.TotalCount = count
 
 			bytes, err := utils.MarshalResponseData(pagedData)
@@ -76,7 +70,6 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			// TODO: validate group access and fully implement. Was being used but no longer being used. Will probably need this down the road.
 			var err error
 			var receipts []models.Receipt
 			var groupIds []string

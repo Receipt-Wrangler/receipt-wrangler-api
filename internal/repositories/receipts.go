@@ -45,18 +45,19 @@ func GetReceiptById(receiptId string) (models.Receipt, error) {
 	return receipt, nil
 }
 
-func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.PagedRequestCommand) ([]models.Receipt, error) {
+func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.PagedRequestCommand) ([]models.Receipt, int64, error) {
 	db := db.GetDB()
 	var receipts []models.Receipt
+	var count int64
 
 	// Start query
-	query := db.Scopes(PaginateReceipts(pagedRequest)).Model(models.Receipt{}).Preload("Tags").Preload("Categories")
+	query := db.Table("receipts")
 
 	// Filter receipts by group
 	if groupId == "all" {
 		groupIds, err := GetGroupIdsByUserId(simpleutils.UintToString(userId))
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		query = query.Where("group_id IN ?", groupIds)
 	} else {
@@ -75,7 +76,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 		}
 		query = query.Order(orderBy + " " + pagedRequest.SortDirection)
 	} else {
-		return nil, errors.New("untrusted value " + pagedRequest.OrderBy + " " + pagedRequest.SortDirection)
+		return nil, 0, errors.New("untrusted value " + pagedRequest.OrderBy + " " + pagedRequest.SortDirection)
 	}
 
 	// Apply filter
@@ -132,13 +133,20 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 		query = buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
 	}
 
-	// Run Query
-	err := query.Find(&receipts).Error
+	err := query.Count(&count).Error
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return receipts, nil
+	query = query.Scopes(PaginateReceipts(pagedRequest)).Preload("Tags").Preload("Categories")
+
+	// Run Query
+	err = query.Find(&receipts).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return receipts, count, nil
 }
 
 func buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation commands.FilterOperation, fieldName string, isArray bool) *gorm.DB {
@@ -176,29 +184,6 @@ func isTrustedValue(pagedRequest commands.PagedRequestCommand) bool {
 	isDirectionTrusted := utils.Contains(directionTrusted, pagedRequest.SortDirection)
 
 	return isOrderByTrusted && isDirectionTrusted
-}
-
-func GetGroupReceiptCount(userId uint, groupId string) (int64, error) {
-	db := db.GetDB()
-	var result int64
-	var err error
-
-	if groupId == "all" {
-		groupIds, err := GetGroupIdsByUserId(simpleutils.UintToString(userId))
-		if err != nil {
-			return 0, err
-		}
-
-		err = db.Model(models.Receipt{}).Where("group_id IN ?", groupIds).Count(&result).Error
-	} else {
-		err = db.Model(models.Receipt{}).Where("group_id = ?", groupId).Count(&result).Error
-	}
-
-	if err != nil {
-		return 0, err
-	}
-
-	return result, nil
 }
 
 func GetReceiptGroupIdByReceiptId(id string) (uint, error) {

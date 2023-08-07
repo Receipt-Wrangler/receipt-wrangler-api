@@ -186,29 +186,6 @@ func isTrustedValue(pagedRequest commands.PagedRequestCommand) bool {
 	return isOrderByTrusted && isDirectionTrusted
 }
 
-func GetGroupReceiptCount(userId uint, groupId string) (int64, error) {
-	db := db.GetDB()
-	var result int64
-	var err error
-
-	if groupId == "all" {
-		groupIds, err := GetGroupIdsByUserId(simpleutils.UintToString(userId))
-		if err != nil {
-			return 0, err
-		}
-
-		err = db.Model(models.Receipt{}).Where("group_id IN ?", groupIds).Count(&result).Error
-	} else {
-		err = db.Model(models.Receipt{}).Where("group_id = ?", groupId).Count(&result).Error
-	}
-
-	if err != nil {
-		return 0, err
-	}
-
-	return result, nil
-}
-
 func GetReceiptGroupIdByReceiptId(id string) (uint, error) {
 	db := db.GetDB()
 	var receipt models.Receipt

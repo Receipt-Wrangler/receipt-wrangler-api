@@ -1,32 +1,37 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
-	db "receipt-wrangler/api/internal/database"
-	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
 
 func GetAllCategories(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
-	errMsg := "Error retrieving categories."
-	var categories []models.Category
+	handler := structs.Handler{
+		ErrorMessage: "Error retrieving categories",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			categoriesRepository := repositories.NewCategoryRepository(nil)
+			categories, err := categoriesRepository.GetAllCategories("*")
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
-	err := db.Model(models.Category{}).Find(&categories).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			bytes, err := utils.MarshalResponseData(&categories)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := json.Marshal(categories)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }

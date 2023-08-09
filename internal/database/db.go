@@ -7,20 +7,39 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 
 	"gorm.io/gorm"
 )
 
 var db *gorm.DB
 
-func BuildConnectionString() string {
+func BuildMariaDbConnectionString() string {
 	envVariables := config.GetEnvVariables()
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", envVariables["MYSQL_USER"], envVariables["MYSQL_PASSWORD"], envVariables["MYSQL_HOST"], envVariables["MYSQL_DATABASE"])
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_HOST"], envVariables["DB_NAME"])
+	return connectionString
+}
+
+func BuildPostgresqlConnectionString() string {
+	envVariables := config.GetEnvVariables()
+	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Europe/Moscow", envVariables["DB_HOST"], envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_NAME"], envVariables["DB_PORT"])
+
 	return connectionString
 }
 
 func Connect() error {
-	connectedDb, err := gorm.Open(mysql.Open(BuildConnectionString()), &gorm.Config{})
+	envVariables := config.GetEnvVariables()
+	dbEngine := envVariables["DB_ENGINE"]
+	var err error
+	var connectedDb *gorm.DB
+
+	if (dbEngine == "mariadb" || dbEngine == "mysql") {
+		connectedDb, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString()), &gorm.Config{})
+	}
+
+	if (dbEngine == "postgresql") {
+		connectedDb, err = gorm.Open(postgres.Open(BuildPostgresqlConnectionString()), &gorm.Config{})
+	}
 
 	if err != nil {
 		return err

@@ -15,7 +15,7 @@ var db *gorm.DB
 
 func BuildConnectionString() string {
 	envVariables := config.GetEnvVariables()
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", envVariables["MYSQL_USER"], envVariables["MYSQL_PASSWORD"], envVariables["MYSQL_HOST"], envVariables["MYSQL_DATABASE"])
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_HOST"], envVariables["DB_NAME"])
 	return connectionString
 }
 

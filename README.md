@@ -7,12 +7,12 @@ To run the api for local development:
 4. Install OpenAPI generator https://openapi-generator.tech/docs/installation (I personally use the jar installation)
 5. Set up a mariadb instance. The easiest way to do this is via docker. F.ex: ``` docker run --name receipt-wrangler-db -e MYSQL_ROOT_PASSWORD=123456 -e MYSQL_USER=wrangler -e MYSQL_PASSWORD=123456 -e MYSQL_DATABASE=wrangler -p 9001:3306  -d library/mariadb ```
 6. Add a config.dev.json and a feature-config.dev.json, copy pasta the samples and modify as needed.
-7. Add env variables for db connection. For example, add the following to the bottom of your .bashrc ```# Export wrangler db env variables
-export MYSQL_ROOT_PASSWORD="123456"
-export MYSQL_USER="wrangler"
-export MYSQL_PASSWORD="123456"
-export MYSQL_DATABASE="wrangler"
-export MYSQL_HOST="0.0.0.0:9001"```
+7. Add env variables for db connection. For example, add the following to the bottom of your .bashrc ```# Export wrangler db env variables export DB_ROOT_PASSWORD="123456"
+export DB_USER="wrangler"
+export DB_PASSWORD="123456"
+export DB_NAME="wrangler"
+export DB_HOST="0.0.0.0:9001"
+export DB_ENGINE="mariadb"```
 8. Once configs are added, and db is up, run ``` go run . ``` in the root directory of the project to run the api.
    
 ## Tech overview

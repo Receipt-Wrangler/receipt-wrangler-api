@@ -50,7 +50,7 @@ func SetConfigs() error {
 }
 
 func ReadEnvVariables() error {
-	envKeys := []string{"DB_ROOT_PASSWORD", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_HOST"}
+	envKeys := []string{"DB_ROOT_PASSWORD", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_HOST", "DB_PORT", "DB_ENGINE"}
 	for _, key := range envKeys {
 		value := os.Getenv(key)
 		envVariables[key] = value

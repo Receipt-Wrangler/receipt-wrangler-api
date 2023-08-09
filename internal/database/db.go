@@ -7,6 +7,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 
 	"gorm.io/gorm"
 )
@@ -19,8 +20,26 @@ func BuildConnectionString() string {
 	return connectionString
 }
 
+func BuildPostgresConnectionString() string {
+	envVariables := config.GetEnvVariables()
+	connectionString := fmt.Sprint("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Europe/Moscow", envVariables["DB_HOST"], envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_NAME"], envVariables["DB_PORT"])
+
+	return connectionString
+}
+
 func Connect() error {
-	connectedDb, err := gorm.Open(mysql.Open(BuildConnectionString()), &gorm.Config{})
+	envVariables := config.GetEnvVariables()
+	dbEngine := envVariables["DB_ENGINE"]
+	var err error
+	var connectedDb *gorm.DB
+
+	if (dbEngine == "mariadb" || dbEngine == "mysql") {
+		connectedDb, err = gorm.Open(mysql.Open(BuildConnectionString()), &gorm.Config{})
+	}
+
+	if (dbEngine == "postgresql") {
+		connectedDb, err = gorm.Open(postgres.Open(BuildPostgresConnectionString()), &gorm.Config{})
+	}
 
 	if err != nil {
 		return err

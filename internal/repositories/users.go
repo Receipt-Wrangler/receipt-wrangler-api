@@ -16,6 +16,7 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 		DisplayName: userData.DisplayName,
 		Password:    userData.Password,
 		IsDummyUser: userData.IsDummyUser,
+		DefaultAvatarColor: "#27b1ff",
 	}
 
 	// Hash password
@@ -30,9 +31,7 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 
 		if len(value) == 0 {
 			var usrCnt int64
-			// Set user's role
 			tx.Model(models.User{}).Count(&usrCnt)
-			// Save User
 			if usrCnt == 0 {
 				user.UserRole = models.ADMIN
 			} else {
@@ -47,7 +46,7 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 		}
 
 		var groupMembers = make([]models.GroupMember, 1)
-		groupMembers = append(groupMembers, models.GroupMember{UserID: user.ID, GroupRole: models.OWNER})
+		groupMembers[0] = models.GroupMember{UserID: user.ID, GroupRole: models.OWNER}
 		// Create default group with user as group member
 		group := models.Group{
 			Name:           "Home",

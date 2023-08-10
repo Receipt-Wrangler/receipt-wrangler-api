@@ -402,14 +402,15 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Copy receipt images
+			fileRepository := repositories.NewFileRepository(nil)
 			for i, fileData := range newReceipt.ImageFiles {
 				srcFileData := receipt.ImageFiles[i]
-				srcImageBytes, err := repositories.GetBytesForFileData(srcFileData)
+				srcImageBytes, err := fileRepository.GetBytesForFileData(srcFileData)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
-				dstPath, err := repositories.BuildFilePath(simpleutils.UintToString(newReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+				dstPath, err := fileRepository.BuildFilePath(simpleutils.UintToString(newReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

@@ -38,6 +38,9 @@ func DeleteReceipt(id string) error {
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		fileRepository := repositories.NewFileRepository(nil)
+		fileRepository.SetTransaction(tx)
+
 		err = tx.Select(clause.Associations).Delete(&receipt).Error
 		if err != nil {
 			return err
@@ -49,7 +52,7 @@ func DeleteReceipt(id string) error {
 		}
 
 		for _, f := range receipt.ImageFiles {
-			path, _ := repositories.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
+			path, _ := fileRepository.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
 			os.Remove(path)
 		}
 

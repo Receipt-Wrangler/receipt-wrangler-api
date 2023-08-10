@@ -5,10 +5,24 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
+
+	"gorm.io/gorm"
 )
 
-func BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName string) (string, error) {
-	db := GetDB()
+type FileRepository struct {
+	BaseRepository
+}
+
+func NewFileRepository(tx *gorm.DB) FileRepository {
+	repository := FileRepository{BaseRepository: BaseRepository{
+		DB: GetDB(),
+		TX: tx,
+	}}
+	return repository
+}
+
+func (repository BaseRepository) BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName string) (string, error) {
+	db := repository.GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", receiptId).Select("group_id").Find(&receipt).Error
@@ -16,7 +30,7 @@ func BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName
 		return "", err
 	}
 
-	groupPath, err := BuildGroupPath(receipt.GroupId, "")
+	groupPath, err := repository.BuildGroupPath(receipt.GroupId, "")
 	if err != nil {
 		return "", err
 	}
@@ -27,8 +41,8 @@ func BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName
 	return path, nil
 }
 
-func BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
-	db := GetDB()
+func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
+	db := repository.GetDB()
 	var groupNameToUse string
 
 	if len(alternateGroupName) > 0 {
@@ -52,8 +66,8 @@ func BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
 	return groupPath, nil
 }
 
-func GetBytesForFileData(fileData models.FileData) ([]byte, error) {
-	path, err := BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
+	path, err := repository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
 	if err != nil {
 		return nil, err
 	}

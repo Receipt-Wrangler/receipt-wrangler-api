@@ -24,6 +24,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	db := repositories.GetDB()
 	basePath, err := os.Getwd()
 	errMsg := "Error uploading image."
+	fileRepository := repositories.NewFileRepository(nil)
 
 	if err != nil {
 		handler_logger.Print(err.Error())
@@ -47,7 +48,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	// Get initial group directory to see if it exists
 	fileData := r.Context().Value("fileData").(models.FileData)
-	filePath, err := repositories.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), "", fileData.Name)
+	filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), "", fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -72,7 +73,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Rebuild file path with correct file id
-	filePath, err = repositories.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+	filePath, err = fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -121,7 +122,8 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			bytes, err := repositories.GetBytesForFileData(fileData)
+			fileRepository := repositories.NewFileRepository(nil)
+			bytes, err := fileRepository.GetBytesForFileData(fileData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -165,7 +167,8 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := repositories.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), id, fileData.Name)
+	fileRepository := repositories.NewFileRepository(nil)
+	path, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), id, fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)

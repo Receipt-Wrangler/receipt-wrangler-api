@@ -14,13 +14,14 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		return result, err
 	}
 
-	repository := repositories.NewReceiptImageRepository(nil)
-	receiptImage, err := repository.GetReceiptImageById(receiptImageUint)
+	receiptImageRepository := repositories.NewReceiptImageRepository(nil)
+	receiptImage, err := receiptImageRepository.GetReceiptImageById(receiptImageUint)
 	if err != nil {
 		return result, err
 	}
 
-	path, err := repositories.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
+	fileRepository := repositories.NewReceiptImageRepository(nil)
+	path, err := fileRepository.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
 	if err != nil {
 		return result, err
 	}

@@ -25,6 +25,7 @@ RUN mkdir sqlite
 VOLUME /go/api/sqlite
 
 # Add logs volume
+RUN mkdir logs
 VOLUME /go/api/logs
 
 # Expose port

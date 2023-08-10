@@ -414,7 +414,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				err = repositories.WriteFile(dstPath, srcImageBytes)
+				err = utils.WriteFile(dstPath, srcImageBytes)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

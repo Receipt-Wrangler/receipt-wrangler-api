@@ -38,7 +38,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if data path exists
-	err = repositories.DirectoryExists(basePath+"/data", true)
+	err = utils.DirectoryExists(basePath+"/data", true)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -64,7 +64,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if group's path exists
-	err = repositories.DirectoryExists(groupDir, true)
+	err = utils.DirectoryExists(groupDir, true)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -79,7 +79,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repositories.WriteFile(filePath, fileData.ImageData)
+	err = utils.WriteFile(filePath, fileData.ImageData)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -216,10 +216,10 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 				}
 
 				tempPath := config.GetBasePath() + "/temp"
-				repositories.MakeDirectory(tempPath)
+				utils.MakeDirectory(tempPath)
 
 				filePath := tempPath + "/" + magicFillCommand.Filename
-				repositories.WriteFile(filePath, []byte(magicFillCommand.ImageData))
+				utils.WriteFile(filePath, []byte(magicFillCommand.ImageData))
 
 				filledReceipt, err = services.ReadReceiptImageFromFileOnly(filePath)
 				if err != nil {

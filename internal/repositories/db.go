@@ -4,6 +4,7 @@ import (
 	"fmt"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/utils"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
@@ -28,7 +29,7 @@ func BuildPostgresqlConnectionString() string {
 
 func BuildSqliteConnectionString() (string, error) {
 	envVariables := config.GetEnvVariables()
-	err := DirectoryExists("./sqlite", true)
+	err := utils.DirectoryExists("./sqlite", true)
 	if err != nil {
 		return "", err
 	}

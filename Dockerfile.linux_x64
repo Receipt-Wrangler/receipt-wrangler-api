@@ -24,5 +24,8 @@ VOLUME /go/api/data
 RUN mkdir sqlite
 VOLUME /go/api/sqlite
 
+# Add logs volume
+VOLUME /go/api/logs
+
 # Expose port
 EXPOSE 8081

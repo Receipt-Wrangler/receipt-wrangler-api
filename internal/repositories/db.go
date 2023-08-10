@@ -23,7 +23,7 @@ func BuildMariaDbConnectionString() string {
 
 func BuildPostgresqlConnectionString() string {
 	envVariables := config.GetEnvVariables()
-	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Europe/Moscow", envVariables["DB_HOST"], envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_NAME"], envVariables["DB_PORT"])
+	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", envVariables["DB_HOST"], envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_NAME"], envVariables["DB_PORT"])
 	return connectionString
 }
 

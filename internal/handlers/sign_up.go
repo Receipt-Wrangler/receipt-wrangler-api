@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -25,7 +24,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateSignUpData(userData models.User) structs.ValidatorError {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	err := structs.ValidatorError{
 		Errors: make(map[string]string),
 	}

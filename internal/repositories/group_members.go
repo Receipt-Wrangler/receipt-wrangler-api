@@ -1,13 +1,12 @@
 package repositories
 
 import (
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 )
 
 // Gets groupMembers that the user has access to
 func GetGroupMembersByUserId(userId string) ([]models.GroupMember, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var groupMembers []models.GroupMember
 
 	err := db.Model(models.GroupMember{}).Where("user_id = ?", userId).Find(&groupMembers).Error
@@ -34,7 +33,7 @@ func GetGroupIdsByUserId(userId string) ([]uint, error) {
 }
 
 func GetGroupMemberByUserIdAndGroupId(userId string, groupId string) (models.GroupMember, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var groupMember models.GroupMember
 
 	err := db.Model(models.GroupMember{}).Where("user_id = ? AND group_id = ?", userId, groupId).Find(&groupMember).Error
@@ -46,7 +45,7 @@ func GetGroupMemberByUserIdAndGroupId(userId string, groupId string) (models.Gro
 }
 
 func GetsGroupMembersByGroupId(groupId string) ([]models.GroupMember, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var groupMembers []models.GroupMember
 
 	err := db.Model(models.GroupMember{}).Where("group_id = ?", groupId).Find(&groupMembers).Error

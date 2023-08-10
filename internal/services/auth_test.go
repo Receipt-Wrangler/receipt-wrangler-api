@@ -1,10 +1,12 @@
-package utils
+package services
 
 import (
 	"context"
 	"fmt"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 	"testing"
 
 	"github.com/auth0/go-jwt-middleware/v2/validator"
@@ -14,11 +16,11 @@ func TestInitTokenValidatorReturnsValidator(t *testing.T) {
 	v, err := InitTokenValidator()
 
 	if v == nil {
-		PrintTestError(t, v, "instance of validator")
+		utils.PrintTestError(t, v, "instance of validator")
 	}
 
 	if err != nil {
-		PrintTestError(t, err, nil)
+		utils.PrintTestError(t, err, nil)
 	}
 }
 
@@ -31,10 +33,10 @@ func TestGenerateJWTGeneratesJWTCorrectly(t *testing.T) {
 	v, err := InitTokenValidator()
 
 	if err != nil {
-		PrintTestError(t, err, nil)
+		utils.PrintTestError(t, err, nil)
 	}
 
-	db := db.GetDB()
+	db := repositories.GetDB()
 	db.Create(&models.User{
 		Username:    expectedUsername,
 		Password:    "Password",
@@ -42,47 +44,47 @@ func TestGenerateJWTGeneratesJWTCorrectly(t *testing.T) {
 	})
 
 	if db.Where("username = ?", expectedUsername).Select("id").Find(&user).Error != nil {
-		PrintTestError(t, err.Error(), nil)
+		utils.PrintTestError(t, err.Error(), nil)
 	}
 
 	jwt, _, _, err := GenerateJWT(user.ID)
 	if err != nil {
-		PrintTestError(t, jwt, "jwt token")
+		utils.PrintTestError(t, jwt, "jwt token")
 	}
 
 	rawJwtStruct, err := v.ValidateToken(context.Background(), jwt)
 	if err != nil {
-		PrintTestError(t, rawJwtStruct, "claim object")
+		utils.PrintTestError(t, rawJwtStruct, "claim object")
 	}
 
-	jwtClaims := rawJwtStruct.(*validator.ValidatedClaims).CustomClaims.(*Claims)
+	jwtClaims := rawJwtStruct.(*validator.ValidatedClaims).CustomClaims.(*structs.Claims)
 
 	if jwt == "nil" {
-		PrintTestError(t, jwt, "non empty string")
+		utils.PrintTestError(t, jwt, "non empty string")
 	}
 
 	if jwtClaims.UserId != user.ID {
-		PrintTestError(t, jwtClaims.UserId, user.ID)
+		utils.PrintTestError(t, jwtClaims.UserId, user.ID)
 	}
 
 	if jwtClaims.Displayname != expectedDisplayname {
-		PrintTestError(t, jwtClaims.Displayname, expectedDisplayname)
+		utils.PrintTestError(t, jwtClaims.Displayname, expectedDisplayname)
 	}
 
 	if jwtClaims.Username != expectedUsername {
-		PrintTestError(t, jwtClaims.Username, expectedUsername)
+		utils.PrintTestError(t, jwtClaims.Username, expectedUsername)
 	}
 
 	if jwtClaims.Issuer != expectedIssuer {
-		PrintTestError(t, jwtClaims.Issuer, expectedIssuer)
+		utils.PrintTestError(t, jwtClaims.Issuer, expectedIssuer)
 	}
 
 	if len(jwtClaims.Audience) > 0 && jwtClaims.Audience[0] != expectedIssuer {
-		PrintTestError(t, jwtClaims.Audience, fmt.Sprintf("[%s]", expectedIssuer))
+		utils.PrintTestError(t, jwtClaims.Audience, fmt.Sprintf("[%s]", expectedIssuer))
 	}
 
 	if err != nil {
-		PrintTestError(t, err, nil)
+		utils.PrintTestError(t, err, nil)
 	}
 }
 
@@ -95,10 +97,10 @@ func TestGenerateRefreshTokenCorrectly(t *testing.T) {
 	v, err := InitTokenValidator()
 
 	if err != nil {
-		PrintTestError(t, err, nil)
+		utils.PrintTestError(t, err, nil)
 	}
 
-	db := db.GetDB()
+	db := repositories.GetDB()
 	db.Create(&models.User{
 		Username:    expectedUsername,
 		Password:    "Password",
@@ -106,38 +108,38 @@ func TestGenerateRefreshTokenCorrectly(t *testing.T) {
 	})
 
 	if db.Where("username = ?", expectedUsername).Select("id").Find(&user).Error != nil {
-		PrintTestError(t, err.Error(), nil)
+		utils.PrintTestError(t, err.Error(), nil)
 	}
 
 	_, refreshToken, _, err := GenerateJWT(user.ID)
 	if err != nil {
-		PrintTestError(t, refreshToken, "refresh token")
+		utils.PrintTestError(t, refreshToken, "refresh token")
 	}
 
 	rawRefreshTokenClaims, err := v.ValidateToken(context.Background(), refreshToken)
 	if err != nil {
-		PrintTestError(t, rawRefreshTokenClaims, "claim object")
+		utils.PrintTestError(t, rawRefreshTokenClaims, "claim object")
 	}
 
-	refreshTokenClaims := rawRefreshTokenClaims.(*validator.ValidatedClaims).CustomClaims.(*Claims)
+	refreshTokenClaims := rawRefreshTokenClaims.(*validator.ValidatedClaims).CustomClaims.(*structs.Claims)
 
 	if refreshToken == "nil" {
-		PrintTestError(t, refreshToken, "non empty string")
+		utils.PrintTestError(t, refreshToken, "non empty string")
 	}
 
 	if refreshTokenClaims.UserId != user.ID {
-		PrintTestError(t, refreshTokenClaims.UserId, user.ID)
+		utils.PrintTestError(t, refreshTokenClaims.UserId, user.ID)
 	}
 
 	if refreshTokenClaims.Issuer != expectedIssuer {
-		PrintTestError(t, refreshTokenClaims.Issuer, expectedIssuer)
+		utils.PrintTestError(t, refreshTokenClaims.Issuer, expectedIssuer)
 	}
 
 	if len(refreshTokenClaims.Audience) > 0 && refreshTokenClaims.Audience[0] != expectedIssuer {
-		PrintTestError(t, refreshTokenClaims.Audience, fmt.Sprintf("[%s]", expectedIssuer))
+		utils.PrintTestError(t, refreshTokenClaims.Audience, fmt.Sprintf("[%s]", expectedIssuer))
 	}
 
 	if err != nil {
-		PrintTestError(t, err, nil)
+		utils.PrintTestError(t, err, nil)
 	}
 }

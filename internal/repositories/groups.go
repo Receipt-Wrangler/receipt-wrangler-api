@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 
@@ -9,7 +8,7 @@ import (
 )
 
 func CreateGroup(group models.Group, userId uint) (models.Group, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var returnGroup models.Group
 	err := db.Transaction(func(tx *gorm.DB) error {
 
@@ -44,7 +43,7 @@ func CreateGroup(group models.Group, userId uint) (models.Group, error) {
 }
 
 func UpdateGroup(group models.Group, groupId string) (models.Group, error) {
-	db := db.GetDB()
+	db := GetDB()
 
 	u64Id, err := simpleutils.StringToUint64(groupId)
 	if err != nil {
@@ -67,7 +66,7 @@ func UpdateGroup(group models.Group, groupId string) (models.Group, error) {
 }
 
 func GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var group models.Group
 	var err error
 

@@ -1,16 +1,15 @@
-package utils
+package repositories
 
 import (
 	"errors"
 	"os"
 	"path/filepath"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 )
 
 func BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName string) (string, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", receiptId).Select("group_id").Find(&receipt).Error
@@ -30,7 +29,7 @@ func BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName
 }
 
 func BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var groupNameToUse string
 
 	if len(alternateGroupName) > 0 {

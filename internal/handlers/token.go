@@ -18,9 +18,9 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 
-			oldRefreshToken := r.Context().Value("refreshToken").(*validator.ValidatedClaims).CustomClaims.(*utils.Claims)
+			oldRefreshToken := r.Context().Value("refreshToken").(*validator.ValidatedClaims).CustomClaims.(*structs.Claims)
 
-			jwt, refreshToken, accessTokenClaims, err := utils.GenerateJWT(oldRefreshToken.UserId)
+			jwt, refreshToken, accessTokenClaims, err := services.GenerateJWT(oldRefreshToken.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

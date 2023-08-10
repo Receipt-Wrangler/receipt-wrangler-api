@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -69,7 +69,7 @@ func ValidateUserData(roleRequired bool) (mw func(http.Handler) http.Handler) {
 
 	mw = func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			userData := r.Context().Value("user").(commands.SignUpCommand)
 			err := structs.ValidatorError{
 				Errors: make(map[string]string),

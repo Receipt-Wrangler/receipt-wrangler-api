@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -12,7 +11,7 @@ import (
 )
 
 func GetGroupsForUser(userId string) ([]models.Group, error) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var groups []models.Group
 
 	groupMembers, err := repositories.GetGroupMembersByUserId(userId)
@@ -34,7 +33,7 @@ func GetGroupsForUser(userId string) ([]models.Group, error) {
 }
 
 func DeleteGroup(groupId string) error {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var receipts []models.Receipt
 
 	group, err := repositories.GetGroupById(groupId, false)

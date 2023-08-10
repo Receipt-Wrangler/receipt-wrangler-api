@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -128,7 +127,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			token := utils.GetJWT(r)
 			notificationRepository := repositories.NewNotificationRepository(nil)
 
@@ -171,7 +170,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetReceipt(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var receipt models.Receipt
 	errMsg := "Error retrieving receipt."
 
@@ -196,7 +195,7 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 
 	errMsg := "Error updating receipt."
 	id := chi.URLParam(r, "id")
@@ -256,7 +255,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			bulkResolve := r.Context().Value("BulkStatusUpdateCommand").(commands.BulkStatusUpdateCommand)
 			var receipts []models.Receipt
 
@@ -345,7 +344,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			newReceipt := models.Receipt{}
 
 			receiptId := chi.URLParam(r, "id")
@@ -404,17 +403,17 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			// Copy receipt images
 			for i, fileData := range newReceipt.ImageFiles {
 				srcFileData := receipt.ImageFiles[i]
-				srcImageBytes, err := utils.GetBytesForFileData(srcFileData)
+				srcImageBytes, err := repositories.GetBytesForFileData(srcFileData)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
-				dstPath, err := utils.BuildFilePath(simpleutils.UintToString(newReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+				dstPath, err := repositories.BuildFilePath(simpleutils.UintToString(newReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
-				err = utils.WriteFile(dstPath, srcImageBytes)
+				err = repositories.WriteFile(dstPath, srcImageBytes)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

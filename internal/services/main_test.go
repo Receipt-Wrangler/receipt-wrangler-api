@@ -1,4 +1,4 @@
-package middleware
+package services
 
 import (
 	"fmt"
@@ -17,7 +17,6 @@ func TestMain(m *testing.M) {
 
 func run(m *testing.M) (code int, err error) {
 	repositories.SetUpTestEnv()
-	InitMiddlewareLogger()
 	repositories.InitTestDb()
 	repositories.MakeMigrations()
 

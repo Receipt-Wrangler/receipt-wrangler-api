@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 	"testing"
@@ -24,7 +25,7 @@ func setupCommentMiddlewareTest() (http.HandlerFunc, *http.Request, *httptest.Re
 		Password:    "Password",
 		DisplayName: "test",
 	}
-	db := db.GetDB()
+	db := repositories.GetDB()
 	db.Create(&user)
 
 	// Set up request
@@ -33,7 +34,7 @@ func setupCommentMiddlewareTest() (http.HandlerFunc, *http.Request, *httptest.Re
 	w := httptest.NewRecorder()
 
 	var vClaims validator.ValidatedClaims
-	vClaims.CustomClaims = &utils.Claims{UserId: 1}
+	vClaims.CustomClaims = &structs.Claims{UserId: 1}
 
 	ctx := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &vClaims)
 	r = r.WithContext(ctx)
@@ -42,11 +43,11 @@ func setupCommentMiddlewareTest() (http.HandlerFunc, *http.Request, *httptest.Re
 }
 
 func teardownCommentMiddlewareTest() {
-	db := db.GetDB()
-	utils.TruncateTable(db, "comments")
-	utils.TruncateTable(db, "receipts")
-	utils.TruncateTable(db, "groups")
-	utils.TruncateTable(db, "users")
+	db := repositories.GetDB()
+	repositories.TruncateTable(db, "comments")
+	repositories.TruncateTable(db, "receipts")
+	repositories.TruncateTable(db, "groups")
+	repositories.TruncateTable(db, "users")
 }
 
 func TestCanDeleteComment(t *testing.T) {
@@ -61,7 +62,7 @@ func TestCanDeleteComment(t *testing.T) {
 	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 
 	// Create test data
-	db := db.GetDB()
+	db := repositories.GetDB()
 
 	group := models.Group{}
 	db.Create(&group)
@@ -104,7 +105,7 @@ func TestCantDeleteComment(t *testing.T) {
 	r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
 
 	// Create test data
-	db := db.GetDB()
+	db := repositories.GetDB()
 
 	// Create sescond user
 	user := models.User{

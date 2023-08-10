@@ -4,16 +4,15 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"receipt-wrangler/api/internal/ai"
-	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/tesseract"
-	"receipt-wrangler/api/internal/utils"
 	"time"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
@@ -42,18 +41,18 @@ func main() {
 		os.Exit(0)
 	}
 
-	err = db.Connect()
+	err = repositories.Connect()
 	if err != nil {
 		logger.Print(err.Error())
 		os.Exit(0)
 	}
-	db.MakeMigrations()
+	repositories.MakeMigrations()
 
 	if config.GetFeatureConfig().AiPoweredReceipts {
 		tesseract.InitClient()
 		defer tesseract.GetClient().Close()
 
-		ai.InitOpenAIClient()
+		services.InitOpenAIClient()
 	}
 
 	router := initRoutes()
@@ -79,7 +78,7 @@ func initLoggers() {
 
 func initRoutes() *chi.Mux {
 	featureConfig := config.GetFeatureConfig()
-	tokenValidator, err := utils.InitTokenValidator()
+	tokenValidator, err := services.InitTokenValidator()
 	if err != nil {
 		panic(err)
 	}

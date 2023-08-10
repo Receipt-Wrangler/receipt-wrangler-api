@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"net/http"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -41,7 +41,7 @@ func CanDeleteComment(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var comment models.Comment
 
-		db := db.GetDB()
+		db := repositories.GetDB()
 		commentId := chi.URLParam(r, "commentId")
 		token := utils.GetJWT(r)
 

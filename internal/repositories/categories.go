@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 
 	"gorm.io/gorm"
@@ -13,7 +12,7 @@ type CategoryRepository struct {
 
 func NewCategoryRepository(tx *gorm.DB) CategoryRepository {
 	repository := CategoryRepository{BaseRepository: BaseRepository{
-		DB: db.GetDB(),
+		DB: GetDB(),
 		TX: tx,
 	}}
 	return repository

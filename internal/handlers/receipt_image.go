@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
-	db "receipt-wrangler/api/internal/database"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -22,7 +21,7 @@ import (
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate size and file type
-	db := db.GetDB()
+	db := repositories.GetDB()
 	basePath, err := os.Getwd()
 	errMsg := "Error uploading image."
 
@@ -39,7 +38,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if data path exists
-	err = utils.DirectoryExists(basePath+"/data", true)
+	err = repositories.DirectoryExists(basePath+"/data", true)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -48,7 +47,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	// Get initial group directory to see if it exists
 	fileData := r.Context().Value("fileData").(models.FileData)
-	filePath, err := utils.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), "", fileData.Name)
+	filePath, err := repositories.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), "", fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -65,7 +64,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if group's path exists
-	err = utils.DirectoryExists(groupDir, true)
+	err = repositories.DirectoryExists(groupDir, true)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -73,14 +72,14 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Rebuild file path with correct file id
-	filePath, err = utils.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+	filePath, err = repositories.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
 		return
 	}
 
-	err = utils.WriteFile(filePath, fileData.ImageData)
+	err = repositories.WriteFile(filePath, fileData.ImageData)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -106,7 +105,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			id := chi.URLParam(r, "id")
 			var fileData models.FileData
 			var receipt models.Receipt
@@ -122,7 +121,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			bytes, err := utils.GetBytesForFileData(fileData)
+			bytes, err := repositories.GetBytesForFileData(fileData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -146,7 +145,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	errMsg := "Error retrieving image."
 
 	id := chi.URLParam(r, "id")
@@ -166,7 +165,7 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path, err := utils.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), id, fileData.Name)
+	path, err := repositories.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), id, fileData.Name)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, 500)
@@ -217,10 +216,10 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 				}
 
 				tempPath := config.GetBasePath() + "/temp"
-				utils.MakeDirectory(tempPath)
+				repositories.MakeDirectory(tempPath)
 
 				filePath := tempPath + "/" + magicFillCommand.Filename
-				utils.WriteFile(filePath, []byte(magicFillCommand.ImageData))
+				repositories.WriteFile(filePath, []byte(magicFillCommand.ImageData))
 
 				filledReceipt, err = services.ReadReceiptImageFromFileOnly(filePath)
 				if err != nil {

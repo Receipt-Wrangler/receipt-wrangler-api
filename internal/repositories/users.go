@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"receipt-wrangler/api/internal/commands"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 
@@ -10,12 +9,12 @@ import (
 )
 
 func CreateUser(userData commands.SignUpCommand) (models.User, error) {
-	db := db.GetDB()
+	db := GetDB()
 	user := models.User{
-		Username:    userData.Username,
-		DisplayName: userData.DisplayName,
-		Password:    userData.Password,
-		IsDummyUser: userData.IsDummyUser,
+		Username:           userData.Username,
+		DisplayName:        userData.DisplayName,
+		Password:           userData.Password,
+		IsDummyUser:        userData.IsDummyUser,
 		DefaultAvatarColor: "#27b1ff",
 	}
 

@@ -30,7 +30,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, errors.New("dummy users cannot log in")
 			}
 
-			jwt, refreshToken, accessTokenClaims, err := utils.GenerateJWT(dbUser.ID)
+			jwt, refreshToken, accessTokenClaims, err := services.GenerateJWT(dbUser.ID)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

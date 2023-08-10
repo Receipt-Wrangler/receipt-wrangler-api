@@ -1,12 +1,10 @@
 package services
 
 import (
-	"receipt-wrangler/api/internal/ai"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/tesseract"
-	"receipt-wrangler/api/internal/utils"
 )
 
 func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
@@ -22,7 +20,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		return result, err
 	}
 
-	path, err := utils.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
+	path, err := repositories.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
 	if err != nil {
 		return result, err
 	}
@@ -32,7 +30,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		return result, nil
 	}
 
-	result, err = ai.ReadReceiptData(ocrText)
+	result, err = ReadReceiptData(ocrText)
 	if err != nil {
 		return models.Receipt{}, err
 	}
@@ -48,7 +46,7 @@ func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 		return result, nil
 	}
 
-	result, err = ai.ReadReceiptData(ocrText)
+	result, err = ReadReceiptData(ocrText)
 	if err != nil {
 		return models.Receipt{}, err
 	}

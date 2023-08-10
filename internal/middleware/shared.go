@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -105,7 +105,7 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 func SetGroupIdByReceiptId(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var receipt models.Receipt
-		db := db.GetDB()
+		db := repositories.GetDB()
 
 		receiptId := r.Context().Value("receiptId").(string)
 		if len(receiptId) == 0 {

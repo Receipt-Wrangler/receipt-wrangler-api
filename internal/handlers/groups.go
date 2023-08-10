@@ -80,12 +80,12 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			groupPath, err := utils.BuildGroupPath(group.ID, "")
+			groupPath, err := repositories.BuildGroupPath(group.ID, "")
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			err = utils.MakeDirectory(groupPath)
+			err = repositories.MakeDirectory(groupPath)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

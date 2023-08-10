@@ -28,7 +28,8 @@ func Search(w http.ResponseWriter, r *http.Request) {
 				results := make([]structs.SearchResult, 0)
 
 				token := utils.GetJWT(r)
-				groupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+				groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

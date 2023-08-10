@@ -116,7 +116,8 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 
 			groupId := r.URL.Query().Get("groupId")
 			if groupId == "all" {
-				userGroupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

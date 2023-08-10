@@ -109,7 +109,8 @@ func BuildNotificationsForUsers(userIds []uint, title string, body string, notif
 }
 
 func BuildNotificationForGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) ([]models.Notification, error) {
-	groupMembers, err := GetsGroupMembersByGroupId(simpleutils.UintToString(groupId))
+	groupMemberRepository := NewGroupMemberRepository(nil)
+	groupMembers, err := groupMemberRepository.GetsGroupMembersByGroupId(simpleutils.UintToString(groupId))
 	if err != nil {
 		return nil, err
 	}

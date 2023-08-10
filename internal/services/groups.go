@@ -14,7 +14,8 @@ func GetGroupsForUser(userId string) ([]models.Group, error) {
 	db := repositories.GetDB()
 	var groups []models.Group
 
-	groupMembers, err := repositories.GetGroupMembersByUserId(userId)
+	groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+	groupMembers, err := groupMemberRepository.GetGroupMembersByUserId(userId)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +78,8 @@ func DeleteGroup(groupId string) error {
 func ValidateGroupRole(role models.GroupRole, groupId string, userId string) error {
 	groupMap := utils.BuildGroupMap()
 
-	groupMember, err := repositories.GetGroupMemberByUserIdAndGroupId(userId, groupId)
+	groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+	groupMember, err := groupMemberRepository.GetGroupMemberByUserIdAndGroupId(userId, groupId)
 	if err != nil {
 		return err
 	}

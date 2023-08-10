@@ -54,7 +54,8 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 
 	// Filter receipts by group
 	if groupId == "all" {
-		groupIds, err := GetGroupIdsByUserId(simpleutils.UintToString(userId))
+		groupMemberRepository := NewGroupMemberRepository(nil)
+		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(userId))
 		if err != nil {
 			return nil, 0, err
 		}

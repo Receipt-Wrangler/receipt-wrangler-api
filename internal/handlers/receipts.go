@@ -85,7 +85,8 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 			if false {
 
 			} else {
-				userGroupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -12,10 +11,11 @@ import (
 )
 
 func GetGroupsForUser(userId string) ([]models.Group, error) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var groups []models.Group
 
-	groupMembers, err := repositories.GetGroupMembersByUserId(userId)
+	groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+	groupMembers, err := groupMemberRepository.GetGroupMembersByUserId(userId)
 	if err != nil {
 		return nil, err
 	}
@@ -34,10 +34,11 @@ func GetGroupsForUser(userId string) ([]models.Group, error) {
 }
 
 func DeleteGroup(groupId string) error {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var receipts []models.Receipt
 
-	group, err := repositories.GetGroupById(groupId, false)
+	groupRepository := repositories.NewGroupRepository(nil)
+	group, err := groupRepository.GetGroupById(groupId, false)
 	if err != nil {
 		return err
 	}
@@ -77,7 +78,8 @@ func DeleteGroup(groupId string) error {
 func ValidateGroupRole(role models.GroupRole, groupId string, userId string) error {
 	groupMap := utils.BuildGroupMap()
 
-	groupMember, err := repositories.GetGroupMemberByUserIdAndGroupId(userId, groupId)
+	groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+	groupMember, err := groupMemberRepository.GetGroupMemberByUserIdAndGroupId(userId, groupId)
 	if err != nil {
 		return err
 	}

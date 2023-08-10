@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 
 	"gorm.io/gorm"
@@ -13,7 +12,7 @@ type TagsRepository struct {
 
 func NewTagsRepository(tx *gorm.DB) TagsRepository {
 	repository := TagsRepository{BaseRepository: BaseRepository{
-		DB: db.GetDB(),
+		DB: GetDB(),
 		TX: tx,
 	}}
 	return repository

@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -52,7 +51,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 			var comment models.Comment
 			commentId := chi.URLParam(r, "commentId")
 
-			db := db.GetDB()
+			db := repositories.GetDB()
 			err := db.Where("id = ?", commentId).Find(&comment).Error
 			if err != nil {
 				return http.StatusInternalServerError, err

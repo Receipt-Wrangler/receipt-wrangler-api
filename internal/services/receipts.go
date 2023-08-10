@@ -2,11 +2,9 @@ package services
 
 import (
 	"os"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
-	"receipt-wrangler/api/internal/utils"
 	"strconv"
 
 	"gorm.io/gorm"
@@ -14,7 +12,7 @@ import (
 )
 
 func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var fileData models.FileData
 
 	err := db.Model(models.FileData{}).Where("id = ?", receiptImageId).Select("receipt_id").First(&fileData).Error
@@ -31,7 +29,7 @@ func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
 }
 
 func DeleteReceipt(id string) error {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload("ImageFiles").Find(&receipt).Error
@@ -40,6 +38,9 @@ func DeleteReceipt(id string) error {
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		fileRepository := repositories.NewFileRepository(nil)
+		fileRepository.SetTransaction(tx)
+
 		err = tx.Select(clause.Associations).Delete(&receipt).Error
 		if err != nil {
 			return err
@@ -51,7 +52,7 @@ func DeleteReceipt(id string) error {
 		}
 
 		for _, f := range receipt.ImageFiles {
-			path, _ := utils.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
+			path, _ := fileRepository.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
 			os.Remove(path)
 		}
 

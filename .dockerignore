@@ -1,3 +1,6 @@
 ./api
 ./logs
 ./data
+./sqlite
+./temp
+./config

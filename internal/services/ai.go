@@ -1,4 +1,4 @@
-package ai
+package services
 
 import (
 	"context"

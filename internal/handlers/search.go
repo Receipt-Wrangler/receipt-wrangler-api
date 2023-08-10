@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -23,13 +22,14 @@ func Search(w http.ResponseWriter, r *http.Request) {
 			if len(searchTerm) > 0 {
 				searchTerm = "%" + searchTerm + "%"
 
-				db := db.GetDB()
+				db := repositories.GetDB()
 				var receipts []models.Receipt
 
 				results := make([]structs.SearchResult, 0)
 
 				token := utils.GetJWT(r)
-				groupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+				groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

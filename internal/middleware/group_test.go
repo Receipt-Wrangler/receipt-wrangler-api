@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 	"testing"
@@ -27,7 +28,7 @@ func createUserAndGroup() {
 		Password:    "Password",
 		DisplayName: "test",
 	}
-	db := db.GetDB()
+	db := repositories.GetDB()
 	db.Create(&user)
 
 	groupMembers := make([]models.GroupMember, 1)
@@ -47,7 +48,7 @@ func createFakeGroupHandler() (http.HandlerFunc, *http.Request, *httptest.Respon
 	w := httptest.NewRecorder()
 
 	var vClaims validator.ValidatedClaims
-	vClaims.CustomClaims = &utils.Claims{UserId: 1}
+	vClaims.CustomClaims = &structs.Claims{UserId: 1}
 
 	ctx := context.WithValue(r.Context(), "groupId", "1")
 	ctx = context.WithValue(ctx, jwtmiddleware.ContextKey{}, &vClaims)
@@ -57,15 +58,15 @@ func createFakeGroupHandler() (http.HandlerFunc, *http.Request, *httptest.Respon
 }
 
 func teardownGroupTest() {
-	db := db.GetDB()
-	utils.TruncateTable(db, "group_members")
-	utils.TruncateTable(db, "groups")
-	utils.TruncateTable(db, "users")
+	db := repositories.GetDB()
+	repositories.TruncateTable(db, "group_members")
+	repositories.TruncateTable(db, "groups")
+	repositories.TruncateTable(db, "users")
 }
 
 func TestValidateGroupeRoleShouldAuthorize1(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.VIEWER)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.VIEWER)
 
 	mw := ValidateGroupRole(models.VIEWER)
 	handler := mw(fakeHandler)
@@ -80,7 +81,7 @@ func TestValidateGroupeRoleShouldAuthorize1(t *testing.T) {
 
 func TestValidateGroupeRoleShouldAuthorize2(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.EDITOR)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.EDITOR)
 
 	mw := ValidateGroupRole(models.VIEWER)
 	handler := mw(fakeHandler)
@@ -95,7 +96,7 @@ func TestValidateGroupeRoleShouldAuthorize2(t *testing.T) {
 
 func TestValidateGroupeRoleShouldAuthorize3(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
 
 	mw := ValidateGroupRole(models.VIEWER)
 	handler := mw(fakeHandler)
@@ -110,7 +111,7 @@ func TestValidateGroupeRoleShouldAuthorize3(t *testing.T) {
 
 func TestValidateGroupeRoleShouldAuthorize4(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
 
 	mw := ValidateGroupRole(models.EDITOR)
 	handler := mw(fakeHandler)
@@ -125,7 +126,7 @@ func TestValidateGroupeRoleShouldAuthorize4(t *testing.T) {
 
 func TestValidateGroupeRoleShouldAuthorize5(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.EDITOR)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.EDITOR)
 
 	mw := ValidateGroupRole(models.EDITOR)
 	handler := mw(fakeHandler)
@@ -140,7 +141,7 @@ func TestValidateGroupeRoleShouldAuthorize5(t *testing.T) {
 
 func TestValidateGroupeRoleShouldAuthorize6(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
 
 	mw := ValidateGroupRole(models.OWNER)
 	handler := mw(fakeHandler)
@@ -155,7 +156,7 @@ func TestValidateGroupeRoleShouldAuthorize6(t *testing.T) {
 
 func TestValidateGroupeRoleShouldDeny1(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.VIEWER)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.VIEWER)
 
 	mw := ValidateGroupRole(models.OWNER)
 	handler := mw(fakeHandler)
@@ -170,7 +171,7 @@ func TestValidateGroupeRoleShouldDeny1(t *testing.T) {
 
 func TestValidateGroupeRoleShouldDeny2(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.EDITOR)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.EDITOR)
 
 	mw := ValidateGroupRole(models.OWNER)
 	handler := mw(fakeHandler)
@@ -185,7 +186,7 @@ func TestValidateGroupeRoleShouldDeny2(t *testing.T) {
 
 func TestValidateGroupeRoleShouldDeny3(t *testing.T) {
 	fakeHandler, r, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.VIEWER)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.VIEWER)
 
 	mw := ValidateGroupRole(models.EDITOR)
 	handler := mw(fakeHandler)
@@ -212,7 +213,7 @@ func TestCanDeleteGroupShouldReject1(t *testing.T) {
 
 func TestCanDeleteGroupShouldReject2(t *testing.T) {
 	fakeHandler, _, w := groupSetup()
-	db.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
+	repositories.GetDB().Model(models.GroupMember{}).Where("group_id = ? AND user_id = ?", "1", "1").Update("group_role", models.OWNER)
 	groupMembers := make([]models.GroupMember, 1)
 	groupMembers = append(groupMembers, models.GroupMember{UserID: 1, GroupRole: models.OWNER})
 
@@ -221,7 +222,7 @@ func TestCanDeleteGroupShouldReject2(t *testing.T) {
 		GroupMembers: groupMembers,
 	}
 
-	db.GetDB().Create(&group)
+	repositories.GetDB().Create(&group)
 
 	CanDeleteGroup(fakeHandler)
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -65,7 +64,7 @@ func SetReceiptGroupId(next http.Handler) http.Handler {
 
 func SetReceiptGroupIds(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		db := db.GetDB()
+		db := repositories.GetDB()
 		receiptIds := r.Context().Value("receiptIds").([]uint)
 		groupIds := make([]string, len(receiptIds))
 		errMsg := "Error accessing receipt."

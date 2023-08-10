@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -13,7 +12,8 @@ import (
 func SignUp(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error signing up"
 	userData := r.Context().Value("signUpCommand").(commands.SignUpCommand)
-	_, err := repositories.CreateUser(userData)
+	userRepository := repositories.NewUserRepository(nil)
+	_, err := userRepository.CreateUser(userData)
 
 	if err != nil {
 		handler_logger.Print(err.Error())
@@ -25,7 +25,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateSignUpData(userData models.User) structs.ValidatorError {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	err := structs.ValidatorError{
 		Errors: make(map[string]string),
 	}

@@ -1,15 +1,15 @@
 package services
 
 import (
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 
 	"gorm.io/gorm"
 )
 
 func DeleteUser(userId string) error {
-	db := db.GetDB()
+	db := repositories.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		var receipts []models.Receipt

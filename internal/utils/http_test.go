@@ -23,7 +23,7 @@ func TestGetBodyDataGetsData(t *testing.T) {
 	json.Unmarshal(bytes, &unmarshalResult)
 
 	if testString != unmarshalResult {
-		// PrintTestError(t, unmarshalResult, testString)
+		// repositories.PrintTestError(t, unmarshalResult, testString)
 	}
 }
 

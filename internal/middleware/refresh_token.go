@@ -3,15 +3,15 @@ package middleware
 import (
 	"context"
 	"net/http"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
 )
 
 func ValidateRefreshToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenValidator, err := utils.InitTokenValidator()
+		tokenValidator, err := services.InitTokenValidator()
 		errMessage := "Error refreshing token"
 
 		if err != nil {
@@ -40,7 +40,7 @@ func ValidateRefreshToken(next http.Handler) http.Handler {
 
 func RevokeRefreshToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		db := db.GetDB()
+		db := repositories.GetDB()
 		dbToken := models.RefreshToken{}
 		errMessage := "Error refreshing token"
 

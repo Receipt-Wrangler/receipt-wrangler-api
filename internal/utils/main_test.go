@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"os"
-	db "receipt-wrangler/api/internal/database"
 	"testing"
 )
 
@@ -16,9 +15,6 @@ func TestMain(m *testing.M) {
 }
 
 func run(m *testing.M) (code int, err error) {
-	SetUpTestEnv()
-	db.InitTestDb()
-	db.MakeMigrations()
 
 	defer teardown()
 
@@ -26,5 +22,4 @@ func run(m *testing.M) (code int, err error) {
 }
 
 func teardown() {
-	TestTeardown()
 }

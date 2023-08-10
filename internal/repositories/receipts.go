@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"receipt-wrangler/api/internal/commands"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
@@ -34,7 +33,7 @@ func PaginateReceipts(pagedRequest commands.PagedRequestCommand) func(db *gorm.D
 }
 
 func GetReceiptById(receiptId string) (models.Receipt, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", receiptId).Find(&receipt).Error
@@ -46,7 +45,7 @@ func GetReceiptById(receiptId string) (models.Receipt, error) {
 }
 
 func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.PagedRequestCommand) ([]models.Receipt, int64, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var receipts []models.Receipt
 	var count int64
 
@@ -55,7 +54,8 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 
 	// Filter receipts by group
 	if groupId == "all" {
-		groupIds, err := GetGroupIdsByUserId(simpleutils.UintToString(userId))
+		groupMemberRepository := NewGroupMemberRepository(nil)
+		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(userId))
 		if err != nil {
 			return nil, 0, err
 		}
@@ -187,7 +187,7 @@ func isTrustedValue(pagedRequest commands.PagedRequestCommand) bool {
 }
 
 func GetReceiptGroupIdByReceiptId(id string) (uint, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", id).Select("group_id").Find(&receipt).Error
@@ -199,7 +199,7 @@ func GetReceiptGroupIdByReceiptId(id string) (uint, error) {
 }
 
 func GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Find(&receipt).Error
@@ -211,7 +211,7 @@ func GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
 }
 
 func GetReceiptsByGroupIds(groupIds []string, querySelect string, queryPreload string) ([]models.Receipt, error) {
-	db := db.GetDB()
+	db := GetDB()
 	var receipts []models.Receipt
 
 	query := db.Model(models.Receipt{}).Where("group_id IN ?", groupIds).Select(querySelect)

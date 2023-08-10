@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"fmt"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
@@ -16,7 +15,7 @@ type NotificationRepository struct {
 
 func NewNotificationRepository(tx *gorm.DB) NotificationRepository {
 	repository := NotificationRepository{BaseRepository: BaseRepository{
-		DB: db.GetDB(),
+		DB: GetDB(),
 		TX: tx,
 	}}
 	return repository
@@ -110,7 +109,8 @@ func BuildNotificationsForUsers(userIds []uint, title string, body string, notif
 }
 
 func BuildNotificationForGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) ([]models.Notification, error) {
-	groupMembers, err := GetsGroupMembersByGroupId(simpleutils.UintToString(groupId))
+	groupMemberRepository := NewGroupMemberRepository(nil)
+	groupMembers, err := groupMemberRepository.GetsGroupMembersByGroupId(simpleutils.UintToString(groupId))
 	if err != nil {
 		return nil, err
 	}

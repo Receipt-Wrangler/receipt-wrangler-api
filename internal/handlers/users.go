@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -27,7 +26,7 @@ type ItemView struct {
 }
 
 func GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	errMsg := "Error retrieving users."
 	var users []structs.UserView
 
@@ -50,12 +49,13 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var UserView structs.UserView
 	bodyData := r.Context().Value("user").(commands.SignUpCommand)
 	errMsg := "Error creating user."
 
-	createdUser, err := repositories.CreateUser(bodyData)
+	userRepository := repositories.NewUserRepository(nil)
+	createdUser, err := userRepository.CreateUser(bodyData)
 
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
@@ -81,7 +81,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	errMsg := "Error updating user."
 	id := chi.URLParam(r, "id")
 
@@ -104,7 +104,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			var itemsOwed []ItemView
 			var itemsOthersOwe []ItemView
 			total := decimal.NewFromInt(0)
@@ -116,7 +116,8 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 
 			groupId := r.URL.Query().Get("groupId")
 			if groupId == "all" {
-				userGroupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -206,7 +207,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUsernameCount(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	errMsg := "Error getting username count."
 	username := chi.URLParam(r, "username")
 	var result int64
@@ -236,7 +237,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			id := chi.URLParam(r, "id")
 			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPasswordCommand)
 
@@ -266,7 +267,7 @@ func ConvertDummyUserToNormalUser(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var dbUser models.User
-			db := db.GetDB()
+			db := repositories.GetDB()
 			id := chi.URLParam(r, "id")
 			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPasswordCommand)
 
@@ -360,7 +361,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := utils.GetJWT(r)
-			db := db.GetDB()
+			db := repositories.GetDB()
 			updateProfileCommand := r.Context().Value("updateProfileCommand").(commands.UpdateProfileCommand)
 
 			if len(updateProfileCommand.DisplayName) == 0 {

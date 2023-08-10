@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -86,7 +85,8 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 			if false {
 
 			} else {
-				userGroupIds, err := repositories.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -128,7 +128,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			token := utils.GetJWT(r)
 			notificationRepository := repositories.NewNotificationRepository(nil)
 
@@ -171,7 +171,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetReceipt(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 	var receipt models.Receipt
 	errMsg := "Error retrieving receipt."
 
@@ -196,7 +196,7 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
-	db := db.GetDB()
+	db := repositories.GetDB()
 
 	errMsg := "Error updating receipt."
 	id := chi.URLParam(r, "id")
@@ -256,7 +256,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			bulkResolve := r.Context().Value("BulkStatusUpdateCommand").(commands.BulkStatusUpdateCommand)
 			var receipts []models.Receipt
 
@@ -345,7 +345,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := db.GetDB()
+			db := repositories.GetDB()
 			newReceipt := models.Receipt{}
 
 			receiptId := chi.URLParam(r, "id")
@@ -402,14 +402,15 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Copy receipt images
+			fileRepository := repositories.NewFileRepository(nil)
 			for i, fileData := range newReceipt.ImageFiles {
 				srcFileData := receipt.ImageFiles[i]
-				srcImageBytes, err := utils.GetBytesForFileData(srcFileData)
+				srcImageBytes, err := fileRepository.GetBytesForFileData(srcFileData)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
-				dstPath, err := utils.BuildFilePath(simpleutils.UintToString(newReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+				dstPath, err := fileRepository.BuildFilePath(simpleutils.UintToString(newReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

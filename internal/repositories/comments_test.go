@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"fmt"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"testing"
@@ -11,7 +10,7 @@ import (
 var commentRepository CommentRepository
 
 func setupCommentTest() {
-	utils.CreateTestGroupWithUsers()
+	CreateTestGroupWithUsers()
 	createTestReceipt()
 	commentRepository = NewCommentRepository(nil)
 }
@@ -23,17 +22,17 @@ func createTestReceipt() {
 		GroupId:      1,
 	}
 
-	db.GetDB().Create(&receipt)
+	GetDB().Create(&receipt)
 }
 
 func teardownCommentTest() {
-	db := db.GetDB()
-	utils.TruncateTable(db, "notifications")
-	utils.TruncateTable(db, "comments")
-	utils.TruncateTable(db, "receipts")
-	utils.TruncateTable(db, "group_members")
-	utils.TruncateTable(db, "groups")
-	utils.TruncateTable(db, "users")
+	db := GetDB()
+	TruncateTable(db, "notifications")
+	TruncateTable(db, "comments")
+	TruncateTable(db, "receipts")
+	TruncateTable(db, "group_members")
+	TruncateTable(db, "groups")
+	TruncateTable(db, "users")
 }
 
 func TestShouldAddCommentAndSendNotificationToAllGroupUsers(t *testing.T) {
@@ -77,7 +76,7 @@ func TestShouldAddCommentAndSendNotificationToAllGroupUsers(t *testing.T) {
 
 func TestShouldAddCommentAndSendNotificationToThreadUsers(t *testing.T) {
 	fmt.Println("test 2")
-	db := db.GetDB()
+	db := GetDB()
 	setupCommentTest()
 	user1Id := uint(1)
 	user2Id := uint(2)

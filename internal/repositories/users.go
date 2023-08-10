@@ -2,20 +2,31 @@ package repositories
 
 import (
 	"receipt-wrangler/api/internal/commands"
-	db "receipt-wrangler/api/internal/database"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
 
-func CreateUser(userData commands.SignUpCommand) (models.User, error) {
-	db := db.GetDB()
+type UserRepository struct {
+	BaseRepository
+}
+
+func NewUserRepository(tx *gorm.DB) UserRepository {
+	repository := UserRepository{BaseRepository: BaseRepository{
+		DB: GetDB(),
+		TX: tx,
+	}}
+	return repository
+}
+
+func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (models.User, error) {
+	db := repository.GetDB()
 	user := models.User{
-		Username:    userData.Username,
-		DisplayName: userData.DisplayName,
-		Password:    userData.Password,
-		IsDummyUser: userData.IsDummyUser,
+		Username:           userData.Username,
+		DisplayName:        userData.DisplayName,
+		Password:           userData.Password,
+		IsDummyUser:        userData.IsDummyUser,
 		DefaultAvatarColor: "#27b1ff",
 	}
 
@@ -27,6 +38,7 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 	user.Password = string(bytes)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		repository.SetTransaction(tx)
 		value := user.UserRole
 
 		if len(value) == 0 {
@@ -39,9 +51,10 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 			}
 		}
 
-		err = tx.Create(&user).Error
+		err = repository.GetDB().Create(&user).Error
 
 		if err != nil {
+			repository.ClearTransaction()
 			return err
 		}
 
@@ -53,12 +66,14 @@ func CreateUser(userData commands.SignUpCommand) (models.User, error) {
 			IsDefaultGroup: true,
 			GroupMembers:   groupMembers,
 		}
-		err = db.Create(&group).Error
+		err = repository.GetDB().Create(&group).Error
 
 		if err != nil {
+			repository.ClearTransaction()
 			return err
 		}
 
+		repository.ClearTransaction()
 		return nil
 	})
 

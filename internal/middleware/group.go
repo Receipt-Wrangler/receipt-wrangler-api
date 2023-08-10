@@ -54,7 +54,8 @@ func BulkValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Ha
 				for i := 0; i < len(groupIds); i++ {
 					groupId := groupIds[i]
 
-					groupMember, err := repositories.GetGroupMemberByUserIdAndGroupId(simpleutils.UintToString(token.UserId), groupId)
+					groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+					groupMember, err := groupMemberRepository.GetGroupMemberByUserIdAndGroupId(simpleutils.UintToString(token.UserId), groupId)
 					if err != nil {
 						middleware_logger.Print(err.Error())
 						utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
@@ -82,7 +83,8 @@ func CanDeleteGroup(next http.Handler) http.Handler {
 		token := utils.GetJWT(r)
 		errMsg := "User must be a part of at least one group."
 
-		groupMembers, err := repositories.GetGroupMembersByUserId(simpleutils.UintToString(token.UserId))
+		groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+		groupMembers, err := groupMemberRepository.GetGroupMembersByUserId(simpleutils.UintToString(token.UserId))
 		if err != nil {
 			middleware_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

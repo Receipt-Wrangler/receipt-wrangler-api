@@ -4,6 +4,7 @@ import (
 	"fmt"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/utils"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
@@ -23,8 +24,18 @@ func BuildMariaDbConnectionString() string {
 func BuildPostgresqlConnectionString() string {
 	envVariables := config.GetEnvVariables()
 	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Europe/Moscow", envVariables["DB_HOST"], envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_NAME"], envVariables["DB_PORT"])
-
 	return connectionString
+}
+
+func BuildSqliteConnectionString() (string, error) {
+	envVariables := config.GetEnvVariables()
+	err := utils.DirectoryExists("./sqlite", true)
+	if err != nil {
+		return "", err
+	}
+
+	connectionString := fmt.Sprintf("file:./sqlite/%s?_pragma=foreign_keys(1)", envVariables["DB_FILENAME"])
+	return connectionString, nil
 }
 
 func Connect() error {
@@ -33,12 +44,20 @@ func Connect() error {
 	var err error
 	var connectedDb *gorm.DB
 
-	if (dbEngine == "mariadb" || dbEngine == "mysql") {
+	if dbEngine == "mariadb" || dbEngine == "mysql" {
 		connectedDb, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString()), &gorm.Config{})
 	}
 
-	if (dbEngine == "postgresql") {
+	if dbEngine == "postgresql" {
 		connectedDb, err = gorm.Open(postgres.Open(BuildPostgresqlConnectionString()), &gorm.Config{})
+	}
+
+	if dbEngine == "sqlite" {
+		connectionString, err := BuildSqliteConnectionString()
+		if err != nil {
+			return err
+		}
+		connectedDb, err = gorm.Open(sqlite.Open(connectionString), &gorm.Config{})
 	}
 
 	if err != nil {

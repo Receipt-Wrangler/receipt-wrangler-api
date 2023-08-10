@@ -7,4 +7,5 @@
 /temp/*
 ./api
 ./coverage.out
+./sqlite
 api

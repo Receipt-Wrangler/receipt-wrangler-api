@@ -20,5 +20,9 @@ RUN go build
 RUN mkdir data
 VOLUME /go/api/data
 
+# Set up sqlite volume
+RUN mkdir sqlite
+VOLUME /go/api/sqlite
+
 # Expose port
 EXPOSE 8081

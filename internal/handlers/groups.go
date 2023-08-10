@@ -40,7 +40,8 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error retrieving group."
 	id := chi.URLParam(r, "groupId")
 
-	groups, err := repositories.GetGroupById(id, true)
+	groupRepository := repositories.NewGroupRepository(nil)
+	groups, err := groupRepository.GetGroupById(id, true)
 	if err != nil {
 		handler_logger.Println(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
@@ -69,7 +70,8 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 			token := utils.GetJWT(r)
 			group := r.Context().Value("group").(models.Group)
 
-			group, err := repositories.CreateGroup(group, token.UserId)
+			groupRepository := repositories.NewGroupRepository(nil)
+			group, err := groupRepository.CreateGroup(group, token.UserId)
 
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -105,7 +107,8 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	group := r.Context().Value("group").(models.Group)
 	groupId := chi.URLParam(r, "groupId")
 
-	updatedGroup, err := repositories.UpdateGroup(group, groupId)
+	groupRepository := repositories.NewGroupRepository(nil)
+	updatedGroup, err := groupRepository.UpdateGroup(group, groupId)
 
 	if err != nil {
 		handler_logger.Println(err.Error())

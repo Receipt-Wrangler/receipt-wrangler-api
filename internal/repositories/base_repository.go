@@ -15,6 +15,10 @@ func (repository BaseRepository) GetDB() *gorm.DB {
 	return repository.DB
 }
 
-func (repository BaseRepository) ClearTransaction() {
+func (repository *BaseRepository) SetTransaction(tx *gorm.DB) {
+	repository.TX = tx
+}
+
+func (repository *BaseRepository) ClearTransaction() {
 	repository.TX = nil
 }

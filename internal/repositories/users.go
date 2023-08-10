@@ -38,7 +38,7 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 	user.Password = string(bytes)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		repository.TX = tx
+		repository.SetTransaction(tx)
 		value := user.UserRole
 
 		if len(value) == 0 {

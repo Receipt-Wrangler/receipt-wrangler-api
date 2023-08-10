@@ -36,7 +36,8 @@ func DeleteGroup(groupId string) error {
 	db := repositories.GetDB()
 	var receipts []models.Receipt
 
-	group, err := repositories.GetGroupById(groupId, false)
+	groupRepository := repositories.NewGroupRepository(nil)
+	group, err := groupRepository.GetGroupById(groupId, false)
 	if err != nil {
 		return err
 	}

@@ -7,13 +7,27 @@ import (
 	"gorm.io/gorm"
 )
 
-func CreateGroup(group models.Group, userId uint) (models.Group, error) {
-	db := GetDB()
+type GroupRepository struct {
+	BaseRepository
+}
+
+func NewGroupRepository(tx *gorm.DB) GroupRepository {
+	repository := GroupRepository{BaseRepository: BaseRepository{
+		DB: GetDB(),
+		TX: tx,
+	}}
+	return repository
+}
+
+func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (models.Group, error) {
+	db := repository.GetDB()
 	var returnGroup models.Group
 	err := db.Transaction(func(tx *gorm.DB) error {
+		repository.SetTransaction(tx)
 
-		txErr := db.Model(&group).Create(&group).Error
+		txErr := repository.GetDB().Model(&group).Create(&group).Error
 		if txErr != nil {
+			repository.ClearTransaction()
 			return txErr
 		}
 
@@ -23,18 +37,20 @@ func CreateGroup(group models.Group, userId uint) (models.Group, error) {
 			GroupRole: models.OWNER,
 		}
 
-		txErr = db.Model(&groupMember).Create(&groupMember).Error
+		txErr = repository.GetDB().Model(&groupMember).Create(&groupMember).Error
 		if txErr != nil {
+			repository.ClearTransaction()
 			return txErr
 		}
 
+		repository.ClearTransaction()
 		return nil
 	})
 	if err != nil {
 		return models.Group{}, err
 	}
 
-	err = db.Model(models.Group{}).Where("id = ?", group.ID).Preload("GroupMembers").Find(&returnGroup).Error
+	err = repository.GetDB().Model(models.Group{}).Where("id = ?", group.ID).Preload("GroupMembers").Find(&returnGroup).Error
 	if err != nil {
 		return models.Group{}, err
 	}
@@ -42,8 +58,8 @@ func CreateGroup(group models.Group, userId uint) (models.Group, error) {
 	return returnGroup, nil
 }
 
-func UpdateGroup(group models.Group, groupId string) (models.Group, error) {
-	db := GetDB()
+func (repository GroupRepository) UpdateGroup(group models.Group, groupId string) (models.Group, error) {
+	db := repository.GetDB()
 
 	u64Id, err := simpleutils.StringToUint64(groupId)
 	if err != nil {
@@ -57,7 +73,7 @@ func UpdateGroup(group models.Group, groupId string) (models.Group, error) {
 		return models.Group{}, err
 	}
 
-	returnGroup, err := GetGroupById(groupId, true)
+	returnGroup, err := repository.GetGroupById(groupId, true)
 	if err != nil {
 		return models.Group{}, err
 	}
@@ -65,8 +81,8 @@ func UpdateGroup(group models.Group, groupId string) (models.Group, error) {
 	return returnGroup, nil
 }
 
-func GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {
-	db := GetDB()
+func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {
+	db := repository.GetDB()
 	var group models.Group
 	var err error
 

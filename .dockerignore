@@ -2,3 +2,5 @@
 ./logs
 ./data
 ./sqlite
+./temp
+./config

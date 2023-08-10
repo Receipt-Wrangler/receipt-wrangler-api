@@ -51,7 +51,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:linux_x64
 
-  build_arm64:
+  build_linux_arm64:
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -60,8 +60,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:linux_arm64
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Set up QEMU
@@ -76,3 +74,5 @@ jobs:
           context: .
           platforms: linux/arm64/v8
           file: ./Dockerfile.linux_arm64
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:linux_arm64

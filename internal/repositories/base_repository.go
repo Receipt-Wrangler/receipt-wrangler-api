@@ -14,3 +14,7 @@ func (repository BaseRepository) GetDB() *gorm.DB {
 
 	return repository.DB
 }
+
+func (repository BaseRepository) ClearTransaction() {
+	repository.TX = nil
+}

@@ -54,7 +54,8 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	bodyData := r.Context().Value("user").(commands.SignUpCommand)
 	errMsg := "Error creating user."
 
-	createdUser, err := repositories.CreateUser(bodyData)
+	userRepository := repositories.NewUserRepository(nil)
+	createdUser, err := userRepository.CreateUser(bodyData)
 
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

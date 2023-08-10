@@ -12,7 +12,8 @@ import (
 func SignUp(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error signing up"
 	userData := r.Context().Value("signUpCommand").(commands.SignUpCommand)
-	_, err := repositories.CreateUser(userData)
+	userRepository := repositories.NewUserRepository(nil)
+	_, err := userRepository.CreateUser(userData)
 
 	if err != nil {
 		handler_logger.Print(err.Error())

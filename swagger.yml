@@ -830,8 +830,6 @@ paths:
                 type: integer
         500:
           $ref: "#/components/responses/Internal"
-      security:
-        - bearerAuth: []
   /user/amountOwedForUser:
     get:
       tags:

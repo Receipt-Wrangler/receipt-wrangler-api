@@ -37,7 +37,7 @@ func validateSignUpData(userData models.User) structs.ValidatorError {
 		db.Model(&models.User{}).Where("username = ?", userData.Username).Count(&count)
 
 		if count > 0 {
-			err.Errors["username"] = "Username already exists"
+			err.Errors["username"] = "Username must be unique"
 		}
 	}
 

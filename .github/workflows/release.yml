@@ -1,5 +1,5 @@
 ---
-name: Build
+name: Release
 on:
   release:
     types: [published]

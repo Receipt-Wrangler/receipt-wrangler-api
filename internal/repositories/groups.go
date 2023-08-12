@@ -84,15 +84,13 @@ func (repository GroupRepository) UpdateGroup(group models.Group, groupId string
 func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {
 	db := repository.GetDB()
 	var group models.Group
-	var err error
 
+	query := db.Model(models.Group{}).Where("id = ?", id)
 	if preloadGroupMembers {
-		err = db.Model(models.Group{}).Where("id = ?", id).Preload("GroupMembers").Find(&group).Error
-
-	} else {
-		err = db.Model(models.Group{}).Where("id = ?", id).Find(&group).Error
+		query = query.Preload("GroupMembers")
 	}
 
+	err := query.First(&group).Error
 	if err != nil {
 		return models.Group{}, err
 	}

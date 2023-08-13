@@ -12,7 +12,19 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func PaginateReceipts(pagedRequest commands.PagedRequestCommand) func(db *gorm.DB) *gorm.DB {
+type ReceiptRepository struct {
+	BaseRepository
+}
+
+func NewReceiptRepository(tx *gorm.DB) ReceiptRepository {
+	repository := ReceiptRepository{BaseRepository: BaseRepository{
+		DB: GetDB(),
+		TX: tx,
+	}}
+	return repository
+}
+
+func (repository ReceiptRepository) PaginateReceipts(pagedRequest commands.PagedRequestCommand) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		page := pagedRequest.Page
 		if page <= 0 {
@@ -32,7 +44,7 @@ func PaginateReceipts(pagedRequest commands.PagedRequestCommand) func(db *gorm.D
 	}
 }
 
-func GetReceiptById(receiptId string) (models.Receipt, error) {
+func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Receipt, error) {
 	db := GetDB()
 	var receipt models.Receipt
 
@@ -44,7 +56,7 @@ func GetReceiptById(receiptId string) (models.Receipt, error) {
 	return receipt, nil
 }
 
-func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.PagedRequestCommand) ([]models.Receipt, int64, error) {
+func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.PagedRequestCommand) ([]models.Receipt, int64, error) {
 	db := GetDB()
 	var receipts []models.Receipt
 	var count int64
@@ -65,7 +77,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 	}
 
 	// Set order by
-	if isTrustedValue(pagedRequest) {
+	if repository.isTrustedValue(pagedRequest) {
 		orderBy := pagedRequest.OrderBy
 		switch pagedRequest.OrderBy {
 
@@ -84,19 +96,19 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 	// Name
 	name := pagedRequest.Filter.Name.Value.(string)
 	if len(name) > 0 {
-		query = buildFilterQuery(query, name, pagedRequest.Filter.Name.Operation, "name", false)
+		query = repository.buildFilterQuery(query, name, pagedRequest.Filter.Name.Operation, "name", false)
 	}
 
 	// Date
 	date := pagedRequest.Filter.Date.Value.(string)
 	if len(date) > 0 {
-		query = buildFilterQuery(query, date, pagedRequest.Filter.Date.Operation, "date", false)
+		query = repository.buildFilterQuery(query, date, pagedRequest.Filter.Date.Operation, "date", false)
 	}
 
 	// Paid By
 	paidBy := pagedRequest.Filter.PaidBy.Value.([]interface{})
 	if len(paidBy) > 0 {
-		query = buildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
+		query = repository.buildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
 	}
 
 	// Categories
@@ -118,19 +130,19 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 	// Amount
 	amount := pagedRequest.Filter.Amount.Value.(float64)
 	if amount > 0 {
-		query = buildFilterQuery(query, amount, pagedRequest.Filter.Amount.Operation, "amount", false)
+		query = repository.buildFilterQuery(query, amount, pagedRequest.Filter.Amount.Operation, "amount", false)
 	}
 
 	// Status
 	status := pagedRequest.Filter.Status.Value.([]interface{})
 	if len(status) > 0 {
-		query = buildFilterQuery(query, status, pagedRequest.Filter.Status.Operation, "status", true)
+		query = repository.buildFilterQuery(query, status, pagedRequest.Filter.Status.Operation, "status", true)
 	}
 
 	// Resolved Date
 	resolvedDate := pagedRequest.Filter.ResolvedDate.Value.(string)
 	if len(resolvedDate) > 0 {
-		query = buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
+		query = repository.buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
 	}
 
 	err := query.Count(&count).Error
@@ -138,7 +150,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 		return nil, 0, err
 	}
 
-	query = query.Scopes(PaginateReceipts(pagedRequest)).Preload("Tags").Preload("Categories")
+	query = query.Scopes(repository.PaginateReceipts(pagedRequest)).Preload("Tags").Preload("Categories")
 
 	// Run Query
 	err = query.Find(&receipts).Error
@@ -149,7 +161,7 @@ func GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest command
 	return receipts, count, nil
 }
 
-func buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation commands.FilterOperation, fieldName string, isArray bool) *gorm.DB {
+func (repository ReceiptRepository) buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation commands.FilterOperation, fieldName string, isArray bool) *gorm.DB {
 
 	if operation == commands.EQUALS && !isArray {
 		return runningQuery.Where(fmt.Sprintf("%v = ?", fieldName), value)
@@ -176,7 +188,7 @@ func buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation comman
 	return runningQuery
 }
 
-func isTrustedValue(pagedRequest commands.PagedRequestCommand) bool {
+func (repository ReceiptRepository) isTrustedValue(pagedRequest commands.PagedRequestCommand) bool {
 	orderByTrusted := []interface{}{"date", "name", "paidBy", "amount", "categories", "tags", "status", "resolvedDate"}
 	directionTrusted := []interface{}{"asc", "desc", ""}
 
@@ -186,7 +198,7 @@ func isTrustedValue(pagedRequest commands.PagedRequestCommand) bool {
 	return isOrderByTrusted && isDirectionTrusted
 }
 
-func GetReceiptGroupIdByReceiptId(id string) (uint, error) {
+func (repository ReceiptRepository) GetReceiptGroupIdByReceiptId(id string) (uint, error) {
 	db := GetDB()
 	var receipt models.Receipt
 
@@ -198,7 +210,7 @@ func GetReceiptGroupIdByReceiptId(id string) (uint, error) {
 	return receipt.GroupId, nil
 }
 
-func GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
+func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
 	db := GetDB()
 	var receipt models.Receipt
 
@@ -210,7 +222,7 @@ func GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
 	return receipt, nil
 }
 
-func GetReceiptsByGroupIds(groupIds []string, querySelect string, queryPreload string) ([]models.Receipt, error) {
+func (repository ReceiptRepository) GetReceiptsByGroupIds(groupIds []string, querySelect string, queryPreload string) ([]models.Receipt, error) {
 	db := GetDB()
 	var receipts []models.Receipt
 

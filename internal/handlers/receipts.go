@@ -34,7 +34,8 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 
 			token := utils.GetJWT(r)
 
-			receipts, count, err := repositories.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			receipts, count, err := receiptRepository.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -99,7 +100,8 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 				// 	return http.StatusForbidden, errors.New("not allowed to access group")
 				// }
 
-				receipts, err = repositories.GetReceiptsByGroupIds(groupIds, "*", clause.Associations)
+				receiptRepository := repositories.NewReceiptRepository(nil)
+				receipts, err = receiptRepository.GetReceiptsByGroupIds(groupIds, "*", clause.Associations)
 			}
 
 			if err != nil {
@@ -163,6 +165,21 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 			w.Write(bytes)
 
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func QuickScan(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error creating receipts.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			
 			return 0, nil
 		},
 	}
@@ -349,7 +366,8 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			newReceipt := models.Receipt{}
 
 			receiptId := chi.URLParam(r, "id")
-			receipt, err := repositories.GetFullyLoadedReceiptById(receiptId)
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			receipt, err := receiptRepository.GetFullyLoadedReceiptById(receiptId)
 
 			if err != nil {
 				return http.StatusInternalServerError, err

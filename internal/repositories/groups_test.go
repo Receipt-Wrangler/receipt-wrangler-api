@@ -15,13 +15,7 @@ func setupGroupRepository() GroupRepository {
 }
 
 func teardownGroupTest() {
-	db := GetDB()
-	TruncateTable(db, "notifications")
-	TruncateTable(db, "comments")
-	TruncateTable(db, "receipts")
-	TruncateTable(db, "group_members")
-	TruncateTable(db, "groups")
-	TruncateTable(db, "users")
+TruncateTestDb()
 }
 
 

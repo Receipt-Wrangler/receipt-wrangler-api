@@ -2,13 +2,10 @@ package handlers
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
-	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
-	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -211,25 +208,10 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 			} else if len(body) > 0 {
-				var magicFillCommand commands.MagicFillCommand
-
-				err := json.Unmarshal(body, &magicFillCommand)
+				filledReceipt, err = services.MagicFillFromImage(body)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
-
-				tempPath := config.GetBasePath() + "/temp"
-				utils.MakeDirectory(tempPath)
-
-				filePath := tempPath + "/" + magicFillCommand.Filename
-				utils.WriteFile(filePath, []byte(magicFillCommand.ImageData))
-
-				filledReceipt, err = services.ReadReceiptImageFromFileOnly(filePath)
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				os.Remove(filePath)
 			}
 
 			bytes, err := utils.MarshalResponseData(filledReceipt)

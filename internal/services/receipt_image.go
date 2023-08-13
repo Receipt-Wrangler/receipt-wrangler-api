@@ -1,10 +1,15 @@
 package services
 
 import (
+	"encoding/json"
+	"os"
+	"receipt-wrangler/api/internal/commands"
+	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/tesseract"
+	"receipt-wrangler/api/internal/utils"
 )
 
 func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
@@ -53,4 +58,29 @@ func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 	}
 
 	return result, nil
+}
+
+func MagicFillFromImage(body []byte) (models.Receipt, error) {
+	// pull out magic fill command as arg
+	var magicFillCommand commands.MagicFillCommand
+
+	err := json.Unmarshal(body, &magicFillCommand)
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	tempPath := config.GetBasePath() + "/temp"
+	utils.MakeDirectory(tempPath)
+
+	filePath := tempPath + "/" + magicFillCommand.Filename
+	utils.WriteFile(filePath, []byte(magicFillCommand.ImageData))
+
+	filledReceipt, err := ReadReceiptImageFromFileOnly(filePath)
+	if err != nil {
+		return models.Receipt{}, nil
+	}
+
+	os.Remove(filePath)
+
+	return filledReceipt, nil
 }

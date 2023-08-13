@@ -55,6 +55,22 @@ func TestShouldCreateNonAdminUserWithGroup(t *testing.T) {
 	TruncateTestDb()
 }
 
+func TestShouldReturnErrorWhenCreatingUserWithDuplicateUsername(t *testing.T) {
+	CreateTestUser()
+	CreateTestGroup()
+	userToCreate := commands.SignUpCommand{
+		Username: "test",
+		DisplayName: "test",
+		Password: "a really secure password",
+	}
+	userRepository := NewUserRepository(nil)
+	_, err := userRepository.CreateUser(userToCreate)
+	if err == nil {
+		utils.PrintTestError(t, err, "error")
+	}
+	TruncateTestDb()
+}
+
 func validateUser(t *testing.T, createdUser models.User, userToCreate commands.SignUpCommand, role models.UserRole, id uint) {
 	if createdUser.ID != id {
 		utils.PrintTestError(t, createdUser.ID, id)

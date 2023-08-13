@@ -76,9 +76,8 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 		repository.ClearTransaction()
 		return nil
 	})
-
 	if err != nil {
-		return models.User{}, nil
+		return models.User{}, err
 	}
 
 	return user, nil

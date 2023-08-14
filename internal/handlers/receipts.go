@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -130,34 +129,16 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := repositories.GetDB()
 			token := utils.GetJWT(r)
-			notificationRepository := repositories.NewNotificationRepository(nil)
+			receiptRepository := repositories.NewReceiptRepository(nil)
 
 			bodyData := r.Context().Value("receipt").(models.Receipt)
-			bodyData.CreatedBy = &token.UserId
-
-			err := db.Transaction(func(tx *gorm.DB) error {
-				notificationRepository.TX = tx
-				err := tx.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
-				if err != nil {
-					return err
-				}
-
-				var userIdsToOmit []interface{} = make([]interface{}, 1)
-				userIdsToOmit = append(userIdsToOmit, *bodyData.CreatedBy)
-
-				notificationBody := fmt.Sprintf("A receipt has been added in the group %s. Check it out! %s", repositories.BuildParamaterisedString("groupId", bodyData.GroupId, "name", "string"), repositories.BuildParamaterisedString("receiptId", bodyData.ID, "", "link"))
-				notificationRepository.SendNotificationToGroup(bodyData.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
-
-				return nil
-			})
-
+			createdReceipt, err := receiptRepository.CreateReceipt(bodyData, token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			bytes, err := json.Marshal(bodyData)
+			bytes, err := json.Marshal(createdReceipt)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -179,7 +160,47 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			
+			var quickScanCommand commands.QuickScanCommand
+			vErr, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			if len(vErr.Errors) > 0 {
+				utils.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
+				return http.StatusInternalServerError, errors.New("validation error")
+			}
+
+			magicFillCommand := commands.MagicFillCommand{
+				ImageData: quickScanCommand.ImageData,
+				Filename:  quickScanCommand.Name,
+			}
+
+			token := utils.GetJWT(r)
+			receiptRepository := repositories.NewReceiptRepository(nil)
+
+			receipt, err := services.MagicFillFromImage(magicFillCommand)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			receipt.Status = models.ReceiptStatus(quickScanCommand.Status)
+			receipt.GroupId = quickScanCommand.GroupId
+			receipt.ImageFiles = append(receipt.ImageFiles, quickScanCommand.FileData)
+
+			createdReceipt, err := receiptRepository.CreateReceipt(receipt, token.UserId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(createdReceipt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
 			return 0, nil
 		},
 	}

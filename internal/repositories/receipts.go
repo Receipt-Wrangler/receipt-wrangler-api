@@ -24,6 +24,36 @@ func NewReceiptRepository(tx *gorm.DB) ReceiptRepository {
 	return repository
 }
 
+func (repository ReceiptRepository) CreateReceipt(receipt models.Receipt, createdByUserID uint) (models.Receipt, error) {
+	db := GetDB()
+	notificationRepository := NewNotificationRepository(nil)
+	var createdReceipt models.Receipt
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		repository.SetTransaction(tx)
+		notificationRepository.SetTransaction(tx)
+		err := tx.Model(models.Receipt{}).Select("*").Create(&createdReceipt).Error
+		if err != nil {
+			return err
+		}
+
+		var userIdsToOmit []interface{} = make([]interface{}, 1)
+		userIdsToOmit = append(userIdsToOmit, *receipt.CreatedBy)
+
+		notificationBody := fmt.Sprintf("A receipt has been added in the group %s. Check it out! %s", BuildParamaterisedString("groupId", receipt.GroupId, "name", "string"), BuildParamaterisedString("receiptId", receipt.ID, "", "link"))
+		notificationRepository.SendNotificationToGroup(receipt.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
+
+		repository.ClearTransaction()
+		notificationRepository.ClearTransaction()
+		return nil
+	})
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	return createdReceipt, nil
+}
+
 func (repository ReceiptRepository) PaginateReceipts(pagedRequest commands.PagedRequestCommand) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		page := pagedRequest.Page

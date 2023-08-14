@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/json"
 	"os"
 	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
@@ -60,14 +59,8 @@ func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 	return result, nil
 }
 
-func MagicFillFromImage(body []byte) (models.Receipt, error) {
-	// pull out magic fill command as arg
+func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, error) {
 	var magicFillCommand commands.MagicFillCommand
-
-	err := json.Unmarshal(body, &magicFillCommand)
-	if err != nil {
-		return models.Receipt{}, err
-	}
 
 	tempPath := config.GetBasePath() + "/temp"
 	utils.MakeDirectory(tempPath)

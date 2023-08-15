@@ -53,4 +53,4 @@ jobs:
           platforms: linux/arm64/v8, linux/amd64
           file: ./Dockerfile.linux_x64
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:${{ github.ref }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:${{ github.ref_name }}

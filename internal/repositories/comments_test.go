@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"fmt"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"testing"
@@ -75,7 +74,6 @@ func TestShouldAddCommentAndSendNotificationToAllGroupUsers(t *testing.T) {
 }
 
 func TestShouldAddCommentAndSendNotificationToThreadUsers(t *testing.T) {
-	fmt.Println("test 2")
 	db := GetDB()
 	setupCommentTest()
 	user1Id := uint(1)

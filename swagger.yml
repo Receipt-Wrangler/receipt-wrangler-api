@@ -355,6 +355,30 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /receipt/quickScan:
+    post:
+      tags:
+        - Receipt
+      summary: Quick scan a receipt
+      description: This take an image and use magic fill to fill and save the receipt [SYSTEM USER]
+      requestBody:
+        description: Quick scan data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuickScanCommand"
+      operationId: quickScanReceipt
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /receipt/{receiptId}:
     parameters:
       - in: path
@@ -1644,3 +1668,37 @@ components:
         Filename:
           type: string
           description: Name of file
+    QuickScanCommand:
+      required:
+        - name
+        - imageData
+        - fileType
+        - size
+        - groupId
+        - status
+      type: object
+      properties:
+        imageData:
+          type: array
+          items:
+            type: integer
+          description: Image data
+        name:
+          type: string
+          description: Name of file
+        fileType:
+          type: string
+          description: Type of file
+        size:
+          type: integer
+          description: Size of file
+        groupId:
+          type: integer
+          description: Group foreign key
+        paidByUserId:
+          type: integer
+          description: User foreign key
+        status:
+          type: string
+          enum: *RECEIPTSTATUS
+          description: Status of quick scanned receipt

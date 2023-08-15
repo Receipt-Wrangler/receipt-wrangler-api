@@ -130,7 +130,9 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 				if groupId != "all" {
 					totalGroupIds = append(totalGroupIds, groupId)
 				}
-				groupReceiptIds, err := repositories.GetReceiptsByGroupIds(totalGroupIds, "id", "")
+
+				receiptRepository := repositories.NewReceiptRepository(nil)
+				groupReceiptIds, err := receiptRepository.GetReceiptsByGroupIds(totalGroupIds, "id", "")
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

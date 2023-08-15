@@ -20,7 +20,8 @@ func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
 		return models.Receipt{}, err
 	}
 
-	receipt, err := repositories.GetReceiptById(strconv.FormatUint(uint64(fileData.ReceiptId), 10))
+	receiptRepository := repositories.NewReceiptRepository(nil)
+	receipt, err := receiptRepository.GetReceiptById(strconv.FormatUint(uint64(fileData.ReceiptId), 10))
 	if err != nil {
 		return models.Receipt{}, err
 	}

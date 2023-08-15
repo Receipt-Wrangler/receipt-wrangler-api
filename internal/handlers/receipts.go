@@ -154,10 +154,13 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func QuickScan(w http.ResponseWriter, r *http.Request) {
+	groupId := ""
 	handler := structs.Handler{
-		ErrorMessage: "Error creating receipts.",
+		ErrorMessage: "Error processing quick scan.",
 		Writer:       w,
 		Request:      r,
+		GroupRole:    models.EDITOR,
+		GroupId:      groupId,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var quickScanCommand commands.QuickScanCommand
@@ -165,6 +168,8 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
+
+			groupId = simpleutils.UintToString(quickScanCommand.GroupId)
 
 			if len(vErr.Errors) > 0 {
 				utils.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
@@ -184,6 +189,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
+			receipt.PaidByUserID = quickScanCommand.PaidByUserId
 			receipt.Status = models.ReceiptStatus(quickScanCommand.Status)
 			receipt.GroupId = quickScanCommand.GroupId
 			receipt.ImageFiles = append(receipt.ImageFiles, quickScanCommand.FileData)

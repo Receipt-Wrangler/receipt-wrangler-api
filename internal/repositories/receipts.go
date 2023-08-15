@@ -27,12 +27,13 @@ func NewReceiptRepository(tx *gorm.DB) ReceiptRepository {
 func (repository ReceiptRepository) CreateReceipt(receipt models.Receipt, createdByUserID uint) (models.Receipt, error) {
 	db := GetDB()
 	notificationRepository := NewNotificationRepository(nil)
-	var createdReceipt models.Receipt
+
+	receipt.CreatedBy = &createdByUserID
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
 		notificationRepository.SetTransaction(tx)
-		err := tx.Model(models.Receipt{}).Select("*").Create(&createdReceipt).Error
+		err := tx.Model(models.Receipt{}).Select("*").Create(&receipt).Error
 		if err != nil {
 			return err
 		}
@@ -51,7 +52,7 @@ func (repository ReceiptRepository) CreateReceipt(receipt models.Receipt, create
 		return models.Receipt{}, err
 	}
 
-	return createdReceipt, nil
+	return receipt, nil
 }
 
 func (repository ReceiptRepository) PaginateReceipts(pagedRequest commands.PagedRequestCommand) func(db *gorm.DB) *gorm.DB {

@@ -60,13 +60,14 @@ func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 }
 
 func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, error) {
-	var magicFillCommand commands.MagicFillCommand
-
 	tempPath := config.GetBasePath() + "/temp"
 	utils.MakeDirectory(tempPath)
 
-	filePath := tempPath + "/" + magicFillCommand.Filename
-	utils.WriteFile(filePath, []byte(magicFillCommand.ImageData))
+	filePath := tempPath + "/" + command.Filename
+	err := utils.WriteFile(filePath, []byte(command.ImageData))
+	if err != nil {
+		return models.Receipt{}, err
+	}
 
 	filledReceipt, err := ReadReceiptImageFromFileOnly(filePath)
 	if err != nil {

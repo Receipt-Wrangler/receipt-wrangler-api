@@ -164,6 +164,9 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var quickScanCommand commands.QuickScanCommand
+			var createdReceipt models.Receipt
+			db := repositories.GetDB()
+
 			vErr, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -183,6 +186,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 
 			token := utils.GetJWT(r)
 			receiptRepository := repositories.NewReceiptRepository(nil)
+			receiptImageRepository := repositories.NewReceiptImageRepository(nil)
 
 			receipt, err := services.MagicFillFromImage(magicFillCommand)
 			if err != nil {
@@ -192,12 +196,24 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 			receipt.PaidByUserID = quickScanCommand.PaidByUserId
 			receipt.Status = models.ReceiptStatus(quickScanCommand.Status)
 			receipt.GroupId = quickScanCommand.GroupId
-			receipt.ImageFiles = append(receipt.ImageFiles, quickScanCommand.FileData)
 
-			createdReceipt, err := receiptRepository.CreateReceipt(receipt, token.UserId)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
+			db.Transaction(func(tx *gorm.DB) error {
+				receiptRepository.SetTransaction(tx)
+				receiptImageRepository.SetTransaction(tx)
+
+				createdReceipt, err = receiptRepository.CreateReceipt(receipt, token.UserId)
+				if err != nil {
+					return err
+				}
+
+				quickScanCommand.FileData.ReceiptId = createdReceipt.ID
+				_, err := receiptImageRepository.CreateReceiptImage(quickScanCommand.FileData)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
 
 			bytes, err := utils.MarshalResponseData(createdReceipt)
 			if err != nil {

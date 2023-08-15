@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
@@ -10,9 +11,11 @@ import (
 
 type QuickScanCommand struct {
 	models.FileData
-	GroupId uint               `json:"groupId"`
-	Group   models.Group       `json:"-"`
-	Status  models.GroupStatus `json:"groupStatus"`
+	PaidByUser   models.User          `json:"paidByUser"`
+	PaidByUserId uint                 `json:"paidByUserId"`
+	Group        models.Group         `json:"-"`
+	GroupId      uint                 `json:"groupId"`
+	Status       models.ReceiptStatus `json:"status"`
 }
 
 func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -31,6 +34,7 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 	command.FileData = quickScanCommand.FileData
 	command.GroupId = quickScanCommand.GroupId
 	command.Status = quickScanCommand.Status
+	command.PaidByUserId = quickScanCommand.PaidByUserId
 
 	return nil
 }
@@ -66,6 +70,7 @@ func (command *QuickScanCommand) LoadDataFromRequestAndValidate(w http.ResponseW
 	}
 
 	vErr := command.Validate()
+	fmt.Println(command.Status)
 	if len(vErr.Errors) > 0 {
 		return vErr, nil
 	}

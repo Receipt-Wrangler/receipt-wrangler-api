@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
-	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
@@ -20,82 +19,32 @@ import (
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	// TODO: Validate size and file type
-	db := repositories.GetDB()
-	basePath, err := os.Getwd()
-	errMsg := "Error uploading image."
-	fileRepository := repositories.NewFileRepository(nil)
+	handler := structs.Handler{
+		ErrorMessage: "Error retrieving image.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			fileImageRepository := repositories.NewReceiptImageRepository(nil)
+			fileData := r.Context().Value("fileData").(models.FileData)
 
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			createdFile, err := fileImageRepository.CreateReceiptImage(fileData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(createdFile)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
-
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	// Check if data path exists
-	err = utils.DirectoryExists(basePath+"/data", true)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	// Get initial group directory to see if it exists
-	fileData := r.Context().Value("fileData").(models.FileData)
-	filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), "", fileData.Name)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-	groupDir, _ := filepath.Split(filePath)
-
-	err = db.Model(models.FileData{}).Create(&fileData).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		os.Remove(filePath)
-		return
-	}
-
-	// Check if group's path exists
-	err = utils.DirectoryExists(groupDir, true)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	// Rebuild file path with correct file id
-	filePath, err = fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	err = utils.WriteFile(filePath, fileData.ImageData)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	fileData.ImageData = make([]byte, 0)
-	bytes, err := utils.MarshalResponseData(fileData)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func GetReceiptImage(w http.ResponseWriter, r *http.Request) {

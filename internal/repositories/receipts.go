@@ -67,7 +67,7 @@ func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Rec
 	return receipt, nil
 }
 
-func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.PagedRequestCommand) ([]models.Receipt, int64, error) {
+func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.ReceiptPagedRequestCommand) ([]models.Receipt, int64, error) {
 	db := GetDB()
 	var receipts []models.Receipt
 	var count int64
@@ -199,7 +199,7 @@ func (repository ReceiptRepository) buildFilterQuery(runningQuery *gorm.DB, valu
 	return runningQuery
 }
 
-func (repository ReceiptRepository) isTrustedValue(pagedRequest commands.PagedRequestCommand) bool {
+func (repository ReceiptRepository) isTrustedValue(pagedRequest commands.ReceiptPagedRequestCommand) bool {
 	orderByTrusted := []interface{}{"date", "name", "paidBy", "amount", "categories", "tags", "status", "resolvedDate"}
 	directionTrusted := []interface{}{"asc", "desc", ""}
 

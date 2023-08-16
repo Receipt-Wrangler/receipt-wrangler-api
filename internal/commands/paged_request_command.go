@@ -8,11 +8,10 @@ import (
 )
 
 type PagedRequestCommand struct {
-	Page          int                `json:"page"`
-	PageSize      int                `json:"pageSize"`
-	OrderBy       string             `json:"orderBy"`
-	SortDirection string             `json:"sortDirection"`
-	Filter        PagedRequestFilter `json:"filter"`
+	Page          int    `json:"page"`
+	PageSize      int    `json:"pageSize"`
+	OrderBy       string `json:"orderBy"`
+	SortDirection string `json:"sortDirection"`
 }
 
 func (command *PagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -32,12 +31,16 @@ func (command *PagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r
 	command.PageSize = pagedRequestCommand.PageSize
 	command.OrderBy = pagedRequestCommand.OrderBy
 	command.SortDirection = pagedRequestCommand.SortDirection
-	command.Filter = pagedRequestCommand.Filter
 
 	return nil
 }
 
-type PagedRequestFilter struct {
+type ReceiptPagedRequestCommand struct {
+	PagedRequestCommand
+	Filter ReceiptPagedRequestFilter `json:"filter"`
+}
+
+type ReceiptPagedRequestFilter struct {
 	Date         PagedRequestField `json:"date"`
 	Amount       PagedRequestField `json:"amount"`
 	Name         PagedRequestField `json:"name"`

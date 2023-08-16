@@ -498,7 +498,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PagedRequestCommand"
+              $ref: "#/components/schemas/ReceiptPagedRequestCommand"
       parameters:
         - in: path
           name: groupId
@@ -1544,7 +1544,25 @@ components:
           items:
             $ref: integer
           description: Receipt ids to update
-    PagedRequestCommand:
+    PageRequestCommand:
+      required:
+        - page
+        - pageSize
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Page number
+        pageSize:
+          type: integer
+          description: Number of records per page
+        orderBy:
+          type: string
+          description: field to order on
+        sortDirection:
+          type: string
+          enum: *SORTDIRECTION
+    ReceiptPagedRequestCommand:
       required:
         - page
         - pageSize
@@ -1563,8 +1581,8 @@ components:
           type: string
           enum: *SORTDIRECTION
         filter:
-          $ref: "#/components/schemas/PagedRequestFilter"
-    PagedRequestFilter:
+          $ref: "#/components/schemas/ReceiptPagedRequestFilter"
+    ReceiptPagedRequestFilter:
       type: object
       properties:
         date:

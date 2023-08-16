@@ -50,7 +50,8 @@ func SetReceiptGroupId(next http.Handler) http.Handler {
 		id := chi.URLParam(r, "id")
 		errMsg := "Error accessing receipt."
 
-		groupId, err := repositories.GetReceiptGroupIdByReceiptId(id)
+		receiptRepository := repositories.NewReceiptRepository(nil)
+		groupId, err := receiptRepository.GetReceiptGroupIdByReceiptId(id)
 		if err != nil {
 			middleware_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)

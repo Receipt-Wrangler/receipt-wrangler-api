@@ -30,7 +30,8 @@ func SetReceiptImageData(next http.Handler) http.Handler {
 			return
 		}
 
-		receipt, err := repositories.GetReceiptById(simpleutils.UintToString(fileData.ReceiptId))
+		receiptRepository := repositories.NewReceiptRepository(nil)
+		receipt, err := receiptRepository.GetReceiptById(simpleutils.UintToString(fileData.ReceiptId))
 		if err != nil {
 			utils.WriteErrorResponse(w, marshalErr, 500)
 			return

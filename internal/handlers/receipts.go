@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -34,7 +33,8 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 
 			token := utils.GetJWT(r)
 
-			receipts, count, err := repositories.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			receipts, count, err := receiptRepository.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -99,7 +99,8 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 				// 	return http.StatusForbidden, errors.New("not allowed to access group")
 				// }
 
-				receipts, err = repositories.GetReceiptsByGroupIds(groupIds, "*", clause.Associations)
+				receiptRepository := repositories.NewReceiptRepository(nil)
+				receipts, err = receiptRepository.GetReceiptsByGroupIds(groupIds, "*", clause.Associations)
 			}
 
 			if err != nil {
@@ -128,39 +129,98 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := repositories.GetDB()
 			token := utils.GetJWT(r)
-			notificationRepository := repositories.NewNotificationRepository(nil)
+			receiptRepository := repositories.NewReceiptRepository(nil)
 
 			bodyData := r.Context().Value("receipt").(models.Receipt)
-			bodyData.CreatedBy = &token.UserId
-
-			err := db.Transaction(func(tx *gorm.DB) error {
-				notificationRepository.TX = tx
-				err := tx.Model(models.Receipt{}).Select("*").Create(&bodyData).Error
-				if err != nil {
-					return err
-				}
-
-				var userIdsToOmit []interface{} = make([]interface{}, 1)
-				userIdsToOmit = append(userIdsToOmit, *bodyData.CreatedBy)
-
-				notificationBody := fmt.Sprintf("A receipt has been added in the group %s. Check it out! %s", repositories.BuildParamaterisedString("groupId", bodyData.GroupId, "name", "string"), repositories.BuildParamaterisedString("receiptId", bodyData.ID, "", "link"))
-				notificationRepository.SendNotificationToGroup(bodyData.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
-
-				return nil
-			})
-
+			createdReceipt, err := receiptRepository.CreateReceipt(bodyData, token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			bytes, err := json.Marshal(bodyData)
+			bytes, err := json.Marshal(createdReceipt)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
 			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func QuickScan(w http.ResponseWriter, r *http.Request) {
+	groupId := ""
+	handler := structs.Handler{
+		ErrorMessage: "Error processing quick scan.",
+		Writer:       w,
+		Request:      r,
+		GroupRole:    models.EDITOR,
+		GroupId:      groupId,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			var quickScanCommand commands.QuickScanCommand
+			var createdReceipt models.Receipt
+			db := repositories.GetDB()
+
+			vErr, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			groupId = simpleutils.UintToString(quickScanCommand.GroupId)
+
+			if len(vErr.Errors) > 0 {
+				utils.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
+				return http.StatusInternalServerError, errors.New("validation error")
+			}
+
+			magicFillCommand := commands.MagicFillCommand{
+				ImageData: quickScanCommand.ImageData,
+				Filename:  quickScanCommand.Name,
+			}
+
+			token := utils.GetJWT(r)
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			receiptImageRepository := repositories.NewReceiptImageRepository(nil)
+
+			receipt, err := services.MagicFillFromImage(magicFillCommand)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			receipt.PaidByUserID = quickScanCommand.PaidByUserId
+			receipt.Status = models.ReceiptStatus(quickScanCommand.Status)
+			receipt.GroupId = quickScanCommand.GroupId
+
+			db.Transaction(func(tx *gorm.DB) error {
+				receiptRepository.SetTransaction(tx)
+				receiptImageRepository.SetTransaction(tx)
+
+				createdReceipt, err = receiptRepository.CreateReceipt(receipt, token.UserId)
+				if err != nil {
+					return err
+				}
+
+				quickScanCommand.FileData.ReceiptId = createdReceipt.ID
+				_, err := receiptImageRepository.CreateReceiptImage(quickScanCommand.FileData)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
+
+			bytes, err := utils.MarshalResponseData(createdReceipt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
 			return 0, nil
@@ -349,7 +409,8 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			newReceipt := models.Receipt{}
 
 			receiptId := chi.URLParam(r, "id")
-			receipt, err := repositories.GetFullyLoadedReceiptById(receiptId)
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			receipt, err := receiptRepository.GetFullyLoadedReceiptById(receiptId)
 
 			if err != nil {
 				return http.StatusInternalServerError, err

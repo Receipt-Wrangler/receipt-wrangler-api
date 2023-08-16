@@ -55,26 +55,6 @@ func (repository ReceiptRepository) CreateReceipt(receipt models.Receipt, create
 	return receipt, nil
 }
 
-func (repository ReceiptRepository) PaginateReceipts(pagedRequest commands.PagedRequestCommand) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		page := pagedRequest.Page
-		if page <= 0 {
-			page = 1
-		}
-
-		pageSize := pagedRequest.PageSize
-		switch {
-		case pageSize > 100:
-			pageSize = 100
-		case pageSize <= 0:
-			pageSize = 10
-		}
-
-		offset := (page - 1) * pageSize
-		return db.Offset(offset).Limit(pageSize)
-	}
-}
-
 func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Receipt, error) {
 	db := GetDB()
 	var receipt models.Receipt
@@ -181,7 +161,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 		return nil, 0, err
 	}
 
-	query = query.Scopes(repository.PaginateReceipts(pagedRequest)).Preload("Tags").Preload("Categories")
+	query = query.Scopes(repository.Paginate(pagedRequest.Page, pagedRequest.PageSize)).Preload("Tags").Preload("Categories")
 
 	// Run Query
 	err = query.Find(&receipts).Error

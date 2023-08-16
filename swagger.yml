@@ -73,6 +73,22 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+    post:
+      tags:
+        - Category
+      summary: Get paged categories
+      description: This will return paged categories
+      operationId: getPagedCategories
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /comment/:
     post:
       tags:

@@ -33,7 +33,7 @@ func DirectoryExists(dir string, createIfNotExist bool) error {
 		}
 	}
 
-	if !errors.Is(err, os.ErrNotExist) {
+	if errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 

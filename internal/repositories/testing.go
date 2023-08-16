@@ -92,6 +92,16 @@ func CreateTestGroupWithUsers() {
 	db.Model(models.GroupMember{}).Create(&groupMember3)
 }
 
+func TruncateTestDb() {
+	db := GetDB()
+	TruncateTable(db, "notifications")
+	TruncateTable(db, "comments")
+	TruncateTable(db, "receipts")
+	TruncateTable(db, "group_members")
+	TruncateTable(db, "groups")
+	TruncateTable(db, "users")
+}
+
 func RemoveTestDb() {
 	os.Remove("./test.db")
 }

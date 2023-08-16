@@ -38,10 +38,7 @@ func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {
 				return err
 			}
 
-			err = os.Rename(oldGroupPath, newGroupPath)
-			if err != nil {
-				return err
-			}
+			os.Rename(oldGroupPath, newGroupPath)
 		}
 	}
 

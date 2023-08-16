@@ -1,6 +1,11 @@
 package commands
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"net/http"
+	"receipt-wrangler/api/internal/utils"
+)
 
 type PagedRequestCommand struct {
 	Page          int                `json:"page"`
@@ -8,6 +13,28 @@ type PagedRequestCommand struct {
 	OrderBy       string             `json:"orderBy"`
 	SortDirection string             `json:"sortDirection"`
 	Filter        PagedRequestFilter `json:"filter"`
+}
+
+func (command *PagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
+	pagedRequestCommand := PagedRequestCommand{}
+
+	bytes, err := utils.GetBodyData(w, r)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &pagedRequestCommand)
+	if err != nil {
+		return err
+	}
+
+	command.Page = pagedRequestCommand.Page
+	command.PageSize = pagedRequestCommand.PageSize
+	command.OrderBy = pagedRequestCommand.OrderBy
+	command.SortDirection = pagedRequestCommand.SortDirection
+	command.Filter = pagedRequestCommand.Filter
+
+	return nil
 }
 
 type PagedRequestFilter struct {
@@ -20,7 +47,6 @@ type PagedRequestFilter struct {
 	Status       PagedRequestField `json:"status"`
 	ResolvedDate PagedRequestField `json:"ResolvedDate"`
 }
-
 
 type PagedRequestField struct {
 	Operation FilterOperation `json:"operation"`

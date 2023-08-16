@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 
 	"gorm.io/gorm"
@@ -23,6 +24,21 @@ func (repository CategoryRepository) GetAllCategories(querySelect string) ([]mod
 	var categories []models.Category
 
 	err := db.Table("categories").Select(querySelect).Find(&categories).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return categories, nil
+}
+
+func (repository CategoryRepository) GetAllPagedCategories(pagedRequestCommand commands.PagedRequestCommand) ([]models.Category, error) {
+	db := repository.GetDB()
+	var categories []models.Category
+
+	query := db.Table("categories").Select("*")
+	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
+
+	err := query.Scan(&categories).Error
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,7 @@ import (
 )
 
 func HandleRequest(handler structs.Handler) {
-	errCode, err := handler.HandlerFunction(handler.Writer, handler.Request)
+
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		token := utils.GetJWT(handler.Request)
 		err := services.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, simpleutils.UintToString(token.UserId))
@@ -20,6 +20,9 @@ func HandleRequest(handler structs.Handler) {
 			return
 		}
 	}
+
+	errCode, err := handler.HandlerFunction(handler.Writer, handler.Request)
+
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(handler.Writer, handler.ErrorMessage, errCode)

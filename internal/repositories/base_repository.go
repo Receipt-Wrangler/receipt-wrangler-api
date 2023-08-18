@@ -42,3 +42,7 @@ func (repository BaseRepository) Paginate(page int, pageSize int) func(db *gorm.
 		return db.Offset(offset).Limit(pageSize)
 	}
 }
+
+func (repository BaseRepository) Sort(db *gorm.DB, orderBy string, sortDirection string) *gorm.DB {
+	return db.Order(orderBy + " " + sortDirection)
+}

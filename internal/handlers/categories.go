@@ -65,6 +65,14 @@ func GetPagedCategories(w http.ResponseWriter, r *http.Request) {
 			pagedData.Data = anyData
 			pagedData.TotalCount = int64(len(anyData))
 
+			bytes, err := utils.MarshalResponseData(pagedData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
 			return 0, nil
 		},
 	}

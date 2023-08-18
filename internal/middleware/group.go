@@ -46,7 +46,7 @@ func BulkValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Ha
 	mw = func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			errMsg := "Unauthorized access to entity."
-			groupMap := utils.BuildGroupMap()
+			groupMap := models.BuildGroupMap()
 			groupIds := r.Context().Value("groupIds").([]string)
 
 			if len(groupIds) > 0 {

@@ -49,3 +49,14 @@ func (repository CategoryRepository) GetAllPagedCategories(pagedRequestCommand c
 
 	return categories, nil
 }
+
+func (repository CategoryRepository) UpdateCategory(categoryToUpdate models.Category, querySelect string) (models.Category, error) {
+	db := repository.GetDB()
+
+	err := db.Model(models.Category{}).Select(querySelect).Updates(&categoryToUpdate).Error
+	if err != nil {
+		return models.Category{}, err
+	}
+
+	return categoryToUpdate, nil
+}

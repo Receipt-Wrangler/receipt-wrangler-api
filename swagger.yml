@@ -54,6 +54,30 @@ definitions:
       - desc
       - ""
 paths:
+  /category/getPagedCategories:
+    post:
+      tags:
+        - Category
+      summary: Get paged categories
+      description: This will return paged categories
+      operationId: getPagedCategories
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /category/:
     get:
       tags:
@@ -69,22 +93,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Category"
-        500:
-          $ref: "#/components/responses/Internal"
-      security:
-        - bearerAuth: []
-    post:
-      tags:
-        - Category
-      summary: Get paged categories
-      description: This will return paged categories
-      operationId: getPagedCategories
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PagedData"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -994,10 +1002,32 @@ components:
           x-go-name: Name
         updatedAt:
           type: string
-
           x-go-name: UpdatedAt
       description: Category to relate receipts to
-      x-go-package: receipt-wrangler/api/internal/models
+    CategoryView:
+      required:
+        - id
+        - name
+        - numberOfReceipts
+      type: object
+      properties:
+        createdAt:
+          type: string
+        createdBy:
+          type: integer
+          format: uint64
+        id:
+          type: integer
+          format: uint64
+        name:
+          type: string
+          description: Name of the category
+        updatedAt:
+          type: string
+        numberOfReceipts:
+          type: int
+          description: Number of receipts associated with this category
+      description: Category to relate receipts to
     Comment:
       required:
         - comment
@@ -1560,7 +1590,7 @@ components:
           items:
             $ref: integer
           description: Receipt ids to update
-    PageRequestCommand:
+    PagedRequestCommand:
       required:
         - page
         - pageSize

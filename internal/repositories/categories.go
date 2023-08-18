@@ -31,12 +31,16 @@ func (repository CategoryRepository) GetAllCategories(querySelect string) ([]mod
 	return categories, nil
 }
 
-func (repository CategoryRepository) GetAllPagedCategories(pagedRequestCommand commands.PagedRequestCommand) ([]models.Category, error) {
+func (repository CategoryRepository) GetAllPagedCategories(pagedRequestCommand commands.PagedRequestCommand) ([]models.CategoryView, error) {
 	db := repository.GetDB()
-	var categories []models.Category
+	var categories []models.CategoryView
 
-	query := db.Table("categories").Select("*")
+	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
+	query = query.Table("receipt_categories").
+		Select("*, COUNT(DISTINCT receipt_categories.receipt_id) as NumberOfReceipts").
+		Joins("JOIN categories ON receipt_categories.category_id = categories.id").
+		Group("receipt_categories.category_id, categories.name")
 
 	err := query.Scan(&categories).Error
 	if err != nil {

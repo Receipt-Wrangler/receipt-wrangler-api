@@ -983,23 +983,18 @@ components:
       properties:
         createdAt:
           type: string
-
-          x-go-name: CreatedAt
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         id:
           type: integer
           format: uint64
-          x-go-name: ID
         name:
           type: string
-          description: |-
-            Name of the category
-
-            required: ture
-          x-go-name: Name
+          description: Name of the category
+        description:
+          type: string
+          description: Description of the category
         updatedAt:
           type: string
           x-go-name: UpdatedAt
@@ -1022,6 +1017,9 @@ components:
         name:
           type: string
           description: Name of the category
+        description:
+          type: string
+          description: Description of the category
         updatedAt:
           type: string
         numberOfReceipts:

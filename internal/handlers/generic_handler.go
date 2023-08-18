@@ -11,7 +11,7 @@ import (
 
 func HandleRequest(handler structs.Handler) {
 
-	token := utils.GetJWT(handler.Request)
+	token := structs.GetJWT(handler.Request)
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		err := services.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, simpleutils.UintToString(token.UserId))
 		if err != nil {

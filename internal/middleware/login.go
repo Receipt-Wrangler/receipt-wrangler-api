@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/utils"
 )
 
 func ValidateLoginData(next http.Handler) http.Handler {
@@ -24,7 +23,7 @@ func ValidateLoginData(next http.Handler) http.Handler {
 
 		if len(err.Errors) > 0 {
 			middleware_logger.Print(err.Errors, r)
-			utils.WriteValidatorErrorResponse(w, err, http.StatusBadRequest)
+			structs.WriteValidatorErrorResponse(w, err, http.StatusBadRequest)
 			return
 		}
 

@@ -13,7 +13,7 @@ import (
 func ValidateComment(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		comment := r.Context().Value("comment").(models.Comment)
-		token := utils.GetJWT(r)
+		token := structs.GetJWT(r)
 
 		vErr := structs.ValidatorError{
 			Errors: make(map[string]string),
@@ -29,7 +29,7 @@ func ValidateComment(next http.Handler) http.Handler {
 		}
 
 		if len(vErr.Errors) > 0 {
-			utils.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+			structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
 			return
 		}
 
@@ -43,7 +43,7 @@ func CanDeleteComment(next http.Handler) http.Handler {
 
 		db := repositories.GetDB()
 		commentId := chi.URLParam(r, "commentId")
-		token := utils.GetJWT(r)
+		token := structs.GetJWT(r)
 
 		err := db.Model(models.Comment{}).Where("id = ?", commentId).Select("user_id").Find(&comment).Error
 		if err != nil {

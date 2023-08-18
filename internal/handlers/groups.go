@@ -15,7 +15,7 @@ import (
 
 func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error retrieving groups."
-	token := utils.GetJWT(r)
+	token := structs.GetJWT(r)
 
 	groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
 	if err != nil {
@@ -67,7 +67,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 			group := r.Context().Value("group").(models.Group)
 
 			groupRepository := repositories.NewGroupRepository(nil)

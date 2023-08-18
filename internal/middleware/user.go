@@ -101,7 +101,7 @@ func ValidateUserData(roleRequired bool) (mw func(http.Handler) http.Handler) {
 			}
 
 			if len(err.Errors) > 0 {
-				utils.WriteValidatorErrorResponse(w, err, http.StatusBadRequest)
+				structs.WriteValidatorErrorResponse(w, err, http.StatusBadRequest)
 				return
 			}
 

@@ -6,6 +6,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/go-chi/chi/v5"
@@ -25,7 +26,7 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 			errMsg := "Unauthorized access to entity."
 
 			if len(groupId) > 0 {
-				token := utils.GetJWT(r)
+				token := structs.GetJWT(r)
 
 				err := services.ValidateGroupRole(role, groupId, simpleutils.UintToString(token.UserId))
 
@@ -50,7 +51,7 @@ func BulkValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Ha
 			groupIds := r.Context().Value("groupIds").([]string)
 
 			if len(groupIds) > 0 {
-				token := utils.GetJWT(r)
+				token := structs.GetJWT(r)
 				for i := 0; i < len(groupIds); i++ {
 					groupId := groupIds[i]
 
@@ -80,7 +81,7 @@ func BulkValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Ha
 
 func CanDeleteGroup(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := utils.GetJWT(r)
+		token := structs.GetJWT(r)
 		errMsg := "User must be a part of at least one group."
 
 		groupMemberRepository := repositories.NewGroupMemberRepository(nil)

@@ -58,8 +58,8 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 				ctx = context.WithValue(ctx, "receiptIds", bulkResolve.ReceiptIds)
 				serveWithContext(r, w, h, ctx)
 
-			case commands.PagedRequestCommand:
-				var pagedRequest commands.PagedRequestCommand
+			case commands.ReceiptPagedRequestCommand:
+				var pagedRequest commands.ReceiptPagedRequestCommand
 				err = json.Unmarshal(bodyData, &pagedRequest)
 
 				shouldReturn := checkError(err, w)

@@ -1,16 +1,46 @@
 package commands
 
-import "database/sql/driver"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"net/http"
+	"receipt-wrangler/api/internal/utils"
+)
 
 type PagedRequestCommand struct {
-	Page          int                `json:"page"`
-	PageSize      int                `json:"pageSize"`
-	OrderBy       string             `json:"orderBy"`
-	SortDirection string             `json:"sortDirection"`
-	Filter        PagedRequestFilter `json:"filter"`
+	Page          int    `json:"page"`
+	PageSize      int    `json:"pageSize"`
+	OrderBy       string `json:"orderBy"`
+	SortDirection string `json:"sortDirection"`
 }
 
-type PagedRequestFilter struct {
+func (command *PagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
+	pagedRequestCommand := PagedRequestCommand{}
+
+	bytes, err := utils.GetBodyData(w, r)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &pagedRequestCommand)
+	if err != nil {
+		return err
+	}
+
+	command.Page = pagedRequestCommand.Page
+	command.PageSize = pagedRequestCommand.PageSize
+	command.OrderBy = pagedRequestCommand.OrderBy
+	command.SortDirection = pagedRequestCommand.SortDirection
+
+	return nil
+}
+
+type ReceiptPagedRequestCommand struct {
+	PagedRequestCommand
+	Filter ReceiptPagedRequestFilter `json:"filter"`
+}
+
+type ReceiptPagedRequestFilter struct {
 	Date         PagedRequestField `json:"date"`
 	Amount       PagedRequestField `json:"amount"`
 	Name         PagedRequestField `json:"name"`
@@ -20,7 +50,6 @@ type PagedRequestFilter struct {
 	Status       PagedRequestField `json:"status"`
 	ResolvedDate PagedRequestField `json:"ResolvedDate"`
 }
-
 
 type PagedRequestField struct {
 	Operation FilterOperation `json:"operation"`

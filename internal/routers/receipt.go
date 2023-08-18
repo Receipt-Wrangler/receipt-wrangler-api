@@ -15,7 +15,7 @@ func BuildReceiptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	receiptRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceipt)
 	receiptRouter.With(middleware.SetReceiptBodyData, middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
-	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", commands.PagedRequestCommand{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)
+	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", commands.ReceiptPagedRequestCommand{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)
 	receiptRouter.With(middleware.SetGeneralBodyData("BulkStatusUpdateCommand", commands.BulkStatusUpdateCommand{}), middleware.SetReceiptGroupIds, middleware.BulkValidateGroupRole(models.EDITOR)).Post("/bulkStatusUpdate", handlers.BulkReceiptStatusUpdate)
 	receiptRouter.With(middleware.SetReceiptBodyData, middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Post("/", handlers.CreateReceipt)
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.EDITOR)).Post("/{id}/duplicate", handlers.DuplicateReceipt)

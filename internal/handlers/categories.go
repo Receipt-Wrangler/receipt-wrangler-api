@@ -126,3 +126,28 @@ func UpdateCategory(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting category",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "categoryId")
+
+			categoryRepository := repositories.NewCategoryRepository(nil)
+			err := categoryRepository.DeleteCategory(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

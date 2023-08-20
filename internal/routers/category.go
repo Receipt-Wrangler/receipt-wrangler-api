@@ -15,6 +15,7 @@ func BuildCategoryRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 
 	categoryRouter.Get("/", handlers.GetAllCategories)
 	categoryRouter.Put("/{categoryId}", handlers.UpdateCategory)
+	categoryRouter.Delete("/{categoryId}", handlers.DeleteCategory)
 	categoryRouter.Post("/getPagedCategories", handlers.GetPagedCategories)
 
 	return categoryRouter

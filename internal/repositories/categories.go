@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 
@@ -59,4 +60,28 @@ func (repository CategoryRepository) UpdateCategory(categoryToUpdate models.Cate
 	}
 
 	return categoryToUpdate, nil
+}
+
+func (repository CategoryRepository) DeleteCategory(categoryId string) error {
+	db := repository.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		query := fmt.Sprintf("DELETE FROM receipt_categories WHERE category_id = %s", categoryId)
+		err := db.Exec(query).Error
+		if err != nil {
+			return err
+		}
+
+		err = db.Where("id = ?", categoryId).Delete(&models.Category{}).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

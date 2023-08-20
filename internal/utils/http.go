@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"receipt-wrangler/api/internal/structs"
 )
 
 var errKey = "errorMsg"
@@ -34,16 +33,6 @@ func WriteCustomErrorResponse(w http.ResponseWriter, msg string, responseCode in
 	bytes, marshalErr := json.Marshal(errMap)
 	if marshalErr != nil {
 		WriteErrorResponse(w, marshalErr, 500)
-	}
-
-	w.WriteHeader(responseCode)
-	w.Write(bytes)
-}
-
-func WriteValidatorErrorResponse(w http.ResponseWriter, err structs.ValidatorError, responseCode int) {
-	bytes, marshalErr := json.Marshal(err.Errors)
-	if marshalErr != nil {
-		WriteErrorResponse(w, marshalErr, responseCode)
 	}
 
 	w.WriteHeader(responseCode)

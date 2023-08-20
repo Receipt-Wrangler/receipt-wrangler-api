@@ -108,7 +108,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			var itemsOwed []ItemView
 			var itemsOthersOwe []ItemView
 			total := decimal.NewFromInt(0)
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 			id := token.UserId
 			resultMap := make(map[uint]decimal.Decimal)
 			totalReceiptIds := make([]uint, 0)
@@ -312,7 +312,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 			if simpleutils.UintToString(token.UserId) == id {
 				return 500, errors.New("user cannot delete itself")
 			}
@@ -337,7 +337,7 @@ func GetClaimsForLoggedInUser(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 			services.PrepareAccessTokenClaims(*token)
 
 			bytes, err := utils.MarshalResponseData(token)
@@ -362,7 +362,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 			db := repositories.GetDB()
 			updateProfileCommand := r.Context().Value("updateProfileCommand").(commands.UpdateProfileCommand)
 

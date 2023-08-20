@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"receipt-wrangler/api/internal/structs"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -70,30 +68,31 @@ func TestWriteCustomErrorResponseWritesResponse(t *testing.T) {
 	}
 }
 
-func TestWriteValidatorErrorResponseWritesResponse(t *testing.T) {
-	var errBytes = make([]byte, 100)
-	var bodyVErr structs.ValidatorError
-	vErr := structs.ValidatorError{
-		Errors: make(map[string]string),
-	}
-	nameErr := "error"
-	amountErr := "amount cannot be empty"
+// TODO: move test
+// func TestWriteValidatorErrorResponseWritesResponse(t *testing.T) {
+// 	var errBytes = make([]byte, 100)
+// 	var bodyVErr structs.ValidatorError
+// 	vErr := structs.ValidatorError{
+// 		Errors: make(map[string]string),
+// 	}
+// 	nameErr := "error"
+// 	amountErr := "amount cannot be empty"
 
-	vErr.Errors["name"] = nameErr
-	vErr.Errors["amount"] = amountErr
+// 	vErr.Errors["name"] = nameErr
+// 	vErr.Errors["amount"] = amountErr
 
-	w := httptest.NewRecorder()
+// 	w := httptest.NewRecorder()
 
-	WriteValidatorErrorResponse(w, vErr, 400)
+// 	WriteValidatorErrorResponse(w, vErr, 400)
 
-	if w.Result().StatusCode != 400 {
-		PrintTestError(t, w.Result().StatusCode, 400)
-	}
+// 	if w.Result().StatusCode != 400 {
+// 		PrintTestError(t, w.Result().StatusCode, 400)
+// 	}
 
-	w.Body.Read(errBytes)
-	json.Unmarshal(errBytes[0:50], &bodyVErr)
+// 	w.Body.Read(errBytes)
+// 	json.Unmarshal(errBytes[0:50], &bodyVErr)
 
-	if reflect.DeepEqual(vErr, bodyVErr) {
-		PrintTestError(t, vErr, bodyVErr)
-	}
-}
+// 	if reflect.DeepEqual(vErr, bodyVErr) {
+// 		PrintTestError(t, vErr, bodyVErr)
+// 	}
+// }

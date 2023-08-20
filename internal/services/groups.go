@@ -5,7 +5,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
-	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -76,7 +75,7 @@ func DeleteGroup(groupId string) error {
 }
 
 func ValidateGroupRole(role models.GroupRole, groupId string, userId string) error {
-	groupMap := utils.BuildGroupMap()
+	groupMap := models.BuildGroupMap()
 
 	groupMemberRepository := repositories.NewGroupMemberRepository(nil)
 	groupMember, err := groupMemberRepository.GetGroupMemberByUserIdAndGroupId(userId, groupId)

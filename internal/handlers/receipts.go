@@ -31,7 +31,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 			pagedRequest := r.Context().Value("pagedRequest").(commands.ReceiptPagedRequestCommand)
 			pagedData := structs.PagedData{}
 
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 
 			receiptRepository := repositories.NewReceiptRepository(nil)
 			receipts, count, err := receiptRepository.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest)
@@ -73,7 +73,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 			var receipts []models.Receipt
 			var groupIds []string
 
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 
 			r.ParseForm()
 
@@ -129,7 +129,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 			receiptRepository := repositories.NewReceiptRepository(nil)
 
 			bodyData := r.Context().Value("receipt").(models.Receipt)
@@ -175,7 +175,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 			groupId = simpleutils.UintToString(quickScanCommand.GroupId)
 
 			if len(vErr.Errors) > 0 {
-				utils.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
 				return http.StatusInternalServerError, errors.New("validation error")
 			}
 
@@ -184,7 +184,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 				Filename:  quickScanCommand.Name,
 			}
 
-			token := utils.GetJWT(r)
+			token := structs.GetJWT(r)
 			receiptRepository := repositories.NewReceiptRepository(nil)
 			receiptImageRepository := repositories.NewReceiptImageRepository(nil)
 
@@ -345,7 +345,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if len(bulkResolve.Comment) > 0 {
-					token := utils.GetJWT(r)
+					token := structs.GetJWT(r)
 					comments := make([]models.Comment, len(bulkResolve.ReceiptIds))
 
 					for i := 0; i < len(bulkResolve.ReceiptIds); i++ {

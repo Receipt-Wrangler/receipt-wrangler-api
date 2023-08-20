@@ -11,12 +11,21 @@ import (
 
 func HandleRequest(handler structs.Handler) {
 
+	token := structs.GetJWT(handler.Request)
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
-		token := utils.GetJWT(handler.Request)
 		err := services.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, simpleutils.UintToString(token.UserId))
 		if err != nil {
 			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
+			return
+		}
+	}
+
+	if len(handler.UserRole) > 0 {
+		hasUserRole := models.HasRole(handler.UserRole, token.UserRole)
+		if !hasUserRole {
+			handler_logger.Print("User is unauthorized to perform this action.")
+			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to perform this action.", http.StatusForbidden)
 			return
 		}
 	}

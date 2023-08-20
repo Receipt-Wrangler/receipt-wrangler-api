@@ -89,7 +89,7 @@ func SetReceiptGroupIds(next http.Handler) http.Handler {
 
 func ValidateReceipt(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := utils.GetJWT(r)
+		token := structs.GetJWT(r)
 		err := structs.ValidatorError{
 			Errors: make(map[string]string),
 		}
@@ -149,7 +149,7 @@ func ValidateReceipt(next http.Handler) http.Handler {
 
 		if len(err.Errors) > 0 {
 			middleware_logger.Print(err.Errors, r)
-			utils.WriteValidatorErrorResponse(w, err, 400)
+			structs.WriteValidatorErrorResponse(w, err, 400)
 			return
 		}
 

@@ -97,6 +97,47 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /category/{categoryId}:
+    parameters:
+      - in: path
+        name: categoryId
+        schema:
+          type: integer
+        required: true
+        description: Category Id to get
+    put:
+      tags:
+        - Category
+      summary: Update category
+      description: This will update a category
+      operationId: updateCategory
+      requestBody:
+        description: Category to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Category"
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - Category
+      summary: Delete category
+      description: This will delete a category by id
+      operationId: deleteCategory
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /comment/:
     post:
       tags:
@@ -983,23 +1024,18 @@ components:
       properties:
         createdAt:
           type: string
-
-          x-go-name: CreatedAt
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         id:
           type: integer
           format: uint64
-          x-go-name: ID
         name:
           type: string
-          description: |-
-            Name of the category
-
-            required: ture
-          x-go-name: Name
+          description: Name of the category
+        description:
+          type: string
+          description: Description of the category
         updatedAt:
           type: string
           x-go-name: UpdatedAt
@@ -1022,6 +1058,9 @@ components:
         name:
           type: string
           description: Name of the category
+        description:
+          type: string
+          description: Description of the category
         updatedAt:
           type: string
         numberOfReceipts:

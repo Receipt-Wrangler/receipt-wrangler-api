@@ -187,7 +187,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateReceiptImageAccess(r *http.Request, groupRole models.GroupRole, receiptImageId string) (int, error) {
-	token := utils.GetJWT(r)
+	token := structs.GetJWT(r)
 	receiptImageIdUint, err := simpleutils.StringToUint(receiptImageId)
 	if err != nil {
 		return http.StatusInternalServerError, err

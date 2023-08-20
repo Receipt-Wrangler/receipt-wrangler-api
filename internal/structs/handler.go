@@ -10,7 +10,8 @@ type Handler struct {
 	Writer          http.ResponseWriter
 	Request         *http.Request
 	GroupRole       models.GroupRole
-	GroupId					string
+	GroupId         string
+	UserRole        models.UserRole
 	HandlerFunction func(http.ResponseWriter, *http.Request) (int, error)
 	ResponseType    string
 }

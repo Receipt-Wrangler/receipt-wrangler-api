@@ -84,7 +84,7 @@ func getPrompt(ocrText string) (string, error) {
 		Categories: categories,
 		Tags: tags
 	}
-
+	If a store name cannot be confidently found, use 'Default store name' as the default name.
 	Omit any value if not found with confidence. Assume the date is in the year %s if not provided, and assume time values are empty. The amount must be a float or integer.
 
 	Choose up to 2 categories from the given list based on the receipt's items and store name. If none fit, omit the result. Select only the id, like:
@@ -92,7 +92,7 @@ func getPrompt(ocrText string) (string, error) {
 		Id: category id
 	}
 
-	Emphasize the relationship between the category and the receipt.
+	Emphasize the relationship between the category and the receipt, and use the description of the category to fine tune the results. Do not return categories that have an empty name or do not exist.
 
 	Categories: %s
 
@@ -108,7 +108,7 @@ func getPrompt(ocrText string) (string, error) {
 
 func getCategoriesString() (string, error) {
 	categoryRepository := repositories.NewCategoryRepository(nil)
-	categories, err := categoryRepository.GetAllCategories("id, name")
+	categories, err := categoryRepository.GetAllCategories("id, name, description")
 	if err != nil {
 		return "", err
 	}

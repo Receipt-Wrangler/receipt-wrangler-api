@@ -97,6 +97,26 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+    post:
+      tags:
+        - Category
+      summary: Create category
+      description: This will create a category
+      operationId: createCategory
+      requestBody:
+        description: Category to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Category"
+      responses:
+        200:
+          $ref: "#/components/schemas/Category"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /category/{categoryId}:
     parameters:
       - in: path

@@ -32,6 +32,17 @@ func (repository CategoryRepository) GetAllCategories(querySelect string) ([]mod
 	return categories, nil
 }
 
+func (repository CategoryRepository) CreateCategory(category models.Category) (models.Category, error) {
+	db := repository.GetDB()
+
+	err := db.Model(&category).Create(&category).Error
+	if err != nil {
+		return models.Category{}, err
+	}
+
+	return category, nil
+}
+
 func (repository CategoryRepository) GetAllPagedCategories(pagedRequestCommand commands.PagedRequestCommand) ([]models.CategoryView, error) {
 	db := repository.GetDB()
 	var categories []models.CategoryView

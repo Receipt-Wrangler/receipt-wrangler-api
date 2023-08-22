@@ -10,9 +10,9 @@ type UserPrefernces struct {
 	BaseModel
 	UserId                   uint          `gorm:"not null; uniqueIndex" json:"userId"`
 	User                     *User         `json:"-"`
-	QuickScanDefaultGroupId  *uint         `json:"quickScanDefaultGroup"`
+	QuickScanDefaultGroupId  *uint         `json:"quickScanDefaultGroupId"`
 	QuickScanDefaultGroup    *Group        `json:"-"`
-	QuickScanDefaultPaidById *uint         `json:"quickScanDefaultPaidBy"`
+	QuickScanDefaultPaidById *uint         `json:"quickScanDefaultPaidById"`
 	QuickScanDefaultPaidBy   *User         `json:"-"`
 	QuickScanDefaultStatus   ReceiptStatus `json:"quickScanDefaultStatus"`
 }

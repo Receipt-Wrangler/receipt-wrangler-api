@@ -13,6 +13,7 @@ func BuildUserPreferencesRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *ch
 	userPreferencesRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 
 	userPreferencesRouter.Get("/", handlers.GetUserPreferences)
+	userPreferencesRouter.Put("/", handlers.UpdateUserPreferences)
 
 	return userPreferencesRouter
 }

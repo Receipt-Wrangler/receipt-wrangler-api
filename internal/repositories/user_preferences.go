@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 
 	"gorm.io/gorm"
 )
@@ -19,7 +18,7 @@ func NewUserPreferencesRepository(tx *gorm.DB) UserPreferncesRepository {
 	return repository
 }
 
-func (repository UserPreferncesRepository) GetUserPreferencesOrCreate(userId string) (models.UserPrefernces, error) {
+func (repository UserPreferncesRepository) GetUserPreferencesOrCreate(userId uint) (models.UserPrefernces, error) {
 	db := repository.GetDB()
 	var userPreferences models.UserPrefernces
 
@@ -29,13 +28,12 @@ func (repository UserPreferncesRepository) GetUserPreferencesOrCreate(userId str
 	}
 
 	if userPreferences.ID == 0 {
-		uintUserId, err := simpleutils.StringToUint(userId)
 		if err != nil {
 			return models.UserPrefernces{}, err
 		}
 
 		userPreferencesToCreate := models.UserPrefernces{
-			UserId: uintUserId,
+			UserId: userId,
 		}
 
 		userPreferences, err = repository.CreateUserPreferences(userPreferencesToCreate)
@@ -51,6 +49,18 @@ func (repository UserPreferncesRepository) CreateUserPreferences(userPreferences
 	db := repository.GetDB()
 
 	err := db.Model(models.UserPrefernces{}).Create(&userPreferences).Error
+	if err != nil {
+		return models.UserPrefernces{}, err
+	}
+
+	return userPreferences, nil
+}
+
+func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, userPreferences models.UserPrefernces) (models.UserPrefernces, error) {
+	db := repository.GetDB()
+	update := map[string]interface{}{"quickScanDefaultGroupId": userPreferences.QuickScanDefaultGroupId, "quickScanDefaultPaidById": userPreferences.QuickScanDefaultPaidById, "quickScanDefaultStatus": userPreferences.QuickScanDefaultStatus}
+
+	err := db.Model(models.UserPrefernces{}).Where("user_id = ?", userId).Updates(&update).Error
 	if err != nil {
 		return models.UserPrefernces{}, err
 	}

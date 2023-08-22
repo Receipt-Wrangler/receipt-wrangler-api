@@ -54,6 +54,30 @@ definitions:
       - desc
       - ""
 paths:
+  /category/{categoryName}:
+    parameters:
+      - in: path
+        name: categoryName
+        schema:
+          type: string
+        required: true
+        description: Category name to get count of
+    get:
+      tags:
+        - Category
+      summary: Get category by name
+      description: This will return a category by name
+      operationId: getCategoryByName
+      responses:
+        200:
+          content:
+            text/plain:
+              schema:
+                type: integer
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /category/getPagedCategories:
     post:
       tags:

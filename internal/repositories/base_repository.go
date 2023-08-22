@@ -46,3 +46,11 @@ func (repository BaseRepository) Paginate(page int, pageSize int) func(db *gorm.
 func (repository BaseRepository) Sort(db *gorm.DB, orderBy string, sortDirection string) *gorm.DB {
 	return db.Order(orderBy + " " + sortDirection)
 }
+
+func (repository BaseRepository) GetCount(table string, queryWhere string) (int64, error) {
+	db := repository.GetDB()
+	var result int64
+	err := db.Table(table).Where(queryWhere).Count(&result).Error
+
+	return result, err
+}

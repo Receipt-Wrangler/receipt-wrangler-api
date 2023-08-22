@@ -17,6 +17,7 @@ import (
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/go-chi/chi/v5"
+	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
 func main() {
@@ -49,6 +50,9 @@ func main() {
 	repositories.MakeMigrations()
 
 	if config.GetFeatureConfig().AiPoweredReceipts {
+		imagick.Initialize()
+		defer imagick.Terminate()
+
 		tesseract.InitClient()
 		defer tesseract.GetClient().Close()
 

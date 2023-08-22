@@ -10,7 +10,7 @@ RUN mkdir config
 VOLUME /go/api/config
 
 # Install tesseract dependencies
-RUN ./set-up-tesseract-env.sh
+RUN ./set-up-dependencies.sh
 
 # Build api
 WORKDIR /go/api

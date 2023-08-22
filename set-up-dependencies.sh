@@ -20,3 +20,6 @@ apt-get install -y -qq libtesseract-dev libleptonica-dev
 
 # Make sure english is installed
 apt-get install -y -qq tesseract-ocr-eng
+
+# Install imageMagick
+apt-get install imagemagick libmagickwand-dev

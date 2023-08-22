@@ -2,7 +2,6 @@ package commands
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
@@ -70,7 +69,6 @@ func (command *QuickScanCommand) LoadDataFromRequestAndValidate(w http.ResponseW
 	}
 
 	vErr := command.Validate()
-	fmt.Println(command.Status)
 	if len(vErr.Errors) > 0 {
 		return vErr, nil
 	}

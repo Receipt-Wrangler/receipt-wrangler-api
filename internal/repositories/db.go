@@ -81,6 +81,7 @@ func MakeMigrations() {
 		&models.GroupMember{},
 		&models.Comment{},
 		&models.Notification{},
+		&models.UserPrefernces{},
 	)
 }
 

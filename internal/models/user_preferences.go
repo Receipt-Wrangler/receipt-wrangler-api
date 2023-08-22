@@ -8,6 +8,8 @@ import (
 
 type UserPrefernces struct {
 	BaseModel
+	UserId                   uint          `gorm:"not null; uniqueIndex" json:"userId"`
+	User                     *User         `json:"-"`
 	QuickScanDefaultGroupId  *uint         `json:"quickScanDefaultGroup"`
 	QuickScanDefaultGroup    *Group        `json:"-"`
 	QuickScanDefaultPaidById *uint         `json:"quickScanDefaultPaidBy"`

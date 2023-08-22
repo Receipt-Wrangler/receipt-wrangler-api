@@ -10,6 +10,9 @@ import (
 )
 
 func HandleRequest(handler structs.Handler) {
+	if len(handler.ResponseType) > 0 {
+		handler.Writer.Header().Set("Content-Type", handler.ResponseType)
+	}
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		token := structs.GetJWT(handler.Request)

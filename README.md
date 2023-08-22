@@ -6,7 +6,7 @@ To run the api for local development:
 
 1. Clone the repository
 2. Install GO on your OS. See https://go.dev/doc/install for more details
-3. Install tesseract dependencies. If you are running a debian derivative (recommended), run `sh set-up-tesseract-env-sudo.sh`, otherwise see https://github.com/otiai10/gosseract for other installation details.
+3. Install tesseract dependencies. If you are running a debian derivative (recommended), run `sudo sh set-up-tesseract-env.sh`, otherwise see https://github.com/otiai10/gosseract for other installation details.
 4. Install OpenAPI generator https://openapi-generator.tech/docs/installation (I personally use the jar installation)
 5. Set up a mariadb instance. The easiest way to do this is via docker. F.ex: `docker run --name receipt-wrangler-db -e MYSQL_ROOT_PASSWORD=123456 -e MYSQL_USER=wrangler -e MYSQL_PASSWORD=123456 -e MYSQL_DATABASE=wrangler -p 9001:3306  -d library/mariadb`
 6. Add a config.dev.json and a feature-config.dev.json, copy pasta the samples and modify as needed.

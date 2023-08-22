@@ -51,6 +51,6 @@ jobs:
         with:
           context: .
           platforms: linux/arm64/v8, linux/amd64
-          file: ./Dockerfile.linux_x64
+          file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:latest

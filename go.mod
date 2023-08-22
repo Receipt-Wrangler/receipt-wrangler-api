@@ -31,6 +31,7 @@ require (
 	github.com/sashabaranov/go-openai v1.14.1 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
+	gopkg.in/gographics/imagick.v2 v2.6.3 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gorm.io/driver/postgres v1.5.2 // indirect
 	modernc.org/libc v1.22.3 // indirect

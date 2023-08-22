@@ -54,6 +54,30 @@ definitions:
       - desc
       - ""
 paths:
+  /category/{categoryName}:
+    parameters:
+      - in: path
+        name: categoryName
+        schema:
+          type: string
+        required: true
+        description: Category name to get count of
+    get:
+      tags:
+        - Category
+      summary: Get category by name
+      description: This will return a category by name
+      operationId: getCategoryByName
+      responses:
+        200:
+          content:
+            text/plain:
+              schema:
+                type: integer
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /category/getPagedCategories:
     post:
       tags:
@@ -93,6 +117,26 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Category"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+    post:
+      tags:
+        - Category
+      summary: Create category
+      description: This will create a category
+      operationId: createCategory
+      requestBody:
+        description: Category to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Category"
+      responses:
+        200:
+          $ref: "#/components/schemas/Category"
         500:
           $ref: "#/components/responses/Internal"
       security:

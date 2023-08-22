@@ -67,3 +67,14 @@ func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, us
 
 	return userPreferences, nil
 }
+
+func (repository UserPreferncesRepository) DeleteUserPreferences(userId uint) error {
+	db := repository.GetDB()
+
+	err := db.Model(models.UserPrefernces{}).Delete("user_id = ?", userId).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -10,10 +10,16 @@ import (
 
 func DeleteUser(userId string) error {
 	db := repositories.GetDB()
+	uintUserId, err := simpleutils.StringToUint(userId)
+	if err != nil {
+		return err
+	}
 
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		var receipts []models.Receipt
 		var groupIdsToNotDelete []uint
+		notificationsRepository := repositories.NewNotificationRepository(tx)
+		userPreferncesRepository := repositories.NewUserPreferencesRepository(tx)
 
 		// Remove receipts that the user paid
 		txErr := tx.Model(models.Receipt{}).Where("paid_by_user_id = ?", userId).Select("id").Find(&receipts).Error
@@ -58,6 +64,18 @@ func DeleteUser(userId string) error {
 				return txErr
 			}
 
+		}
+
+		// Remove user's notifications
+		txErr = notificationsRepository.DeleteAllNotificationsForUser(uintUserId)
+		if txErr != nil {
+			return txErr
+		}
+
+		// Remove user's preferences
+		txErr = userPreferncesRepository.DeleteUserPreferences(uintUserId)
+		if txErr != nil {
+			return txErr
 		}
 
 		// Remove user

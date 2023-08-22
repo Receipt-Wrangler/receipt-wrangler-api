@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -178,6 +179,35 @@ func DeleteCategory(w http.ResponseWriter, r *http.Request) {
 			}
 
 			w.WriteHeader(200)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetCategoryNameCount(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting category count",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.TEXT_PLAIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			categoryRepository := repositories.NewCategoryRepository(nil)
+			categoryName := chi.URLParam(r, "categoryName")
+			count, err := categoryRepository.GetCount("categories", fmt.Sprintf("name = '%s'", categoryName))
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(count)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
 
 			return 0, nil
 		},

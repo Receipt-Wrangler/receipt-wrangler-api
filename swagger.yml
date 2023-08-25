@@ -1031,6 +1031,50 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /userPreferences:
+    get:
+      tags:
+        - UserPreferences
+      summary: Get user preferences
+      description:
+        This will return the user's preferences for the currently logged in
+        user [SYSTEM USER]
+      operationId: getUserPreferences
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferences"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+    put:
+      tags:
+        - UserPreferences
+      summary: Update user preferences
+      description:
+        This will update the user's preferences for the currently logged in
+        user [SYSTEM USER]
+      requestBody:
+        description: User preferences to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPreferences"
+      operationId: updateUserPreferences
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferences"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -1849,3 +1893,25 @@ components:
           type: string
           enum: *RECEIPTSTATUS
           description: Status of quick scanned receipt
+    UserPreferences:
+      type: object
+      required:
+        - id
+        - userId
+      properties:
+        id:
+          type: integer
+          description: User preferences id
+        userId:
+          type: integer
+          description: User foreign key
+        quickScanDefaultGroupId:
+          type: integer
+          description: Group foreign key
+        quickScanDefaultPaidById:
+          type: integer
+          description: User foreign key
+        quickScanDefaultStatus:
+          type: string
+          enum: *RECEIPTSTATUS
+          description: Default quick scan status

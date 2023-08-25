@@ -154,5 +154,9 @@ func initRoutes() *chi.Mux {
 	notificationRouter := routers.BuildNotificationRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/notifications", notificationRouter)
 
+	//User Preferences router
+	userPreferencesRouter := routers.BuildUserPreferencesRouter(tokenValidatorMiddleware)
+	rootRouter.Mount("/api/userPreferences", userPreferencesRouter)
+
 	return rootRouter
 }

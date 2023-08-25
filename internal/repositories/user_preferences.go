@@ -58,9 +58,12 @@ func (repository UserPreferncesRepository) CreateUserPreferences(userPreferences
 
 func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, userPreferences models.UserPrefernces) (models.UserPrefernces, error) {
 	db := repository.GetDB()
-	update := map[string]interface{}{"quickScanDefaultGroupId": userPreferences.QuickScanDefaultGroupId, "quickScanDefaultPaidById": userPreferences.QuickScanDefaultPaidById, "quickScanDefaultStatus": userPreferences.QuickScanDefaultStatus}
 
-	err := db.Model(models.UserPrefernces{}).Where("user_id = ?", userId).Updates(&update).Error
+	update := models.UserPrefernces{QuickScanDefaultGroupId: userPreferences.QuickScanDefaultGroupId,
+		QuickScanDefaultPaidById: userPreferences.QuickScanDefaultPaidById,
+		QuickScanDefaultStatus:   userPreferences.QuickScanDefaultStatus}
+
+	err := db.Model(models.UserPrefernces{}).Select("quick_scan_default_group_id", "quick_scan_default_paid_by_id", "quick_scan_default_status").Where("id = ?", userId).Updates(&update).Error
 	if err != nil {
 		return models.UserPrefernces{}, err
 	}

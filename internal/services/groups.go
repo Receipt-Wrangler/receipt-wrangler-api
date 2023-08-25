@@ -48,6 +48,7 @@ func DeleteGroup(groupId string) error {
 			return txErr
 		}
 
+		// Delete receipts in group
 		for i := 0; i < len(receipts); i++ {
 			txErr = DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
 			if txErr != nil {
@@ -55,11 +56,16 @@ func DeleteGroup(groupId string) error {
 			}
 		}
 
+		// Delete group members
 		txErr = db.Where("group_id = ?", groupId).Delete(&models.GroupMember{}).Error
 		if txErr != nil {
 			return txErr
 		}
 
+		// Unset user preferences
+		db.Model(models.UserPrefernces{}).Where("quick_scan_default_group_id = ?", groupId).Update("quick_scan_default_group_id", nil)
+
+		// Delete group
 		txErr = db.Model(&group).Delete(&group).Error
 		if txErr != nil {
 			return txErr

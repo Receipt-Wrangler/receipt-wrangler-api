@@ -78,6 +78,12 @@ func DeleteUser(userId string) error {
 			return txErr
 		}
 
+		// Remove user from other user's users preferences
+		txErr = tx.Model(models.UserPrefernces{}).Where("quick_scan_default_paid_by_id = ?", userId).Update("quick_scan_default_paid_by_id", nil).Error
+		if txErr != nil {
+			return txErr
+		}
+
 		// Remove user
 		txErr = tx.Where("id = ?", userId).Delete(&models.User{}).Error
 		if txErr != nil {

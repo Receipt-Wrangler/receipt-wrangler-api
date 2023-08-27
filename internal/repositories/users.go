@@ -62,7 +62,7 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 		groupMembers[0] = models.GroupMember{UserID: user.ID, GroupRole: models.OWNER}
 		// Create default group with user as group member
 		group := models.Group{
-			Name:           "Home",
+			Name:           "My Receipts",
 			IsDefaultGroup: true,
 			GroupMembers:   groupMembers,
 		}
@@ -81,4 +81,23 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 	}
 
 	return user, nil
+}
+
+func (repository UserRepository) CreateUserIfNoneExist() error {
+	repository.GetDB()
+	var userCount int64
+
+	err := repository.GetDB().Model(models.User{}).Count(&userCount).Error
+	if err != nil {
+		return err
+	}
+
+	if userCount == 0 {
+		_, err = repository.CreateUser(commands.GetDefaultAdminSignUpCommand())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

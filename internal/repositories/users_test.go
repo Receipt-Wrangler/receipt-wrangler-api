@@ -10,9 +10,9 @@ import (
 func TestShouldCreateAdminUserWithGroup(t *testing.T) {
 	db := GetDB()
 	userToCreate := commands.SignUpCommand{
-		Username: "test",
+		Username:    "test",
 		DisplayName: "test",
-		Password: "a really secure password",
+		Password:    "a really secure password",
 	}
 	userRepository := NewUserRepository(nil)
 	createdUser, err := userRepository.CreateUser(userToCreate)
@@ -35,9 +35,9 @@ func TestShouldCreateNonAdminUserWithGroup(t *testing.T) {
 	CreateTestUser()
 	CreateTestGroup()
 	userToCreate := commands.SignUpCommand{
-		Username: "test2",
+		Username:    "test2",
 		DisplayName: "test",
-		Password: "a really secure password",
+		Password:    "a really secure password",
 	}
 	userRepository := NewUserRepository(nil)
 	createdUser, err := userRepository.CreateUser(userToCreate)
@@ -59,9 +59,9 @@ func TestShouldReturnErrorWhenCreatingUserWithDuplicateUsername(t *testing.T) {
 	CreateTestUser()
 	CreateTestGroup()
 	userToCreate := commands.SignUpCommand{
-		Username: "test",
+		Username:    "test",
 		DisplayName: "test",
-		Password: "a really secure password",
+		Password:    "a really secure password",
 	}
 	userRepository := NewUserRepository(nil)
 	_, err := userRepository.CreateUser(userToCreate)
@@ -93,8 +93,8 @@ func validateGroup(t *testing.T, group models.Group, id uint, userId uint) {
 	if group.GroupMembers[0].UserID != userId {
 		utils.PrintTestError(t, group.GroupMembers[0].UserID, userId)
 	}
-	if group.Name != "Home" {
-		utils.PrintTestError(t, group.Name, "Home")
+	if group.Name != "My Receipts" {
+		utils.PrintTestError(t, group.Name, "My Receipts")
 	}
 
 }

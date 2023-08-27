@@ -32,6 +32,10 @@ func GetEnvVariables() map[string]string {
 	return envVariables
 }
 
+func GetDeployEnv() string {
+	return env
+}
+
 func SetConfigs() error {
 	setEnv()
 	setBasePath()

@@ -59,8 +59,10 @@ func main() {
 		services.InitOpenAIClient()
 	}
 
-	userRepository := repositories.NewUserRepository(nil)
-	err = userRepository.CreateUserIfNoneExist()
+	if config.GetDeployEnv() != "test" {
+		userRepository := repositories.NewUserRepository(nil)
+		err = userRepository.CreateUserIfNoneExist()
+	}
 
 	if err != nil {
 		logger.Print(err.Error())

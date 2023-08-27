@@ -59,6 +59,14 @@ func main() {
 		services.InitOpenAIClient()
 	}
 
+	userRepository := repositories.NewUserRepository(nil)
+	err = userRepository.CreateUserIfNoneExist()
+
+	if err != nil {
+		logger.Print(err.Error())
+		os.Exit(0)
+	}
+
 	router := initRoutes()
 	serve(router)
 }

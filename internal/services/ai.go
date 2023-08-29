@@ -80,12 +80,13 @@ func getPrompt(ocrText string) (string, error) {
 	{
 		Name: store name,
 		Amount: amount,
-		Date: date in zulu,
+		Date: date in zulu, with ALL time values set to 0,
 		Categories: categories,
 		Tags: tags
 	}
 	If a store name cannot be confidently found, use 'Default store name' as the default name.
-	Omit any value if not found with confidence. Assume the date is in the year %s if not provided, and assume time values are empty. The amount must be a float or integer.
+	Omit any value if not found with confidence. Assume the date is in the year %s if not provided.
+	The amount must be a float or integer.
 
 	Choose up to 2 categories from the given list based on the receipt's items and store name. If none fit, omit the result. Select only the id, like:
 	{

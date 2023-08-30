@@ -488,6 +488,38 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /receipt/hasAccess:
+    get:
+      tags:
+        - Receipt
+      summary: Has access to receipt
+      description:
+        This will return whether or not the currently logged in user has
+        access to the receipt
+      operationId: hasAccessToReceipt
+      parameters:
+        - in: query
+          name: receiptId
+          schema:
+            type: integer
+          required: true
+        - in: query
+          name: groupRole
+          schema: 
+            type: string
+            enum: *GROUPROLE
+          description: Role required to have access to receipt
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        400: 
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /receipt/{receiptId}:
     parameters:
       - in: path
@@ -1084,6 +1116,10 @@ components:
   responses:
     Ok:
       description: Request was successfully processed
+    BadRequest:
+      description: The request was malformed
+    Forbidden: 
+      description: The request was not allowed
     Internal:
       description: There was an error processing the request
   schemas:

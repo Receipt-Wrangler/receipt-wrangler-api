@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -376,6 +377,50 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 
 			w.WriteHeader(200)
 			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func HasAccess(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Insufficient permissions",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := structs.GetJWT(r)
+
+			receiptId := r.URL.Query().Get("receiptId")
+			if len(receiptId) == 0 {
+				return http.StatusBadRequest, errors.New("receiptId required")
+			}
+
+			groupRole := r.URL.Query().Get("groupRole")
+			if len(groupRole) == 0 {
+				return http.StatusBadRequest, errors.New("groupRole required")
+			}
+
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			receipt, err := receiptRepository.GetReceiptById(receiptId)
+			if err != nil {
+				return http.StatusBadRequest, err
+			}
+
+			validatedGroupRole, err := models.GroupRole(groupRole).Value()
+			if err != nil {
+				return http.StatusBadRequest, err
+			}
+
+			err = services.ValidateGroupRole(models.GroupRole(validatedGroupRole), fmt.Sprint(receipt.GroupId), fmt.Sprint(token.UserId))
+			if err != nil {
+				return http.StatusForbidden, err
+			}
+
+			w.WriteHeader(200)
 
 			return 0, nil
 		},

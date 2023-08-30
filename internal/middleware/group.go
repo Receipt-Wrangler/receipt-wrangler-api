@@ -23,6 +23,10 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 			} else {
 				groupId = r.Context().Value("groupId").(string)
 			}
+			if groupId == "all" {
+				h.ServeHTTP(w, r)
+				return
+			}
 			errMsg := "Unauthorized access to entity."
 
 			if len(groupId) > 0 {

@@ -96,7 +96,14 @@ func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {
 	}
 
 	if r.Status == RESOLVED && r.ID > 0 {
-		err := updateItemsToResolved(tx, r)
+		err := updateItemsToStatus(tx, r, ITEM_RESOLVED)
+		if err != nil {
+			return err
+		}
+	}
+
+	if r.Status == DRAFT && r.ID > 0 {
+		err := updateItemsToStatus(tx, r, ITEM_DRAFT)
 		if err != nil {
 			return err
 		}
@@ -105,7 +112,7 @@ func (r *Receipt) AfterUpdate(tx *gorm.DB) (err error) {
 	return nil
 }
 
-func updateItemsToResolved(tx *gorm.DB, r *Receipt) error {
+func updateItemsToStatus(tx *gorm.DB, r *Receipt, status ItemStatus) error {
 	var items []Item
 	var itemIdsToUpdate []uint
 
@@ -115,13 +122,13 @@ func updateItemsToResolved(tx *gorm.DB, r *Receipt) error {
 	}
 
 	for _, item := range items {
-		if item.Status != ITEM_RESOLVED {
+		if item.Status != status {
 			itemIdsToUpdate = append(itemIdsToUpdate, item.ID)
 		}
 	}
 
 	if len(itemIdsToUpdate) > 0 {
-		err := tx.Table("items").Where("id IN ?", itemIdsToUpdate).UpdateColumn("status", ITEM_RESOLVED).Error
+		err := tx.Table("items").Where("id IN ?", itemIdsToUpdate).UpdateColumn("status", status).Error
 		if err != nil {
 			return err
 		}

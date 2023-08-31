@@ -68,7 +68,19 @@ func (repository GroupRepository) UpdateGroup(group models.Group, groupId string
 
 	group.ID = uint(u64Id)
 
-	err = db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&group).Updates(&group).Error
+	err = db.Transaction(func(tx *gorm.DB) error {
+		txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&group).Omit("ID").Updates(&group).Error
+		if err != nil {
+			return txErr
+		}
+
+		txErr = tx.Model(&group).Association("GroupMembers").Unscoped().Replace(group.GroupMembers)
+		if txErr != nil {
+			return txErr
+		}
+
+		return nil
+	})
 	if err != nil {
 		return models.Group{}, err
 	}

@@ -19,11 +19,13 @@ definitions:
       - "OPEN"
       - "NEEDS_ATTENTION"
       - "RESOLVED"
+      - "DRAFT"
   ItemStatus:
     type: string
     enum: &ITEMSTATUS
       - "OPEN"
       - "RESOLVED"
+      - "DRAFT"
   GroupStatus:
     type: string
     enum: &GROUPSTATUS
@@ -505,14 +507,14 @@ paths:
           required: true
         - in: query
           name: groupRole
-          schema: 
+          schema:
             type: string
             enum: *GROUPROLE
           description: Role required to have access to receipt
       responses:
         200:
           $ref: "#/components/responses/Ok"
-        400: 
+        400:
           $ref: "#/components/responses/BadRequest"
         403:
           $ref: "#/components/responses/Forbidden"
@@ -1118,7 +1120,7 @@ components:
       description: Request was successfully processed
     BadRequest:
       description: The request was malformed
-    Forbidden: 
+    Forbidden:
       description: The request was not allowed
     Internal:
       description: There was an error processing the request

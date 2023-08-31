@@ -13,6 +13,7 @@ import (
 func BuildReceiptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	receiptRouter := chi.NewRouter()
 	receiptRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
+	receiptRouter.Get("/hasAccess", handlers.HasAccess)
 	receiptRouter.With(middleware.SetReceiptGroupId, middleware.ValidateGroupRole(models.VIEWER)).Get("/{id}", handlers.GetReceipt)
 	receiptRouter.With(middleware.SetReceiptBodyData, middleware.ValidateGroupRole(models.EDITOR), middleware.ValidateReceipt).Put("/{id}", handlers.UpdateReceipt)
 	receiptRouter.With(middleware.SetGeneralBodyData("pagedRequest", commands.ReceiptPagedRequestCommand{}), middleware.ValidateGroupRole(models.VIEWER)).Post("/group/{groupId}", handlers.GetPagedReceiptsForGroup)

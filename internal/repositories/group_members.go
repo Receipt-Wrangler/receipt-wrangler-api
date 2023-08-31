@@ -50,7 +50,7 @@ func (repository GroupMemberRepository) GetGroupMemberByUserIdAndGroupId(userId 
 	db := repository.GetDB()
 	var groupMember models.GroupMember
 
-	err := db.Model(models.GroupMember{}).Where("user_id = ? AND group_id = ?", userId, groupId).Find(&groupMember).Error
+	err := db.Model(models.GroupMember{}).Where("user_id = ? AND group_id = ?", userId, groupId).First(&groupMember).Error
 	if err != nil {
 		return models.GroupMember{}, err
 	}

@@ -1,7 +1,7 @@
 package models
 
 import (
-	"database/sql/driver"
+	"errors"
 )
 
 type GroupRole string
@@ -17,6 +17,10 @@ func (self *GroupRole) Scan(value string) error {
 	return nil
 }
 
-func (self GroupRole) Value() (driver.Value, error) {
+func (self GroupRole) Value() (string, error) {
+	value := string(self)
+	if value != "OWNER" && value != "VIEWER" && value != "EDITOR" {
+		return "", errors.New("invalid GroupRole value")
+	}
 	return string(self), nil
 }

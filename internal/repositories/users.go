@@ -39,9 +39,11 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
-		value := user.UserRole
+		userPreferencesRepository := NewUserPreferencesRepository(tx)
 
-		if len(value) == 0 {
+		userRole := user.UserRole
+
+		if len(userRole) == 0 {
 			var usrCnt int64
 			tx.Model(models.User{}).Count(&usrCnt)
 			if usrCnt == 0 {
@@ -73,7 +75,14 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 			return err
 		}
 
+		userPreferences := models.UserPrefernces{UserId: user.ID}
+		_, err := userPreferencesRepository.CreateUserPreferences(userPreferences)
+		if err != nil {
+			return err
+		}
+
 		repository.ClearTransaction()
+		userPreferencesRepository.ClearTransaction()
 		return nil
 	})
 	if err != nil {

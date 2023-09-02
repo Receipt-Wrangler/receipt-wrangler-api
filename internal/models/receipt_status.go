@@ -11,7 +11,7 @@ const (
 	OPEN            ReceiptStatus = "OPEN"
 	NEEDS_ATTENTION ReceiptStatus = "NEEDS_ATTENTION"
 	RESOLVED        ReceiptStatus = "RESOLVED"
-	DRAFT					  ReceiptStatus = "DRAFT"
+	DRAFT           ReceiptStatus = "DRAFT"
 )
 
 func (self *ReceiptStatus) Scan(value string) error {
@@ -20,7 +20,7 @@ func (self *ReceiptStatus) Scan(value string) error {
 }
 
 func (self ReceiptStatus) Value() (driver.Value, error) {
-	if self != OPEN && self != NEEDS_ATTENTION && self != RESOLVED && self != DRAFT {
+	if self != OPEN && self != NEEDS_ATTENTION && self != RESOLVED && self != DRAFT && self != "" {
 		return nil, errors.New("invalid receiptStatus")
 	}
 	return string(self), nil

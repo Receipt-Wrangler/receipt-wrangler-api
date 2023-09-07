@@ -81,7 +81,7 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 		}
 
 		userPreferences := models.UserPrefernces{UserId: user.ID}
-		_, err := userPreferencesRepository.CreateUserPreferences(userPreferences)
+		_, err = userPreferencesRepository.CreateUserPreferences(userPreferences)
 		if err != nil {
 			return err
 		}

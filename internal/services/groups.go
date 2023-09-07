@@ -7,6 +7,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func GetGroupsForUser(userId string) ([]models.Group, error) {
@@ -24,7 +25,7 @@ func GetGroupsForUser(userId string) ([]models.Group, error) {
 		groupIds[i] = groupMembers[i].GroupID
 	}
 
-	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload("GroupMembers").Find(&groups).Error
+	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Find(&groups).Error
 	if err != nil {
 		return nil, err
 	}

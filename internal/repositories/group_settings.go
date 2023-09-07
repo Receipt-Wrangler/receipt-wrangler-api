@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"receipt-wrangler/api/internal/models"
+
 	"gorm.io/gorm"
 )
 
@@ -14,4 +16,15 @@ func NewGroupSettingsRepository(tx *gorm.DB) GroupSettingsRepository {
 		TX: tx,
 	}}
 	return repository
+}
+
+func (repository GroupSettingsRepository) CreateGroupSettings(groupSettings models.GroupSettings) (models.GroupSettings, error) {
+	db := repository.GetDB()
+
+	err := db.Model(&groupSettings).Create(&groupSettings).Error
+	if err != nil {
+		return models.GroupSettings{}, err
+	}
+
+	return groupSettings, nil
 }

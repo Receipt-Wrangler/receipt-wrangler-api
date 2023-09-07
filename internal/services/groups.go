@@ -44,7 +44,7 @@ func DeleteGroup(groupId string) error {
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := db.Model(models.Receipt{}).Where("group_id = ?", groupId).Find(&receipts).Error
+		txErr := tx.Model(models.Receipt{}).Where("group_id = ?", groupId).Find(&receipts).Error
 		if txErr != nil {
 			return txErr
 		}
@@ -58,16 +58,16 @@ func DeleteGroup(groupId string) error {
 		}
 
 		// Delete group members
-		txErr = db.Where("group_id = ?", groupId).Delete(&models.GroupMember{}).Error
+		txErr = tx.Where("group_id = ?", groupId).Delete(&models.GroupMember{}).Error
 		if txErr != nil {
 			return txErr
 		}
 
 		// Unset user preferences
-		db.Model(models.UserPrefernces{}).Where("quick_scan_default_group_id = ?", groupId).Update("quick_scan_default_group_id", nil)
+		tx.Model(models.UserPrefernces{}).Where("quick_scan_default_group_id = ?", groupId).Update("quick_scan_default_group_id", nil)
 
 		// Delete group
-		txErr = db.Model(&group).Delete(&group).Error
+		txErr = tx.Model(&group).Select(clause.Associations).Delete(&group).Error
 		if txErr != nil {
 			return txErr
 		}

@@ -25,6 +25,7 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 	var returnGroup models.Group
 	err := db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
+		groupSettingsRepository := NewGroupSettingsRepository(tx)
 
 		txErr := repository.GetDB().Model(&group).Create(&group).Error
 		if txErr != nil {
@@ -48,7 +49,7 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 			GroupId: group.ID,
 		}
 
-		txErr = repository.GetDB().Model(&groupSettings).Create(&groupSettings).Error
+		_, txErr = groupSettingsRepository.CreateGroupSettings(groupSettings)
 		if txErr != nil {
 			repository.ClearTransaction()
 			return txErr

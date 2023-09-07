@@ -4,7 +4,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type GroupMemberRepository struct {
@@ -24,7 +23,7 @@ func (repository GroupMemberRepository) GetGroupMembersByUserId(userId string) (
 	db := repository.GetDB()
 	var groupMembers []models.GroupMember
 
-	err := db.Model(models.GroupMember{}).Where("user_id = ?", userId).Preload(clause.Associations).Find(&groupMembers).Error
+	err := db.Model(models.GroupMember{}).Where("user_id = ?", userId).Find(&groupMembers).Error
 	if err != nil {
 		return nil, err
 	}

@@ -43,6 +43,16 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 			return txErr
 		}
 
+		groupSettings := models.GroupSettings{
+			GroupId: group.ID,
+		}
+
+		txErr = repository.GetDB().Model(&groupSettings).Create(&groupSettings).Error
+		if txErr != nil {
+			repository.ClearTransaction()
+			return txErr
+		}
+
 		repository.ClearTransaction()
 		return nil
 	})

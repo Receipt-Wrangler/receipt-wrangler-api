@@ -98,7 +98,9 @@ func TruncateTestDb() {
 	TruncateTable(db, "comments")
 	TruncateTable(db, "receipts")
 	TruncateTable(db, "group_members")
+	TruncateTable(db, "group_settings")
 	TruncateTable(db, "groups")
+	TruncateTable(db, "user_prefernces")
 	TruncateTable(db, "users")
 }
 

@@ -73,13 +73,6 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 			return err
 		}
 
-		err = repository.GetDB().Create(&group).Error
-
-		if err != nil {
-			repository.ClearTransaction()
-			return err
-		}
-
 		userPreferences := models.UserPrefernces{UserId: user.ID}
 		_, err = userPreferencesRepository.CreateUserPreferences(userPreferences)
 		if err != nil {

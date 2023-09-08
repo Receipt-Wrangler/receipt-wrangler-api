@@ -27,7 +27,7 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 		repository.SetTransaction(tx)
 		groupSettingsRepository := NewGroupSettingsRepository(tx)
 
-		txErr := repository.GetDB().Model(&group).Create(&group).Error
+		txErr := tx.Model(&group).Create(&group).Error
 		if txErr != nil {
 			repository.ClearTransaction()
 			return txErr
@@ -39,7 +39,7 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 			GroupRole: models.OWNER,
 		}
 
-		txErr = repository.GetDB().Model(&groupMember).Create(&groupMember).Error
+		txErr = tx.Model(&groupMember).Create(&groupMember).Error
 		if txErr != nil {
 			repository.ClearTransaction()
 			return txErr

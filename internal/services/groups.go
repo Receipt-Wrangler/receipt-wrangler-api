@@ -7,6 +7,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func GetGroupsForUser(userId string) ([]models.Group, error) {
@@ -24,7 +25,7 @@ func GetGroupsForUser(userId string) ([]models.Group, error) {
 		groupIds[i] = groupMembers[i].GroupID
 	}
 
-	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload("GroupMembers").Find(&groups).Error
+	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Find(&groups).Error
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +44,7 @@ func DeleteGroup(groupId string) error {
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := db.Model(models.Receipt{}).Where("group_id = ?", groupId).Find(&receipts).Error
+		txErr := tx.Model(models.Receipt{}).Where("group_id = ?", groupId).Find(&receipts).Error
 		if txErr != nil {
 			return txErr
 		}
@@ -57,16 +58,16 @@ func DeleteGroup(groupId string) error {
 		}
 
 		// Delete group members
-		txErr = db.Where("group_id = ?", groupId).Delete(&models.GroupMember{}).Error
+		txErr = tx.Where("group_id = ?", groupId).Delete(&models.GroupMember{}).Error
 		if txErr != nil {
 			return txErr
 		}
 
 		// Unset user preferences
-		db.Model(models.UserPrefernces{}).Where("quick_scan_default_group_id = ?", groupId).Update("quick_scan_default_group_id", nil)
+		tx.Model(models.UserPrefernces{}).Where("quick_scan_default_group_id = ?", groupId).Update("quick_scan_default_group_id", nil)
 
 		// Delete group
-		txErr = db.Model(&group).Delete(&group).Error
+		txErr = tx.Model(&group).Select(clause.Associations).Delete(&group).Error
 		if txErr != nil {
 			return txErr
 		}

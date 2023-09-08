@@ -12,6 +12,7 @@ type Group struct {
 	Name           string        `gorm:"not null" json:"name"`
 	IsDefaultGroup bool          `json:"isDefault"`
 	GroupMembers   []GroupMember `json:"groupMembers"`
+	GroupSettings  GroupSettings `json:"groupSettings"`
 	Status         GroupStatus   `gorm:"default:'ACTIVE'; not null" json:"status"`
 }
 

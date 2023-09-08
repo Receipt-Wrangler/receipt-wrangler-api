@@ -38,6 +38,7 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 	user.Password = string(bytes)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		groupRepository := NewGroupRepository(tx)
 		repository.SetTransaction(tx)
 		userPreferencesRepository := NewUserPreferencesRepository(tx)
 
@@ -60,23 +61,20 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 			return err
 		}
 
-		var groupMembers = make([]models.GroupMember, 1)
-		groupMembers[0] = models.GroupMember{UserID: user.ID, GroupRole: models.OWNER}
-		// Create default group with user as group member
 		group := models.Group{
 			Name:           "My Receipts",
 			IsDefaultGroup: true,
-			GroupMembers:   groupMembers,
+			GroupSettings:  models.GroupSettings{},
 		}
-		err = repository.GetDB().Create(&group).Error
 
+		_, err := groupRepository.CreateGroup(group, user.ID)
 		if err != nil {
 			repository.ClearTransaction()
 			return err
 		}
 
 		userPreferences := models.UserPrefernces{UserId: user.ID}
-		_, err := userPreferencesRepository.CreateUserPreferences(userPreferences)
+		_, err = userPreferencesRepository.CreateUserPreferences(userPreferences)
 		if err != nil {
 			return err
 		}

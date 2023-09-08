@@ -5,6 +5,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GroupRepository struct {
@@ -24,8 +25,9 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 	var returnGroup models.Group
 	err := db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
+		groupSettingsRepository := NewGroupSettingsRepository(tx)
 
-		txErr := repository.GetDB().Model(&group).Create(&group).Error
+		txErr := tx.Model(&group).Create(&group).Error
 		if txErr != nil {
 			repository.ClearTransaction()
 			return txErr
@@ -37,7 +39,17 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 			GroupRole: models.OWNER,
 		}
 
-		txErr = repository.GetDB().Model(&groupMember).Create(&groupMember).Error
+		txErr = tx.Model(&groupMember).Create(&groupMember).Error
+		if txErr != nil {
+			repository.ClearTransaction()
+			return txErr
+		}
+
+		groupSettings := models.GroupSettings{
+			GroupId: group.ID,
+		}
+
+		_, txErr = groupSettingsRepository.CreateGroupSettings(groupSettings)
 		if txErr != nil {
 			repository.ClearTransaction()
 			return txErr
@@ -101,6 +113,9 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 	if preloadGroupMembers {
 		query = query.Preload("GroupMembers")
 	}
+
+	// TODO: Fix this repository call to take a preload string instead of a bool
+	query.Preload(clause.Associations)
 
 	err := query.First(&group).Error
 	if err != nil {

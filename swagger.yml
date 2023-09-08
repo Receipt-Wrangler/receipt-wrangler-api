@@ -1315,6 +1315,8 @@ components:
           type: integer
           format: uint64
           x-go-name: CreatedBy
+        groupSettings:
+          $ref: "#/components/schemas/GroupSettings"
         groupMembers:
           type: array
           description: Members of the group
@@ -1953,3 +1955,23 @@ components:
           type: string
           enum: *RECEIPTSTATUS
           description: Default quick scan status
+    GroupSettings:
+      type: object
+      required:
+        - id
+        - groupId
+      properties:
+        id:
+          type: integer
+          description: Group settings id
+        groupId:
+          type: integer
+          description: Group foreign key
+        createdAt:
+          type: string
+        createdBy:
+          type: integer
+          format: uint64
+        updatedAt:
+          type: string
+

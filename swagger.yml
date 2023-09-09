@@ -336,6 +336,40 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+    /group/{groupId}/groupSettings:
+      put:
+        tags:
+          - Groups
+        summary: Update group settings
+        description: This will update the group settings for a group
+        operationId: updateGroupSettings
+        parameters:
+          - in: path
+            name: groupId
+            schema:
+              type: integer
+            required: true
+            description: Group Id to update
+        requestBody:
+          description: Group settings to update
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateGroupSettingsCommand"
+        responses:
+          200:
+            content:
+              application/json:
+                schema:
+                  $ref: "#/components/schemas/GroupSettings"
+          400:
+            $ref: "#/components/responses/BadRequest"
+          500:
+            $ref: "#/components/responses/Internal"
+        security:
+          - bearerAuth: []
+
   /login/:
     post:
       tags:
@@ -1970,12 +2004,12 @@ components:
         emailToRead:
           type: string
           description: Email to read
-        SubjectLineRegexes:
+        subjectLineRegexes:
           type: array
           description: Subject line regexes
           items:
             $ref: "#/components/schemas/SubjectLineRegex"
-        EmailWhiteList:
+        emailWhiteList:
           type: array
           description: Email white list
           items:
@@ -2033,3 +2067,23 @@ components:
             format: uint64
           updatedAt:
             type: string
+      UpdateGroupSettingsCommand:
+        type: object
+        required:
+          - emailToRead
+          - subjectLineRegexes
+          - emailWhiteList
+        properties:
+          emailToRead:
+            type: string
+            description: Email to read
+          subjectLineRegexes:
+            type: array
+            description: Subject line regexes
+            items:
+              $ref: "#/components/schemas/SubjectLineRegex"
+          emailWhiteList:
+            type: array
+            description: Email white list
+            items:
+              $ref: "#/components/schemas/GroupSettingsEmail"

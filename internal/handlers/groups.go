@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -127,6 +128,48 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	utils.SetJSONResponseHeaders(w)
 	w.WriteHeader(200)
 	w.Write(bytes)
+}
+
+func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
+	groupId := chi.URLParam(r, "groupId")
+
+	handler := structs.Handler{
+		ErrorMessage: "Error creating group",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		GroupRole:    models.OWNER,
+		GroupId:      groupId,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpdateGroupSettingsCommand{}
+			vErr, err := command.LoadDataFromRequestAndValidate(w, r)
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return 0, nil
+			}
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+			updatedGroupSettings, err := groupSettingsRepository.UpdateGroupSettings(groupId, command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(updatedGroupSettings)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
 }
 
 func DeleteGroup(w http.ResponseWriter, r *http.Request) {

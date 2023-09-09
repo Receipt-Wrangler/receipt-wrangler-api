@@ -1967,6 +1967,19 @@ components:
         groupId:
           type: integer
           description: Group foreign key
+        emailToRead:
+          type: string
+          description: Email to read
+        SubjectLineRegexes:
+          type: array
+          description: Subject line regexes
+          items:
+            $ref: "#/components/schemas/SubjectLineRegex"
+        EmailWhiteList:
+          type: array
+          description: Email white list
+          items:
+            $ref: "#/components/schemas/GroupSettingsEmail"
         createdAt:
           type: string
         createdBy:
@@ -1974,4 +1987,49 @@ components:
           format: uint64
         updatedAt:
           type: string
-
+    SubjectLineRegex:
+      type: object
+      required:
+        - id
+        - groupSettingsId
+        - regex
+      properties:
+        id:
+          type: integer
+          description: Subject line regex id
+        groupSettingsId:
+          type: integer
+          description: Group settings foreign key
+        regex:
+          type: string
+          description: Regex to match subject line
+        createdAt:
+          type: string
+        createdBy:
+          type: integer
+          format: uint64
+        updatedAt:
+          type: string
+      GroupSettingsEmail:
+        type: object
+        required:
+          - id
+          - groupSettingsId
+          - email
+        properties:
+          id:
+            type: integer
+            description: Group settings email id
+          groupSettingsId:
+            type: integer
+            description: Group settings foreign key
+          email:
+            type: string
+            description: Email to match
+          createdAt:
+            type: string
+          createdBy:
+            type: integer
+            format: uint64
+          updatedAt:
+            type: string

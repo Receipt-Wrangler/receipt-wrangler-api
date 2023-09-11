@@ -2001,6 +2001,9 @@ components:
         groupId:
           type: integer
           description: Group foreign key
+        emailIntegrationEnabled:
+          type: boolean
+          description: Whether email integration is enabled
         emailToRead:
           $ref: "#/components/schemas/GroupSettingsEmail"
           description: Email to read
@@ -2074,6 +2077,9 @@ components:
         - subjectLineRegexes
         - emailWhiteList
       properties:
+        emailIntegrationEnabled:
+          type: boolean
+          description: Whether email integration is enabled
         emailToRead:
           $ref: "#/components/schemas/GroupSettingsEmail"
           description: Email to read

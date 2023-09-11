@@ -27,9 +27,9 @@ func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWr
 		return err
 	}
 
-	updateGroupSettingsCommand.EmailToRead = command.EmailToRead
-	updateGroupSettingsCommand.SubjectLineRegexes = command.SubjectLineRegexes
-	updateGroupSettingsCommand.EmailWhiteList = command.EmailWhiteList
+	command.EmailToRead = updateGroupSettingsCommand.EmailToRead
+	command.SubjectLineRegexes = updateGroupSettingsCommand.SubjectLineRegexes
+	command.EmailWhiteList = updateGroupSettingsCommand.EmailWhiteList
 
 	return nil
 }
@@ -39,9 +39,9 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 		Errors: make(map[string]string),
 	}
 
-	if len(command.EmailToRead.Email.Email) == 0 {
-		vErr.Errors["emailToRead"] = "Email to read is required."
-	}
+	// if len(command.EmailToRead.Email.Email) == 0 {
+	// 	vErr.Errors["emailToRead"] = "Email to read is required."
+	// }
 
 	return vErr
 }

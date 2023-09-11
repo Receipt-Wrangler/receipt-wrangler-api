@@ -2002,7 +2002,7 @@ components:
           type: integer
           description: Group foreign key
         emailToRead:
-          type: string
+          $ref: "#/components/schemas/GroupSettingsEmail"
           description: Email to read
         subjectLineRegexes:
           type: array
@@ -2075,7 +2075,7 @@ components:
         - emailWhiteList
       properties:
         emailToRead:
-          type: string
+          $ref: "#/components/schemas/GroupSettingsEmail"
           description: Email to read
         subjectLineRegexes:
           type: array

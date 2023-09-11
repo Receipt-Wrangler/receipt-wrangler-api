@@ -134,7 +134,7 @@ func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 	groupId := chi.URLParam(r, "groupId")
 
 	handler := structs.Handler{
-		ErrorMessage: "Error creating group",
+		ErrorMessage: "Error updating group settings",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,

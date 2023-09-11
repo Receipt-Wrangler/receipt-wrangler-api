@@ -66,8 +66,14 @@ func DeleteGroup(groupId string) error {
 		// Unset user preferences
 		tx.Model(models.UserPrefernces{}).Where("quick_scan_default_group_id = ?", groupId).Update("quick_scan_default_group_id", nil)
 
+		// Delete Group Settings
+		txErr = tx.Model(&group.GroupSettings).Select(clause.Associations).Delete(&group.GroupSettings).Error
+		if txErr != nil {
+			return txErr
+		}
+
 		// Delete group
-		txErr = tx.Model(&group).Select(clause.Associations).Delete(&group).Error
+		txErr = tx.Model(&group.GroupSettings).Select(clause.Associations).Delete(&group).Error
 		if txErr != nil {
 			return txErr
 		}

@@ -5,7 +5,6 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type GroupRepository struct {
@@ -115,7 +114,7 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 	}
 
 	// TODO: Fix this repository call to take a preload string instead of a bool
-	query.Preload(clause.Associations)
+	query = query.Preload("GroupSettings.EmailToRead").Preload("GroupSettings.SubjectLineRegexes").Preload("GroupSettings.EmailWhiteList")
 
 	err := query.First(&group).Error
 	if err != nil {

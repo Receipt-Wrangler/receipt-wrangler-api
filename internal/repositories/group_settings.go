@@ -41,6 +41,9 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 
+		// err = tx.Model(&groupSettings).Where("id = ?", groupSettings.ID).Updates(&command).Error
+		// if err != nil {}
+
 		err = tx.Model(&groupSettings).Where("id = ?", groupSettings.ID).Association("EmailToRead").Replace(&command.EmailToRead)
 		if err != nil {
 			return err

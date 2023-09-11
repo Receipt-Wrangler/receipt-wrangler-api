@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"fmt"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 
@@ -44,7 +43,6 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 
 		err = tx.Model(&groupSettings).Where("id = ?", groupSettings.ID).Association("EmailToRead").Replace(&command.EmailToRead)
 		if err != nil {
-			fmt.Println(err.Error())
 			return err
 		}
 

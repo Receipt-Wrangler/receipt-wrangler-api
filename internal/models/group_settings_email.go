@@ -2,6 +2,6 @@ package models
 
 type GroupSettingsEmail struct {
 	BaseModel
-	Email
-	GroupSettingsId uint `json:"groupSettingsId"`
+	Email           string `json:"email"`
+	GroupSettingsId uint   `json:"groupSettingsId"`
 }

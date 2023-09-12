@@ -41,22 +41,17 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 
-		// err = tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&groupSettings).Select("*").Save(&command).Error
-		// if err != nil {
-		// 	return err
-		// }
-
-		err = tx.Model(&groupSettings).Where("id = ?", groupSettings.ID).Association("EmailToRead").Replace(&command.EmailToRead)
+		err = tx.Model(&groupSettings).Select("*").Updates(map[string]interface{}{"email_to_read": command.EmailToRead}).Error
 		if err != nil {
 			return err
 		}
 
-		err = tx.Model(&groupSettings).Where("id = ?", groupSettings.ID).Association("SubjectLineRegexes").Replace(command.SubjectLineRegexes)
+		err = tx.Model(&groupSettings).Association("SubjectLineRegexes").Replace(&command.SubjectLineRegexes)
 		if err != nil {
 			return err
 		}
 
-		err = tx.Model(&groupSettings).Where("id = ?", groupSettings.ID).Association("EmailWhiteList").Replace(&command.EmailWhiteList)
+		err = tx.Model(&groupSettings).Association("EmailWhiteList").Replace(&command.EmailWhiteList)
 		if err != nil {
 			return err
 		}

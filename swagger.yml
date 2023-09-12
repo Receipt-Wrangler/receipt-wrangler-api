@@ -2005,7 +2005,7 @@ components:
           type: boolean
           description: Whether email integration is enabled
         emailToRead:
-          $ref: "#/components/schemas/GroupSettingsEmail"
+          type: string
           description: Email to read
         subjectLineRegexes:
           type: array
@@ -2016,7 +2016,7 @@ components:
           type: array
           description: Email white list
           items:
-            $ref: "#/components/schemas/GroupSettingsEmail"
+            $ref: "#/components/schemas/GroupSettingsWhiteListEmail"
         createdAt:
           type: string
         createdBy:
@@ -2047,7 +2047,7 @@ components:
           format: uint64
         updatedAt:
           type: string
-    GroupSettingsEmail:
+    GroupSettingsWhiteListEmail:
       type: object
       required:
         - id
@@ -2081,7 +2081,7 @@ components:
           type: boolean
           description: Whether email integration is enabled
         emailToRead:
-          $ref: "#/components/schemas/GroupSettingsEmail"
+          type: string
           description: Email to read
         subjectLineRegexes:
           type: array
@@ -2092,4 +2092,5 @@ components:
           type: array
           description: Email white list
           items:
-            $ref: "#/components/schemas/GroupSettingsEmail"
+            $ref: "#/components/schemas/GroupSettingsWhiteListEmail"
+            

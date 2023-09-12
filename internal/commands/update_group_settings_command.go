@@ -9,9 +9,9 @@ import (
 )
 
 type UpdateGroupSettingsCommand struct {
-	EmailToRead        models.GroupSettingsEmail   `json:"emailToRead"`
-	SubjectLineRegexes []models.SubjectLineRegex   `json:"subjectLineRegexes"`
-	EmailWhiteList     []models.GroupSettingsEmail `json:"emailWhiteList"`
+	EmailToRead        string                               `json:"emailToRead"`
+	SubjectLineRegexes []models.SubjectLineRegex            `json:"subjectLineRegexes"`
+	EmailWhiteList     []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
 }
 
 func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

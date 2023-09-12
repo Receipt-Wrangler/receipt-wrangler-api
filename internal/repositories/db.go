@@ -83,7 +83,7 @@ func MakeMigrations() {
 		&models.Notification{},
 		&models.UserPrefernces{},
 		&models.SubjectLineRegex{},
-		&models.GroupSettingsEmail{},
+		&models.GroupSettingsWhiteListEmail{},
 		&models.GroupSettings{},
 	)
 }

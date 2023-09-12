@@ -1,6 +1,6 @@
 package models
 
-type GroupSettingsEmail struct {
+type GroupSettingsWhiteListEmail struct {
 	BaseModel
 	Email           string `json:"email"`
 	GroupSettingsId uint   `json:"groupSettingsId"`

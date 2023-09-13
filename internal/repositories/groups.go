@@ -121,5 +121,18 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 		return models.Group{}, err
 	}
 
+	if group.GroupSettings.ID == 0 {
+		groupSettingsRepository := NewGroupSettingsRepository(db)
+
+		groupSettings := models.GroupSettings{
+			GroupId: group.ID,
+		}
+
+		_, err := groupSettingsRepository.CreateGroupSettings(groupSettings)
+		if err != nil {
+			return models.Group{}, err
+		}
+	}
+
 	return group, nil
 }

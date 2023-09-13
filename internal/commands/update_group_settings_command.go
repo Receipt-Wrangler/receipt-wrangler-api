@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"net/http"
+	"net/mail"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
@@ -41,9 +42,14 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 		Errors: make(map[string]string),
 	}
 
-	// if len(command.EmailToRead.Email.Email) == 0 {
-	// 	vErr.Errors["emailToRead"] = "Email to read is required."
-	// }
+	if command.EmailToRead == "" && command.EmailIntegrationEnabled {
+		vErr.Errors["emailToRead"] = "Email to read is required when email integration is enabled"
+	}
+
+	_, err := mail.ParseAddress(command.EmailToRead)
+	if err != nil {
+		vErr.Errors["emailToRead"] = "Email to read is invalid"
+	}
 
 	return vErr
 }

@@ -41,7 +41,7 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 
-		err = tx.Model(&groupSettings).Select("*").Updates(map[string]interface{}{"email_to_read": command.EmailToRead}).Error
+		err = tx.Model(&groupSettings).Select("*").Updates(map[string]interface{}{"email_to_read": command.EmailToRead, "email_integration_enabled": command.EmailIntegrationEnabled}).Error
 		if err != nil {
 			return err
 		}

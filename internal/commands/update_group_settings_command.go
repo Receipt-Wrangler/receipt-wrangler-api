@@ -9,9 +9,10 @@ import (
 )
 
 type UpdateGroupSettingsCommand struct {
-	EmailToRead        string                               `json:"emailToRead"`
-	SubjectLineRegexes []models.SubjectLineRegex            `json:"subjectLineRegexes"`
-	EmailWhiteList     []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
+	EmailToRead             string                               `json:"emailToRead"`
+	EmailIntegrationEnabled bool                                 `json:"emailIntegrationEnabled"`
+	SubjectLineRegexes      []models.SubjectLineRegex            `json:"subjectLineRegexes"`
+	EmailWhiteList          []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
 }
 
 func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -27,6 +28,7 @@ func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWr
 		return err
 	}
 
+	command.EmailIntegrationEnabled = updateGroupSettingsCommand.EmailIntegrationEnabled
 	command.EmailToRead = updateGroupSettingsCommand.EmailToRead
 	command.SubjectLineRegexes = updateGroupSettingsCommand.SubjectLineRegexes
 	command.EmailWhiteList = updateGroupSettingsCommand.EmailWhiteList

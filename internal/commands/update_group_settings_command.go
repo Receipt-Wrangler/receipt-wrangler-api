@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/mail"
 	"receipt-wrangler/api/internal/models"
@@ -49,6 +50,14 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 	_, err := mail.ParseAddress(command.EmailToRead)
 	if err != nil {
 		vErr.Errors["emailToRead"] = "Email to read is invalid"
+	}
+
+	for index, email := range command.EmailWhiteList {
+		_, err := mail.ParseAddress(email.Email)
+		if err != nil {
+			errorKey := fmt.Sprintf("emailWhiteList.%d.email", index)
+			vErr.Errors[errorKey] = "Email is an  invalid email"
+		}
 	}
 
 	return vErr

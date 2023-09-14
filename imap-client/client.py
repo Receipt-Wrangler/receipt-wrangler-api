@@ -1,3 +1,5 @@
+from email import policy
+from email.parser import BytesParser
 from mailbox import Message
 from imapclient import IMAPClient
 import json
@@ -11,8 +13,6 @@ def main():
     for settings in emailSettings:
         emailData = get_latest_email(settings)
         emailsToProcess.append(emailData)
-
-    print(emailsToProcess)
 
 
 def get_latest_email(settings):
@@ -38,9 +38,6 @@ def get_formatted_message_data(data):
     fromName = fromData[0]
     fromEmail = fromData[1].replace("<", "").replace(">", "")
 
-    for k, v in message_data.items():
-        print(k, v)
-
     result = {
         "date": message_data.get("Date"),
         "subject": message_data.get("Subject"),
@@ -55,23 +52,21 @@ def get_formatted_message_data(data):
 
 def get_attachments(message_data: Message):
     result = []
-    if message_data.is_multipart():
-        # Iterate through each part
-        for part in message_data:
-            # If the part is an attachment
-            print(part, "part")
-            if part() == 'attachment':
-                # Extract filename
-                filename = part.get_filename()
-                if filename:
-                    # Open the file in write-binary mode and save it
-                    result.append({
-                        "filename": filename,
-                        "payload": part.get_payload(decode=True)
-                    })
-                    # with open(filename, 'wb') as f:
-                    #     f.write(part.get_payload(decode=True))
-                    print(f"Saved attachment as {filename}")
+    for part in message_data.walk():
+        if part.get_content_maintype() == 'multipart':
+            continue
+        if part.get('Content-Disposition') is None:
+            continue
+
+        fileName = part.get_filename()
+        if bool(fileName):
+            filePath = f"./temp/{fileName}"
+            with open(filePath, 'wb') as f:
+                f.write(part.get_payload(decode=True))
+
+            result.append({
+                "fileName": fileName,
+            })
 
     return result
 

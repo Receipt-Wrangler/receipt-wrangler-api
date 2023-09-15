@@ -1,6 +1,7 @@
 from email import policy
 from email.parser import BytesParser
 from mailbox import Message
+import sys
 from imapclient import IMAPClient
 import json
 import email
@@ -8,11 +9,22 @@ import email
 
 def main():
     config = read_config()
+    group_settings = read_group_settings()
     emailSettings = config["emailSettings"]
-    emailsToProcess = []
-    for settings in emailSettings:
-        emailData = get_latest_email(settings)
-        emailsToProcess.append(emailData)
+    # emailsToProcess = []
+    # for settings in emailSettings:
+    #     emailData = get_latest_email(settings)
+    #     emailsToProcess.append(emailData)
+
+    # print(json.dumps(emailsToProcess, indent=4))
+    print(json.dumps(group_settings[0], indent=4))
+
+
+def read_group_settings():
+    raw_data = sys.stdin.read()
+    json_data = json.loads(raw_data)
+
+    return json_data
 
 
 def get_latest_email(settings):
@@ -58,17 +70,25 @@ def get_attachments(message_data: Message):
         if part.get('Content-Disposition') is None:
             continue
 
-        fileName = part.get_filename()
-        if bool(fileName):
+        filename = part.get_filename()
+        mime_type = part.get_content_type()
+
+        if bool(fileName) and valid_mime_type(mime_type):
             filePath = f"./temp/{fileName}"
             with open(filePath, 'wb') as f:
                 f.write(part.get_payload(decode=True))
 
             result.append({
-                "fileName": fileName,
+                "filename": fileName,
             })
 
     return result
+
+
+def valid_mime_type(mime_type):
+    image_mime_types_regex = r"image\/.*"
+    index = image_mime_types_regex.find(mime_type)
+    return index > -1
 
 
 def read_config():

@@ -5,6 +5,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GroupSettingsRepository struct {
@@ -17,6 +18,18 @@ func NewGroupSettingsRepository(tx *gorm.DB) GroupSettingsRepository {
 		TX: tx,
 	}}
 	return repository
+}
+
+func (repository GroupSettingsRepository) GetAllGroupSettings() ([]models.GroupSettings, error) {
+	db := repository.GetDB()
+	var groupSettings []models.GroupSettings
+
+	err := db.Model(&models.GroupSettings{}).Preload(clause.Associations).Find(&groupSettings).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return groupSettings, nil
 }
 
 func (repository GroupSettingsRepository) CreateGroupSettings(groupSettings models.GroupSettings) (models.GroupSettings, error) {

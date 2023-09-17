@@ -5,7 +5,7 @@ import "time"
 type Attachment struct {
 	Filename string `json:"filename"`
 	FileType string `json:"fileType"`
-	Size     int    `json:"size"`
+	Size     uint   `json:"size"`
 }
 
 type EmailMetadata struct {
@@ -15,4 +15,5 @@ type EmailMetadata struct {
 	FromName    string       `json:"fromName"`
 	FromEmail   string       `json:"fromEmail"`
 	Attachments []Attachment `json:"attachments"`
+	GroupIds    []uint       `json:"groupIds"`
 }

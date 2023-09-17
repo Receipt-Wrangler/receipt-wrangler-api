@@ -3,6 +3,7 @@ from itertools import chain
 from mailbox import Message
 import os
 from imapclient import IMAPClient
+from imapclient import exceptions
 import logging
 import re
 import sys
@@ -29,9 +30,11 @@ def main():
         json_results = json.dumps(results)
 
         print(json_results)
-    except Exception as e:
+    except exceptions.LoginError as e:
         logging.error(e)
         sys.exit(1)
+    except Exception as e:
+        logging.error(e)
 
     exit(0)
 

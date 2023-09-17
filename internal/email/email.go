@@ -32,7 +32,7 @@ func PollEmails() error {
 				err := callClient()
 				if err != nil {
 					logging.GetLogger().Println(err.Error())
-					fmt.Println(err.Error())
+					ticker.Stop()
 				}
 			}
 		}

@@ -1,14 +1,16 @@
-from email import policy
-from email.parser import BytesParser
+import datetime
+from itertools import chain
 from mailbox import Message
+from imapclient import IMAPClient
+import logging
 import re
 import sys
-from imapclient import IMAPClient
 import json
 import email
 
 
 def main():
+    init_logger()
     config = read_config()
     group_settings = read_group_settings()
     emailSettings = config["emailSettings"]
@@ -18,15 +20,24 @@ def main():
     try:
         emailsToProcess = []
         for settings in emailSettings:
-            emailData = get_latest_email(settings, group_settings_to_process)
+            emailData = get_unread_emails_to_process(
+                settings, group_settings_to_process)
             emailsToProcess.append(emailData)
 
-        # print(json.dumps(emailsToProcess, indent=4))
-        print(json.dumps(group_settings_to_process, indent=4))
+        results = list(chain.from_iterable(emailsToProcess))
+        json_results = json.dumps(results)
+
+        print(json_results)
     except Exception as e:
-        print(e)
+        logging.error(e)
         sys.exit(1)
+
     exit(0)
+
+
+def init_logger():
+    logging.basicConfig(filename='logs/imap-client.log', level=logging.INFO,
+                        format='%(asctime)s %(levelname)s {%(pathname)s:%(lineno)d} %(message)s')
 
 
 def get_group_settings_to_process(group_settings: list, emailSettings):
@@ -44,8 +55,8 @@ def read_group_settings():
     return json_data
 
 
-def get_latest_email(settings, group_settings_to_process):
-    results = {}
+def get_unread_emails_to_process(settings, group_settings_to_process):
+    results = []
     with IMAPClient(host=settings["host"]) as client:
         client.login(settings["username"], settings["password"])
         client.select_folder('INBOX')
@@ -57,8 +68,10 @@ def get_latest_email(settings, group_settings_to_process):
         for message_id, data in response.items():
             formatted_data = get_formatted_message_data(
                 data, group_settings_to_process)
-            if formatted_data:
-                results[message_id] = formatted_data
+            if len(formatted_data) > 0:
+                logging.info("WE MADE IT")
+                formatted_data[message_id] = message_id
+                results.append(formatted_data)
 
     return results
 
@@ -76,13 +89,17 @@ def get_formatted_message_data(data, group_settings_to_process):
         if group_setting["emailToRead"] == toEmail:
             should_process = should_process_email(
                 subject, fromEmail, group_setting)
-            return False
 
     if not should_process:
-        return None
+        return {}
+
+    date = datetime.datetime.strptime(message_data.get(
+        "Date"), "%a, %d %b %Y %H:%M:%S %z")
+    utc_date = date.replace(tzinfo=datetime.timezone.utc)
+    formatted_date = utc_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     result = {
-        "date": message_data.get("Date"),
+        "date": formatted_date,
         "subject": subject,
         "to": message_data.get("To"),
         "fromName": fromName,
@@ -96,15 +113,15 @@ def get_formatted_message_data(data, group_settings_to_process):
 def should_process_email(subject, from_email, group_setting):
     whitelist_emails = group_setting["emailWhiteList"]
     subject_line_regexes = group_setting["subjectLineRegexes"]
-    # check that form email is in the whitelist emails
-    # if there are no emails, then bypass
-    valid_email = valid_from_email(from_email, whitelist_emails)
 
-    # iterate over regexes and check that subject matches at least one of the regexes
-    # if there are no regexes, then bypass
+    valid_email = valid_from_email(from_email, whitelist_emails)
     valid_subject_line = valid_subject(subject, subject_line_regexes)
 
-    return valid_email and valid_subject_line
+    should_process = valid_email and valid_subject_line
+
+    logging.info(
+        f"Should process email: '{subject}' from: '{from_email}' {should_process}. Valid email: {valid_email}. Valid subject line: {valid_subject_line} ")
+    return should_process
 
 
 def valid_from_email(from_email, whitelist_emails):
@@ -116,13 +133,17 @@ def valid_from_email(from_email, whitelist_emails):
     if from_email not in whitelist_email_addresses:
         return False
 
+    return True
+
 
 def valid_subject(subject, subject_line_regexes):
     if len(subject_line_regexes) == 0:
         return True
 
     for subject_line_regex in subject_line_regexes:
-        matches = re.search(subject_line_regex.regex, subject)
+        matches = re.search(subject_line_regex["regex"], subject)
+        logging.info(
+            f"Found match: {matches} on email subject: '{subject}' with regex: '{subject_line_regex['regex']}'")
         if matches:
             return True
 
@@ -140,13 +161,13 @@ def get_attachments(message_data: Message):
         filename = part.get_filename()
         mime_type = part.get_content_type()
 
-        if bool(fileName) and valid_mime_type(mime_type):
-            filePath = f"./temp/{fileName}"
+        if bool(filename) and valid_mime_type(mime_type):
+            filePath = f"./temp/{filename}"
             with open(filePath, 'wb') as f:
                 f.write(part.get_payload(decode=True))
 
             result.append({
-                "filename": fileName,
+                "filename": filename,
             })
 
     return result

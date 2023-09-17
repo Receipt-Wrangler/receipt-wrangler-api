@@ -31,6 +31,7 @@ func PollEmails() error {
 			case <-ticker.C:
 				err := callClient()
 				if err != nil {
+					logging.GetLogger().Panic("Error polling emails, polling stopped")
 					logging.GetLogger().Println(err.Error())
 					ticker.Stop()
 				}

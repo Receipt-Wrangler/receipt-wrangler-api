@@ -158,7 +158,6 @@ def valid_subject(subject, subject_line_regexes):
     return False
 
 
-# TODO: handle multiples
 def get_attachments(message_data: Message):
     result = []
     for part in message_data.walk():

@@ -106,6 +106,7 @@ def get_formatted_message_data(data, group_settings_to_process):
         "attachments": get_attachments(message_data),
     }
 
+    logging.info(f"Formatted message data: {result}")
     return result
 
 

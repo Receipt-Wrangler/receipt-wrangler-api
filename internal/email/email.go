@@ -8,6 +8,7 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
 )
 
 func PollEmails() error {
@@ -23,7 +24,7 @@ func callClient() error {
 	logger := logging.GetLogger()
 	basePath := config.GetBasePath()
 	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
-	groupSettings, err := groupSettingsRepository.GetAllGroupSettings()
+	groupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ?", true)
 	if err != nil {
 		logger.Println(err.Error())
 		return err
@@ -46,7 +47,7 @@ func callClient() error {
 		return err
 	}
 
-	var result interface{}
+	var result []structs.EmailMetadata
 
 	err = json.Unmarshal(out.Bytes(), &result)
 	if err != nil {

@@ -61,8 +61,7 @@ def get_unread_emails_to_process(settings, group_settings_to_process):
         client.login(settings["username"], settings["password"])
         client.select_folder('INBOX')
 
-        # messages = client.search(['UNSEEN'])
-        messages = client.search(['ALL'])
+        messages = client.search(['UNSEEN'])
         response = client.fetch(messages, ['FLAGS', 'RFC822'])
 
         for message_id, data in response.items():

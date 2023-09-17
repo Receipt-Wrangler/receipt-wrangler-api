@@ -8,7 +8,8 @@ type EmailSettings struct {
 }
 
 type Config struct {
-	SecretKey     string
-	OpenAiKey     string
-	EmailSettings []EmailSettings
+	SecretKey            string
+	OpenAiKey            string
+	EmailPollingInterval int
+	EmailSettings        []EmailSettings
 }

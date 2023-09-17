@@ -1,6 +1,7 @@
 import datetime
 from itertools import chain
 from mailbox import Message
+import os
 from imapclient import IMAPClient
 import logging
 import re
@@ -149,6 +150,7 @@ def valid_subject(subject, subject_line_regexes):
     return False
 
 
+# TODO: handle multiples
 def get_attachments(message_data: Message):
     result = []
     for part in message_data.walk():
@@ -167,8 +169,12 @@ def get_attachments(message_data: Message):
             with open(filePath, 'wb') as f:
                 f.write(part.get_payload(decode=True))
 
+            size = os.path.getsize(filePath)
+
             result.append({
                 "filename": filename,
+                "fileType": mime_type,
+                "size": size,
             })
 
     return result

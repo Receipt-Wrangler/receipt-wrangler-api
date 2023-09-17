@@ -187,7 +187,8 @@ def valid_mime_type(mime_type):
 
 
 def read_config():
-    path = "config/config.dev.json"
+    env = os.environ.get("ENV", "dev")
+    path = f"config/config.{env}.json"
     f = open(path, "r")
     data = json.load(f)
     f.close()

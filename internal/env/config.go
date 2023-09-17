@@ -114,6 +114,7 @@ func setEnv() {
 	flag.Parse()
 
 	env = *envFlag
+	os.Setenv("ENV", env)
 }
 
 func setBasePath() {

@@ -69,7 +69,6 @@ def get_unread_emails_to_process(settings, group_settings_to_process):
             formatted_data = get_formatted_message_data(
                 data, group_settings_to_process)
             if len(formatted_data) > 0:
-                logging.info("WE MADE IT")
                 formatted_data[message_id] = message_id
                 results.append(formatted_data)
 
@@ -161,7 +160,9 @@ def get_attachments(message_data: Message):
         filename = part.get_filename()
         mime_type = part.get_content_type()
 
-        if bool(filename) and valid_mime_type(mime_type):
+        logging.info(f"Filename: {filename} mime_type: {mime_type}")
+
+        if len(filename) > 0 and valid_mime_type(mime_type):
             filePath = f"./temp/{filename}"
             with open(filePath, 'wb') as f:
                 f.write(part.get_payload(decode=True))
@@ -175,8 +176,8 @@ def get_attachments(message_data: Message):
 
 def valid_mime_type(mime_type):
     image_mime_types_regex = r"image\/.*"
-    index = image_mime_types_regex.find(mime_type)
-    return index > -1
+    match = re.search(image_mime_types_regex, mime_type)
+    return match is not None
 
 
 def read_config():

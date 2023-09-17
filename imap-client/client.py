@@ -145,7 +145,8 @@ def valid_subject(subject, subject_line_regexes):
         return True
 
     for subject_line_regex in subject_line_regexes:
-        matches = re.search(subject_line_regex["regex"], subject)
+        regex = re.compile(subject_line_regex["regex"])
+        matches = regex.search(subject)
         logging.info(
             f"Found match: {matches} on email subject: '{subject}' with regex: '{subject_line_regex['regex']}'")
         if matches:

@@ -3,7 +3,7 @@ package structs
 import "time"
 
 type Attachment struct {
-	FileName string `json:"fileName"`
+	Filename string `json:"filename"`
 }
 
 type EmailMetadata struct {

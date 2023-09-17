@@ -13,16 +13,30 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"time"
 
 	"gorm.io/gorm"
 )
 
 func PollEmails() error {
-	err := callClient()
-	if err != nil {
-		logging.GetLogger().Println(err.Error())
-		fmt.Println(err.Error())
-	}
+	config := config.GetConfig()
+	ticker := time.NewTicker(time.Duration(config.EmailPollingInterval) * time.Second)
+	done := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				err := callClient()
+				if err != nil {
+					logging.GetLogger().Println(err.Error())
+					fmt.Println(err.Error())
+				}
+			}
+		}
+	}()
 
 	return nil
 }

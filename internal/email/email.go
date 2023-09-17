@@ -78,7 +78,7 @@ func callClient() error {
 
 	fmt.Println(result)
 
-	err = processEmails(result)
+	err = processEmails(result, groupSettings)
 	if err != nil {
 		logger.Println(err.Error())
 		return err
@@ -87,7 +87,7 @@ func callClient() error {
 	return nil
 }
 
-func processEmails(emailMetadata []structs.EmailMetadata) error {
+func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models.GroupSettings) error {
 	basePath := config.GetBasePath() + "/temp"
 	db := repositories.GetDB()
 	imagesToRemove := []string{}
@@ -104,12 +104,25 @@ func processEmails(emailMetadata []structs.EmailMetadata) error {
 					return err
 				}
 
-				for _, groupId := range metadata.GroupIds {
-					receipt.GroupId = groupId
+				for _, groupSettingsId := range metadata.GroupSettingsIds {
+					groupSettingsToUse := models.GroupSettings{}
+
+					for _, groupSetting := range groupSettings {
+						if groupSetting.ID == groupSettingsId {
+							groupSettingsToUse = groupSetting
+							break
+						}
+					}
+
+					if groupSettingsToUse.ID == 0 {
+						return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
+					}
+
+					// TODO: Add user id
+					receipt.GroupId = groupSettingsToUse.GroupId
 					receipt.Status = models.DRAFT
 					receipt.PaidByUserID = 1
 
-					// TODO: Add user id
 					createdReceipt, err := receiptRepository.CreateReceipt(receipt, 1)
 					if err != nil {
 						return err

@@ -87,13 +87,13 @@ def get_formatted_message_data(data, group_settings_to_process):
     subject = message_data.get("Subject")
 
     should_process = False
-    group_ids = []
+    group_settings_ids = []
     for group_setting in group_settings_to_process:
         if group_setting["emailToRead"] == toEmail:
             should_process = should_process_email(
                 subject, fromEmail, group_setting)
             if should_process:
-                group_ids.append(group_setting["groupId"])
+                group_settings_ids.append(group_setting["id"])
 
     if not should_process:
         return {}
@@ -110,7 +110,7 @@ def get_formatted_message_data(data, group_settings_to_process):
         "fromName": fromName,
         "fromEmail": fromEmail,
         "attachments": get_attachments(message_data),
-        "groupIds": group_ids,
+        "groupSettingsIds": group_settings_ids,
     }
 
     logging.info(f"Formatted message data: {result}")

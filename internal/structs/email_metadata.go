@@ -9,11 +9,11 @@ type Attachment struct {
 }
 
 type EmailMetadata struct {
-	Date        time.Time    `json:"date"`
-	Subject     string       `json:"subject"`
-	To          string       `json:"to"`
-	FromName    string       `json:"fromName"`
-	FromEmail   string       `json:"fromEmail"`
-	Attachments []Attachment `json:"attachments"`
-	GroupIds    []uint       `json:"groupIds"`
+	Date             time.Time    `json:"date"`
+	Subject          string       `json:"subject"`
+	To               string       `json:"to"`
+	FromName         string       `json:"fromName"`
+	FromEmail        string       `json:"fromEmail"`
+	Attachments      []Attachment `json:"attachments"`
+	GroupSettingsIds []uint       `json:"groupSettingsIds"`
 }

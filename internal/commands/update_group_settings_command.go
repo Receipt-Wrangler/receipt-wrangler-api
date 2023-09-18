@@ -11,10 +11,13 @@ import (
 )
 
 type UpdateGroupSettingsCommand struct {
-	EmailToRead             string                               `json:"emailToRead"`
-	EmailIntegrationEnabled bool                                 `json:"emailIntegrationEnabled"`
-	SubjectLineRegexes      []models.SubjectLineRegex            `json:"subjectLineRegexes"`
-	EmailWhiteList          []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
+	EmailToRead                 string                               `json:"emailToRead"`
+	EmailIntegrationEnabled     bool                                 `json:"emailIntegrationEnabled"`
+	SubjectLineRegexes          []models.SubjectLineRegex            `json:"subjectLineRegexes"`
+	EmailWhiteList              []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
+	EmailDefaultReceiptStatus   models.ReceiptStatus                 `json:"emailDefaultReceiptStatus"`
+	EmailDefaultReceiptPaidBy   *models.User                         `json:"-"`
+	EmailDefaultReceiptPaidById *uint                                `json:"emailDefaultReceiptPaidById"`
 }
 
 func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -34,6 +37,8 @@ func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWr
 	command.EmailToRead = updateGroupSettingsCommand.EmailToRead
 	command.SubjectLineRegexes = updateGroupSettingsCommand.SubjectLineRegexes
 	command.EmailWhiteList = updateGroupSettingsCommand.EmailWhiteList
+	command.EmailDefaultReceiptStatus = updateGroupSettingsCommand.EmailDefaultReceiptStatus
+	command.EmailDefaultReceiptPaidById = updateGroupSettingsCommand.EmailDefaultReceiptPaidById
 
 	return nil
 }

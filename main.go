@@ -65,7 +65,7 @@ func main() {
 		err = userRepository.CreateUserIfNoneExist()
 	}
 
-	if len(config.GetConfig().EmailSettings) > 0 {
+	if len(config.GetConfig().EmailSettings) > 0 && config.GetFeatureConfig().AiPoweredReceipts {
 		email.PollEmails()
 	}
 

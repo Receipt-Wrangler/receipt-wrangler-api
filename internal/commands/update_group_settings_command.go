@@ -52,6 +52,14 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 		vErr.Errors["emailToRead"] = "Email to read is required when email integration is enabled"
 	}
 
+	if command.EmailDefaultReceiptStatus == "" && command.EmailIntegrationEnabled {
+		vErr.Errors["emailDefaultReceiptStatus"] = "Default receipt status is required when email integration is enabled"
+	}
+
+	if (command.EmailDefaultReceiptPaidById == nil || *command.EmailDefaultReceiptPaidById == 0) && command.EmailIntegrationEnabled {
+		vErr.Errors["emailDefaultReceiptPaidById"] = "Default receipt paid by is required when email integration is enabled"
+	}
+
 	_, err := mail.ParseAddress(command.EmailToRead)
 	if err != nil {
 		vErr.Errors["emailToRead"] = "Email to read is invalid"

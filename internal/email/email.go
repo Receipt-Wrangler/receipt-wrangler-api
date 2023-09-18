@@ -119,12 +119,11 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 						return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
 					}
 
-					// TODO: Add user id and status
 					receipt.GroupId = groupSettingsToUse.GroupId
-					receipt.Status = models.DRAFT
-					receipt.PaidByUserID = 1
+					receipt.Status = groupSettingsToUse.EmailDefaultReceiptStatus
+					receipt.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
 
-					createdReceipt, err := receiptRepository.CreateReceipt(receipt, 1)
+					createdReceipt, err := receiptRepository.CreateReceipt(receipt, 0)
 					if err != nil {
 						return err
 					}

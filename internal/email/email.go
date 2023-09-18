@@ -77,7 +77,7 @@ func callClient() error {
 		return err
 	}
 
-	fmt.Println(result)
+	logger.Println("Emails metadata captured: ", result)
 
 	err = processEmails(result, groupSettings)
 	if err != nil {

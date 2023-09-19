@@ -113,6 +113,9 @@ def get_formatted_message_data(data, group_settings_to_process):
         "groupSettingsIds": group_settings_ids,
     }
 
+    if (len(result["attachments"]) == 0):
+        return {}
+
     logging.info(f"Formatted message data: {result}")
     return result
 

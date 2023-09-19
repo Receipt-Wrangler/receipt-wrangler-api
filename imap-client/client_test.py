@@ -1,7 +1,8 @@
+import datetime
 import unittest
 
-from unittest.mock import patch
-from client import get_group_settings_to_process, should_process_email, valid_from_email, valid_subject, valid_mime_type
+from unittest.mock import Mock, patch
+from client import get_formatted_message_data, get_group_settings_to_process, should_process_email, valid_from_email, valid_subject, valid_mime_type
 
 
 class TestGetGroupSettingsToProcess(unittest.TestCase):
@@ -180,6 +181,75 @@ class TestShouldProcessEmail(unittest.TestCase):
                          "subjectLineRegexes": "anything"}
         self.assertFalse(should_process_email(
             "Invalid Subject", "invalid@example.com", group_setting))
+
+
+class TestGetFormattedMessageData(unittest.TestCase):
+
+    @patch('email.message_from_bytes')
+    @patch('client.should_process_email')
+    @patch('client.get_attachments')
+    def test_process_email(self, mock_get_attachments, mock_should_process_email, mock_message_from_bytes):
+        # Mock email message
+        mock_message = Mock()
+        mock_message.get.side_effect = lambda x: {
+            "From": "John Doe <john@example.com>",
+            "To": "to@example.com",
+            "Subject": "Test Subject",
+            "Date": "Mon, 20 Sep 2021 10:10:10 +0000"
+        }.get(x, "")
+        mock_message_from_bytes.return_value = mock_message
+
+        # Mock should_process_email
+        mock_should_process_email.return_value = True
+
+        # Mock get_attachments
+        mock_get_attachments.return_value = ["attachment1", "attachment2"]
+
+        # Set up function arguments
+        data = {b"RFC822": b"email data"}
+        group_settings_to_process = [
+            {"emailToRead": "to@example.com", "id": 1},
+            {"emailToRead": "another_to@example.com", "id": 2}
+        ]
+
+        result = get_formatted_message_data(data, group_settings_to_process)
+
+        # TODO: Check date correctly
+        self.assertEqual(result["date"], "2021-09-20T10:10:10.000000Z")
+        self.assertEqual(result["subject"], "Test Subject")
+        self.assertEqual(result["to"], "to@example.com")
+        self.assertEqual(result["fromName"], "John Doe ")
+        self.assertEqual(result["fromEmail"], "john@example.com")
+        self.assertEqual(result["groupSettingsIds"], [1])
+        self.assertEqual(result["attachments"], ["attachment1", "attachment2"])
+
+    @patch('email.message_from_bytes')
+    @patch('client.should_process_email')
+    @patch('datetime.datetime')
+    @patch('client.get_attachments')
+    def test_no_process_email(self, mock_get_attachments, mock_datetime, mock_should_process_email, mock_message_from_bytes):
+        # Mock email message
+        mock_message = Mock()
+        mock_message.get.side_effect = lambda x: {
+            "From": "John Doe <john@example.com>",
+            "To": "to@example.com",
+            "Subject": "Test Subject",
+            "Date": "Mon, 20 Sep 2021 10:10:10 +0000"
+        }.get(x, "")
+        mock_message_from_bytes.return_value = mock_message
+
+        # Mock should_process_email
+        mock_should_process_email.return_value = False
+
+        data = {b"RFC822": b"email data"}
+        group_settings_to_process = [
+            {"emailToRead": "to@example.com", "id": 1},
+            {"emailToRead": "another_to@example.com", "id": 2}
+        ]
+
+        result = get_formatted_message_data(data, group_settings_to_process)
+
+        self.assertEqual(result, {})
 
 
 if __name__ == '__main__':

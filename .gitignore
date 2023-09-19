@@ -8,4 +8,5 @@
 ./api
 ./coverage.out
 ./sqlite/*
+./imap-client/__pycache__
 api

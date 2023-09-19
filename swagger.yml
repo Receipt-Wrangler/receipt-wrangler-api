@@ -2017,6 +2017,13 @@ components:
           description: Email white list
           items:
             $ref: "#/components/schemas/GroupSettingsWhiteListEmail"
+        emailDefaultReceiptStatus:
+          type: string
+          enum: *RECEIPTSTATUS
+          description: Default receipt status
+        emailDefaultReceiptPaidById:
+          type: integer
+          description: User foreign key
         createdAt:
           type: string
         createdBy:
@@ -2093,4 +2100,11 @@ components:
           description: Email white list
           items:
             $ref: "#/components/schemas/GroupSettingsWhiteListEmail"
+        emailDefaultReceiptStatus:
+          type: string
+          enum: *RECEIPTSTATUS
+          description: Default receipt status
+        emailDefaultReceiptPaidById:
+          type: integer
+          description: User foreign key
             

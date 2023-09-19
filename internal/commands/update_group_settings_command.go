@@ -11,10 +11,13 @@ import (
 )
 
 type UpdateGroupSettingsCommand struct {
-	EmailToRead             string                               `json:"emailToRead"`
-	EmailIntegrationEnabled bool                                 `json:"emailIntegrationEnabled"`
-	SubjectLineRegexes      []models.SubjectLineRegex            `json:"subjectLineRegexes"`
-	EmailWhiteList          []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
+	EmailToRead                 string                               `json:"emailToRead"`
+	EmailIntegrationEnabled     bool                                 `json:"emailIntegrationEnabled"`
+	SubjectLineRegexes          []models.SubjectLineRegex            `json:"subjectLineRegexes"`
+	EmailWhiteList              []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
+	EmailDefaultReceiptStatus   models.ReceiptStatus                 `json:"emailDefaultReceiptStatus"`
+	EmailDefaultReceiptPaidBy   *models.User                         `json:"-"`
+	EmailDefaultReceiptPaidById *uint                                `json:"emailDefaultReceiptPaidById"`
 }
 
 func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -34,6 +37,8 @@ func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWr
 	command.EmailToRead = updateGroupSettingsCommand.EmailToRead
 	command.SubjectLineRegexes = updateGroupSettingsCommand.SubjectLineRegexes
 	command.EmailWhiteList = updateGroupSettingsCommand.EmailWhiteList
+	command.EmailDefaultReceiptStatus = updateGroupSettingsCommand.EmailDefaultReceiptStatus
+	command.EmailDefaultReceiptPaidById = updateGroupSettingsCommand.EmailDefaultReceiptPaidById
 
 	return nil
 }
@@ -45,6 +50,14 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 
 	if command.EmailToRead == "" && command.EmailIntegrationEnabled {
 		vErr.Errors["emailToRead"] = "Email to read is required when email integration is enabled"
+	}
+
+	if command.EmailDefaultReceiptStatus == "" && command.EmailIntegrationEnabled {
+		vErr.Errors["emailDefaultReceiptStatus"] = "Default receipt status is required when email integration is enabled"
+	}
+
+	if (command.EmailDefaultReceiptPaidById == nil || *command.EmailDefaultReceiptPaidById == 0) && command.EmailIntegrationEnabled {
+		vErr.Errors["emailDefaultReceiptPaidById"] = "Default receipt paid by is required when email integration is enabled"
 	}
 
 	_, err := mail.ParseAddress(command.EmailToRead)

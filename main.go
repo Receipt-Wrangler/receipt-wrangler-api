@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"receipt-wrangler/api/internal/email"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/logging"
@@ -62,6 +63,10 @@ func main() {
 	if config.GetDeployEnv() != "test" {
 		userRepository := repositories.NewUserRepository(nil)
 		err = userRepository.CreateUserIfNoneExist()
+	}
+
+	if len(config.GetConfig().EmailSettings) > 0 && config.GetFeatureConfig().AiPoweredReceipts {
+		email.PollEmails()
 	}
 
 	if err != nil {

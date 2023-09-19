@@ -5,6 +5,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GroupSettingsRepository struct {
@@ -17,6 +18,23 @@ func NewGroupSettingsRepository(tx *gorm.DB) GroupSettingsRepository {
 		TX: tx,
 	}}
 	return repository
+}
+
+func (repository GroupSettingsRepository) GetAllGroupSettings(queryWhere string, whereArgs any) ([]models.GroupSettings, error) {
+	db := repository.GetDB()
+	var groupSettings []models.GroupSettings
+
+	query := db.Model(&models.GroupSettings{}).Preload(clause.Associations)
+	if queryWhere != "" {
+		query = query.Where(queryWhere, whereArgs)
+	}
+
+	err := query.Find(&groupSettings).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return groupSettings, nil
 }
 
 func (repository GroupSettingsRepository) CreateGroupSettings(groupSettings models.GroupSettings) (models.GroupSettings, error) {
@@ -41,7 +59,7 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 
-		err = tx.Model(&groupSettings).Select("*").Updates(map[string]interface{}{"email_to_read": command.EmailToRead, "email_integration_enabled": command.EmailIntegrationEnabled}).Error
+		err = tx.Model(&groupSettings).Select("*").Updates(map[string]interface{}{"email_to_read": command.EmailToRead, "email_integration_enabled": command.EmailIntegrationEnabled, "email_default_receipt_paid_by_id": command.EmailDefaultReceiptPaidById, "email_default_receipt_status": command.EmailDefaultReceiptStatus}).Error
 		if err != nil {
 			return err
 		}

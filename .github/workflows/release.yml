@@ -28,6 +28,8 @@ jobs:
           name: codecov-umbrella # optional
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
+      - name: Test imap client
+        run: python3 imap-client/client_test.py
 
   build:
     needs: test

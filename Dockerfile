@@ -9,6 +9,9 @@ COPY . .
 RUN mkdir config
 VOLUME /go/api/config
 
+# Add local bin to path for python dependencies
+ENV PATH="~/.local/bin:${PATH}"
+
 # Install tesseract dependencies
 RUN ./set-up-dependencies.sh
 

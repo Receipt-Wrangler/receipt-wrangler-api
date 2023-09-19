@@ -28,7 +28,9 @@ func (repository ReceiptRepository) CreateReceipt(receipt models.Receipt, create
 	db := GetDB()
 	notificationRepository := NewNotificationRepository(nil)
 
-	receipt.CreatedBy = &createdByUserID
+	if receipt.GroupId > 0 {
+		receipt.CreatedBy = &createdByUserID
+	}
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)

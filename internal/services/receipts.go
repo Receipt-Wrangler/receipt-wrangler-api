@@ -39,21 +39,21 @@ func DeleteReceipt(id string) error {
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		var imagesToDelete []string
 		fileRepository := repositories.NewFileRepository(nil)
 		fileRepository.SetTransaction(tx)
+
+		for _, f := range receipt.ImageFiles {
+			path, _ := fileRepository.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
+			imagesToDelete = append(imagesToDelete, path)
+		}
 
 		err = tx.Select(clause.Associations).Delete(&receipt).Error
 		if err != nil {
 			return err
 		}
 
-		err = tx.Delete(&receipt).Error
-		if err != nil {
-			return err
-		}
-
-		for _, f := range receipt.ImageFiles {
-			path, _ := fileRepository.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
+		for _, path := range imagesToDelete {
 			os.Remove(path)
 		}
 

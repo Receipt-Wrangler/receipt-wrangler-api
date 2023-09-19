@@ -203,7 +203,7 @@ class TestGetFormattedMessageData(unittest.TestCase):
         mock_should_process_email.return_value = True
 
         # Mock get_attachments
-        mock_get_attachments.return_value = ["attachment1", "attachment2"]
+        mock_get_attachments.return_value = [{}, {}]
 
         # Set up function arguments
         data = {b"RFC822": b"email data"}
@@ -221,7 +221,7 @@ class TestGetFormattedMessageData(unittest.TestCase):
         self.assertEqual(result["fromName"], "John Doe ")
         self.assertEqual(result["fromEmail"], "john@example.com")
         self.assertEqual(result["groupSettingsIds"], [1])
-        self.assertEqual(result["attachments"], ["attachment1", "attachment2"])
+        self.assertEqual(result["attachments"], [{}, {}])
 
     @patch('email.message_from_bytes')
     @patch('client.should_process_email')

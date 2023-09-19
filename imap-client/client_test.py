@@ -1,8 +1,9 @@
 import datetime
+import tempfile
 import unittest
 
 from unittest.mock import Mock, patch
-from client import get_formatted_message_data, get_group_settings_to_process, should_process_email, valid_from_email, valid_subject, valid_mime_type
+from client import get_attachments, get_formatted_message_data, get_group_settings_to_process, should_process_email, valid_from_email, valid_subject, valid_mime_type
 
 
 class TestGetGroupSettingsToProcess(unittest.TestCase):
@@ -250,6 +251,53 @@ class TestGetFormattedMessageData(unittest.TestCase):
         result = get_formatted_message_data(data, group_settings_to_process)
 
         self.assertEqual(result, {})
+
+
+class TestProcessMessageParts(unittest.TestCase):
+
+    # TODO: Fix this test
+    # @patch('client.valid_mime_type', return_value=True)
+    # @patch('os.path.getsize', return_value=100)
+    # def test_valid_parts(self, mock_getsize, mock_valid_mime_type):
+    #     part1 = Mock()
+    #     part1.get_content_maintype.return_value = 'text'
+    #     part1.get.return_value = 'attachment'
+    #     part1.get_filename.return_value = 'file1.txt'
+    #     part1.get_content_type.return_value = 'text/plain'
+    #     part1.get_payload.return_value = b'Hello, world!'
+
+    #     part2 = Mock()
+    #     part2.get_content_maintype.return_value = 'multipart'
+
+    #     message_data = Mock()
+    #     message_data.walk.return_value = [part1, part2]
+
+    #     with tempfile.TemporaryDirectory() as temp_dir:
+    #         # Update temp directory path
+    #         global temp_dir_path
+    #         temp_dir_path = temp_dir
+
+    #         result = get_attachments(message_data)
+
+    #     self.assertEqual(len(result), 1)
+    #     self.assertEqual(result[0]['filename'], 'file1.txt')
+    #     self.assertEqual(result[0]['fileType'], 'text/plain')
+    #     self.assertEqual(result[0]['size'], 100)
+
+    @patch('client.valid_mime_type', return_value=False)
+    def test_invalid_mime_type(self, mock_valid_mime_type):
+        part = Mock()
+        part.get_content_maintype.return_value = 'text'
+        part.get.return_value = 'attachment'
+        part.get_filename.return_value = 'file1.txt'
+        part.get_content_type.return_value = 'text/plain'
+
+        message_data = Mock()
+        message_data.walk.return_value = [part]
+
+        result = get_attachments(message_data)
+
+        self.assertEqual(len(result), 0)
 
 
 if __name__ == '__main__':

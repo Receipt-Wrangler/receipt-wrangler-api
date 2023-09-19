@@ -32,7 +32,6 @@ def main():
         print(json_results)
     except exceptions.LoginError as e:
         logging.error(e)
-        sys.exit(1)
     except Exception as e:
         logging.error(e)
 

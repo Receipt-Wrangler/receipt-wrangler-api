@@ -62,6 +62,7 @@ func callClient() error {
 	cmd := exec.Command("python3", basePath+"/imap-client/client.py")
 	cmd.Stdout = &out
 	cmd.Stdin = bytes.NewReader(bytesArr)
+	cmd.Env = os.Environ()
 
 	err = cmd.Run()
 	if err != nil {

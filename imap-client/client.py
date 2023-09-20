@@ -29,6 +29,8 @@ def main():
         results = list(chain.from_iterable(emailsToProcess))
         json_results = json.dumps(results)
 
+        logging.info(f"Results: {json_results}")
+
         print(json_results)
     except exceptions.LoginError as e:
         logging.error(e)

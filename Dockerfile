@@ -12,6 +12,9 @@ VOLUME /go/api/config
 # Add local bin to path for python dependencies
 ENV PATH="~/.local/bin:${PATH}"
 
+# Set env
+ENV ENV="prod"
+
 # Install tesseract dependencies
 RUN ./set-up-dependencies.sh
 

@@ -25,7 +25,12 @@ func GetFeatureConfig() structs.FeatureConfig {
 }
 
 func GetBasePath() string {
-	return basePath
+	envBase := os.Getenv("BASE_PATH")
+	if len(envBase) == 0 {
+		return basePath
+	}
+
+	return envBase
 }
 
 func GetEnvVariables() map[string]string {

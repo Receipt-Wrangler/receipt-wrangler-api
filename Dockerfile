@@ -15,6 +15,9 @@ ENV PATH="~/.local/bin:${PATH}"
 # Set env
 ENV ENV="prod"
 
+# Set base path
+ENV BASE_PATH="/go/api"
+
 # Install tesseract dependencies
 RUN ./set-up-dependencies.sh
 

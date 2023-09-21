@@ -10,6 +10,8 @@ import sys
 import json
 import email
 
+base_path = os.environ.get("BASE_PATH", "")
+
 
 def main():
     init_logger()
@@ -41,7 +43,8 @@ def main():
 
 
 def init_logger():
-    logging.basicConfig(filename='logs/imap-client.log', level=logging.INFO,
+    path = os.path.join(base_path, "logs", "imap-client.log")
+    logging.basicConfig(filename=path, level=logging.INFO,
                         format='%(asctime)s %(levelname)s {%(pathname)s:%(lineno)d} %(message)s')
 
 
@@ -199,7 +202,7 @@ def valid_mime_type(mime_type):
 
 def read_config():
     env = os.environ.get("ENV", "dev")
-    path = f"config/config.{env}.json"
+    path = os.path.join(base_path, "config", f"config.{env}.json")
     f = open(path, "r")
     data = json.load(f)
     f.close()

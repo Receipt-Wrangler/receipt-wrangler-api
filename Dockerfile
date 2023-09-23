@@ -29,6 +29,9 @@ RUN go build
 RUN mkdir data
 VOLUME /go/api/data
 
+# Set up temp directory
+RUN mkdir temp
+
 # Set up sqlite volume
 RUN mkdir sqlite
 VOLUME /go/api/sqlite

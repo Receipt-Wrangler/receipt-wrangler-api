@@ -179,7 +179,7 @@ def get_attachments(message_data: Message):
         logging.info(f"Filename: {filename} mime_type: {mime_type}")
 
         if len(filename) > 0 and valid_mime_type(mime_type):
-            filePath = f"./temp/{filename}"
+            filePath = os.path.join(base_path, "temp", filename)
             with open(filePath, 'wb') as f:
                 f.write(part.get_payload(decode=True))
 

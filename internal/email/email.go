@@ -122,6 +122,7 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 					receipt.GroupId = groupSettingsToUse.GroupId
 					receipt.Status = groupSettingsToUse.EmailDefaultReceiptStatus
 					receipt.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
+					receipt.CreatedByString = "Email Integration"
 
 					createdReceipt, err := receiptRepository.CreateReceipt(receipt, 0)
 					if err != nil {

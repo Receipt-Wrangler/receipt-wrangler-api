@@ -1548,7 +1548,6 @@ components:
         date:
           type: string
           description: Receipt date
-
           x-go-name: Date
         groupId:
           type: integer
@@ -1583,7 +1582,6 @@ components:
         resolvedDate:
           type: string
           description: Date resolved
-
           x-go-name: ResolvedDate
         status:
           type: string
@@ -1596,8 +1594,10 @@ components:
           x-go-name: Tags
         updatedAt:
           type: string
-
           x-go-name: UpdatedAt
+        createdByString:
+          type: string
+          description: Created by string, which is anything that is not a user
       description: Receipt
       x-go-package: receipt-wrangler/api/internal/models
     Tag:

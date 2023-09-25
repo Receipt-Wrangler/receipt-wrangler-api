@@ -84,35 +84,36 @@ def get_unread_emails_to_process(settings, group_settings_to_process):
 
 def get_formatted_message_data(data, group_settings_to_process):
     message_data = email.message_from_bytes(data[b"RFC822"])
-    fromData = message_data.get("From").split("<")
-    fromName = fromData[0]
-    fromEmail = fromData[1].replace("<", "").replace(">", "")
-    toEmail = message_data.get("To")
+    from_data = getFormattedToOrFromData(message_data, "From")
+    if from_data["email"] is None:
+        return {}
+
+    toEmailData = getFormattedToOrFromData(message_data, "To")
+    if toEmailData["email"] is None:
+        return {}
+
     subject = message_data.get("Subject")
 
     should_process = False
     group_settings_ids = []
     for group_setting in group_settings_to_process:
-        if group_setting["emailToRead"] == toEmail:
+        if group_setting["emailToRead"] == toEmailData["email"]:
             should_process = should_process_email(
-                subject, fromEmail, group_setting)
+                subject, from_data["email"], group_setting)
             if should_process:
                 group_settings_ids.append(group_setting["id"])
 
     if not should_process:
         return {}
 
-    date = datetime.datetime.strptime(message_data.get(
-        "Date"), "%a, %d %b %Y %H:%M:%S %z")
-    utc_date = date.replace(tzinfo=datetime.timezone.utc)
-    formatted_date = utc_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    formatted_date = getFormattedDate(message_data.get("Date"))
 
     result = {
         "date": formatted_date,
         "subject": subject,
-        "to": message_data.get("To"),
-        "fromName": fromName,
-        "fromEmail": fromEmail,
+        "to": toEmailData["email"],
+        "fromName": from_data["name"],
+        "fromEmail": from_data["email"],
         "attachments": get_attachments(message_data),
         "groupSettingsIds": group_settings_ids,
     }
@@ -121,6 +122,37 @@ def get_formatted_message_data(data, group_settings_to_process):
         return {}
 
     logging.info(f"Formatted message data: {result}")
+    return result
+
+
+def getFormattedDate(date):
+    date_parts = date.split(
+        "(")  # Fixes case when date comes back in utc , so (UTC) is appended
+    logging.info(date[0])
+    date = datetime.datetime.strptime(
+        date_parts[0].strip(), "%a, %d %b %Y %H:%M:%S %z")
+    utc_date = date.replace(tzinfo=datetime.timezone.utc)
+    formatted_date = utc_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+    return formatted_date
+
+
+def getFormattedToOrFromData(message_data: Message, key: str):
+    result = {
+        "name": None,
+        "email": None
+    }
+
+    fromData = message_data.get(key).split("<")
+    if len(fromData) == 2:
+        result["name"] = fromData[0]
+        result["email"] = fromData[1].replace("<", "").replace(">", "")
+
+    if len(fromData) == 1:
+        result["email"] = fromData[0]
+
+    logging.info(f"Formatted from data: {result}")
+
     return result
 
 

@@ -827,6 +827,30 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /tags/getPagedTags:
+    post:
+      tags:
+        - Tag
+      summary: Get paged tags
+      description: This will return paged tags
+      operationId: getpagedTags
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /tag/:
     get:
       tags:

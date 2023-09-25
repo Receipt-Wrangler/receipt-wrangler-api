@@ -84,19 +84,22 @@ def get_unread_emails_to_process(settings, group_settings_to_process):
 
 def get_formatted_message_data(data, group_settings_to_process):
     message_data = email.message_from_bytes(data[b"RFC822"])
-    from_data = getFromData(message_data)
-    if from_data["fromEmail"] is None:
+    from_data = getFormattedToOrFromData(message_data, "From")
+    if from_data["email"] is None:
         return {}
 
-    toEmail = message_data.get("To")
+    toEmailData = getFormattedToOrFromData(message_data, "To")
+    if toEmailData["email"] is None:
+        return {}
+
     subject = message_data.get("Subject")
 
     should_process = False
     group_settings_ids = []
     for group_setting in group_settings_to_process:
-        if group_setting["emailToRead"] == toEmail:
+        if group_setting["emailToRead"] == toEmailData["email"]:
             should_process = should_process_email(
-                subject, from_data["fromEmail"], group_setting)
+                subject, from_data["email"], group_setting)
             if should_process:
                 group_settings_ids.append(group_setting["id"])
 
@@ -108,9 +111,9 @@ def get_formatted_message_data(data, group_settings_to_process):
     result = {
         "date": formatted_date,
         "subject": subject,
-        "to": message_data.get("To"),
-        "fromName": from_data["fromName"],
-        "fromEmail": from_data["fromEmail"],
+        "to": toEmailData["email"],
+        "fromName": from_data["name"],
+        "fromEmail": from_data["email"],
         "attachments": get_attachments(message_data),
         "groupSettingsIds": group_settings_ids,
     }
@@ -134,20 +137,21 @@ def getFormattedDate(date):
     return formatted_date
 
 
-def getFromData(message_data: Message):
+def getFormattedToOrFromData(message_data: Message, key: str):
     result = {
-        "fromName": None,
-        "fromEmail": None
+        "name": None,
+        "email": None
     }
 
-    fromData = message_data.get("From").split("<")
-    logging.info(f"From data: {fromData}")
+    fromData = message_data.get(key).split("<")
     if len(fromData) == 2:
-        result["fromName"] = fromData[0]
-        result["fromEmail"] = fromData[1].replace("<", "").replace(">", "")
+        result["name"] = fromData[0]
+        result["email"] = fromData[1].replace("<", "").replace(">", "")
 
     if len(fromData) == 1:
-        result["fromEmail"] = fromData[0]
+        result["email"] = fromData[0]
+
+    logging.info(f"Formatted from data: {result}")
 
     return result
 

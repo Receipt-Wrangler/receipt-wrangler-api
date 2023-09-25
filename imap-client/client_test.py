@@ -3,7 +3,7 @@ import tempfile
 import unittest
 
 from unittest.mock import Mock, patch
-from client import get_attachments, get_formatted_message_data, get_group_settings_to_process, should_process_email, valid_from_email, valid_subject, valid_mime_type
+from client import get_attachments, get_formatted_message_data, get_group_settings_to_process, getFormattedDate, getFromData, should_process_email, valid_from_email, valid_subject, valid_mime_type
 
 
 class TestGetGroupSettingsToProcess(unittest.TestCase):
@@ -251,6 +251,59 @@ class TestGetFormattedMessageData(unittest.TestCase):
         result = get_formatted_message_data(data, group_settings_to_process)
 
         self.assertEqual(result, {})
+
+
+class TestGetFromData(unittest.TestCase):
+
+    # def setUp(self):
+    # logging.disable(logging.CRITICAL)  # to disable logging for tests
+
+    def test_split_length_two(self):
+        message_data = {"From": "John Doe <john.doe@example.com>"}
+        result = getFromData(message_data)
+        self.assertEqual(result, {
+            "fromName": "John Doe ",
+            "fromEmail": "john.doe@example.com"
+        })
+
+    def test_split_length_one(self):
+        message_data = {"From": "john.doe@example.com"}
+        result = getFromData(message_data)
+        self.assertEqual(result, {
+            "fromName": None,
+            "fromEmail": "john.doe@example.com"
+        })
+
+    def test_no_from_field(self):
+        message_data = {}
+        with self.assertRaises(AttributeError):
+            getFromData(message_data)
+
+    # Optionally: test for more edge cases, like "From": "<john.doe@example.com>" or other variation
+
+
+class TestGetFormattedDate(unittest.TestCase):
+
+    def test_standard_date(self):
+        date = "Wed, 06 Jan 2021 12:34:56 +0000"
+        result = getFormattedDate(date)
+        self.assertEqual(result, "2021-01-06T12:34:56.000000Z")
+
+    def test_date_with_utc_appendix(self):
+        date = "Wed, 06 Jan 2021 12:34:56 +0000 (UTC)"
+        result = getFormattedDate(date)
+        self.assertEqual(result, "2021-01-06T12:34:56.000000Z")
+
+    # def test_date_with_different_timezone(self):
+    #     date = "Wed, 06 Jan 2021 14:34:56 +0200"
+    #     result = getFormattedDate(date)
+    #     # converting to UTC
+    #     self.assertEqual(result, "2021-01-06T12:34:56.000000Z")
+
+    def test_invalid_date_format(self):
+        date = "2021-01-06 12:34:56"
+        with self.assertRaises(ValueError):
+            getFormattedDate(date)
 
 
 class TestProcessMessageParts(unittest.TestCase):

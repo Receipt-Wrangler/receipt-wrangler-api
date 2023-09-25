@@ -833,7 +833,7 @@ paths:
         - Tag
       summary: Get paged tags
       description: This will return paged tags
-      operationId: getpagedTags
+      operationId: getPagedTags
       requestBody:
         description: Paging and sorting data
         required: true

@@ -1668,16 +1668,16 @@ components:
           format: uint64
         name:
           type: string
-          description: Name of the category
+          description: Name of the tag
         description:
           type: string
-          description: Description of the category
+          description: Description of the tag
         updatedAt:
           type: string
         numberOfReceipts:
           type: int
-          description: Number of receipts associated with this category
-      description: Category to relate receipts to
+          description: Number of receipts associated with this tag
+      description: Tag to relate receipts to
     User:
       required:
         - username

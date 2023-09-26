@@ -827,7 +827,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /tags/getPagedTags:
+  /tag/getPagedTags:
     post:
       tags:
         - Tag
@@ -1651,6 +1651,33 @@ components:
           x-go-name: UpdatedAt
       description: Tag to relate receipts to
       x-go-package: receipt-wrangler/api/internal/models
+    TagView:
+      required:
+        - id
+        - name
+        - numberOfReceipts
+      type: object
+      properties:
+        createdAt:
+          type: string
+        createdBy:
+          type: integer
+          format: uint64
+        id:
+          type: integer
+          format: uint64
+        name:
+          type: string
+          description: Name of the category
+        description:
+          type: string
+          description: Description of the category
+        updatedAt:
+          type: string
+        numberOfReceipts:
+          type: int
+          description: Number of receipts associated with this category
+      description: Category to relate receipts to
     User:
       required:
         - username

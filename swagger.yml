@@ -67,9 +67,9 @@ paths:
     get:
       tags:
         - Category
-      summary: Get category by name
-      description: This will return a category by name
-      operationId: getCategoryByName
+      summary: Get category count by name
+      description: This will return a count of categories with the same name
+      operationId: getCategoryCountByName
       responses:
         200:
           content:
@@ -847,6 +847,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+  /tag/{tagName}:
+    parameters:
+      - in: path
+        name: tagName
+        schema:
+          type: string
+        required: true
+        description: Tag name to get count of
+    get:
+      tags:
+        - Tag
+      summary: Get tag count by name
+      description: This will count of names with the same name
+      operationId: getTagCountByName
+      responses:
+        200:
+          content:
+            text/plain:
+              schema:
+                type: integer
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -2212,4 +2236,3 @@ components:
         emailDefaultReceiptPaidById:
           type: integer
           description: User foreign key
-            

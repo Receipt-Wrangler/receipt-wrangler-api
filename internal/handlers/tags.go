@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -106,6 +107,36 @@ func UpdateTag(w http.ResponseWriter, r *http.Request) {
 			}
 
 			bytes, err := utils.MarshalResponseData(updatedTag)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetTagNameCount(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting tag count",
+		Writer:       w,
+		Request:      r,
+		UserRole: 	 models.ADMIN,
+		ResponseType: constants.TEXT_PLAIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			tagRepository := repositories.NewTagsRepository(nil)
+			tagName := chi.URLParam(r, "tagName")
+			count, err := tagRepository.GetCount("tags", fmt.Sprintf("name = '%s'", tagName))
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(count)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

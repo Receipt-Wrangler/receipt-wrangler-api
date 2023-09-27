@@ -49,3 +49,20 @@ func (repository TagsRepository) GetAllPagedTags(pagedRequestCommand commands.Pa
 
 	return tags, nil
 }
+
+func (repository TagsRepository) UpdateTag(tagId string, command commands.TagUpsertCommand) (models.Tag, error) {
+	db := repository.GetDB()
+	var updatedTag models.Tag
+
+	err := db.Model(models.Tag{}).Where("id = ?", tagId).Updates(command).Error
+	if err != nil {
+		return models.Tag{}, err
+	}
+
+	err = db.Model(models.Tag{}).Where("id = ?", tagId).Find(&updatedTag).Error
+	if err != nil {
+		return models.Tag{}, err
+	}
+
+	return updatedTag, nil
+}

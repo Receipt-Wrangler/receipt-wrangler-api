@@ -851,6 +851,47 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /tag/{tagId}:
+    parameters:
+      - in: path
+        name: tagId
+        schema:
+          type: integer
+        required: true
+        description: Id of tag to get
+    put:
+      tags:
+        - Tag
+      summary: Update tag
+      description: This will update a tag
+      operationId: updateTag
+      requestBody:
+        description: Tag to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertTagCommand"
+      responses:
+        200:
+          $ref: "#/components/schemas/Tag"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - Tag
+      summary: Delete tag
+      description: This will delete a tag by id
+      operationId: deleteTag
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /tag/:
     get:
       tags:
@@ -1649,6 +1690,19 @@ components:
           type: string
 
           x-go-name: UpdatedAt
+      description: Tag to relate receipts to
+      x-go-package: receipt-wrangler/api/internal/models
+    UpsertTagCommand:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+          description: Tag name
+        description:
+          type: string
+          description: Tag description
       description: Tag to relate receipts to
       x-go-package: receipt-wrangler/api/internal/models
     TagView:

@@ -15,7 +15,7 @@ func BuildTagRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	tagRouter.Get("/", handlers.GetAllTags)
 	tagRouter.Post("/getPagedTags", handlers.GetPagedTags)
 	tagRouter.Put("/{tagId}", handlers.UpdateTag)
-	tagRouter.Get("/{categoryName}", handlers.GetTagNameCount)
+	tagRouter.Get("/{tagName}", handlers.GetTagNameCount)
 
 	return tagRouter
 }

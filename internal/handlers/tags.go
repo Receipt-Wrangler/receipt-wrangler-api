@@ -155,6 +155,31 @@ func UpdateTag(w http.ResponseWriter, r *http.Request) {
 	HandleRequest(handler)
 }
 
+func DeleteTag(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting tag",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "tagId")
+
+			tagRepository := repositories.NewTagsRepository(nil)
+			err := tagRepository.DeleteTag(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
 func GetTagNameCount(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error getting tag count",

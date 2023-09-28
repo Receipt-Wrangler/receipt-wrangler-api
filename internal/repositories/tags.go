@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 
@@ -80,4 +81,28 @@ func (repository TagsRepository) UpdateTag(tagId string, command commands.TagUps
 	}
 
 	return updatedTag, nil
+}
+
+func (repository TagsRepository) DeleteTag(tagId string) error {
+	db := repository.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		query := fmt.Sprintf("DELETE FROM receipt_tags WHERE tag_id = %s", tagId)
+		err := tx.Exec(query).Error
+		if err != nil {
+			return err
+		}
+
+		err = tx.Where("id = ?", tagId).Delete(&models.Tag{}).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

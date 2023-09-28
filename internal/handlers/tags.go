@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func GetAllTags(w http.ResponseWriter, r *http.Request) {
@@ -66,6 +70,73 @@ func GetPagedTags(w http.ResponseWriter, r *http.Request) {
 			pagedData.TotalCount = int64(len(anyData))
 
 			bytes, err := utils.MarshalResponseData(pagedData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func UpdateTag(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error updating tag",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "tagId")
+
+			tagUpsertCommand := commands.TagUpsertCommand{}
+			err := tagUpsertCommand.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			tagRepository := repositories.NewTagsRepository(nil)
+			updatedTag, err := tagRepository.UpdateTag(id, tagUpsertCommand)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(updatedTag)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetTagNameCount(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting tag count",
+		Writer:       w,
+		Request:      r,
+		UserRole: 	 models.ADMIN,
+		ResponseType: constants.TEXT_PLAIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			tagRepository := repositories.NewTagsRepository(nil)
+			tagName := chi.URLParam(r, "tagName")
+			count, err := tagRepository.GetCount("tags", fmt.Sprintf("name = '%s'", tagName))
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(count)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

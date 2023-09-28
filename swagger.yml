@@ -67,9 +67,9 @@ paths:
     get:
       tags:
         - Category
-      summary: Get category by name
-      description: This will return a category by name
-      operationId: getCategoryByName
+      summary: Get category count by name
+      description: This will return a count of categories with the same name
+      operationId: getCategoryCountByName
       responses:
         200:
           content:
@@ -847,6 +847,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+  /tag/{tagName}:
+    parameters:
+      - in: path
+        name: tagName
+        schema:
+          type: string
+        required: true
+        description: Tag name to get count of
+    get:
+      tags:
+        - Tag
+      summary: Get tag count by name
+      description: This will count of names with the same name
+      operationId: getTagCountByName
+      responses:
+        200:
+          content:
+            text/plain:
+              schema:
+                type: integer
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+  /tag/{tagId}:
+    parameters:
+      - in: path
+        name: tagId
+        schema:
+          type: integer
+        required: true
+        description: Id of tag to get
+    put:
+      tags:
+        - Tag
+      summary: Update tag
+      description: This will update a tag
+      operationId: updateTag
+      requestBody:
+        description: Tag to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertTagCommand"
+      responses:
+        200:
+          $ref: "#/components/schemas/Tag"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - Tag
+      summary: Delete tag
+      description: This will delete a tag by id
+      operationId: deleteTag
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1651,6 +1716,19 @@ components:
           x-go-name: UpdatedAt
       description: Tag to relate receipts to
       x-go-package: receipt-wrangler/api/internal/models
+    UpsertTagCommand:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+          description: Tag name
+        description:
+          type: string
+          description: Tag description
+      description: Tag to relate receipts to
+      x-go-package: receipt-wrangler/api/internal/models
     TagView:
       required:
         - id
@@ -2158,4 +2236,3 @@ components:
         emailDefaultReceiptPaidById:
           type: integer
           description: User foreign key
-            

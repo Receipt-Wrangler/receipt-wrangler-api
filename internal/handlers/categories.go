@@ -192,6 +192,7 @@ func GetCategoryNameCount(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting category count",
 		Writer:       w,
 		Request:      r,
+		UserRole: 	 models.ADMIN,
 		ResponseType: constants.TEXT_PLAIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			categoryRepository := repositories.NewCategoryRepository(nil)

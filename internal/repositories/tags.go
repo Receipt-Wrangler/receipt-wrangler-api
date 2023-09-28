@@ -31,6 +31,21 @@ func (repository TagsRepository) GetAllTags(querySelect string) ([]models.Tag, e
 	return tags, nil
 }
 
+func (repository TagsRepository) CreateTag(command commands.TagUpsertCommand) (models.Tag, error) {
+	db := repository.GetDB()
+	tag := models.Tag{}
+
+	tag.Name = command.Name
+	tag.Description = command.Description
+
+	err := db.Model(&tag).Create(&tag).Error
+	if err != nil {
+		return models.Tag{}, err
+	}
+
+	return tag, nil
+}
+
 func (repository TagsRepository) GetAllPagedTags(pagedRequestCommand commands.PagedRequestCommand) ([]models.TagView, error) {
 	db := repository.GetDB()
 	var tags []models.TagView

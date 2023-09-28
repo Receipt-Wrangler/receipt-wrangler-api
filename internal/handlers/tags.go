@@ -41,6 +41,40 @@ func GetAllTags(w http.ResponseWriter, r *http.Request) {
 	HandleRequest(handler)
 }
 
+func CreateTag(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error creating tag",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			tag := commands.TagUpsertCommand{}
+			err := tag.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			tagRepository := repositories.NewTagsRepository(nil)
+			createdTag, err := tagRepository.CreateTag(tag)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(&createdTag)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
 func GetPagedTags(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error retrieving tags",
@@ -126,7 +160,7 @@ func GetTagNameCount(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting tag count",
 		Writer:       w,
 		Request:      r,
-		UserRole: 	 models.ADMIN,
+		UserRole:     models.ADMIN,
 		ResponseType: constants.TEXT_PLAIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			tagRepository := repositories.NewTagsRepository(nil)

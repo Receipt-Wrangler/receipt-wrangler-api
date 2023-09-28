@@ -78,12 +78,12 @@ func (repository CategoryRepository) DeleteCategory(categoryId string) error {
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		query := fmt.Sprintf("DELETE FROM receipt_categories WHERE category_id = %s", categoryId)
-		err := db.Exec(query).Error
+		err := tx.Exec(query).Error
 		if err != nil {
 			return err
 		}
 
-		err = db.Where("id = ?", categoryId).Delete(&models.Category{}).Error
+		err = tx.Where("id = ?", categoryId).Delete(&models.Category{}).Error
 		if err != nil {
 			return err
 		}

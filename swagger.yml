@@ -935,6 +935,26 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+    post:
+      tags:
+        - Tag
+      summary: Create tag
+      description: This will create a tag
+      operationId: createTag
+      requestBody:
+        description: Tag to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertTagCommand"
+      responses:
+        200:
+          $ref: "#/components/schemas/Tag"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /token/:
     post:
       tags:

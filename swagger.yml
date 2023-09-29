@@ -282,6 +282,29 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /group/{groupId}/pollGroupEmail:
+    post:
+      tags:
+        - Groups
+      summary: Poll group email
+      description:
+        This will poll the group email for new receipts and add them to the
+        group
+      operationId: pollGroupEmail
+      parameters:
+        - in: path
+          name: groupId
+          schema:
+            type: integer
+          required: true
+          description: Group Id to poll
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /group/{groupId}:
     parameters:
       - in: path

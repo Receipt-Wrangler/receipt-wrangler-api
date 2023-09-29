@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/email"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -165,6 +166,29 @@ func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 			w.Write(bytes)
 
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
+	groupId := chi.URLParam(r, "groupId")
+
+	handler := structs.Handler{
+		ErrorMessage: "Error polling emails",
+		Writer:       w,
+		Request:      r,
+		GroupRole:    models.VIEWER,
+		GroupId:      groupId,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			err := email.CallClient(groupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
 			return 0, nil
 		},
 	}

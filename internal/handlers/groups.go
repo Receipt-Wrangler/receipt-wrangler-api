@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -176,7 +177,7 @@ func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 
 func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 	groupId := chi.URLParam(r, "groupId")
-	errMessage := "Error polling emails, please review your email integration settings"
+	errMessage := "Error polling email(s), please review your email integration settings"
 
 	handler := structs.Handler{
 		ErrorMessage: errMessage,
@@ -186,20 +187,45 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 		GroupId:      groupId,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
-			if groupId == "all" {
+			groupIdsToPoll := []string{}
 
-			} else {
-				groupSettings, err := groupSettingsRepository.GetAllGroupSettings("group_id = ?", groupId)
-				if err != nil || len(groupSettings) == 0 {
+			if groupId == "all" {
+				token := structs.GetJWT(r)
+				disabledEmailIntegrationCnt := 0
+				groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
-				if !groupSettings[0].EmailIntegrationEnabled {
-					return http.StatusInternalServerError, errors.New("email integration is not enabled for this group")
+				for _, group := range groups {
+					if group.GroupSettings.EmailIntegrationEnabled {
+						groupIdsToPoll = append(groupIdsToPoll, simpleutils.UintToString(group.ID))
+					} else {
+						disabledEmailIntegrationCnt += 1
+					}
+				}
+
+				if disabledEmailIntegrationCnt == len(groups) {
+					return http.StatusBadRequest, errors.New("email integration is not enabled for any of your groups")
+				}
+
+			} else {
+				groupSettings, err := groupSettingsRepository.GetAllGroupSettings("group_id = ?", groupId)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				for _, groupSetting := range groupSettings {
+					if !groupSetting.EmailIntegrationEnabled {
+						return http.StatusBadRequest, errors.New("email integration is not enabled for this group")
+					}
+					groupIdsToPoll = append(groupIdsToPoll, simpleutils.UintToString(groupSetting.GroupId))
 				}
 			}
 
-			err := email.CallClient(groupId)
+			fmt.Println(groupIdsToPoll)
+
+			err := email.CallClient(false, groupIdsToPoll)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

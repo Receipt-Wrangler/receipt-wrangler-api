@@ -15,12 +15,21 @@ func HandleRequest(handler structs.Handler) {
 	}
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
-		token := structs.GetJWT(handler.Request)
-		err := services.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, simpleutils.UintToString(token.UserId))
-		if err != nil {
-			handler_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
-			return
+		var checkGroupRole bool
+		if handler.GroupId == "all" && handler.AllowAllGroup {
+			checkGroupRole = false
+		} else {
+			checkGroupRole = true
+		}
+
+		if checkGroupRole {
+			token := structs.GetJWT(handler.Request)
+			err := services.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, simpleutils.UintToString(token.UserId))
+			if err != nil {
+				handler_logger.Print(err.Error())
+				utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
+				return
+			}
 		}
 	}
 

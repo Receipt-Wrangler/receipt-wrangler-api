@@ -19,6 +19,7 @@ func BuildGroupRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{}), middleware.ValidateGroupRole(models.OWNER)).Put("/{groupId}", handlers.UpdateGroup)
 	groupRouter.Put("/{groupId}/groupSettings", handlers.UpdateGroupSettings)
 	groupRouter.With(middleware.ValidateGroupRole(models.OWNER), middleware.CanDeleteGroup).Delete("/{groupId}", handlers.DeleteGroup)
+	groupRouter.Post("/{groupId}/pollGroupEmail", handlers.PollGroupEmail)
 
 	return groupRouter
 }

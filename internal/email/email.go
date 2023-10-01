@@ -29,7 +29,7 @@ func PollEmails() error {
 			case <-done:
 				return
 			case <-ticker.C:
-				err := callClient()
+				err := CallClient(true, nil)
 				if err != nil {
 					logging.GetLogger().Println("Error polling emails")
 					logging.GetLogger().Println(err.Error())
@@ -41,15 +41,39 @@ func PollEmails() error {
 	return nil
 }
 
-func callClient() error {
+func CallClient(pollAllGroups bool, groupIds []string) error {
+	logger := logging.GetLogger()
+	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+
+	if pollAllGroups {
+		groupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ?", true)
+		if err != nil {
+			logger.Println(err.Error())
+			return err
+		}
+		err = pollEmailForGroupSettings(groupSettings)
+		if err != nil {
+			logger.Println(err.Error())
+			return err
+		}
+	} else {
+		groupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ? AND group_id IN ?", true, groupIds)
+		if err != nil {
+			logger.Println(err.Error())
+			return err
+		}
+		err = pollEmailForGroupSettings(groupSettings)
+		if err != nil {
+			logger.Println(err.Error())
+			return err
+		}
+	}
+	return nil
+}
+
+func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	logger := logging.GetLogger()
 	basePath := config.GetBasePath()
-	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
-	groupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ?", true)
-	if err != nil {
-		logger.Println(err.Error())
-		return err
-	}
 
 	bytesArr, err := json.Marshal(groupSettings)
 	if err != nil {

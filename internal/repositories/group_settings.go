@@ -20,13 +20,13 @@ func NewGroupSettingsRepository(tx *gorm.DB) GroupSettingsRepository {
 	return repository
 }
 
-func (repository GroupSettingsRepository) GetAllGroupSettings(queryWhere string, whereArgs any) ([]models.GroupSettings, error) {
+func (repository GroupSettingsRepository) GetAllGroupSettings(queryWhere string, whereArgs ...any) ([]models.GroupSettings, error) {
 	db := repository.GetDB()
 	var groupSettings []models.GroupSettings
 
 	query := db.Model(&models.GroupSettings{}).Preload(clause.Associations)
 	if queryWhere != "" {
-		query = query.Where(queryWhere, whereArgs)
+		query = query.Where(queryWhere, whereArgs...)
 	}
 
 	err := query.Find(&groupSettings).Error

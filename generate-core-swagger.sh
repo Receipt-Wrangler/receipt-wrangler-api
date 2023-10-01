@@ -1,0 +1,1 @@
+java -jar ../swagger-codegen-cli.jar generate -i ./swagger.yml -o ../receipt-wrangler-core/projects/core/src/lib/api/ -l typescript-angular

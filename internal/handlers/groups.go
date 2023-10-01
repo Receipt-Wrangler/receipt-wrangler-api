@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -223,8 +222,6 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 					groupIdsToPoll = append(groupIdsToPoll, simpleutils.UintToString(groupSetting.GroupId))
 				}
 			}
-
-			fmt.Println(groupIdsToPoll)
 
 			err := email.CallClient(false, groupIdsToPoll)
 			if err != nil {

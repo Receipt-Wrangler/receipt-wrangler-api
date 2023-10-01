@@ -16,7 +16,7 @@ func HandleRequest(handler structs.Handler) {
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		var checkGroupRole bool
-		if handler.GroupId == "all" && handler.HandleAllGroup {
+		if handler.GroupId == "all" && handler.AllowAllGroup {
 			checkGroupRole = false
 		} else {
 			checkGroupRole = true

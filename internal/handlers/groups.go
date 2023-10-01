@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -175,14 +176,29 @@ func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 
 func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 	groupId := chi.URLParam(r, "groupId")
+	errMessage := "Error polling emails, please review your email integration settings"
 
 	handler := structs.Handler{
-		ErrorMessage: "Error polling emails",
+		ErrorMessage: errMessage,
 		Writer:       w,
 		Request:      r,
 		GroupRole:    models.VIEWER,
 		GroupId:      groupId,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+			if groupId == "all" {
+
+			} else {
+				groupSettings, err := groupSettingsRepository.GetAllGroupSettings("group_id = ?", groupId)
+				if err != nil || len(groupSettings) == 0 {
+					return http.StatusInternalServerError, err
+				}
+
+				if !groupSettings[0].EmailIntegrationEnabled {
+					return http.StatusInternalServerError, errors.New("email integration is not enabled for this group")
+				}
+			}
+
 			err := email.CallClient(groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err

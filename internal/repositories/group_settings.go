@@ -26,7 +26,7 @@ func (repository GroupSettingsRepository) GetAllGroupSettings(queryWhere string,
 
 	query := db.Model(&models.GroupSettings{}).Preload(clause.Associations)
 	if queryWhere != "" {
-		query = query.Where(queryWhere, whereArgs)
+		query = query.Where(queryWhere, whereArgs...)
 	}
 
 	err := query.Find(&groupSettings).Error

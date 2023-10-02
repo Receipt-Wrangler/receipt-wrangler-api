@@ -102,6 +102,9 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 
 				receiptRepository := repositories.NewReceiptRepository(nil)
 				receipts, err = receiptRepository.GetReceiptsByGroupIds(groupIds, "*", clause.Associations)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 			}
 
 			if err != nil {
@@ -125,7 +128,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Error creating receipts.",
+		ErrorMessage: "Error creating receipt.",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
@@ -232,82 +235,91 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetReceipt(w http.ResponseWriter, r *http.Request) {
-	db := repositories.GetDB()
-	var receipt models.Receipt
-	errMsg := "Error retrieving receipt."
+	handler := structs.Handler{
+		ErrorMessage: "Error retrieving receipt.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := repositories.GetDB()
+			var receipt models.Receipt
+			id := chi.URLParam(r, "id")
 
-	id := chi.URLParam(r, "id")
+			err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Preload("Comments.Replies").Find(&receipt).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
-	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Preload("Comments.Replies").Find(&receipt).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 404)
-		return
+			bytes, err := json.Marshal(receipt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := json.Marshal(receipt)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
-	db := repositories.GetDB()
+	handler := structs.Handler{
+		ErrorMessage: "Error updating receipt.",
+		Writer:       w,
+		Request:      r,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := repositories.GetDB()
 
-	errMsg := "Error updating receipt."
-	id := chi.URLParam(r, "id")
-	u64Id, err := strconv.ParseUint(id, 10, 32)
+			id := chi.URLParam(r, "id")
+			u64Id, err := strconv.ParseUint(id, 10, 32)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			bodyData := r.Context().Value("receipt").(models.Receipt)
+			bodyData.ID = uint(u64Id)
+
+			err = db.Transaction(func(tx *gorm.DB) error {
+				txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID", "created_by", "updated_at", "created_at").Where("id = ?", uint(u64Id)).Save(bodyData).Error
+				if txErr != nil {
+					handler_logger.Print(txErr.Error())
+					return txErr
+				}
+
+				txErr = tx.Model(&bodyData).Association("Tags").Replace(bodyData.Tags)
+				if txErr != nil {
+					handler_logger.Print(txErr.Error())
+					return txErr
+				}
+
+				txErr = tx.Model(&bodyData).Association("Categories").Replace(bodyData.Categories)
+				if txErr != nil {
+					handler_logger.Print(txErr.Error())
+					return txErr
+				}
+
+				txErr = tx.Model(&bodyData).Association("ReceiptItems").Replace(bodyData.ReceiptItems)
+				if txErr != nil {
+					handler_logger.Print(txErr.Error())
+					return txErr
+				}
+
+				return nil
+			})
+
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
 	}
 
-	bodyData := r.Context().Value("receipt").(models.Receipt)
-	bodyData.ID = uint(u64Id)
-
-	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := db.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID", "created_by", "updated_at", "created_at").Where("id = ?", uint(u64Id)).Save(bodyData).Error
-		if txErr != nil {
-			handler_logger.Print(txErr.Error())
-			return txErr
-		}
-
-		txErr = db.Model(&bodyData).Association("Tags").Replace(bodyData.Tags)
-		if txErr != nil {
-			handler_logger.Print(txErr.Error())
-			return txErr
-		}
-
-		txErr = db.Model(&bodyData).Association("Categories").Replace(bodyData.Categories)
-		if txErr != nil {
-			handler_logger.Print(txErr.Error())
-			return txErr
-		}
-
-		txErr = db.Model(&bodyData).Association("ReceiptItems").Replace(bodyData.ReceiptItems)
-		if txErr != nil {
-			handler_logger.Print(txErr.Error())
-			return txErr
-		}
-
-		// return nil will commit the whole transaction
-		return nil
-	})
-
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
+	HandleRequest(handler)
 }
 
 func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
@@ -387,7 +399,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 
 func HasAccess(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Insufficient permissions",
+		ErrorMessage: "Insufficient permissions.",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
@@ -430,17 +442,25 @@ func HasAccess(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
-	errMsg := "Error deleting receipt."
-	id := chi.URLParam(r, "id")
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting receipt.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
 
-	err := services.DeleteReceipt(id)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			err := services.DeleteReceipt(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
 	}
 
-	w.WriteHeader(200)
+	HandleRequest(handler)
 }
 
 func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {

@@ -95,42 +95,44 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
-	db := repositories.GetDB()
-	errMsg := "Error retrieving image."
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting image.",
+		Writer:       w,
+		Request:      r,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := repositories.GetDB()
 
-	id := chi.URLParam(r, "id")
-	var fileData models.FileData
+			id := chi.URLParam(r, "id")
+			var fileData models.FileData
 
-	err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = db.Delete(fileData).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			fileRepository := repositories.NewFileRepository(nil)
+			path, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), id, fileData.Name)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = os.Remove(path)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+
+			return 0, nil
+		},
 	}
 
-	err = db.Delete(fileData).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	fileRepository := repositories.NewFileRepository(nil)
-	path, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), id, fileData.Name)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	err = os.Remove(path)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
+	HandleRequest(handler)
 }
 
 func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {

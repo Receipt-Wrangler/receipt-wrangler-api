@@ -17,50 +17,64 @@ import (
 )
 
 func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
-	errMsg := "Error retrieving groups."
-	token := structs.GetJWT(r)
+	handler := structs.Handler{
+		ErrorMessage: "Error retrieving groups.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := structs.GetJWT(r)
 
-	groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(groups)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := utils.MarshalResponseData(groups)
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	utils.SetJSONResponseHeaders(w)
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func GetGroupById(w http.ResponseWriter, r *http.Request) {
-	errMsg := "Error retrieving group."
-	id := chi.URLParam(r, "groupId")
+	handler := structs.Handler{
+		ErrorMessage: "Error retrieving group.",
+		Writer:       w,
+		Request:      r,
+		GroupId:      chi.URLParam(r, "groupId"),
+		GroupRole:    models.VIEWER,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "groupId")
 
-	groupRepository := repositories.NewGroupRepository(nil)
-	groups, err := groupRepository.GetGroupById(id, true)
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+			groupRepository := repositories.NewGroupRepository(nil)
+			groups, err := groupRepository.GetGroupById(id, true)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(groups)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := utils.MarshalResponseData(groups)
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	utils.SetJSONResponseHeaders(w)
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func CreateGroup(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +110,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
 			return 0, nil
@@ -107,29 +121,36 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateGroup(w http.ResponseWriter, r *http.Request) {
-	errMsg := "Error updating group."
-	group := r.Context().Value("group").(models.Group)
-	groupId := chi.URLParam(r, "groupId")
+	handler := structs.Handler{
+		ErrorMessage: "Error updating group.",
+		Writer:       w,
+		Request:      r,
+		GroupId:      chi.URLParam(r, "groupId"),
+		GroupRole:    models.OWNER,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			group := r.Context().Value("group").(models.Group)
+			groupId := chi.URLParam(r, "groupId")
 
-	groupRepository := repositories.NewGroupRepository(nil)
-	updatedGroup, err := groupRepository.UpdateGroup(group, groupId)
+			groupRepository := repositories.NewGroupRepository(nil)
+			updatedGroup, err := groupRepository.UpdateGroup(group, groupId)
 
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(updatedGroup)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+			return 0, nil
+		},
 	}
 
-	bytes, err := utils.MarshalResponseData(updatedGroup)
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
-	}
-
-	utils.SetJSONResponseHeaders(w)
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
@@ -237,15 +258,26 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteGroup(w http.ResponseWriter, r *http.Request) {
-	errMsg := "Error deleting group."
-	id := chi.URLParam(r, "groupId")
 
-	err := services.DeleteGroup(id)
-	if err != nil {
-		handler_logger.Println(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting group.",
+		Writer:       w,
+		Request:      r,
+		GroupId:      chi.URLParam(r, "groupId"),
+		GroupRole:    models.OWNER,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "groupId")
+
+			err := services.DeleteGroup(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			return 0, nil
+		},
 	}
 
-	w.WriteHeader(http.StatusOK)
+	HandleRequest(handler)
 }

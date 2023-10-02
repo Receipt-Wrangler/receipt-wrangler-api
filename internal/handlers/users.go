@@ -26,75 +26,96 @@ type ItemView struct {
 }
 
 func GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	db := repositories.GetDB()
-	errMsg := "Error retrieving users."
-	var users []structs.UserView
+	handler := structs.Handler{
+		ErrorMessage: "Error retrieving users.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := repositories.GetDB()
+			var users []structs.UserView
 
-	err := db.Model(models.User{}).Find(&users).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
+			// TODO: move to repo
+			err := db.Model(models.User{}).Find(&users).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := json.Marshal(users)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := json.Marshal(users)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, 500)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	db := repositories.GetDB()
-	var UserView structs.UserView
-	bodyData := r.Context().Value("user").(commands.SignUpCommand)
-	errMsg := "Error creating user."
+	handler := structs.Handler{
+		ErrorMessage: "Error creating user.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := repositories.GetDB()
+			var UserView structs.UserView
+			bodyData := r.Context().Value("user").(commands.SignUpCommand)
 
-	userRepository := repositories.NewUserRepository(nil)
-	createdUser, err := userRepository.CreateUser(bodyData)
+			userRepository := repositories.NewUserRepository(nil)
+			createdUser, err := userRepository.CreateUser(bodyData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
-	if err != nil {
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+			// TODO: Move to repo
+			err = db.Model(models.User{}).Where("id = ?", createdUser.ID).Find(&UserView).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(UserView)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	err = db.Model(models.User{}).Where("id = ?", createdUser.ID).Find(&UserView).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
-	}
-
-	bytes, err := utils.MarshalResponseData(UserView)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	db := repositories.GetDB()
-	errMsg := "Error updating user."
-	id := chi.URLParam(r, "id")
+	handler := structs.Handler{
+		ErrorMessage: "Error updating user.",
+		Writer:       w,
+		Request:      r,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := repositories.GetDB()
+			id := chi.URLParam(r, "id")
+			bodyData := r.Context().Value("user").(commands.SignUpCommand)
 
-	bodyData := r.Context().Value("user").(commands.SignUpCommand)
+			//TODO: Move to repo
+			err := db.Table("users").Select("username", "display_name", "user_role").Where("id = ?", id).Updates(&bodyData).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
-	err := db.Table("users").Select("username", "display_name", "user_role").Where("id = ?", id).Updates(&bodyData).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
 	}
 
-	w.WriteHeader(http.StatusOK)
+	HandleRequest(handler)
 }
 
 func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
@@ -209,27 +230,35 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetUsernameCount(w http.ResponseWriter, r *http.Request) {
-	db := repositories.GetDB()
-	errMsg := "Error getting username count."
-	username := chi.URLParam(r, "username")
-	var result int64
+	handler := structs.Handler{
+		ErrorMessage: "Error getting username count.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.TEXT_PLAIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			db := repositories.GetDB()
+			username := chi.URLParam(r, "username")
+			var result int64
 
-	err := db.Model(models.User{}).Where("username = ?", username).Count(&result).Error
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+			// TODO: user repo count func
+			err := db.Model(models.User{}).Where("username = ?", username).Count(&result).Error
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(result)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
 	}
 
-	bytes, err := utils.MarshalResponseData(result)
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
+	HandleRequest(handler)
 }
 
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
@@ -237,12 +266,12 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error resetting password.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			id := chi.URLParam(r, "id")
 			resetPasswordData := r.Context().Value("reset_password").(structs.ResetPasswordCommand)
 
+			// TODO: move to service
 			hashedPassword, err := utils.HashPassword(resetPasswordData.Password)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -253,7 +282,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			return 0, nil
 		},
 	}
@@ -309,7 +338,6 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error Deleting User.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			token := structs.GetJWT(r)
@@ -370,6 +398,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, errors.New("displayName is undefined")
 			}
 
+			// TODO: move to repo
 			err := db.Table("users").Where("id = ?", token.UserId).Updates(map[string]interface{}{"display_name": updateProfileCommand.DisplayName, "default_avatar_color": updateProfileCommand.DefaultAvatarColor}).Error
 			if err != nil {
 				return http.StatusInternalServerError, err

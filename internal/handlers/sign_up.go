@@ -6,22 +6,29 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/utils"
 )
 
 func SignUp(w http.ResponseWriter, r *http.Request) {
-	errMsg := "Error signing up"
-	userData := r.Context().Value("signUpCommand").(commands.SignUpCommand)
-	userRepository := repositories.NewUserRepository(nil)
-	_, err := userRepository.CreateUser(userData)
+	handler := structs.Handler{
+		ErrorMessage: "Error signing up.",
+		Writer:       w,
+		Request:      r,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			userData := r.Context().Value("signUpCommand").(commands.SignUpCommand)
+			userRepository := repositories.NewUserRepository(nil)
+			_, err := userRepository.CreateUser(userData)
 
-	if err != nil {
-		handler_logger.Print(err.Error())
-		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-		return
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
 	}
 
-	w.WriteHeader(200)
+	HandleRequest(handler)
+
 }
 
 func validateSignUpData(userData models.User) structs.ValidatorError {

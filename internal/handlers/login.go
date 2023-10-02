@@ -13,7 +13,7 @@ import (
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Invalid credentials",
+		ErrorMessage: "Invalid credentials.",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,

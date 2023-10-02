@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
@@ -15,7 +14,6 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error refreshing token",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 
 			oldRefreshToken := r.Context().Value("refreshToken").(*validator.ValidatedClaims).CustomClaims.(*structs.Claims)

@@ -46,13 +46,19 @@ func (repository CategoryRepository) CreateCategory(category models.Category) (m
 func (repository CategoryRepository) GetAllPagedCategories(pagedRequestCommand commands.PagedRequestCommand) ([]models.CategoryView, error) {
 	db := repository.GetDB()
 	var categories []models.CategoryView
+	quotedAlias := "\"NumberOfReceipts\""
+
+	if pagedRequestCommand.OrderBy == "numberOfReceipts" {
+		pagedRequestCommand.OrderBy = quotedAlias
+	}
 
 	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
-	query = query.Table("receipt_categories").
-		Select("*, COUNT(DISTINCT receipt_categories.receipt_id) as NumberOfReceipts").
-		Joins("RIGHT JOIN categories ON receipt_categories.category_id = categories.id").
-		Group("receipt_categories.category_id, categories.name")
+	selectString := fmt.Sprintf("categories.id, categories.name, COUNT(DISTINCT receipt_categories.receipt_id) as %s", quotedAlias)
+	query = query.Table("categories").
+		Select(selectString).
+		Joins("LEFT JOIN receipt_categories ON categories.id = receipt_categories.category_id").
+		Group("categories.id, categories.name").Debug()
 
 	err := query.Scan(&categories).Error
 	if err != nil {

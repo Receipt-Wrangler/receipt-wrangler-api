@@ -51,6 +51,10 @@ func (repository TagsRepository) GetAllPagedTags(pagedRequestCommand commands.Pa
 	db := repository.GetDB()
 	var tags []models.TagView
 
+	if pagedRequestCommand.OrderBy == "numberOfReceipts" {
+		pagedRequestCommand.OrderBy = "\"NumberOfReceipts\""
+	}
+
 	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
 	query = query.Table("tags").

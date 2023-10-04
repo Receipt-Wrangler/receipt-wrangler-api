@@ -50,13 +50,19 @@ func (repository TagsRepository) CreateTag(command commands.TagUpsertCommand) (m
 func (repository TagsRepository) GetAllPagedTags(pagedRequestCommand commands.PagedRequestCommand) ([]models.TagView, error) {
 	db := repository.GetDB()
 	var tags []models.TagView
+	quotedAlias := "\"NumberOfReceipts\""
+
+	if pagedRequestCommand.OrderBy == "numberOfReceipts" {
+		pagedRequestCommand.OrderBy = quotedAlias
+	}
 
 	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
-	query = query.Table("receipt_tags").
-		Select("*, COUNT(DISTINCT receipt_tags.receipt_id) as NumberOfReceipts").
-		Joins("RIGHT JOIN tags ON receipt_tags.tag_id = tags.id").
-		Group("receipt_tags.tag_id, tags.name")
+	selectString := fmt.Sprintf("tags.id, tags.name, COUNT(DISTINCT receipt_tags.receipt_id) as %s", quotedAlias)
+	query = query.Table("tags").
+		Select(selectString).
+		Joins("LEFT JOIN receipt_tags ON tags.id = receipt_tags.tag_id").
+		Group("tags.id, tags.name")
 
 	err := query.Scan(&tags).Error
 	if err != nil {

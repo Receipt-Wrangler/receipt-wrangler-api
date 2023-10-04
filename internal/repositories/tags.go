@@ -53,10 +53,10 @@ func (repository TagsRepository) GetAllPagedTags(pagedRequestCommand commands.Pa
 
 	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
-	query = query.Table("receipt_tags").
-		Select("*, COUNT(DISTINCT receipt_tags.receipt_id) as NumberOfReceipts").
-		Joins("RIGHT JOIN tags ON receipt_tags.tag_id = tags.id").
-		Group("receipt_tags.tag_id, tags.name")
+	query = query.Table("tags").
+		Select("tags.id, tags.name, COUNT(DISTINCT receipt_tags.receipt_id) as \"NumberOfReceipts\"").
+		Joins("LEFT JOIN receipt_tags ON tags.id = receipt_tags.tag_id").
+		Group("tags.id, tags.name")
 
 	err := query.Scan(&tags).Error
 	if err != nil {

@@ -58,7 +58,7 @@ func (repository CategoryRepository) GetAllPagedCategories(pagedRequestCommand c
 	query = query.Table("categories").
 		Select(selectString).
 		Joins("LEFT JOIN receipt_categories ON categories.id = receipt_categories.category_id").
-		Group("categories.id, categories.name").Debug()
+		Group("categories.id, categories.name")
 
 	err := query.Scan(&categories).Error
 	if err != nil {

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	config "receipt-wrangler/api/internal/env"
@@ -9,6 +8,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/structs"
 	"time"
 
 	"github.com/sashabaranov/go-openai"
@@ -27,35 +27,30 @@ func GetClient() *openai.Client {
 func ReadReceiptData(ocrText string) (models.Receipt, error) {
 	var result models.Receipt
 	logger := logging.GetLogger()
-
+	config := config.GetConfig()
 	client := GetClient()
+	aiClient := structs.NewAiClient(config.AiSettings.AiType, client)
+	clientMessages := []structs.AiClientMessage{}
+
 	prompt, err := getPrompt(ocrText)
 	if err != nil {
 		return models.Receipt{}, err
 	}
 
-	resp, err := client.CreateChatCompletion(
-		context.Background(),
-		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: prompt,
-				},
-			},
-			N:           1,
-			Temperature: 0,
-		},
-	)
+	clientMessages = append(clientMessages, structs.AiClientMessage{
+		Role:    "user",
+		Content: prompt,
+	})
+	aiClient.Messages = clientMessages
+
+	response, err := aiClient.CreateChatCompletion()
 	if err != nil {
 		return models.Receipt{}, err
 	}
 
-	openAiResponse := resp.Choices[0].Message.Content
-	logger.Print(openAiResponse, "raw response")
+	logger.Print(response, "raw response")
 
-	err = json.Unmarshal([]byte(openAiResponse), &result)
+	err = json.Unmarshal([]byte(response), &result)
 	if err != nil {
 		return models.Receipt{}, err
 	}

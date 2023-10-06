@@ -2,12 +2,15 @@ package structs
 
 import (
 	"bytes"
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
+
+	"github.com/sashabaranov/go-openai"
 )
 
 type AiClientType string
@@ -34,15 +37,17 @@ type AiClientMessage struct {
 	Content string `json:"content"`
 }
 
-func NewAiClient(clientType AiClientType) *AiClient {
+func NewAiClient(clientType AiClientType, openAiClient *openai.Client) *AiClient {
 	return &AiClient{
-		ClientType: clientType,
+		ClientType:   clientType,
+		OpenAiClient: openAiClient,
 	}
 }
 
 type AiClient struct {
-	ClientType AiClientType      `json:"clientType"`
-	Messages   []AiClientMessage `json:"messages"`
+	ClientType   AiClientType      `json:"clientType"`
+	Messages     []AiClientMessage `json:"messages"`
+	OpenAiClient *openai.Client    `json:"openAiClient"`
 }
 
 func (aiClient *AiClient) CreateChatCompletion() (string, error) {
@@ -78,4 +83,30 @@ func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
 	fmt.Println(response)
 
 	return "hello", nil
+}
+
+func (aiClient *AiClient) OpenAiChatCompletion() (string, error) {
+	openAiMessages := make([]openai.ChatCompletionMessage, len(aiClient.Messages))
+	for index, message := range aiClient.Messages {
+		openAiMessages[index] = openai.ChatCompletionMessage{
+			Role:    message.Role,
+			Content: message.Content,
+		}
+	}
+
+	resp, err := aiClient.OpenAiClient.CreateChatCompletion(
+		context.Background(),
+		openai.ChatCompletionRequest{
+			Model:       openai.GPT3Dot5Turbo,
+			Messages:    openAiMessages,
+			N:           1,
+			Temperature: 0,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	response := resp.Choices[0].Message.Content
+	return response, nil
 }

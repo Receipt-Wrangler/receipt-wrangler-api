@@ -1,8 +1,13 @@
 package structs
 
 import (
+	"bytes"
 	"database/sql/driver"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"receipt-wrangler/api/internal/constants"
 )
 
 type AiClientType string
@@ -40,6 +45,37 @@ type AiClient struct {
 	Messages   []AiClientMessage `json:"messages"`
 }
 
-func (aiClient *AiClient) CreateChatCompletion() {
+func (aiClient *AiClient) CreateChatCompletion() (string, error) {
+	switch aiClient.ClientType {
 
+	case LLAMA_GPT:
+		aiClient.LlamaGptChatCompletion()
+
+	case OPEN_AI:
+		return "stub", nil
+	}
+
+	return "", nil
+}
+
+func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
+	body := map[string]interface{}{
+		"messages": aiClient.Messages,
+	}
+
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return "", err
+	}
+
+	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
+
+	response, err := http.Post("", constants.APPLICATION_JSON, bodyBytesBuffer)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println(response)
+
+	return "hello", nil
 }

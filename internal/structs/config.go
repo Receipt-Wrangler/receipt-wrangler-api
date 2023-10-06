@@ -7,9 +7,16 @@ type EmailSettings struct {
 	Password string
 }
 
+type AiSettings struct {
+	AiType AiClientType `json:"type"`
+	Key    string       `json:"key"`
+	Url    string       `json:"url"`
+}
+
 type Config struct {
 	SecretKey            string
 	OpenAiKey            string
+	AiSettings           AiSettings
 	EmailPollingInterval int
 	EmailSettings        []EmailSettings
 }

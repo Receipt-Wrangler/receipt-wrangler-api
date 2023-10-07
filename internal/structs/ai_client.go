@@ -54,16 +54,17 @@ func (aiClient *AiClient) CreateChatCompletion() (string, error) {
 	switch aiClient.ClientType {
 
 	case LLAMA_GPT:
-		aiClient.LlamaGptChatCompletion()
+		return aiClient.LlamaGptChatCompletion()
 
 	case OPEN_AI:
-		return "stub", nil
+		return aiClient.OpenAiChatCompletion()
 	}
 
 	return "", nil
 }
 
 func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
+	// config := config.GetConfig()
 	body := map[string]interface{}{
 		"messages": aiClient.Messages,
 	}

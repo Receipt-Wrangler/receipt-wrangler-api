@@ -66,15 +66,16 @@ func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, erro
 	filePath := tempPath + "/" + command.Filename
 	err := utils.WriteFile(filePath, []byte(command.ImageData))
 	if err != nil {
+		os.Remove(filePath)
 		return models.Receipt{}, err
 	}
 
 	filledReceipt, err := ReadReceiptImageFromFileOnly(filePath)
 	if err != nil {
+		os.Remove(filePath)
 		return models.Receipt{}, nil
 	}
 
 	os.Remove(filePath)
-
 	return filledReceipt, nil
 }

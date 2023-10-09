@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"receipt-wrangler/api/internal/ai"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
@@ -29,7 +30,7 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 	logger := logging.GetLogger()
 	config := config.GetConfig()
 	client := GetClient()
-	aiClient := structs.NewAiClient(config.AiSettings.AiType, client)
+	aiClient := ai.NewAiClient(config.AiSettings.AiType, client)
 	clientMessages := []structs.AiClientMessage{}
 
 	prompt, err := getPrompt(ocrText)
@@ -45,6 +46,7 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 
 	response, err := aiClient.CreateChatCompletion()
 	if err != nil {
+		fmt.Println(err.Error())
 		return models.Receipt{}, err
 	}
 

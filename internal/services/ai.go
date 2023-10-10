@@ -1,14 +1,15 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"receipt-wrangler/api/internal/ai"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/structs"
 	"time"
 
 	"github.com/sashabaranov/go-openai"
@@ -17,7 +18,17 @@ import (
 var client *openai.Client
 
 func InitOpenAIClient() {
-	client = openai.NewClient(config.GetConfig().OpenAiKey)
+	config := config.GetConfig()
+	apiKey := config.OpenAiKey
+	if len(apiKey) == 0 && config.AiSettings.AiType == structs.OPEN_AI {
+		apiKey = config.AiSettings.Key
+	}
+
+	if len(apiKey) == 0 {
+		logging.GetLogger().Print("OpenAI Key not found!")
+	}
+
+	client = openai.NewClient(apiKey)
 }
 
 func GetClient() *openai.Client {
@@ -27,35 +38,37 @@ func GetClient() *openai.Client {
 func ReadReceiptData(ocrText string) (models.Receipt, error) {
 	var result models.Receipt
 	logger := logging.GetLogger()
-
+	config := config.GetConfig()
 	client := GetClient()
+
+	aiType := config.AiSettings.AiType
+	if len(aiType) == 0 {
+		aiType = structs.OPEN_AI
+	}
+
+	aiClient := ai.NewAiClient(aiType, client)
+	clientMessages := []structs.AiClientMessage{}
+
 	prompt, err := getPrompt(ocrText)
 	if err != nil {
 		return models.Receipt{}, err
 	}
 
-	resp, err := client.CreateChatCompletion(
-		context.Background(),
-		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo,
-			Messages: []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: prompt,
-				},
-			},
-			N:           1,
-			Temperature: 0,
-		},
-	)
+	clientMessages = append(clientMessages, structs.AiClientMessage{
+		Role:    "user",
+		Content: prompt,
+	})
+	aiClient.Messages = clientMessages
+
+	response, err := aiClient.CreateChatCompletion()
 	if err != nil {
+		fmt.Println(err.Error())
 		return models.Receipt{}, err
 	}
 
-	openAiResponse := resp.Choices[0].Message.Content
-	logger.Print(openAiResponse, "raw response")
+	logger.Print(response, "raw response")
 
-	err = json.Unmarshal([]byte(openAiResponse), &result)
+	err = json.Unmarshal([]byte(response), &result)
 	if err != nil {
 		return models.Receipt{}, err
 	}

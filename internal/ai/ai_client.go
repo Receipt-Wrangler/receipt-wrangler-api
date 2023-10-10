@@ -41,14 +41,15 @@ func (aiClient *AiClient) CreateChatCompletion() (string, error) {
 }
 
 func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
-	//result := ""
+	result := ""
 	config := config.GetConfig()
 	body := map[string]interface{}{
-		"messages": aiClient.Messages,
+		"messages":    aiClient.Messages,
+		"temperature": 0,
 	}
 	fmt.Println(body)
 	httpClient := http.Client{}
-	httpClient.Timeout = 1 * time.Hour
+	httpClient.Timeout = 10 * time.Minute
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -73,7 +74,7 @@ func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	response.Body.Close()
+	defer response.Body.Close()
 
 	var responseObject LlamaGptResponse
 
@@ -82,9 +83,9 @@ func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
 		return "", err
 	}
 
-	fmt.Println(responseObject.Choices[0].Message.Content, "content")
+	result = responseObject.Choices[0].Message.Content
 
-	return "hello", nil
+	return result, nil
 }
 
 func (aiClient *AiClient) OpenAiChatCompletion() (string, error) {

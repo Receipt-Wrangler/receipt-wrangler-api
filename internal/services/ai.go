@@ -62,7 +62,6 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 
 	response, err := aiClient.CreateChatCompletion()
 	if err != nil {
-		fmt.Println(err.Error())
 		return models.Receipt{}, err
 	}
 

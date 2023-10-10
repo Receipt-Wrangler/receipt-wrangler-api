@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	config "receipt-wrangler/api/internal/env"
@@ -47,7 +46,6 @@ func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
 		"messages":    aiClient.Messages,
 		"temperature": 0,
 	}
-	fmt.Println(body)
 	httpClient := http.Client{}
 	httpClient.Timeout = 10 * time.Minute
 

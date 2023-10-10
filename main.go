@@ -13,6 +13,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/tesseract"
 	"time"
 
@@ -51,12 +52,17 @@ func main() {
 	repositories.MakeMigrations()
 
 	if config.GetFeatureConfig().AiPoweredReceipts {
+		logger.Print("Initializing Imagick...")
 		imagick.Initialize()
 		defer imagick.Terminate()
 
+		logger.Print("Initializing Tesseract...")
 		tesseract.InitClient()
 		defer tesseract.GetClient().Close()
+	}
 
+	if config.GetFeatureConfig().AiPoweredReceipts && (config.GetConfig().AiSettings.AiType == structs.OPEN_AI || len(config.GetConfig().OpenAiKey) > 0) {
+		logger.Print("Initializing OpenAI Client...")
 		services.InitOpenAIClient()
 	}
 

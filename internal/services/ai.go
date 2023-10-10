@@ -18,7 +18,17 @@ import (
 var client *openai.Client
 
 func InitOpenAIClient() {
-	client = openai.NewClient(config.GetConfig().OpenAiKey)
+	config := config.GetConfig()
+	apiKey := config.OpenAiKey
+	if len(apiKey) == 0 && config.AiSettings.AiType == structs.OPEN_AI {
+		apiKey = config.AiSettings.Key
+	}
+
+	if len(apiKey) == 0 {
+		logging.GetLogger().Print("OpenAI Key not found!")
+	}
+
+	client = openai.NewClient(apiKey)
 }
 
 func GetClient() *openai.Client {
@@ -30,7 +40,13 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 	logger := logging.GetLogger()
 	config := config.GetConfig()
 	client := GetClient()
-	aiClient := ai.NewAiClient(config.AiSettings.AiType, client)
+
+	aiType := config.AiSettings.AiType
+	if len(aiType) == 0 {
+		aiType = structs.OPEN_AI
+	}
+
+	aiClient := ai.NewAiClient(aiType, client)
 	clientMessages := []structs.AiClientMessage{}
 
 	prompt, err := getPrompt(ocrText)

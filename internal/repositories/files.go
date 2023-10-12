@@ -1,10 +1,14 @@
 package repositories
 
 import (
+	"errors"
+	"net/http"
 	"path/filepath"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
+	"regexp"
 
 	"gorm.io/gorm"
 )
@@ -78,4 +82,19 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 	}
 
 	return bytes, nil
+}
+
+func (repository BaseRepository) ValidateFileType(fileData models.FileData) (string, error) {
+	fileType := http.DetectContentType(fileData.ImageData)
+	acceptedFileTypes := []string{constants.ANY_IMAGE, constants.APPLICATION_PDF}
+
+	for _, acceptedFileType := range acceptedFileTypes {
+		matched, _ := regexp.Match(acceptedFileType, []byte(fileType))
+
+		if matched {
+			return fileType, nil
+		}
+	}
+
+	return "", errors.New("invalid file type")
 }

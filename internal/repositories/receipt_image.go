@@ -22,8 +22,16 @@ func NewReceiptImageRepository(tx *gorm.DB) ReceiptImageRepository {
 	return repository
 }
 
+// TODO: Move to service
 func (repository ReceiptImageRepository) CreateReceiptImage(fileData models.FileData) (models.FileData, error) {
 	fileRepository := NewFileRepository(nil)
+
+	validatedFileType, err := fileRepository.ValidateFileType(fileData)
+	if err != nil {
+		return models.FileData{}, err
+	}
+
+	fileData.FileType = validatedFileType
 
 	basePath, err := os.Getwd()
 	if err != nil {

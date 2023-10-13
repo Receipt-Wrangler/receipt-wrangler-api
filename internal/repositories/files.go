@@ -77,12 +77,24 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 		return nil, err
 	}
 
-	bytes, err := utils.ReadFile(path)
-	if err != nil {
-		return nil, err
+	if fileData.FileType == constants.APPLICATION_PDF {
+		bytes, err := repository.ConvertPdfToImage(path)
+		if err != nil {
+			return nil, err
+		}
+
+		return bytes, nil
+	} else if fileData.FileType == constants.ANY_IMAGE {
+
+		bytes, err := utils.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		return bytes, nil
 	}
 
-	return bytes, nil
+	return nil, errors.New("invalid file type")
 }
 
 func (repository BaseRepository) ValidateFileType(fileData models.FileData) (string, error) {

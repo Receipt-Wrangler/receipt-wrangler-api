@@ -10,6 +10,7 @@ import (
 	"receipt-wrangler/api/internal/utils"
 	"regexp"
 
+	"gopkg.in/gographics/imagick.v2/imagick"
 	"gorm.io/gorm"
 )
 
@@ -97,4 +98,44 @@ func (repository BaseRepository) ValidateFileType(fileData models.FileData) (str
 	}
 
 	return "", errors.New("invalid file type")
+}
+
+func (repository BaseRepository) ConvertPdfToImage(filePath string) ([]byte, error) {
+	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+
+	// Must be *before* ReadImageFile
+	// Make sure our image is high quality
+	if err := mw.SetResolution(300, 300); err != nil {
+		return nil, err
+	}
+
+	// Load the image file into imagick
+	if err := mw.ReadImage(filePath); err != nil {
+		return nil, err
+	}
+
+	// Must be *after* ReadImageFile
+	// Flatten image and remove alpha channel, to prevent alpha turning black in jpg
+	if err := mw.SetImageAlphaChannel(imagick.ALPHA_CHANNEL_FLATTEN); err != nil {
+		return nil, err
+	}
+
+	// Set any compression (100 = max quality)
+	if err := mw.SetCompressionQuality(95); err != nil {
+		return nil, err
+	}
+
+	// Select only first page of pdf
+	mw.SetIteratorIndex(0)
+
+	// Convert into JPG
+	if err := mw.SetFormat("jpg"); err != nil {
+		return nil, err
+	}
+
+	// Save File
+
+	mw.ResetIterator()
+	return mw.GetImageBlob(), nil
 }

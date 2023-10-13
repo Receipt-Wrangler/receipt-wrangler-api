@@ -8,6 +8,7 @@ import (
 	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ReceiptImageRepository struct {
@@ -81,7 +82,7 @@ func (repository ReceiptImageRepository) GetReceiptImageById(receiptImageId uint
 	db := repository.GetDB()
 	var result models.FileData
 
-	err := db.Model(models.FileData{}).Where("id = ?", receiptImageId).Find(&result).Error
+	err := db.Model(models.FileData{}).Where("id = ?", receiptImageId).Preload(clause.Associations).Find(&result).Error
 	if err != nil {
 		return models.FileData{}, err
 	}

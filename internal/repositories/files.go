@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"receipt-wrangler/api/internal/constants"
@@ -73,28 +74,57 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 
 func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
 	path, err := repository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+	var bytes []byte
+
 	if err != nil {
 		return nil, err
 	}
 
-	if fileData.FileType == constants.APPLICATION_PDF {
-		bytes, err := repository.ConvertPdfToJpg(path)
-		if err != nil {
-			return nil, err
-		}
-
-		return bytes, nil
-	} else if fileData.FileType == constants.ANY_IMAGE {
-
-		bytes, err := utils.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-
-		return bytes, nil
+	isImage, err := repository.IsImage(fileData)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("invalid file type")
+	isPdf, err := repository.IsPdf(fileData)
+	if err != nil {
+		return nil, err
+	}
+
+	if isPdf {
+		bytes, err = repository.ConvertPdfToJpg(path)
+		if err != nil {
+			return nil, err
+		}
+
+	} else if isImage {
+		bytes, err = utils.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		fmt.Println(fileData.FileType)
+		return nil, errors.New("invalid file type")
+	}
+
+	return bytes, nil
+}
+
+func (repository BaseRepository) IsImage(fileData models.FileData) (bool, error) {
+	isImage, err := regexp.Match(constants.ANY_IMAGE, []byte(fileData.FileType))
+	if err != nil {
+		return false, err
+	}
+
+	return isImage, nil
+}
+
+func (repository BaseRepository) IsPdf(fileData models.FileData) (bool, error) {
+	isPdf, err := regexp.Match(constants.APPLICATION_PDF, []byte(fileData.FileType))
+	if err != nil {
+		return false, err
+	}
+
+	return isPdf, nil
 }
 
 func (repository BaseRepository) ValidateFileType(fileData models.FileData) (string, error) {

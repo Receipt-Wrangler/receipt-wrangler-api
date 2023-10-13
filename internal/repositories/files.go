@@ -78,7 +78,7 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 	}
 
 	if fileData.FileType == constants.APPLICATION_PDF {
-		bytes, err := repository.ConvertPdfToImage(path)
+		bytes, err := repository.ConvertPdfToJpg(path)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func (repository BaseRepository) ValidateFileType(fileData models.FileData) (str
 	return "", errors.New("invalid file type")
 }
 
-func (repository BaseRepository) ConvertPdfToImage(filePath string) ([]byte, error) {
+func (repository BaseRepository) ConvertPdfToJpg(filePath string) ([]byte, error) {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 

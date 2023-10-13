@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"receipt-wrangler/api/internal/constants"
@@ -102,7 +101,6 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 			return nil, err
 		}
 	} else {
-		fmt.Println(fileData.FileType)
 		return nil, errors.New("invalid file type")
 	}
 

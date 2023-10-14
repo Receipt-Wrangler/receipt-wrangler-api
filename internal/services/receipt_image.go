@@ -3,6 +3,7 @@ package services
 import (
 	"os"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -11,6 +12,8 @@ import (
 
 func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 	var result models.Receipt
+	var pathToReadFrom string
+
 	receiptImageUint, err := simpleutils.StringToUint(receiptImageId)
 	if err != nil {
 		return result, err
@@ -21,14 +24,30 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 	if err != nil {
 		return result, err
 	}
-
 	fileRepository := repositories.NewReceiptImageRepository(nil)
-	path, err := fileRepository.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
+
+	receiptImagePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
 	if err != nil {
 		return result, err
 	}
 
-	ocrText, err := tesseract.ReadImage(path)
+	if receiptImage.FileType == constants.APPLICATION_PDF {
+		bytes, err := fileRepository.ConvertPdfToJpg(receiptImagePath)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		pathToReadFrom, err = fileRepository.WriteTempFile(receiptImage.Name, bytes)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		defer os.Remove(pathToReadFrom)
+	} else {
+		pathToReadFrom = receiptImagePath
+	}
+
+	ocrText, err := tesseract.ReadImage(pathToReadFrom)
 	if err != nil {
 		return result, nil
 	}

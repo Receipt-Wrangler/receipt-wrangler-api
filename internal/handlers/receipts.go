@@ -177,7 +177,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			_, err = fileRepository.ValidateFileType(models.FileData{ImageData: quickScanCommand.ImageData})
+			_, err = fileRepository.ValidateFileType(quickScanCommand.ImageData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

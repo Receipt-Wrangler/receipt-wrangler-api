@@ -113,7 +113,7 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 
 func (repository BaseRepository) GetBytesFromImageBytes(imageData []byte) ([]byte, error) {
 	var bytes []byte
-	validatedType, err := repository.ValidateFileType(models.FileData{ImageData: imageData})
+	validatedType, err := repository.ValidateFileType(imageData)
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func (repository BaseRepository) IsPdf(fileData models.FileData) (bool, error) {
 	return isPdf, nil
 }
 
-func (repository BaseRepository) ValidateFileType(fileData models.FileData) (string, error) {
-	fileType := http.DetectContentType(fileData.ImageData)
+func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) {
+	fileType := http.DetectContentType(bytes)
 	acceptedFileTypes := []string{constants.ANY_IMAGE, constants.APPLICATION_PDF}
 
 	for _, acceptedFileType := range acceptedFileTypes {

@@ -3,8 +3,10 @@ package repositories
 import (
 	"errors"
 	"net/http"
+	"os"
 	"path/filepath"
 	"receipt-wrangler/api/internal/constants"
+	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
@@ -178,4 +180,19 @@ func (repository BaseRepository) ConvertPdfToJpg(filePath string) ([]byte, error
 
 	mw.ResetIterator()
 	return mw.GetImageBlob(), nil
+}
+
+func (repository BaseRepository) WriteTempFile(filename string, data []byte) (string, error) {
+	tempPath := config.GetBasePath() + "/temp"
+	utils.MakeDirectory(tempPath)
+
+	filePath := tempPath + "/" + filename
+
+	err := utils.WriteFile(filePath, data)
+	if err != nil {
+		os.Remove(filePath)
+		return "", err
+	}
+
+	return filePath, nil
 }

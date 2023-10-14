@@ -81,17 +81,17 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 		return nil, err
 	}
 
-	isImage, err := repository.IsImage(fileData)
-	if err != nil {
-		return nil, err
-	}
-
-	isPdf, err := repository.IsPdf(fileData)
-	if err != nil {
-		return nil, err
-	}
-
 	fileBytes, err := utils.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	isImage, err := repository.IsImage(fileBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	isPdf, err := repository.IsPdf(fileBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +130,13 @@ func (repository BaseRepository) GetBytesFromImageBytes(imageData []byte) ([]byt
 	return bytes, nil
 }
 
-func (repository BaseRepository) IsImage(fileData models.FileData) (bool, error) {
-	isImage, err := regexp.Match(constants.ANY_IMAGE, []byte(fileData.FileType))
+func (repository BaseRepository) IsImage(imageData []byte) (bool, error) {
+	validatedFileType, err := repository.ValidateFileType(imageData)
+	if err != nil {
+		return false, err
+	}
+
+	isImage, err := regexp.Match(constants.ANY_IMAGE, []byte(validatedFileType))
 	if err != nil {
 		return false, err
 	}
@@ -139,8 +144,13 @@ func (repository BaseRepository) IsImage(fileData models.FileData) (bool, error)
 	return isImage, nil
 }
 
-func (repository BaseRepository) IsPdf(fileData models.FileData) (bool, error) {
-	isPdf, err := regexp.Match(constants.APPLICATION_PDF, []byte(fileData.FileType))
+func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
+	validatedFileType, err := repository.ValidateFileType(imageData)
+	if err != nil {
+		return false, err
+	}
+
+	isPdf, err := regexp.Match(constants.APPLICATION_PDF, []byte(validatedFileType))
 	if err != nil {
 		return false, err
 	}

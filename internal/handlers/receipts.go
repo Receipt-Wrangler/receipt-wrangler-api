@@ -170,8 +170,14 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 			var quickScanCommand commands.QuickScanCommand
 			var createdReceipt models.Receipt
 			db := repositories.GetDB()
+			fileRepository := repositories.NewFileRepository(nil)
 
 			vErr, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			_, err = fileRepository.ValidateFileType(models.FileData{ImageData: quickScanCommand.ImageData})
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -8,6 +8,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/tesseract"
+	"receipt-wrangler/api/internal/utils"
 )
 
 func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
@@ -31,8 +32,13 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		return result, err
 	}
 
+	receiptImageBytes, err := utils.ReadFile(receiptImagePath)
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
 	if receiptImage.FileType == constants.APPLICATION_PDF {
-		bytes, err := fileRepository.ConvertPdfToJpg(receiptImagePath)
+		bytes, err := fileRepository.ConvertPdfToJpg(receiptImageBytes)
 		if err != nil {
 			return models.Receipt{}, err
 		}

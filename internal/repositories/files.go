@@ -75,7 +75,7 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 
 func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
 	path, err := repository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
-	var bytes []byte
+	var resultBytes []byte
 
 	if err != nil {
 		return nil, err
@@ -91,19 +91,40 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 		return nil, err
 	}
 
+	fileBytes, err := utils.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
 	if isPdf {
-		bytes, err = repository.ConvertPdfToJpg(path)
+		resultBytes, err = repository.ConvertPdfToJpg(fileBytes)
 		if err != nil {
 			return nil, err
 		}
 
 	} else if isImage {
-		bytes, err = utils.ReadFile(path)
+		resultBytes = fileBytes
+	} else {
+		return nil, errors.New("invalid file type")
+	}
+
+	return resultBytes, nil
+}
+
+func (repository BaseRepository) GetBytesFromImageBytes(imageData []byte) ([]byte, error) {
+	var bytes []byte
+	validatedType, err := repository.ValidateFileType(models.FileData{ImageData: imageData})
+	if err != nil {
+		return nil, err
+	}
+
+	if validatedType == constants.APPLICATION_PDF {
+		bytes, err = repository.ConvertPdfToJpg(imageData)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		return nil, errors.New("invalid file type")
+		bytes = imageData
 	}
 
 	return bytes, nil
@@ -142,7 +163,7 @@ func (repository BaseRepository) ValidateFileType(fileData models.FileData) (str
 	return "", errors.New("invalid file type")
 }
 
-func (repository BaseRepository) ConvertPdfToJpg(filePath string) ([]byte, error) {
+func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 
@@ -153,7 +174,7 @@ func (repository BaseRepository) ConvertPdfToJpg(filePath string) ([]byte, error
 	}
 
 	// Load the image file into imagick
-	if err := mw.ReadImage(filePath); err != nil {
+	if err := mw.ReadImageBlob(bytes); err != nil {
 		return nil, err
 	}
 
@@ -175,8 +196,6 @@ func (repository BaseRepository) ConvertPdfToJpg(filePath string) ([]byte, error
 	if err := mw.SetFormat("jpg"); err != nil {
 		return nil, err
 	}
-
-	// Save File
 
 	mw.ResetIterator()
 	return mw.GetImageBlob(), nil

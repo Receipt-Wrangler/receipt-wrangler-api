@@ -51,10 +51,12 @@ func main() {
 	}
 	repositories.MakeMigrations()
 
+	logger.Print("Initializing Imagick...")
+	imagick.Initialize()
+	defer imagick.Terminate()
+	//TODO: make sure deployed version has updated security policy
+
 	if config.GetFeatureConfig().AiPoweredReceipts {
-		logger.Print("Initializing Imagick...")
-		imagick.Initialize()
-		defer imagick.Terminate()
 
 		logger.Print("Initializing Tesseract...")
 		tesseract.InitClient()

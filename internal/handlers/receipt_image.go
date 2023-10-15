@@ -18,7 +18,7 @@ import (
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
-	// TODO: Validate size and file type
+	// TODO: Validate size
 	handler := structs.Handler{
 		ErrorMessage: "Error retrieving image.",
 		Writer:       w,
@@ -58,6 +58,8 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "id")
 			var fileData models.FileData
 			var receipt models.Receipt
+			var bytes []byte
+			var fileType string
 			result := make(map[string]string)
 
 			err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
@@ -71,12 +73,18 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			fileRepository := repositories.NewFileRepository(nil)
-			bytes, err := fileRepository.GetBytesForFileData(fileData)
+			bytes, err = fileRepository.GetBytesForFileData(fileData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			imageData := "data:" + fileData.FileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
+			if fileData.FileType == constants.ANY_IMAGE {
+				fileType = fileData.FileType
+			} else if fileData.FileType == constants.APPLICATION_PDF {
+				fileType = "image/jpeg"
+			}
+
+			imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
 			result["encodedImage"] = imageData
 
 			resultBytes, err := utils.MarshalResponseData(result)

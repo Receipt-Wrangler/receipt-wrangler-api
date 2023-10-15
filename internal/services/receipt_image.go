@@ -3,7 +3,7 @@ package services
 import (
 	"os"
 	"receipt-wrangler/api/internal/commands"
-	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -13,6 +13,8 @@ import (
 
 func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 	var result models.Receipt
+	var pathToReadFrom string
+
 	receiptImageUint, err := simpleutils.StringToUint(receiptImageId)
 	if err != nil {
 		return result, err
@@ -23,14 +25,35 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 	if err != nil {
 		return result, err
 	}
-
 	fileRepository := repositories.NewReceiptImageRepository(nil)
-	path, err := fileRepository.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
+
+	receiptImagePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
 	if err != nil {
 		return result, err
 	}
 
-	ocrText, err := tesseract.ReadImage(path)
+	receiptImageBytes, err := utils.ReadFile(receiptImagePath)
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	if receiptImage.FileType == constants.APPLICATION_PDF {
+		bytes, err := fileRepository.ConvertPdfToJpg(receiptImageBytes)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		pathToReadFrom, err = fileRepository.WriteTempFile(receiptImage.Name, bytes)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		defer os.Remove(pathToReadFrom)
+	} else {
+		pathToReadFrom = receiptImagePath
+	}
+
+	ocrText, err := tesseract.ReadImage(pathToReadFrom)
 	if err != nil {
 		return result, nil
 	}
@@ -60,13 +83,15 @@ func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 }
 
 func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, error) {
-	tempPath := config.GetBasePath() + "/temp"
-	utils.MakeDirectory(tempPath)
+	fileRepository := repositories.NewFileRepository(nil)
 
-	filePath := tempPath + "/" + command.Filename
-	err := utils.WriteFile(filePath, []byte(command.ImageData))
+	bytes, err := fileRepository.GetBytesFromImageBytes(command.ImageData)
 	if err != nil {
-		os.Remove(filePath)
+		return models.Receipt{}, err
+	}
+
+	filePath, err := fileRepository.WriteTempFile(command.Filename, bytes)
+	if err != nil {
 		return models.Receipt{}, err
 	}
 

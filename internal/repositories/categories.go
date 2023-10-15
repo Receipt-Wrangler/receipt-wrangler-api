@@ -54,7 +54,7 @@ func (repository CategoryRepository) GetAllPagedCategories(pagedRequestCommand c
 
 	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
-	selectString := fmt.Sprintf("categories.id, categories.name, COUNT(DISTINCT receipt_categories.receipt_id) as %s", quotedAlias)
+	selectString := fmt.Sprintf("categories.id, categories.name, categories.description,  COUNT(DISTINCT receipt_categories.receipt_id) as %s", quotedAlias)
 	query = query.Table("categories").
 		Select(selectString).
 		Joins("LEFT JOIN receipt_categories ON categories.id = receipt_categories.category_id").

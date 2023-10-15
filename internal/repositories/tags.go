@@ -58,7 +58,7 @@ func (repository TagsRepository) GetAllPagedTags(pagedRequestCommand commands.Pa
 
 	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
-	selectString := fmt.Sprintf("tags.id, tags.name, COUNT(DISTINCT receipt_tags.receipt_id) as %s", quotedAlias)
+	selectString := fmt.Sprintf("tags.id, tags.name, tags.description, COUNT(DISTINCT receipt_tags.receipt_id) as %s", quotedAlias)
 	query = query.Table("tags").
 		Select(selectString).
 		Joins("LEFT JOIN receipt_tags ON tags.id = receipt_tags.tag_id").

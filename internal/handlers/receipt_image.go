@@ -18,15 +18,51 @@ import (
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
+
 	// TODO: Validate size
 	handler := structs.Handler{
-		ErrorMessage: "Error retrieving image.",
+		ErrorMessage: "Error uploading image.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			fileRepository := repositories.NewFileRepository(nil)
+
+			err := r.ParseMultipartForm(50 << 20)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			receiptId, err := simpleutils.StringToUint(r.Form.Get("receiptId"))
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			file, fileHeader, err := r.FormFile("file")
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			defer file.Close()
+
+			fileBytes := make([]byte, fileHeader.Size)
+
+			_, err = file.Read(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			_, err = fileRepository.ValidateFileType(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			fileImageRepository := repositories.NewReceiptImageRepository(nil)
-			fileData := r.Context().Value("fileData").(models.FileData)
+			fileData := models.FileData{
+				Name:      fileHeader.Filename,
+				Size:      uint(fileHeader.Size),
+				ReceiptId: receiptId,
+				ImageData: fileBytes,
+			}
 
 			createdFile, err := fileImageRepository.CreateReceiptImage(fileData)
 			if err != nil {

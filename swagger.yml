@@ -726,9 +726,9 @@ paths:
         description: Receipt image to upload
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: "#/components/schemas/FileData"
+              $ref: "#/components/schemas/ReceiptFileUploadCommand"
       operationId: uploadReceiptImage
       responses:
         200:
@@ -2281,3 +2281,14 @@ components:
         emailDefaultReceiptPaidById:
           type: integer
           description: User foreign key
+    ReceiptFileUploadCommand:
+      type: object
+      required:
+        - file
+        - receiptId
+      properties:
+        file:
+          type: string
+          format: binary
+        receiptId:
+          type: integer

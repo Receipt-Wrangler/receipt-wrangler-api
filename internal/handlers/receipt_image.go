@@ -20,6 +20,7 @@ import (
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Validate size
+	// TODO: Find a way to validate receipt
 	handler := structs.Handler{
 		ErrorMessage: "Error uploading image.",
 		Writer:       w,

@@ -116,6 +116,7 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 	basePath := config.GetBasePath() + "/temp"
 	db := repositories.GetDB()
 	imagesToRemove := []string{}
+	fileRepository := repositories.NewCategoryRepository(nil)
 
 	err := db.Transaction(func(tx *gorm.DB) error {
 		receiptRepository := repositories.NewReceiptRepository(tx)
@@ -123,11 +124,35 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 
 		for _, metadata := range emailMetadata {
 			for _, attachment := range metadata.Attachments {
-				path := basePath + "/" + attachment.Filename
-				receipt, err := services.ReadReceiptImageFromFileOnly(path)
+				tempFilePath := basePath + "/" + attachment.Filename
+				imageForOcrPath := basePath + "/" + "image-" + attachment.Filename
+
+				bytes, err := utils.ReadFile(tempFilePath)
 				if err != nil {
 					return err
 				}
+
+				_, err = fileRepository.ValidateFileType(bytes)
+				if err != nil {
+					return err
+				}
+
+				ocrBytes, err := fileRepository.GetBytesFromImageBytes(bytes)
+				if err != nil {
+					return err
+				}
+
+				err = utils.WriteFile(imageForOcrPath, ocrBytes)
+				if err != nil {
+					return err
+				}
+
+				receipt, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
+				if err != nil {
+					return err
+				}
+
+				imagesToRemove = append(imagesToRemove, imageForOcrPath)
 
 				for _, groupSettingsId := range metadata.GroupSettingsIds {
 					groupSettingsToUse := models.GroupSettings{}
@@ -153,11 +178,6 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 						return err
 					}
 
-					bytes, err := utils.ReadFile(path)
-					if err != nil {
-						return err
-					}
-
 					fileData := models.FileData{
 						ReceiptId: createdReceipt.ID,
 						Name:      attachment.Filename,
@@ -173,7 +193,7 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 
 				}
 
-				imagesToRemove = append(imagesToRemove, path)
+				imagesToRemove = append(imagesToRemove, tempFilePath)
 			}
 		}
 

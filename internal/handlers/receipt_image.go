@@ -41,8 +41,6 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// TODO: Validate size
-	// TODO: Find a way to validate receipt
-	// Add receipt id to handler if it exists, then use it to get the group id to check the goru prole against
 	handler := structs.Handler{
 		ErrorMessage: errMessage,
 		Writer:       w,
@@ -76,7 +74,22 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			bytes, err := utils.MarshalResponseData(createdFile)
+			fileBytes, err = fileRepository.GetBytesForFileData(createdFile)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			encodedImage, err := fileRepository.BuildEncodedImageString(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			fileDataView := models.FileDataView{
+				Id:           createdFile.ID,
+				EncodedImage: encodedImage,
+			}
+
+			bytes, err := utils.MarshalResponseData(fileDataView)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -103,7 +116,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 			var receipt models.Receipt
 			var bytes []byte
 			var fileType string
-			result := make(map[string]string)
+			result := models.FileDataView{}
 
 			err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
 			if err != nil {
@@ -121,14 +134,14 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			if fileData.FileType == constants.ANY_IMAGE {
-				fileType = fileData.FileType
-			} else if fileData.FileType == constants.APPLICATION_PDF {
-				fileType = "image/jpeg"
+			fileType, err = fileRepository.GetFileType(bytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
 			}
 
 			imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
-			result["encodedImage"] = imageData
+			result.EncodedImage = imageData
+			result.Id = fileData.ID
 
 			resultBytes, err := utils.MarshalResponseData(result)
 			if err != nil {

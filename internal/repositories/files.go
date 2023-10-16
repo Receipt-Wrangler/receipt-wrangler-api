@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"encoding/base64"
 	"errors"
 	"net/http"
 	"os"
@@ -73,6 +74,7 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 	return groupPath, nil
 }
 
+// TODO: refactor to just call get bytes from image bytes
 func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
 	path, err := repository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
 	var resultBytes []byte
@@ -224,4 +226,32 @@ func (repository BaseRepository) WriteTempFile(filename string, data []byte) (st
 	}
 
 	return filePath, nil
+}
+
+func (repository BaseRepository) GetFileType(bytes []byte) (string, error) {
+	fileType, err := repository.ValidateFileType(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	isPdf, err := repository.IsPdf(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	if isPdf {
+		fileType = "image/jpeg"
+	}
+
+	return fileType, nil
+}
+
+func (repository BaseRepository) BuildEncodedImageString(bytes []byte) (string, error) {
+	fileType, err := repository.GetFileType(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
+	return imageData, nil
 }

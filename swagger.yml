@@ -732,7 +732,10 @@ paths:
       operationId: uploadReceiptImage
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileDataView"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -787,7 +790,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncodedImage"
+                $ref: "#/components/schemas/FileDataView"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -2074,13 +2077,6 @@ components:
             type: object
         totalCount:
           type: integer
-    EncodedImage:
-      required:
-        - encodedImage
-      type: object
-      properties:
-        encodedImage:
-          type: string
     FeatureConfig:
       required:
         - enableLocalSignUp
@@ -2292,3 +2288,15 @@ components:
           format: binary
         receiptId:
           type: integer
+    FileDataView:
+      type: object
+      required:
+        - id
+        - encodedImage
+      properties:
+        id:
+          type: integer
+          description: File data id
+        encodedImage:
+          type: string
+          description: Base64 encoded image

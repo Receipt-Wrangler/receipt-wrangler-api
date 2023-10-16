@@ -18,33 +18,39 @@ import (
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
+	errMessage := "Error uploading image."
+	fileRepository := repositories.NewFileRepository(nil)
+
+	err := r.ParseMultipartForm(50 << 20)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+	}
+
+	receiptId, err := simpleutils.StringToUint(r.Form.Get("receiptId"))
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+	}
+
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+	}
+	defer file.Close()
 
 	// TODO: Validate size
 	// TODO: Find a way to validate receipt
+	// Add receipt id to handler if it exists, then use it to get the group id to check the goru prole against
 	handler := structs.Handler{
-		ErrorMessage: "Error uploading image.",
+		ErrorMessage: errMessage,
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
+		ReceiptId:    r.Form.Get("receiptId"),
+		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			fileRepository := repositories.NewFileRepository(nil)
-
-			err := r.ParseMultipartForm(50 << 20)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			receiptId, err := simpleutils.StringToUint(r.Form.Get("receiptId"))
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			file, fileHeader, err := r.FormFile("file")
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-			defer file.Close()
-
 			fileBytes := make([]byte, fileHeader.Size)
 
 			_, err = file.Read(fileBytes)

@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
@@ -12,6 +13,19 @@ import (
 func HandleRequest(handler structs.Handler) {
 	if len(handler.ResponseType) > 0 {
 		handler.Writer.Header().Set("Content-Type", handler.ResponseType)
+	}
+
+	if len(handler.ReceiptId) > 0 {
+		var receipt models.Receipt
+		db := repositories.GetDB()
+		err := db.Model(models.Receipt{}).Where("id = ?", handler.ReceiptId).Select("group_id").First(&receipt).Error
+		if err != nil {
+			handler_logger.Print(err.Error())
+			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
+			return
+		}
+
+		handler.GroupId = simpleutils.UintToString(receipt.GroupId)
 	}
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {

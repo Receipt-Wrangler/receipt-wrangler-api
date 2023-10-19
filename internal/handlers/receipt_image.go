@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"os"
 	"receipt-wrangler/api/internal/commands"
@@ -209,11 +208,6 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 			receiptImageId := r.URL.Query().Get("receiptImageId")
 			filledReceipt := models.Receipt{}
 
-			body, err := utils.GetBodyData(w, r)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
 			if len(receiptImageId) > 0 {
 				errCode, err := validateReceiptImageAccess(r, models.VIEWER, receiptImageId)
 				if err != nil {
@@ -224,11 +218,27 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
-			} else if len(body) > 0 {
-				var magicFillCommand commands.MagicFillCommand
-				err := json.Unmarshal(body, &magicFillCommand)
+			} else {
+				err := r.ParseMultipartForm(50 << 20)
 				if err != nil {
 					return http.StatusInternalServerError, err
+				}
+
+				file, fileHeader, err := r.FormFile("file")
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+				defer file.Close()
+
+				fileBytes := make([]byte, fileHeader.Size)
+				_, err = file.Read(fileBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				magicFillCommand := commands.MagicFillCommand{
+					ImageData: fileBytes,
+					Filename:  fileHeader.Filename,
 				}
 
 				filledReceipt, err = services.MagicFillFromImage(magicFillCommand)

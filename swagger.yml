@@ -750,9 +750,13 @@ paths:
       requestBody:
         required: false
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: "#/components/schemas/MagicFillCommand"
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
       parameters:
         - in: query
           name: receiptImageId

@@ -1,39 +1,57 @@
 package commands
 
 import (
-	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/utils"
 )
 
 type QuickScanCommand struct {
-	models.FileData
-	PaidByUser   models.User          `json:"paidByUser"`
-	PaidByUserId uint                 `json:"paidByUserId"`
-	Group        models.Group         `json:"-"`
-	GroupId      uint                 `json:"groupId"`
-	Status       models.ReceiptStatus `json:"status"`
+	File         multipart.File        `json:"file"`
+	FileHeader   *multipart.FileHeader `json:"fileHeader"`
+	PaidByUser   models.User           `json:"paidByUser"`
+	PaidByUserId uint                  `json:"paidByUserId"`
+	Group        models.Group          `json:"-"`
+	GroupId      uint                  `json:"groupId"`
+	Status       models.ReceiptStatus  `json:"status"`
 }
 
 func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
-	quickScanCommand := QuickScanCommand{}
+	var status models.ReceiptStatus
 
-	bytes, err := utils.GetBodyData(w, r)
+	err := r.ParseMultipartForm(50 << 20)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(bytes, &quickScanCommand)
+	groupId, err := simpleutils.StringToUint(r.Form.Get("groupId"))
 	if err != nil {
 		return err
 	}
 
-	command.FileData = quickScanCommand.FileData
-	command.GroupId = quickScanCommand.GroupId
-	command.Status = quickScanCommand.Status
-	command.PaidByUserId = quickScanCommand.PaidByUserId
+	paidByUserId, err := simpleutils.StringToUint(r.Form.Get("paidByUserId"))
+	if err != nil {
+		return err
+	}
+
+	err = status.Scan(r.Form.Get("status"))
+	if err != nil {
+		return err
+	}
+
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	command.File = file
+	command.FileHeader = fileHeader
+	command.GroupId = groupId
+	command.Status = status
+	command.PaidByUserId = paidByUserId
 
 	return nil
 }
@@ -51,12 +69,8 @@ func (command QuickScanCommand) Validate() structs.ValidatorError {
 		vErr.Errors["status"] = "Status is required."
 	}
 
-	if len(command.Name) == 0 {
-		vErr.Errors["filename"] = "Filename is required."
-	}
-
-	if len(command.ImageData) == 0 {
-		vErr.Errors["imageData"] = "Image data is required."
+	if command.FileHeader == nil {
+		vErr.Errors["file"] = "File is required."
 	}
 
 	return vErr

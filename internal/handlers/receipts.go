@@ -158,40 +158,49 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func QuickScan(w http.ResponseWriter, r *http.Request) {
-	groupId := ""
+	errMsg := "Error processing quick scan."
+	var quickScanCommand commands.QuickScanCommand
+
+	vErr, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+	}
+
+	groupIdString := simpleutils.UintToString(quickScanCommand.GroupId)
+
 	handler := structs.Handler{
-		ErrorMessage: "Error processing quick scan.",
+		ErrorMessage: errMsg,
 		Writer:       w,
 		Request:      r,
 		GroupRole:    models.EDITOR,
-		GroupId:      groupId,
+		GroupId:      groupIdString,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			var quickScanCommand commands.QuickScanCommand
 			var createdReceipt models.Receipt
 			db := repositories.GetDB()
 			fileRepository := repositories.NewFileRepository(nil)
-
-			vErr, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			_, err = fileRepository.ValidateFileType(quickScanCommand.ImageData)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			groupId = simpleutils.UintToString(quickScanCommand.GroupId)
 
 			if len(vErr.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
 				return http.StatusInternalServerError, errors.New("validation error")
 			}
 
+			fileBytes := make([]byte, quickScanCommand.FileHeader.Size)
+			_, err := quickScanCommand.File.Read(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			defer quickScanCommand.File.Close()
+
+			validatedFileType, err := fileRepository.ValidateFileType(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			magicFillCommand := commands.MagicFillCommand{
-				ImageData: quickScanCommand.ImageData,
-				Filename:  quickScanCommand.Name,
+				ImageData: fileBytes,
+				Filename:  quickScanCommand.FileHeader.Filename,
 			}
 
 			token := structs.GetJWT(r)
@@ -216,8 +225,15 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 					return err
 				}
 
-				quickScanCommand.FileData.ReceiptId = createdReceipt.ID
-				_, err := receiptImageRepository.CreateReceiptImage(quickScanCommand.FileData)
+				fileData := models.FileData{
+					Name:      quickScanCommand.FileHeader.Filename,
+					Size:      uint(quickScanCommand.FileHeader.Size),
+					ImageData: fileBytes,
+					ReceiptId: createdReceipt.ID,
+					FileType:  validatedFileType,
+				}
+
+				_, err := receiptImageRepository.CreateReceiptImage(fileData)
 				if err != nil {
 					return err
 				}

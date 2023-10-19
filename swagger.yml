@@ -535,7 +535,7 @@ paths:
         description: Quick scan data
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: "#/components/schemas/QuickScanCommand"
       operationId: quickScanReceipt
@@ -2105,28 +2105,15 @@ components:
           description: Name of file
     QuickScanCommand:
       required:
-        - name
-        - imageData
-        - fileType
-        - size
+        - file
         - groupId
         - status
+        - paidByUserId
       type: object
       properties:
-        imageData:
-          type: array
-          items:
-            type: integer
-          description: Image data
-        name:
+        file:
           type: string
-          description: Name of file
-        fileType:
-          type: string
-          description: Type of file
-        size:
-          type: integer
-          description: Size of file
+          format: binary
         groupId:
           type: integer
           description: Group foreign key

@@ -35,3 +35,6 @@ apt-get install -y -qq tesseract-ocr-eng
 
 # Install imageMagick
 apt-get install -y -qq imagemagick libmagickwand-dev
+
+# Adjust imageMagick policy to allow for pdf conversion
+sed -i 's|<policy domain="coder" rights="none" pattern="PDF" />|<policy domain="coder" rights="read\|write" pattern="PDF" />|g' /etc/ImageMagick-6/policy.xml

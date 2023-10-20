@@ -228,12 +228,11 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 				fileData := models.FileData{
 					Name:      quickScanCommand.FileHeader.Filename,
 					Size:      uint(quickScanCommand.FileHeader.Size),
-					ImageData: fileBytes,
 					ReceiptId: createdReceipt.ID,
 					FileType:  validatedFileType,
 				}
 
-				_, err := receiptImageRepository.CreateReceiptImage(fileData)
+				_, err := receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 				if err != nil {
 					return err
 				}

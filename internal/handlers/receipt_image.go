@@ -65,10 +65,9 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 				Name:      fileHeader.Filename,
 				Size:      uint(fileHeader.Size),
 				ReceiptId: receiptId,
-				ImageData: fileBytes,
 			}
 
-			createdFile, err := fileImageRepository.CreateReceiptImage(fileData)
+			createdFile, err := fileImageRepository.CreateReceiptImage(fileData, fileBytes)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

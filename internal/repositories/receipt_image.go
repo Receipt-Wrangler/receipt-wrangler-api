@@ -24,11 +24,11 @@ func NewReceiptImageRepository(tx *gorm.DB) ReceiptImageRepository {
 }
 
 // TODO: Move to service
-func (repository ReceiptImageRepository) CreateReceiptImage(fileData models.FileData) (models.FileData, error) {
+func (repository ReceiptImageRepository) CreateReceiptImage(fileData models.FileData, fileBytes []byte) (models.FileData, error) {
 	fileRepository := NewFileRepository(nil)
 
 	// TODO: refactor to use command
-	validatedFileType, err := fileRepository.ValidateFileType(fileData.ImageData)
+	validatedFileType, err := fileRepository.ValidateFileType(fileBytes)
 	if err != nil {
 		return models.FileData{}, err
 	}
@@ -71,7 +71,7 @@ func (repository ReceiptImageRepository) CreateReceiptImage(fileData models.File
 		return models.FileData{}, err
 	}
 
-	err = utils.WriteFile(filePath, fileData.ImageData)
+	err = utils.WriteFile(filePath, fileBytes)
 	if err != nil {
 		return models.FileData{}, err
 	}

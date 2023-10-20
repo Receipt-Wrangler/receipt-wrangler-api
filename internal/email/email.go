@@ -183,10 +183,9 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 						Name:      attachment.Filename,
 						FileType:  attachment.FileType,
 						Size:      attachment.Size,
-						ImageData: bytes,
 					}
 
-					_, err = receiptImageRepository.CreateReceiptImage(fileData)
+					_, err = receiptImageRepository.CreateReceiptImage(fileData, bytes)
 					if err != nil {
 						return err
 					}

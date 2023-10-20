@@ -535,7 +535,7 @@ paths:
         description: Quick scan data
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: "#/components/schemas/QuickScanCommand"
       operationId: quickScanReceipt
@@ -726,13 +726,16 @@ paths:
         description: Receipt image to upload
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: "#/components/schemas/FileData"
+              $ref: "#/components/schemas/ReceiptFileUploadCommand"
       operationId: uploadReceiptImage
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileDataView"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -747,9 +750,13 @@ paths:
       requestBody:
         required: false
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              $ref: "#/components/schemas/MagicFillCommand"
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
       parameters:
         - in: query
           name: receiptImageId
@@ -787,7 +794,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncodedImage"
+                $ref: "#/components/schemas/FileDataView"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -2074,13 +2081,6 @@ components:
             type: object
         totalCount:
           type: integer
-    EncodedImage:
-      required:
-        - encodedImage
-      type: object
-      properties:
-        encodedImage:
-          type: string
     FeatureConfig:
       required:
         - enableLocalSignUp
@@ -2109,28 +2109,15 @@ components:
           description: Name of file
     QuickScanCommand:
       required:
-        - name
-        - imageData
-        - fileType
-        - size
+        - file
         - groupId
         - status
+        - paidByUserId
       type: object
       properties:
-        imageData:
-          type: array
-          items:
-            type: integer
-          description: Image data
-        name:
+        file:
           type: string
-          description: Name of file
-        fileType:
-          type: string
-          description: Type of file
-        size:
-          type: integer
-          description: Size of file
+          format: binary
         groupId:
           type: integer
           description: Group foreign key
@@ -2281,3 +2268,26 @@ components:
         emailDefaultReceiptPaidById:
           type: integer
           description: User foreign key
+    ReceiptFileUploadCommand:
+      type: object
+      required:
+        - file
+        - receiptId
+      properties:
+        file:
+          type: string
+          format: binary
+        receiptId:
+          type: integer
+    FileDataView:
+      type: object
+      required:
+        - id
+        - encodedImage
+      properties:
+        id:
+          type: integer
+          description: File data id
+        encodedImage:
+          type: string
+          description: Base64 encoded image

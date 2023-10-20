@@ -11,6 +11,7 @@ type Handler struct {
 	Request         *http.Request
 	GroupRole       models.GroupRole
 	GroupId         string
+	ReceiptId       string
 	AllowAllGroup   bool
 	UserRole        models.UserRole
 	HandlerFunction func(http.ResponseWriter, *http.Request) (int, error)

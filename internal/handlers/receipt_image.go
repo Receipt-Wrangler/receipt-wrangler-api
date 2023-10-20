@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"os"
 	"receipt-wrangler/api/internal/commands"
@@ -18,22 +17,77 @@ import (
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
+	errMessage := "Error uploading image."
+	fileRepository := repositories.NewFileRepository(nil)
+
+	err := r.ParseMultipartForm(50 << 20)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+	}
+
+	receiptId, err := simpleutils.StringToUint(r.Form.Get("receiptId"))
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+	}
+
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+	}
+	defer file.Close()
+
 	// TODO: Validate size
 	handler := structs.Handler{
-		ErrorMessage: "Error retrieving image.",
+		ErrorMessage: errMessage,
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
+		ResponseType: constants.APPLICATION_JSON,
+		ReceiptId:    r.Form.Get("receiptId"),
+		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			fileImageRepository := repositories.NewReceiptImageRepository(nil)
-			fileData := r.Context().Value("fileData").(models.FileData)
+			fileBytes := make([]byte, fileHeader.Size)
 
-			createdFile, err := fileImageRepository.CreateReceiptImage(fileData)
+			_, err = file.Read(fileBytes)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			bytes, err := utils.MarshalResponseData(createdFile)
+			_, err = fileRepository.ValidateFileType(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			fileImageRepository := repositories.NewReceiptImageRepository(nil)
+			fileData := models.FileData{
+				Name:      fileHeader.Filename,
+				Size:      uint(fileHeader.Size),
+				ReceiptId: receiptId,
+			}
+
+			createdFile, err := fileImageRepository.CreateReceiptImage(fileData, fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			fileBytes, err = fileRepository.GetBytesForFileData(createdFile)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			encodedImage, err := fileRepository.BuildEncodedImageString(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			fileDataView := models.FileDataView{
+				Id:           createdFile.ID,
+				EncodedImage: encodedImage,
+			}
+
+			bytes, err := utils.MarshalResponseData(fileDataView)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -60,7 +114,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 			var receipt models.Receipt
 			var bytes []byte
 			var fileType string
-			result := make(map[string]string)
+			result := models.FileDataView{}
 
 			err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
 			if err != nil {
@@ -78,14 +132,14 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			if fileData.FileType == constants.ANY_IMAGE {
-				fileType = fileData.FileType
-			} else if fileData.FileType == constants.APPLICATION_PDF {
-				fileType = "image/jpeg"
+			fileType, err = fileRepository.GetFileType(bytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
 			}
 
 			imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
-			result["encodedImage"] = imageData
+			result.EncodedImage = imageData
+			result.Id = fileData.ID
 
 			resultBytes, err := utils.MarshalResponseData(result)
 			if err != nil {
@@ -153,11 +207,6 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 			receiptImageId := r.URL.Query().Get("receiptImageId")
 			filledReceipt := models.Receipt{}
 
-			body, err := utils.GetBodyData(w, r)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
 			if len(receiptImageId) > 0 {
 				errCode, err := validateReceiptImageAccess(r, models.VIEWER, receiptImageId)
 				if err != nil {
@@ -168,11 +217,27 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
-			} else if len(body) > 0 {
-				var magicFillCommand commands.MagicFillCommand
-				err := json.Unmarshal(body, &magicFillCommand)
+			} else {
+				err := r.ParseMultipartForm(50 << 20)
 				if err != nil {
 					return http.StatusInternalServerError, err
+				}
+
+				file, fileHeader, err := r.FormFile("file")
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+				defer file.Close()
+
+				fileBytes := make([]byte, fileHeader.Size)
+				_, err = file.Read(fileBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				magicFillCommand := commands.MagicFillCommand{
+					ImageData: fileBytes,
+					Filename:  fileHeader.Filename,
 				}
 
 				filledReceipt, err = services.MagicFillFromImage(magicFillCommand)

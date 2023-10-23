@@ -267,7 +267,7 @@ func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error converting receipt.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.TEXT_PLAIN,
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			fileRepository := repositories.NewFileRepository(nil)
 			result := make(map[string]string)

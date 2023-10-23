@@ -752,11 +752,15 @@ paths:
         content:
           multipart/form-data:
             schema:
-              object:
-                type: string
-                format: binary
-                description: file to convert
-      operationId: convertReceiptImageToJpg
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Base64 encoded image
+      operationId: convertToJpg
       responses:
         200:
           content:

@@ -270,6 +270,7 @@ func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.TEXT_PLAIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			fileRepository := repositories.NewFileRepository(nil)
+			result := make(map[string]string)
 
 			err := r.ParseMultipartForm(50 << 20)
 			if err != nil {
@@ -306,8 +307,14 @@ func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
+			result["encodedImage"] = encodedString
+			bytes, err := utils.MarshalResponseData(result)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			w.WriteHeader(200)
-			w.Write([]byte(encodedString))
+			w.Write(bytes)
 
 			return 0, nil
 		},

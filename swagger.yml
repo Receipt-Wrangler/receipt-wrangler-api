@@ -740,7 +740,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
-  /receiptImage/convertToJpg/:
+  /receiptImage/convertToJpg:
     post:
       tags:
         - ReceiptImage
@@ -764,10 +764,9 @@ paths:
       responses:
         200:
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-                description: base64 encoded jpg
+                $ref: "#/components/schemas/EncodedImage"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -2328,3 +2327,11 @@ components:
         encodedImage:
           type: string
           description: Base64 encoded image
+    EncodedImage:
+      type: object
+      required:
+        - encodedImage
+      properties:
+        encodedImage:
+          type: string
+          description: base64 encoded jpg

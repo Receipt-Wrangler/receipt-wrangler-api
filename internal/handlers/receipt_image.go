@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"os"
 	"receipt-wrangler/api/internal/commands"
@@ -247,6 +248,67 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			bytes, err := utils.MarshalResponseData(filledReceipt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error converting receipt.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			fileRepository := repositories.NewFileRepository(nil)
+			result := make(map[string]string)
+
+			err := r.ParseMultipartForm(50 << 20)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			file, fileHeader, err := r.FormFile("file")
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			fileBytes := make([]byte, fileHeader.Size)
+			_, err = file.Read(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			validatedFileType, err := fileRepository.ValidateFileType(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			if validatedFileType != constants.APPLICATION_PDF {
+				return http.StatusBadRequest, errors.New("file must be a PDF")
+			}
+
+			jpgBytes, err := fileRepository.ConvertPdfToJpg(fileBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			encodedString, err := fileRepository.BuildEncodedImageString(jpgBytes)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			result["encodedImage"] = encodedString
+			bytes, err := utils.MarshalResponseData(result)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

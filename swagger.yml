@@ -740,6 +740,38 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /receiptImage/convertToJpg:
+    post:
+      tags:
+        - ReceiptImage
+      summary: Converts a receipt image to jpg
+      description: This will convert a receipt image to jpg, [SYSTEM USER]
+      requestBody:
+        description: Receipt image to convert
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Base64 encoded image
+      operationId: convertToJpg
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EncodedImage"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+
   /receiptImage/magicFill:
     post:
       tags:
@@ -2279,6 +2311,10 @@ components:
           format: binary
         receiptId:
           type: integer
+          description: Receipt foreign key
+        encodedImage:
+          type: string
+          description: Base64 encoded image for file types that aren't viewable natively in the browser, such as PDFs
     FileDataView:
       type: object
       required:
@@ -2291,3 +2327,11 @@ components:
         encodedImage:
           type: string
           description: Base64 encoded image
+    EncodedImage:
+      type: object
+      required:
+        - encodedImage
+      properties:
+        encodedImage:
+          type: string
+          description: base64 encoded jpg

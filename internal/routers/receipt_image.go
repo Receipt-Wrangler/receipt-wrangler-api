@@ -17,6 +17,7 @@ func BuildReceiptImageRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.M
 	receiptImageRouter.Post("/magicFill", handlers.MagicFillFromImage)
 	receiptImageRouter.With(middleware.SetReceiptImageGroupId, middleware.ValidateGroupRole(models.EDITOR)).Delete("/{id}", handlers.RemoveReceiptImage)
 	receiptImageRouter.Post("/", handlers.UploadReceiptImage)
+	receiptImageRouter.Post("/convertToJpg", handlers.ConvertToJpg)
 
 	return receiptImageRouter
 }

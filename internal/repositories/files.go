@@ -190,6 +190,12 @@ func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// Must be *after* ReadImageFile
+	// Flatten image and remove alpha channel, to prevent alpha turning black in jpg
+	if err := mw.SetImageAlphaChannel(imagick.ALPHA_CHANNEL_FLATTEN); err != nil {
+		return nil, err
+	}
+
 	// Find out how many images/pages we've got in a pdf.
 	numPages := int(mw.GetNumberImages())
 

@@ -3,6 +3,7 @@ package repositories
 import (
 	"encoding/base64"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 	"regexp"
+	"strings"
 
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"gorm.io/gorm"
@@ -179,52 +181,102 @@ func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 
-	// Must be *before* ReadImageFile
-	// Make sure our image is high quality
-	if err := mw.SetResolution(300, 300); err != nil {
-		return nil, err
-	}
-
-	// Load the image file into imagick
 	if err := mw.ReadImageBlob(bytes); err != nil {
 		return nil, err
 	}
 
-	// Must be *after* ReadImageFile
-	// Flatten image and remove alpha channel, to prevent alpha turning black in jpg
-	if err := mw.SetImageAlphaChannel(imagick.ALPHA_CHANNEL_FLATTEN); err != nil {
+	// Set the format to JPEG once, the setting is retained across frames.
+	if err := mw.SetImageFormat("jpeg"); err != nil {
 		return nil, err
 	}
 
-	// Set any compression (100 = max quality)
-	if err := mw.SetCompressionQuality(95); err != nil {
+	// Find out how many images/pages we've got in a pdf.
+	numPages := int(mw.GetNumberImages())
+
+	// Create a new wand to store the final long image.
+	finalImage := imagick.NewMagickWand()
+	defer finalImage.Destroy()
+
+	// Iterate over each page, processing it as needed.
+	for i := 0; i < numPages; i++ {
+		mw.SetIteratorIndex(i)
+
+		// Get the current image as a MagickWand.
+		// This is done because AddImage() expects a MagickWand, not a blob.
+		currImage := mw.GetImage()
+
+		// Add the current image to the finalImage wand.
+		if err := finalImage.AddImage(currImage); err != nil {
+			log.Fatal(err) // Handle the error appropriately
+		}
+
+		// Destroy the current image object as it's no longer needed.
+		currImage.Destroy()
+	}
+
+	// Now, we will append all the images stored in finalImage vertically.
+	// Resetting the wand is necessary for AppendImages to work.
+	finalImage.ResetIterator()
+	combinedImage := finalImage.AppendImages(true)
+
+	tempFilePath, err := repository.BuildTempFilePath("jpg")
+	if err != nil {
 		return nil, err
 	}
 
-	// Select only first page of pdf
-	mw.SetIteratorIndex(0)
-
-	// Convert into JPG
-	if err := mw.SetFormat("jpg"); err != nil {
+	if err := combinedImage.WriteImage(tempFilePath); err != nil {
 		return nil, err
 	}
 
-	mw.ResetIterator()
-	return mw.GetImageBlob(), nil
+	bytes, err = utils.ReadFile(tempFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	os.Remove(tempFilePath)
+	return bytes, nil
 }
 
-func (repository BaseRepository) WriteTempFile(filename string, data []byte) (string, error) {
+func (repository BaseRepository) WriteTempFile(data []byte) (string, error) {
 	tempPath := config.GetBasePath() + "/temp"
 	utils.MakeDirectory(tempPath)
 
-	filePath := tempPath + "/" + filename
+	validatedFileType, err := repository.ValidateFileType(data)
+	if err != nil {
+		return "", err
+	}
 
-	err := utils.WriteFile(filePath, data)
+	parts := strings.Split(validatedFileType, "/")
+	if len(parts) != 2 {
+		return "", errors.New("malformed mime type")
+	}
+
+	fileType := parts[1]
+
+	filePath, err := repository.BuildTempFilePath(fileType)
+	if err != nil {
+		return "", err
+	}
+
+	err = utils.WriteFile(filePath, data)
 	if err != nil {
 		os.Remove(filePath)
 		return "", err
 	}
 
+	return filePath, nil
+}
+
+func (repository BaseRepository) BuildTempFilePath(fileType string) (string, error) {
+	tempPath := config.GetBasePath() + "/temp"
+
+	filename, err := utils.GetRandomString(10)
+	if err != nil {
+		return "", err
+	}
+
+	filePath := tempPath + "/" + filename
+	filePath = filePath + "." + fileType
 	return filePath, nil
 }
 

@@ -37,13 +37,14 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		return models.Receipt{}, err
 	}
 
+	// TODO: make generic
 	if receiptImage.FileType == constants.APPLICATION_PDF {
 		bytes, err := fileRepository.ConvertPdfToJpg(receiptImageBytes)
 		if err != nil {
 			return models.Receipt{}, err
 		}
 
-		pathToReadFrom, err = fileRepository.WriteTempFile(receiptImage.Name, bytes)
+		pathToReadFrom, err = fileRepository.WriteTempFile(bytes)
 		if err != nil {
 			return models.Receipt{}, err
 		}
@@ -90,7 +91,7 @@ func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, erro
 		return models.Receipt{}, err
 	}
 
-	filePath, err := fileRepository.WriteTempFile(command.Filename, bytes)
+	filePath, err := fileRepository.WriteTempFile(bytes)
 	if err != nil {
 		return models.Receipt{}, err
 	}

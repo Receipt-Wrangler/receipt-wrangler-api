@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/base64"
-	"errors"
 	"net/http"
 	"os"
 	"receipt-wrangler/api/internal/commands"
@@ -264,7 +263,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 
 func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Error converting receipt.",
+		ErrorMessage: "Error converting image.",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
@@ -288,16 +287,12 @@ func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			validatedFileType, err := fileRepository.ValidateFileType(fileBytes)
+			_, err = fileRepository.ValidateFileType(fileBytes)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			if validatedFileType != constants.APPLICATION_PDF {
-				return http.StatusBadRequest, errors.New("file must be a PDF")
-			}
-
-			jpgBytes, err := fileRepository.ConvertPdfToJpg(fileBytes)
+			jpgBytes, err := fileRepository.GetBytesFromImageBytes(fileBytes)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"receipt-wrangler/api/internal/constants"
@@ -15,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gabriel-vasile/mimetype"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"gorm.io/gorm"
 )
@@ -163,7 +163,7 @@ func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
 }
 
 func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) {
-	fileType := http.DetectContentType(bytes)
+	fileType := mimetype.Detect(bytes).String()
 	acceptedFileTypes := []string{constants.ANY_IMAGE, constants.APPLICATION_PDF}
 
 	for _, acceptedFileType := range acceptedFileTypes {

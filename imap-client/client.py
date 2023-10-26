@@ -227,7 +227,7 @@ def get_attachments(message_data: Message):
 
 
 def valid_mime_type(mime_type):
-    image_mime_types_regex = r"^(image\/(jpeg|png|gif|bmp|webp|tiff)|application\/pdf)$"
+    image_mime_types_regex = r"^(image\/(jpeg|png|heic|bmp|webp|tiff)|application\/pdf)$"
     match = re.search(image_mime_types_regex, mime_type or "")
     return match is not None
 

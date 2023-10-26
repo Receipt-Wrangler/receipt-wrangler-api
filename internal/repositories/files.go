@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"receipt-wrangler/api/internal/constants"
@@ -15,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gabriel-vasile/mimetype"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"gorm.io/gorm"
 )
@@ -76,10 +76,8 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 	return groupPath, nil
 }
 
-// TODO: refactor to just call get bytes from image bytes
 func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
 	path, err := repository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
-	var resultBytes []byte
 
 	if err != nil {
 		return nil, err
@@ -90,26 +88,9 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 		return nil, err
 	}
 
-	isImage, err := repository.IsImage(fileBytes)
+	resultBytes, err := repository.GetBytesFromImageBytes(fileBytes)
 	if err != nil {
 		return nil, err
-	}
-
-	isPdf, err := repository.IsPdf(fileBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	if isPdf {
-		resultBytes, err = repository.ConvertPdfToJpg(fileBytes)
-		if err != nil {
-			return nil, err
-		}
-
-	} else if isImage {
-		resultBytes = fileBytes
-	} else {
-		return nil, errors.New("invalid file type")
 	}
 
 	return resultBytes, nil
@@ -124,6 +105,11 @@ func (repository BaseRepository) GetBytesFromImageBytes(imageData []byte) ([]byt
 
 	if validatedType == constants.APPLICATION_PDF {
 		bytes, err = repository.ConvertPdfToJpg(imageData)
+		if err != nil {
+			return nil, err
+		}
+	} else if validatedType == constants.IMAGE_HEIC {
+		bytes, err = repository.ConvertHeicToJpg(imageData)
 		if err != nil {
 			return nil, err
 		}
@@ -163,7 +149,7 @@ func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
 }
 
 func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) {
-	fileType := http.DetectContentType(bytes)
+	fileType := mimetype.Detect(bytes).String()
 	acceptedFileTypes := []string{constants.ANY_IMAGE, constants.APPLICATION_PDF}
 
 	for _, acceptedFileType := range acceptedFileTypes {
@@ -175,6 +161,21 @@ func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) 
 	}
 
 	return "", errors.New("invalid file type")
+}
+
+func (repository BaseRepository) ConvertHeicToJpg(bytes []byte) ([]byte, error) {
+	mw := imagick.NewMagickWand()
+	defer mw.Destroy()
+
+	if err := mw.ReadImageBlob(bytes); err != nil {
+		return nil, err
+	}
+
+	if err := mw.SetImageFormat("jpeg"); err != nil {
+		return nil, err
+	}
+
+	return mw.GetImageBlob(), nil
 }
 
 func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {

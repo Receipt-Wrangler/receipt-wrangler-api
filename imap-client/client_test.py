@@ -128,7 +128,7 @@ class TestValidMimeType(unittest.TestCase):
     def test_valid_image_mime_types(self):
         self.assertTrue(valid_mime_type("image/png"))
         self.assertTrue(valid_mime_type("image/jpeg"))
-        self.assertTrue(valid_mime_type("image/gif"))
+        self.assertTrue(valid_mime_type("image/heic"))
         self.assertTrue(valid_mime_type("application/pdf"))
 
     def test_invalid_mime_types(self):

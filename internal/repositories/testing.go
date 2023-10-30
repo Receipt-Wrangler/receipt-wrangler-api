@@ -49,7 +49,14 @@ func CreateTestGroup() {
 func CreateTestGroupWithUsers() {
 	db := GetDB()
 	group := models.Group{
+		BaseModel: models.BaseModel{
+			ID: 1,
+		},
 		Name: "test",
+	}
+
+	group2 := models.Group{
+		Name: "test2",
 	}
 
 	user := models.User{
@@ -67,6 +74,11 @@ func CreateTestGroupWithUsers() {
 		DisplayName: "asdf",
 		Password:    "1",
 	}
+	user4 := models.User{
+		Username:    "test3",
+		DisplayName: "asdf",
+		Password:    "1",
+	}
 
 	groupMember := models.GroupMember{
 		GroupID: 1,
@@ -80,16 +92,23 @@ func CreateTestGroupWithUsers() {
 		GroupID: 1,
 		UserID:  3,
 	}
+	groupMember4 := models.GroupMember{
+		GroupID: 2,
+		UserID:  4,
+	}
 
 	db.Create(&group)
+	db.Create(&group2)
 
 	db.Table("users").Create(&user)
 	db.Table("users").Create(&user2)
 	db.Table("users").Create(&user3)
+	db.Table("users").Create(&user4)
 
 	db.Model(models.GroupMember{}).Create(&groupMember)
 	db.Model(models.GroupMember{}).Create(&groupMember2)
 	db.Model(models.GroupMember{}).Create(&groupMember3)
+	db.Model(models.GroupMember{}).Create(&groupMember4)
 }
 
 func TruncateTestDb() {

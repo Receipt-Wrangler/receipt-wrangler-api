@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"os"
+	"receipt-wrangler/api/internal/repositories"
 	"testing"
 )
 
@@ -15,6 +16,10 @@ func TestMain(m *testing.M) {
 }
 
 func run(m *testing.M) (code int, err error) {
+	repositories.SetUpTestEnv()
+	InitHandlerLogger()
+	repositories.InitTestDb()
+	repositories.MakeMigrations()
 
 	defer teardown()
 
@@ -22,4 +27,5 @@ func run(m *testing.M) (code int, err error) {
 }
 
 func teardown() {
+	repositories.TestTeardown()
 }

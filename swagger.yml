@@ -1697,65 +1697,51 @@ components:
         amount:
           type: string
           description: Reciept total amount
-          x-go-name: Amount
         categories:
           type: array
           description: Categories associated to receipt
           items:
             $ref: "#/components/schemas/Category"
-          x-go-name: Categories
         comments:
           type: array
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/Comment"
-          x-go-name: Comments
         createdAt:
           type: string
-
-          x-go-name: CreatedAt
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         date:
           type: string
           description: Receipt date
-          x-go-name: Date
         groupId:
           type: integer
           description: Group foreign key
           format: uint64
-          x-go-name: GroupId
         id:
           type: integer
           format: uint64
-          x-go-name: ID
         imageFiles:
           type: array
           description: Files associated to receipt
           items:
             $ref: "#/components/schemas/FileData"
-          x-go-name: ImageFiles
         name:
           type: string
           description: Receipt name
-          x-go-name: Name
         paidByUserId:
           type: integer
           description: User paid foreign key
           format: uint64
-          x-go-name: PaidByUserID
         receiptItems:
           type: array
           description: Items associated to receipt
           items:
             $ref: "#/components/schemas/Item"
-          x-go-name: ReceiptItems
         resolvedDate:
           type: string
           description: Date resolved
-          x-go-name: ResolvedDate
         status:
           type: string
           enum: *RECEIPTSTATUS
@@ -1764,15 +1750,12 @@ components:
           description: Tags associated to receipt
           items:
             $ref: "#/components/schemas/Tag"
-          x-go-name: Tags
         updatedAt:
           type: string
-          x-go-name: UpdatedAt
         createdByString:
           type: string
           description: Created by string, which is anything that is not a user
       description: Receipt
-      x-go-package: receipt-wrangler/api/internal/models
     Tag:
       required:
         - name
@@ -1780,26 +1763,79 @@ components:
       properties:
         createdAt:
           type: string
-
           x-go-name: CreatedAt
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         id:
           type: integer
           format: uint64
-          x-go-name: ID
         name:
           type: string
           description: Tag name
-          x-go-name: Name
         updatedAt:
           type: string
-
-          x-go-name: UpdatedAt
       description: Tag to relate receipts to
-      x-go-package: receipt-wrangler/api/internal/models
+    Dashboard:
+      required:
+        - id
+        - name
+        - userId
+      type: object
+      properties:
+        createdAt:
+          type: string
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+        id:
+          type: integer
+          format: uint64
+        name:
+          type: string
+          description: Dashboard name
+        groupId:
+          type: integer
+          format: uint64
+          description: Group foreign key
+        userId:
+          type: integer
+          format: uint64
+          description: User foreign key
+        updatedAt:
+          type: string
+        widgets:
+          type: array
+          description: Widgets associated to dashboard
+          items:
+            $ref: "#/components/schemas/Widget"
+      description: Dashboard for a user
+    Widget:
+      required:
+        - id
+        - dashboardId
+      type: object
+      properties:
+        createdAt:
+          type: string
+          x-go-name: CreatedAt
+        createdBy:
+          type: integer
+          format: uint64
+        id:
+          type: integer
+          format: uint64
+        name:
+          type: string
+          description: Widget name
+        dashboardId:
+          type: integer
+          format: uint64
+          description: Dashboard foreign key
+        updatedAt:
+          type: string
+      description: Widget related to a user's dashboard
     UpsertTagCommand:
       required:
         - name

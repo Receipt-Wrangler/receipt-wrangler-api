@@ -12,13 +12,13 @@ type UpsertDashboardCommand struct {
 	Widgets []models.Widget `json:"widgets"`
 }
 
-func (tag *UpsertDashboardCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
+func (command *UpsertDashboardCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
 	bytes, err := utils.GetBodyData(w, r)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(bytes, &tag)
+	err = json.Unmarshal(bytes, &command)
 	if err != nil {
 		return err
 	}

@@ -72,6 +72,7 @@ paths:
       operationId: getCategoryCountByName
       responses:
         200:
+          description: The number of categories with the same name
           content:
             text/plain:
               schema:
@@ -96,6 +97,7 @@ paths:
               $ref: "#/components/schemas/PagedRequestCommand"
       responses:
         200:
+          description: Paged categories
           content:
             application/json:
               schema:
@@ -113,6 +115,7 @@ paths:
       operationId: getAllCategories
       responses:
         200:
+          description: All categories in the system
           content:
             application/json:
               schema:
@@ -235,6 +238,7 @@ paths:
       operationId: getFeatureConfig
       responses:
         200:
+          description: The feature config
           content:
             application/json:
               schema:
@@ -252,6 +256,7 @@ paths:
       operationId: getGroupsForuser
       responses:
         200:
+          description: The groups
           content:
             application/json:
               schema:
@@ -384,6 +389,7 @@ paths:
               $ref: "#/components/schemas/UpdateGroupSettingsCommand"
       responses:
         200:
+          description: The updated group settings
           content:
             application/json:
               schema:
@@ -441,6 +447,7 @@ paths:
       operationId: getNotificationsForuser
       responses:
         200:
+          description: The notifications
           content:
             application/json:
               schema:
@@ -496,6 +503,7 @@ paths:
       operationId: getNotificationCount
       responses:
         200:
+          description: The notification count
           content:
             application/json:
               schema:
@@ -541,6 +549,7 @@ paths:
       operationId: quickScanReceipt
       responses:
         200:
+          description: The created receipt
           content:
             application/json:
               schema:
@@ -597,6 +606,7 @@ paths:
       operationId: getReceiptById
       responses:
         200:
+          description: The receipt
           content:
             application/json:
               schema:
@@ -677,6 +687,7 @@ paths:
               $ref: "#/components/schemas/BulkStatusUpdateCommand"
       responses:
         200:
+          description: The updated receipts
           content:
             application/json:
               schema:
@@ -732,6 +743,7 @@ paths:
       operationId: uploadReceiptImage
       responses:
         200:
+          description: The uploaded receipt image
           content:
             application/json:
               schema:
@@ -763,6 +775,7 @@ paths:
       operationId: convertToJpg
       responses:
         200:
+          description: The converted image
           content:
             application/json:
               schema:
@@ -798,6 +811,7 @@ paths:
           description: Id of receipt image to perform magic fill on
       responses:
         200:
+          description: The parsed receipt
           content:
             application/json:
               schema:
@@ -823,6 +837,7 @@ paths:
       operationId: getReceiptImageById
       responses:
         200:
+          description: The receipt image
           content:
             application/json:
               schema:
@@ -860,6 +875,7 @@ paths:
             type: string
       responses:
         200:
+          description: The search results
           content:
             application/json:
               schema:
@@ -907,6 +923,7 @@ paths:
               $ref: "#/components/schemas/PagedRequestCommand"
       responses:
         200:
+          description: Paged tags
           content:
             application/json:
               schema:
@@ -931,6 +948,7 @@ paths:
       operationId: getTagCountByName
       responses:
         200:
+          description: The number of tags with the same name
           content:
             text/plain:
               schema:
@@ -989,6 +1007,7 @@ paths:
       operationId: getAllTags
       responses:
         200:
+          description: All tags in the system
           content:
             application/json:
               schema:
@@ -1044,6 +1063,7 @@ paths:
       operationId: getUsers
       responses:
         200:
+          description: The users
           content:
             application/json:
               schema:
@@ -1198,6 +1218,7 @@ paths:
       operationId: getUsernameCount
       responses:
         200:
+          description: The number of users with the same username
           content:
             application/json:
               schema:
@@ -1283,6 +1304,7 @@ paths:
       operationId: getUserPreferences
       responses:
         200:
+          description: The user's preferences
           content:
             application/json:
               schema:
@@ -1308,6 +1330,7 @@ paths:
       operationId: updateUserPreferences
       responses:
         200:
+          description: The user's preferences
           content:
             application/json:
               schema:
@@ -1397,7 +1420,7 @@ components:
         updatedAt:
           type: string
         numberOfReceipts:
-          type: int
+          type: integer
           description: Number of receipts associated with this category
       description: Category to relate receipts to
     Comment:
@@ -1873,7 +1896,7 @@ components:
         updatedAt:
           type: string
         numberOfReceipts:
-          type: int
+          type: integer
           description: Number of receipts associated with this tag
       description: Tag to relate receipts to
     User:
@@ -2371,3 +2394,16 @@ components:
         encodedImage:
           type: string
           description: base64 encoded jpg
+    UpsertDashboardCommand:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Dashboard name
+        widgets:
+          type: array
+          description: Widgets associated to dashboard
+          items:
+            $ref: "#/components/schemas/Widget" 

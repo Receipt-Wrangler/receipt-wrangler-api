@@ -6,12 +6,12 @@ import (
 	"receipt-wrangler/api/internal/utils"
 )
 
-type TagUpsertCommand struct {
+type UpsertTagCommand struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
-func (tag *TagUpsertCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
+func (tag *UpsertTagCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
 	bytes, err := utils.GetBodyData(w, r)
 	if err != nil {
 		return err

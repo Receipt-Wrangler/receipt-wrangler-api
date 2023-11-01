@@ -48,7 +48,7 @@ func CreateTag(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			tag := commands.TagUpsertCommand{}
+			tag := commands.UpsertTagCommand{}
 			err := tag.LoadDataFromRequest(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -128,7 +128,7 @@ func UpdateTag(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "tagId")
 
-			tagUpsertCommand := commands.TagUpsertCommand{}
+			tagUpsertCommand := commands.UpsertTagCommand{}
 			err := tagUpsertCommand.LoadDataFromRequest(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err

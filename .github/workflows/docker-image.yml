@@ -56,3 +56,9 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:latest
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PAT }}
+          repository: Receipt-Wrangler/receipt-wrangler-monolith
+          event-type: build

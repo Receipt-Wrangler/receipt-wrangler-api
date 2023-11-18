@@ -19,7 +19,13 @@ func GetCorsPolicy() *cors.Cors {
 	}
 
 	if env == "prod" {
-		return cors.Default()
+		return cors.New(cors.Options{
+			AllowedOrigins:      []string{"http://localhost:4200", "http://localhost:8100"},
+			AllowCredentials:    true,
+			AllowPrivateNetwork: true,
+			AllowedMethods:      []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowedHeaders:      []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		})
 	}
 
 	return cors.Default()

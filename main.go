@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"receipt-wrangler/api/internal/corspolicy"
 	"receipt-wrangler/api/internal/email"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/handlers"
@@ -54,7 +55,6 @@ func main() {
 	logger.Print("Initializing Imagick...")
 	imagick.Initialize()
 	defer imagick.Terminate()
-	//TODO: make sure deployed version has updated security policy
 
 	if config.GetFeatureConfig().AiPoweredReceipts {
 
@@ -110,8 +110,14 @@ func initRoutes() *chi.Mux {
 		panic(err)
 	}
 	tokenValidatorMiddleware := jwtmiddleware.New(tokenValidator.ValidateToken)
+	env := config.GetDeployEnv()
 
 	rootRouter := chi.NewRouter()
+
+	if env == "dev" {
+		cors := corspolicy.GetCorsPolicy()
+		rootRouter.Use(cors.Handler)
+	}
 
 	// Token Refresh Router
 	refreshRouter := routers.BuildTokenRefreshRouter(tokenValidatorMiddleware)

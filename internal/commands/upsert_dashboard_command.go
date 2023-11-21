@@ -3,13 +3,12 @@ package commands
 import (
 	"encoding/json"
 	"net/http"
-	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 )
 
 type UpsertDashboardCommand struct {
-	Name    string          `json:"name"`
-	Widgets []models.Widget `json:"widgets"`
+	Name    string                `json:"name"`
+	Widgets []UpsertWidgetCommand `json:"widgets"`
 }
 
 func (command *UpsertDashboardCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

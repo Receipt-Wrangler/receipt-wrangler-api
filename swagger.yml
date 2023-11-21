@@ -55,7 +55,36 @@ definitions:
       - asc
       - desc
       - ""
+  WidgetType:
+    type: string
+    enum: &WIDGETTYPE
+      - "GROUP_SUMMARY"
 paths:
+  /dashboard/:
+    post:
+      tags:
+        - Dashboard
+      summary: Create dashboard
+      description: This will create a dashboard [SYSTEM USER]
+      requestBody:
+        description: Dashboard
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertDashboardCommand"
+      operationId: createDashboard
+      responses:
+        200:
+          description: The created dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /category/{categoryName}:
     parameters:
       - in: path
@@ -1858,6 +1887,14 @@ components:
           description: Dashboard foreign key
         updatedAt:
           type: string
+        widgetType:
+          type: string
+          enum: *WIDGETTYPE
+          description: Type of widget
+        configuration:
+          type: string
+          format: json
+          description: Configuration of widget
       description: Widget related to a user's dashboard
     UpsertTagCommand:
       required:
@@ -2406,4 +2443,16 @@ components:
           type: array
           description: Widgets associated to dashboard
           items:
-            $ref: "#/components/schemas/Widget" 
+            $ref: "#/components/schemas/UpsertWidgetCommand"
+    UpsertWidgetCommand:
+      type: object
+      required:
+        - widgetType
+      properties:
+        name:
+          type: string
+          description: Dashboard name
+        widgetType:
+          type: string
+          enum: *WIDGETTYPE
+          description: Type of widget

@@ -114,6 +114,7 @@ func initRoutes() *chi.Mux {
 
 	rootRouter := chi.NewRouter()
 
+	// TODO: this policy is not ready for production yet. Need to add more configuration options to make sure we aren't using less secure options
 	if env == "dev" {
 		cors := corspolicy.GetCorsPolicy()
 		rootRouter.Use(cors.Handler)
@@ -186,6 +187,10 @@ func initRoutes() *chi.Mux {
 	//User Preferences router
 	userPreferencesRouter := routers.BuildUserPreferencesRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/userPreferences", userPreferencesRouter)
+
+	// Dashboard router
+	dashboardRouter := routers.BuildDashboardRouter(tokenValidatorMiddleware)
+	rootRouter.Mount("/api/dashboard", dashboardRouter)
 
 	return rootRouter
 }

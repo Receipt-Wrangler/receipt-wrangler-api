@@ -8,6 +8,7 @@ import (
 
 type UpsertDashboardCommand struct {
 	Name    string                `json:"name"`
+	GroupId string                `json:"groupId"`  
 	Widgets []UpsertWidgetCommand `json:"widgets"`
 }
 

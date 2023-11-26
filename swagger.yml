@@ -60,6 +60,33 @@ definitions:
     enum: &WIDGETTYPE
       - "GROUP_SUMMARY"
 paths:
+  /dashboard/{groupId}:
+    parameters:
+      - in: path
+        name: groupId
+        schema:
+          type: string
+        required: true
+        description: Id of group to get dashboard for
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboards for a user by group id
+      description: This will get a dashboards for a user by group id
+      operationId: getDashboardsForUserByGroupId
+      responses:
+        200:
+          description: The dashboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Dashboard"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /dashboard/:
     post:
       tags:
@@ -2435,10 +2462,14 @@ components:
       type: object
       required:
         - name
+        - groupId
       properties:
         name:
           type: string
           description: Dashboard name
+        groupId:
+          type: string
+          description: Group foreign key
         widgets:
           type: array
           description: Widgets associated to dashboard

@@ -8,5 +8,5 @@ type Widget struct {
 	Dashboard     Dashboard       `json:"-"`
 	DashboardId   uint            `gorm:"not null;" json:"dashboardId"`
 	WidgetType    WidgetType      `gorm:"not null;" json:"widgetType"`
-	Configuration json.RawMessage `gorm:"not null;" json:"configuration"`
+	Configuration json.RawMessage `json:"configuration"`
 }

@@ -21,7 +21,7 @@ func NewDashboardRepository(tx *gorm.DB) DashboardRepository {
 }
 
 func (repository *DashboardRepository) CreateDashboard(command commands.UpsertDashboardCommand, userId uint) (models.Dashboard, error) {
-	db := repository.DB
+	db := repository.GetDB()
 	widgets := make([]models.Widget, len(command.Widgets))
 	var groupId uint
 
@@ -62,4 +62,16 @@ func (repository *DashboardRepository) CreateDashboard(command commands.UpsertDa
 	}
 
 	return dashboard, nil
+}
+
+func (repository *DashboardRepository) GetDashboardsForUserByGroup(userId uint, groupId uint) ([]models.Dashboard, error) {
+	db := repository.GetDB()
+	var dashboards []models.Dashboard
+
+	err := db.Where("user_id = ? and group_id = ?", userId, groupId).Find(&dashboards).Error
+	if err != nil {
+		return []models.Dashboard{}, err
+	}
+
+	return dashboards, nil
 }

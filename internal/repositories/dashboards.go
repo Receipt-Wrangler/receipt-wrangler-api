@@ -6,6 +6,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type DashboardRepository struct {
@@ -68,7 +69,7 @@ func (repository *DashboardRepository) GetDashboardsForUserByGroup(userId uint, 
 	db := repository.GetDB()
 	var dashboards []models.Dashboard
 
-	err := db.Where("user_id = ? and group_id = ?", userId, groupId).Find(&dashboards).Error
+	err := db.Where("user_id = ? and group_id = ?", userId, groupId).Preload(clause.Associations).Find(&dashboards).Error
 	if err != nil {
 		return []models.Dashboard{}, err
 	}

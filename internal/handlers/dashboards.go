@@ -15,7 +15,7 @@ import (
 
 func CreateDashboard(w http.ResponseWriter, r *http.Request) {
 	command := commands.UpsertDashboardCommand{}
-	command.LoadDataFromRequest(w, r)
+	vErr, err := command.LoadDataFromRequestAndValidate(w, r)
 
 	handler := structs.Handler{
 		ErrorMessage:  "Error adding dashboard",
@@ -26,6 +26,15 @@ func CreateDashboard(w http.ResponseWriter, r *http.Request) {
 		AllowAllGroup: true,
 		ResponseType:  constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return 0, nil
+			}
+
 			dashboardRepository := repositories.NewDashboardRepository(nil)
 			token := structs.GetJWT(r)
 

@@ -10,10 +10,11 @@ import (
 type Group struct {
 	BaseModel
 	Name           string        `gorm:"not null" json:"name"`
-	IsDefaultGroup bool          `json:"isDefault"`
+	IsDefaultGroup bool          `json:"isDe fault"`
 	GroupMembers   []GroupMember `json:"groupMembers"`
 	GroupSettings  GroupSettings `json:"groupSettings"`
 	Status         GroupStatus   `gorm:"default:'ACTIVE'; not null" json:"status"`
+	IsAllGroup     bool          `json:"allGroup"`
 }
 
 func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {

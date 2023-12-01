@@ -136,3 +136,17 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 
 	return group, nil
 }
+
+func (repository GroupRepository) CreateAllGroup(userId uint) (models.Group, error) {
+	group := models.Group{
+		Name:       "All",
+		IsAllGroup: true,
+	}
+
+	allGroup, err := repository.CreateGroup(group, userId)
+	if err != nil {
+		return models.Group{}, err
+	}
+
+	return allGroup, nil
+}

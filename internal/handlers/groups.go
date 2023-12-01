@@ -25,9 +25,33 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 
+			db := repositories.GetDB()
+			db.Where("user_id = ?", token.UserId).Find(&models.Group{})
+
 			groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err
+			}
+
+			// TODO: 12/1/2023 This is a way for ensure all users have an all group. We can remove this in a few months
+			hasAllGroup := false
+			for i := 0; i < len(groups); i++ {
+				if groups[i].IsAllGroup {
+					hasAllGroup = true
+				}
+			}
+
+			if !hasAllGroup {
+				groupsRepository := repositories.NewGroupRepository(nil)
+				_, err := groupsRepository.CreateAllGroup(token.UserId)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				groups, err = services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 			}
 
 			bytes, err := utils.MarshalResponseData(groups)

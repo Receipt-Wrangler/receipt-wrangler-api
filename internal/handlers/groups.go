@@ -110,6 +110,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			group := r.Context().Value("group").(models.Group)
+			group.IsAllGroup = false
 
 			groupRepository := repositories.NewGroupRepository(nil)
 			group, err := groupRepository.CreateGroup(group, token.UserId)
@@ -157,6 +158,14 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 			groupId := chi.URLParam(r, "groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
+			dbGroup, err := groupRepository.GetGroupById(groupId, false)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			if dbGroup.IsAllGroup {
+				return http.StatusBadRequest, errors.New("cannot update all group")
+			}
+
 			updatedGroup, err := groupRepository.UpdateGroup(group, groupId)
 
 			if err != nil {
@@ -292,7 +301,16 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "groupId")
 
-			err := services.DeleteGroup(id)
+			groupRepository := repositories.NewGroupRepository(nil)
+			group, err := groupRepository.GetGroupById(id, false)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			if group.IsAllGroup {
+				return http.StatusBadRequest, errors.New("cannot delete all group")
+			}
+
+			err = services.DeleteGroup(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

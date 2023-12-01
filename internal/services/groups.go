@@ -43,6 +43,10 @@ func DeleteGroup(groupId string) error {
 		return err
 	}
 
+	if group.IsAllGroup {
+		return errors.New("cannot delete all group")
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		txErr := tx.Model(models.Receipt{}).Where("group_id = ?", groupId).Find(&receipts).Error
 		if txErr != nil {

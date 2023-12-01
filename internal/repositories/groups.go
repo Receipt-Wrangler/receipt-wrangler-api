@@ -80,7 +80,7 @@ func (repository GroupRepository) UpdateGroup(group models.Group, groupId string
 	group.ID = uint(u64Id)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&group).Omit("ID").Updates(&group).Error
+		txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&group).Omit("ID", "is_all_group").Updates(&group).Error
 		if err != nil {
 			return txErr
 		}

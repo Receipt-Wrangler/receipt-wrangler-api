@@ -293,7 +293,7 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			err := email.CallClient(false, groupIdsToPoll)
+			err = email.CallClient(false, groupIdsToPoll)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

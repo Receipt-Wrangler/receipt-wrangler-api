@@ -25,7 +25,7 @@ func GetGroupsForUser(userId string) ([]models.Group, error) {
 		groupIds[i] = groupMembers[i].GroupID
 	}
 
-	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Find(&groups).Error
+	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Order("is_all_group desc").Find(&groups).Error
 	if err != nil {
 		return nil, err
 	}

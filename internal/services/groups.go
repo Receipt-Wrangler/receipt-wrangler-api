@@ -48,6 +48,11 @@ func DeleteGroup(groupId string) error {
 		return err
 	}
 
+	group, err := groupRepository.GetGroupById(groupId, false)
+	if err != nil {
+		return err
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		txErr := tx.Model(models.Receipt{}).Where("group_id = ?", groupId).Find(&receipts).Error
 		if txErr != nil {

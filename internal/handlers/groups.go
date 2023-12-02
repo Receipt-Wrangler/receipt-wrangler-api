@@ -235,12 +235,11 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 	errMessage := "Error polling email(s), please review your email integration settings"
 
 	handler := structs.Handler{
-		ErrorMessage:  errMessage,
-		Writer:        w,
-		Request:       r,
-		GroupRole:     models.VIEWER,
-		GroupId:       groupId,
-		AllowAllGroup: true,
+		ErrorMessage: errMessage,
+		Writer:       w,
+		Request:      r,
+		GroupRole:    models.VIEWER,
+		GroupId:      groupId,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
 			groupRepository := repositories.NewGroupRepository(nil)

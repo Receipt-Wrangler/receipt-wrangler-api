@@ -1595,16 +1595,14 @@ components:
         - status
         - id
         - groupMembers
+        - isAllGroup
       type: object
       properties:
         createdAt:
           type: string
-
-          x-go-name: CreatedAt
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         groupSettings:
           $ref: "#/components/schemas/GroupSettings"
         groupMembers:
@@ -1612,19 +1610,18 @@ components:
           description: Members of the group
           items:
             $ref: "#/components/schemas/GroupMember"
-          x-go-name: GroupMembers
         id:
           type: integer
           format: uint64
-          x-go-name: ID
         isDefault:
           type: boolean
           description: Is default group (not used yet)
-          x-go-name: IsDefaultGroup
         name:
           type: string
           description: Name of the group
-          x-go-name: Name
+        isAllGroup:
+          type: boolean
+          description: Is all group for user
         status:
           type: string
           enum: *GROUPSTATUS

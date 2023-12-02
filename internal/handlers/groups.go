@@ -25,9 +25,6 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 
-			db := repositories.GetDB()
-			db.Where("user_id = ?", token.UserId).Find(&models.Group{})
-
 			groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err

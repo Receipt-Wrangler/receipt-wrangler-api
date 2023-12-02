@@ -37,14 +37,15 @@ func DeleteGroup(groupId string) error {
 	db := repositories.GetDB()
 	var receipts []models.Receipt
 
-	groupRepository := repositories.NewGroupRepository(nil)
-	group, err := groupRepository.GetGroupById(groupId, false)
+	uintGroupId, err := simpleutils.StringToUint(groupId)
 	if err != nil {
 		return err
 	}
 
-	if group.IsAllGroup {
-		return errors.New("cannot delete all group")
+	groupRepository := repositories.NewGroupRepository(nil)
+	isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+	if err != nil || isAllGroup {
+		return err
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {

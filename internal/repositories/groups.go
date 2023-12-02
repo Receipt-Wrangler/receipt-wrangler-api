@@ -150,3 +150,13 @@ func (repository GroupRepository) CreateAllGroup(userId uint) (models.Group, err
 
 	return allGroup, nil
 }
+
+func (repository GroupRepository) IsAllGroup(groupId uint) (bool, error) {
+	var group models.Group
+	err := db.Where("id = ?", groupId).First(&group).Select("is_all_group").Error
+	if err != nil {
+		return false, err
+	}
+
+	return group.IsAllGroup, nil
+}

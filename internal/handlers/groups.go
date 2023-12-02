@@ -158,11 +158,16 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 			groupId := chi.URLParam(r, "groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
-			dbGroup, err := groupRepository.GetGroupById(groupId, false)
+			uintGroupId, err := simpleutils.StringToUint(groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-			if dbGroup.IsAllGroup {
+
+			isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			if isAllGroup {
 				return http.StatusBadRequest, errors.New("cannot update all group")
 			}
 
@@ -300,13 +305,17 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.OWNER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "groupId")
-
-			groupRepository := repositories.NewGroupRepository(nil)
-			group, err := groupRepository.GetGroupById(id, false)
+			uintGroupId, err := simpleutils.StringToUint(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-			if group.IsAllGroup {
+
+			groupRepository := repositories.NewGroupRepository(nil)
+			isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			if isAllGroup {
 				return http.StatusBadRequest, errors.New("cannot delete all group")
 			}
 

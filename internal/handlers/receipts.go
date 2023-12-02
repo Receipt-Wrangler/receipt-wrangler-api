@@ -127,6 +127,8 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
+
+	// TODO: Clean up to make sure group id is not an all group, and remove middleware sets and checks
 	handler := structs.Handler{
 		ErrorMessage: "Error creating receipt.",
 		Writer:       w,

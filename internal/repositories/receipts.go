@@ -74,11 +74,21 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	var receipts []models.Receipt
 	var count int64
 
+	uintGroupId, err := simpleutils.StringToUint(groupId)
+	if err != nil {
+		return nil, 0, err
+	}
+	groupRepository := NewGroupRepository(nil)
+	isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	// Start query
 	query := db.Table("receipts")
 
 	// Filter receipts by group
-	if groupId == "all" {
+	if isAllGroup {
 		groupMemberRepository := NewGroupMemberRepository(nil)
 		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(userId))
 		if err != nil {
@@ -158,7 +168,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 		query = repository.buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
 	}
 
-	err := query.Count(&count).Error
+	err = query.Count(&count).Error
 	if err != nil {
 		return nil, 0, err
 	}

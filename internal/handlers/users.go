@@ -136,7 +136,18 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			totalGroupIds := make([]string, 0)
 
 			groupId := r.URL.Query().Get("groupId")
-			if groupId == "all" {
+
+			groupRepository := repositories.NewGroupRepository(nil)
+			uintGroupId, err := simpleutils.StringToUint(groupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			if isAllGroup {
 				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
 				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
 				if err != nil {
@@ -148,7 +159,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if len(groupId) > 0 {
-				if groupId != "all" {
+				if !isAllGroup {
 					totalGroupIds = append(totalGroupIds, groupId)
 				}
 
@@ -163,7 +174,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			err := r.ParseForm()
+			err = r.ParseForm()
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

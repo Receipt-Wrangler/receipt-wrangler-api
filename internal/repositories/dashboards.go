@@ -26,11 +26,7 @@ func (repository *DashboardRepository) CreateDashboard(command commands.UpsertDa
 	widgets := make([]models.Widget, len(command.Widgets))
 	var groupId uint
 
-	if command.GroupId == "all" {
-		groupId = 0
-	} else {
-		groupId, _ = simpleutils.StringToUint(command.GroupId)
-	}
+	groupId, _ = simpleutils.StringToUint(command.GroupId)
 
 	for i, widget := range command.Widgets {
 		configuration := []byte("{}")

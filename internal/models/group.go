@@ -14,6 +14,7 @@ type Group struct {
 	GroupMembers   []GroupMember `json:"groupMembers"`
 	GroupSettings  GroupSettings `json:"groupSettings"`
 	Status         GroupStatus   `gorm:"default:'ACTIVE'; not null" json:"status"`
+	IsAllGroup     bool          `json:"isAllGroup"`
 }
 
 func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {

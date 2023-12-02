@@ -30,6 +30,27 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
+			// TODO: 12/1/2023 This is a way for ensure all users have an all group. We can remove this in a few months
+			hasAllGroup := false
+			for i := 0; i < len(groups); i++ {
+				if groups[i].IsAllGroup {
+					hasAllGroup = true
+				}
+			}
+
+			if !hasAllGroup {
+				groupsRepository := repositories.NewGroupRepository(nil)
+				_, err := groupsRepository.CreateAllGroup(token.UserId)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				groups, err = services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+			}
+
 			bytes, err := utils.MarshalResponseData(groups)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -86,6 +107,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			group := r.Context().Value("group").(models.Group)
+			group.IsAllGroup = false
 
 			groupRepository := repositories.NewGroupRepository(nil)
 			group, err := groupRepository.CreateGroup(group, token.UserId)
@@ -133,6 +155,19 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 			groupId := chi.URLParam(r, "groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
+			uintGroupId, err := simpleutils.StringToUint(groupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			if isAllGroup {
+				return http.StatusBadRequest, errors.New("cannot update all group")
+			}
+
 			updatedGroup, err := groupRepository.UpdateGroup(group, groupId)
 
 			if err != nil {
@@ -200,17 +235,27 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 	errMessage := "Error polling email(s), please review your email integration settings"
 
 	handler := structs.Handler{
-		ErrorMessage:  errMessage,
-		Writer:        w,
-		Request:       r,
-		GroupRole:     models.VIEWER,
-		GroupId:       groupId,
-		AllowAllGroup: true,
+		ErrorMessage: errMessage,
+		Writer:       w,
+		Request:      r,
+		GroupRole:    models.VIEWER,
+		GroupId:      groupId,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+			groupRepository := repositories.NewGroupRepository(nil)
+
 			groupIdsToPoll := []string{}
 
-			if groupId == "all" {
+			uintGroupId, err := simpleutils.StringToUint(groupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			if isAllGroup {
 				token := structs.GetJWT(r)
 				disabledEmailIntegrationCnt := 0
 				groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
@@ -244,7 +289,7 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			err := email.CallClient(false, groupIdsToPoll)
+			err = email.CallClient(false, groupIdsToPoll)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -267,8 +312,21 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.OWNER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "groupId")
+			uintGroupId, err := simpleutils.StringToUint(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
-			err := services.DeleteGroup(id)
+			groupRepository := repositories.NewGroupRepository(nil)
+			isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			if isAllGroup {
+				return http.StatusBadRequest, errors.New("cannot delete all group")
+			}
+
+			err = services.DeleteGroup(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

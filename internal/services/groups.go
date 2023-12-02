@@ -25,7 +25,7 @@ func GetGroupsForUser(userId string) ([]models.Group, error) {
 		groupIds[i] = groupMembers[i].GroupID
 	}
 
-	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Find(&groups).Error
+	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Order("is_all_group desc").Find(&groups).Error
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,17 @@ func DeleteGroup(groupId string) error {
 	db := repositories.GetDB()
 	var receipts []models.Receipt
 
+	uintGroupId, err := simpleutils.StringToUint(groupId)
+	if err != nil {
+		return err
+	}
+
 	groupRepository := repositories.NewGroupRepository(nil)
+	isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+	if err != nil || isAllGroup {
+		return err
+	}
+
 	group, err := groupRepository.GetGroupById(groupId, false)
 	if err != nil {
 		return err

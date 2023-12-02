@@ -18,13 +18,12 @@ func CreateDashboard(w http.ResponseWriter, r *http.Request) {
 	vErr, err := command.LoadDataFromRequestAndValidate(w, r)
 
 	handler := structs.Handler{
-		ErrorMessage:  "Error adding dashboard",
-		Writer:        w,
-		Request:       r,
-		GroupId:       command.GroupId,
-		GroupRole:     models.VIEWER,
-		AllowAllGroup: true,
-		ResponseType:  constants.APPLICATION_JSON,
+		ErrorMessage: "Error adding dashboard",
+		Writer:       w,
+		Request:      r,
+		GroupId:      command.GroupId,
+		GroupRole:    models.VIEWER,
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -62,13 +61,12 @@ func GetDashboardsForUser(w http.ResponseWriter, r *http.Request) {
 	groupId := chi.URLParam(r, "groupId")
 
 	handler := structs.Handler{
-		ErrorMessage:  "Error retrieving dashboards",
-		Writer:        w,
-		Request:       r,
-		GroupId:       groupId,
-		GroupRole:     models.VIEWER,
-		AllowAllGroup: true,
-		ResponseType:  constants.APPLICATION_JSON,
+		ErrorMessage: "Error retrieving dashboards",
+		Writer:       w,
+		Request:      r,
+		GroupId:      groupId,
+		GroupRole:    models.VIEWER,
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			dashboardRepository := repositories.NewDashboardRepository(nil)
 			token := structs.GetJWT(r)

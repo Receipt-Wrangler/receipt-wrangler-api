@@ -246,9 +246,20 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 		AllowAllGroup: true,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+			groupRepository := repositories.NewGroupRepository(nil)
+
 			groupIdsToPoll := []string{}
 
-			if groupId == "all" {
+			uintGroupId, err := simpleutils.StringToUint(groupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			if isAllGroup {
 				token := structs.GetJWT(r)
 				disabledEmailIntegrationCnt := 0
 				groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))

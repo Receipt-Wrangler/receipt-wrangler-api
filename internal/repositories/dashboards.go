@@ -41,7 +41,7 @@ func (repository *DashboardRepository) CreateDashboard(command commands.UpsertDa
 	dashboard := models.Dashboard{
 		UserID:  userId,
 		Name:    command.Name,
-		GroupID: &groupId,
+		GroupID: groupId,
 		Widgets: widgets,
 	}
 
@@ -71,4 +71,30 @@ func (repository *DashboardRepository) GetDashboardsForUserByGroup(userId uint, 
 	}
 
 	return dashboards, nil
+}
+
+func (repository *DashboardRepository) GetDashboardById(dashboardId uint) (models.Dashboard, error) {
+	db := repository.GetDB()
+	var dashboard models.Dashboard
+
+	if db.Model(models.Dashboard{}).Preload(clause.Associations).First(&dashboard, dashboardId).Error != nil {
+		return models.Dashboard{}, nil
+	}
+
+	return dashboard, nil
+}
+
+func (repository *DashboardRepository) UpdateDashboardById(dashboardId uint, command commands.UpsertDashboardCommand) (models.Dashboard, error) {
+	db := repository.GetDB()
+
+	if db.Model(models.Dashboard{}).Where("id = ?", dashboardId).Updates(command).Error != nil {
+		return models.Dashboard{}, nil
+	}
+
+	dashboard, err := repository.GetDashboardById(dashboardId)
+	if err != nil {
+		return models.Dashboard{}, err
+	}
+
+	return dashboard, nil
 }

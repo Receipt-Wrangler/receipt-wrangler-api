@@ -13,6 +13,7 @@ func BuildDashboardRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux 
 
 	dashboardRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 	dashboardRouter.Get("/{groupId}", handlers.GetDashboardsForUser)
+	dashboardRouter.Put("/{dashboardId}", handlers.UpdateDashboard)
 	dashboardRouter.Post("/", handlers.CreateDashboard)
 
 	return dashboardRouter

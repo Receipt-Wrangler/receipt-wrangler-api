@@ -86,15 +86,47 @@ func (repository *DashboardRepository) GetDashboardById(dashboardId uint) (model
 
 func (repository *DashboardRepository) UpdateDashboardById(dashboardId uint, command commands.UpsertDashboardCommand) (models.Dashboard, error) {
 	db := repository.GetDB()
-
-	if db.Model(models.Dashboard{}).Where("id = ?", dashboardId).Updates(command).Error != nil {
-		return models.Dashboard{}, nil
-	}
-
-	dashboard, err := repository.GetDashboardById(dashboardId)
+	groupId, err := simpleutils.StringToUint(command.GroupId)
 	if err != nil {
 		return models.Dashboard{}, err
 	}
 
-	return dashboard, nil
+	db.Transaction(func(tx *gorm.DB) error {
+		widgets := make([]models.Widget, len(command.Widgets))
+		for i, widget := range command.Widgets {
+			configuration := []byte("{}")
+
+			widgets[i] = models.Widget{
+				DashboardId:   dashboardId,
+				Name:          widget.Name,
+				WidgetType:    widget.WidgetType,
+				Configuration: configuration,
+			}
+		}
+
+		dashboard := models.Dashboard{
+			BaseModel: models.BaseModel{
+				ID: dashboardId,
+			},
+			Name:    command.Name,
+			GroupID: groupId,
+		}
+
+		if db.Model(&dashboard).Where("id = ?", dashboardId).Updates(&dashboard).Error != nil {
+			return err
+		}
+
+		if db.Model(&dashboard).Association("Widgets").Unscoped().Replace(widgets) != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	updatedDashboard, err := repository.GetDashboardById(dashboardId)
+	if err != nil {
+		return models.Dashboard{}, err
+	}
+
+	return updatedDashboard, nil
 }

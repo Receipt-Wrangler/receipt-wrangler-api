@@ -83,6 +83,63 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Dashboard"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+  /dashboard/{dashboardId}:
+    parameters:
+      - in: path
+        name: dashboardId
+        schema:
+          type: integer
+        required: true
+        description: Id of dashboard to operate on
+    put:
+      tags:
+        - Dashboard
+      summary: Update dashboard
+      description: This will update a dashboard
+      operationId: updateDashboard
+      requestBody:
+        description: Dashboard to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertDashboardCommand"
+      responses:
+        200:
+          description: The updated dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403: 
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - Dashboard
+      summary: Delete dashboard
+      description: This will delete a dashboard by id
+      operationId: deleteDashboard
+      responses:
+        200:
+          description: The deleted dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
       security:

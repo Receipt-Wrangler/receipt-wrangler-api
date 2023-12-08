@@ -94,3 +94,59 @@ func GetDashboardsForUser(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
+	dashboardId := chi.URLParam(r, "dashboardId")
+	dashboardRepository := repositories.NewDashboardRepository(nil)
+	uintDashboardId, err := simpleutils.StringToUint(dashboardId)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	dashboard, err := dashboardRepository.GetDashboardById(uintDashboardId)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	stringGroupId := simpleutils.UintToString(dashboard.GroupID)
+
+	handler := structs.Handler{
+		ErrorMessage: "Error updating dashboard",
+		Writer:       w,
+		Request:      r,
+		GroupId:      stringGroupId,
+		GroupRole:    models.VIEWER,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpsertDashboardCommand{}
+			vErr, err := command.LoadDataFromRequestAndValidate(w, r)
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			dashboard, err := dashboardRepository.UpdateDashboardById(uintDashboardId, command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(dashboard)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

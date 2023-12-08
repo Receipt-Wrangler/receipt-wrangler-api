@@ -41,7 +41,7 @@ func (repository *DashboardRepository) CreateDashboard(command commands.UpsertDa
 	dashboard := models.Dashboard{
 		UserID:  userId,
 		Name:    command.Name,
-		GroupID: &groupId,
+		GroupID: groupId,
 		Widgets: widgets,
 	}
 
@@ -71,4 +71,62 @@ func (repository *DashboardRepository) GetDashboardsForUserByGroup(userId uint, 
 	}
 
 	return dashboards, nil
+}
+
+func (repository *DashboardRepository) GetDashboardById(dashboardId uint) (models.Dashboard, error) {
+	db := repository.GetDB()
+	var dashboard models.Dashboard
+
+	if db.Model(models.Dashboard{}).Preload(clause.Associations).First(&dashboard, dashboardId).Error != nil {
+		return models.Dashboard{}, nil
+	}
+
+	return dashboard, nil
+}
+
+func (repository *DashboardRepository) UpdateDashboardById(dashboardId uint, command commands.UpsertDashboardCommand) (models.Dashboard, error) {
+	db := repository.GetDB()
+	groupId, err := simpleutils.StringToUint(command.GroupId)
+	if err != nil {
+		return models.Dashboard{}, err
+	}
+
+	db.Transaction(func(tx *gorm.DB) error {
+		widgets := make([]models.Widget, len(command.Widgets))
+		for i, widget := range command.Widgets {
+			configuration := []byte("{}")
+
+			widgets[i] = models.Widget{
+				DashboardId:   dashboardId,
+				Name:          widget.Name,
+				WidgetType:    widget.WidgetType,
+				Configuration: configuration,
+			}
+		}
+
+		dashboard := models.Dashboard{
+			BaseModel: models.BaseModel{
+				ID: dashboardId,
+			},
+			Name:    command.Name,
+			GroupID: groupId,
+		}
+
+		if db.Model(&dashboard).Where("id = ?", dashboardId).Updates(&dashboard).Error != nil {
+			return err
+		}
+
+		if db.Model(&dashboard).Association("Widgets").Unscoped().Replace(widgets) != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	updatedDashboard, err := repository.GetDashboardById(dashboardId)
+	if err != nil {
+		return models.Dashboard{}, err
+	}
+
+	return updatedDashboard, nil
 }

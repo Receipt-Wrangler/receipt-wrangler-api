@@ -120,6 +120,12 @@ func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.VIEWER,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := structs.GetJWT(r)
+
+			if dashboard.UserID != token.UserId {
+				return http.StatusForbidden, nil
+			}
+
 			command := commands.UpsertDashboardCommand{}
 			vErr, err := command.LoadDataFromRequestAndValidate(w, r)
 			if len(vErr.Errors) > 0 {
@@ -132,6 +138,58 @@ func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 			}
 
 			dashboard, err := dashboardRepository.UpdateDashboardById(uintDashboardId, command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(dashboard)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func DeleteDashboard(w http.ResponseWriter, r *http.Request) {
+	dashboardId := chi.URLParam(r, "dashboardId")
+	uintDashboardId, err := simpleutils.StringToUint(dashboardId)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	dashboardRepository := repositories.NewDashboardRepository(nil)
+	dashboard, err := dashboardRepository.GetDashboardById(uintDashboardId)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	stringDashboardId := simpleutils.UintToString(dashboard.GroupID)
+
+	handler := structs.Handler{
+		ErrorMessage: "Error deleteing dashboard",
+		Writer:       w,
+		Request:      r,
+		GroupId:      stringDashboardId,
+		GroupRole:    models.VIEWER,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := structs.GetJWT(r)
+
+			if dashboard.UserID != token.UserId {
+				return http.StatusForbidden, nil
+			}
+
+			dashboardRepository := repositories.NewDashboardRepository(nil)
+			err := dashboardRepository.DeleteDashboardById(uintDashboardId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

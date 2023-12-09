@@ -77,11 +77,35 @@ func (repository *DashboardRepository) GetDashboardById(dashboardId uint) (model
 	db := repository.GetDB()
 	var dashboard models.Dashboard
 
-	if db.Model(models.Dashboard{}).Preload(clause.Associations).First(&dashboard, dashboardId).Error != nil {
-		return models.Dashboard{}, nil
+	err := db.Model(models.Dashboard{}).Preload(clause.Associations).First(&dashboard, dashboardId).Error
+	if err != nil {
+		return models.Dashboard{}, err
 	}
 
 	return dashboard, nil
+}
+
+func (repository *DashboardRepository) DeleteDashboardById(dashboardId uint) error {
+	db := repository.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		err := db.Delete(&models.Widget{}, "dashboard_id = ?", dashboardId).Error
+		if err != nil {
+			return err
+		}
+
+		err = db.Delete(models.Dashboard{}, dashboardId).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (repository *DashboardRepository) UpdateDashboardById(dashboardId uint, command commands.UpsertDashboardCommand) (models.Dashboard, error) {

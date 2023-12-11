@@ -59,6 +59,7 @@ definitions:
     type: string
     enum: &WIDGETTYPE
       - "GROUP_SUMMARY"
+      - "FILTERED_RECEIPTS"
 paths:
   /dashboard/{groupId}:
     parameters:
@@ -2545,3 +2546,7 @@ components:
           type: string
           enum: *WIDGETTYPE
           description: Type of widget
+        configuration:
+          type: string
+          format: json
+          description: Configuration of widget

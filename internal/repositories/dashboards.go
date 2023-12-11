@@ -118,13 +118,12 @@ func (repository *DashboardRepository) UpdateDashboardById(dashboardId uint, com
 	db.Transaction(func(tx *gorm.DB) error {
 		widgets := make([]models.Widget, len(command.Widgets))
 		for i, widget := range command.Widgets {
-			configuration := []byte("{}")
 
 			widgets[i] = models.Widget{
 				DashboardId:   dashboardId,
 				Name:          widget.Name,
 				WidgetType:    widget.WidgetType,
-				Configuration: configuration,
+				Configuration: widget.Configuration,
 			}
 		}
 

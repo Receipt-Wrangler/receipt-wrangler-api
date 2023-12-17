@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -132,6 +133,8 @@ func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
 				return 0, nil
 			}
+
+			fmt.Println(command)
 
 			if err != nil {
 				return http.StatusInternalServerError, err

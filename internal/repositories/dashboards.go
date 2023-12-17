@@ -119,6 +119,10 @@ func (repository *DashboardRepository) UpdateDashboardById(dashboardId uint, com
 		widgets := make([]models.Widget, len(command.Widgets))
 		for i, widget := range command.Widgets {
 
+			if widget.Configuration == nil {
+				widget.Configuration = []byte("{}")
+			}
+
 			widgets[i] = models.Widget{
 				DashboardId:   dashboardId,
 				Name:          widget.Name,

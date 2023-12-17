@@ -119,11 +119,15 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
+	groupId := r.URL.Query().Get("groupId")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error calculating amount owed.",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
+		GroupId:      groupId,
+		GroupRole:    models.VIEWER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			var itemsOwed []ItemView
@@ -134,8 +138,6 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			resultMap := make(map[uint]decimal.Decimal)
 			totalReceiptIds := make([]uint, 0)
 			totalGroupIds := make([]string, 0)
-
-			groupId := r.URL.Query().Get("groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
 			uintGroupId, err := simpleutils.StringToUint(groupId)

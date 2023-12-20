@@ -22,13 +22,15 @@ import (
 )
 
 func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
+	groupId := chi.URLParam(r, "groupId")
 	handler := structs.Handler{
 		ErrorMessage: "Error getting receipts",
 		Writer:       w,
 		Request:      r,
+		GroupId:      groupId,
+		GroupRole:    models.VIEWER,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			groupId := chi.URLParam(r, "groupId")
 			pagedRequest := r.Context().Value("pagedRequest").(commands.ReceiptPagedRequestCommand)
 			pagedData := structs.PagedData{}
 

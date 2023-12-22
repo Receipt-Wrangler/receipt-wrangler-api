@@ -70,7 +70,6 @@ func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Rec
 }
 
 func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.ReceiptPagedRequestCommand) ([]models.Receipt, int64, error) {
-	db := GetDB()
 	var receipts []models.Receipt
 	var count int64
 
@@ -84,8 +83,11 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 		return nil, 0, err
 	}
 
-	// Start query
-	query := db.Table("receipts")
+	// Apply filter
+	query, err := repository.BuildGormFilterQuery(pagedRequest)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Filter receipts by group
 	if isAllGroup {
@@ -114,7 +116,24 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 		return nil, 0, errors.New("untrusted value " + pagedRequest.OrderBy + " " + pagedRequest.SortDirection)
 	}
 
-	// Apply filter
+	err = query.Count(&count).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	query = query.Scopes(repository.Paginate(pagedRequest.Page, pagedRequest.PageSize)).Preload("Tags").Preload("Categories")
+
+	// Run Query
+	err = query.Find(&receipts).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return receipts, count, nil
+}
+
+func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.ReceiptPagedRequestCommand) (*gorm.DB, error) {
+	query := db.Model(models.Receipt{})
 
 	// Name
 	name := pagedRequest.Filter.Name.Value.(string)
@@ -168,20 +187,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 		query = repository.buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
 	}
 
-	err = query.Count(&count).Error
-	if err != nil {
-		return nil, 0, err
-	}
-
-	query = query.Scopes(repository.Paginate(pagedRequest.Page, pagedRequest.PageSize)).Preload("Tags").Preload("Categories")
-
-	// Run Query
-	err = query.Find(&receipts).Error
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return receipts, count, nil
+	return query, nil
 }
 
 func (repository ReceiptRepository) buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation commands.FilterOperation, fieldName string, isArray bool) *gorm.DB {

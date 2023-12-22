@@ -59,6 +59,7 @@ definitions:
     type: string
     enum: &WIDGETTYPE
       - "GROUP_SUMMARY"
+      - "FILTERED_RECEIPTS"
 paths:
   /dashboard/{groupId}:
     parameters:
@@ -1977,8 +1978,8 @@ components:
           enum: *WIDGETTYPE
           description: Type of widget
         configuration:
-          type: string
-          format: json
+          type: object
+          additionalProperties: {}
           description: Configuration of widget
       description: Widget related to a user's dashboard
     UpsertTagCommand:
@@ -2545,3 +2546,7 @@ components:
           type: string
           enum: *WIDGETTYPE
           description: Type of widget
+        configuration:
+          type: object
+          additionalProperties: {}
+          description: Configuration of widget

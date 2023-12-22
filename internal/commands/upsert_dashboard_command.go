@@ -43,6 +43,7 @@ func (command UpsertDashboardCommand) Validate() structs.ValidatorError {
 	return vErr
 }
 
+// TODO: cast config somewhere
 func (command *UpsertDashboardCommand) LoadDataFromRequestAndValidate(w http.ResponseWriter, r *http.Request) (structs.ValidatorError, error) {
 	err := command.LoadDataFromRequest(w, r)
 	if err != nil {

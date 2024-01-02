@@ -191,6 +191,8 @@ paths:
             text/plain:
               schema:
                 type: integer
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -284,6 +286,8 @@ paths:
       responses:
         200:
           $ref: "#/components/responses/Ok"
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -297,6 +301,8 @@ paths:
       responses:
         200:
           $ref: "#/components/responses/Ok"
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
       security:

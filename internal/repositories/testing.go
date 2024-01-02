@@ -111,6 +111,25 @@ func CreateTestGroupWithUsers() {
 	db.Model(models.GroupMember{}).Create(&groupMember4)
 }
 
+func CreateTestCategories() {
+	db := GetDB()
+	category := models.Category{
+		Name: "test",
+	}
+
+	category2 := models.Category{
+		Name: "test2",
+	}
+
+	category3 := models.Category{
+		Name: "test3",
+	}
+
+	db.Create(&category)
+	db.Create(&category2)
+	db.Create(&category3)
+}
+
 func TruncateTestDb() {
 	db := GetDB()
 	TruncateTable(db, "notifications")

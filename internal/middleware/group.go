@@ -30,9 +30,9 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 			errMsg := "Unauthorized access to entity."
 
 			if len(groupId) > 0 {
+				groupService := services.NewGroupService(nil)
 				token := structs.GetJWT(r)
-
-				err := services.ValidateGroupRole(role, groupId, simpleutils.UintToString(token.UserId))
+				err := groupService.ValidateGroupRole(role, groupId, simpleutils.UintToString(token.UserId))
 
 				if err != nil {
 					middleware_logger.Print("Unauthorized request", r)

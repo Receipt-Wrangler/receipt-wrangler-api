@@ -10,8 +10,20 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func GetGroupsForUser(userId string) ([]models.Group, error) {
-	db := repositories.GetDB()
+type GroupService struct {
+	BaseService
+}
+
+func NewGroupService(tx *gorm.DB) GroupService {
+	service := GroupService{BaseService: BaseService{
+		DB: repositories.GetDB(),
+		TX: tx,
+	}}
+	return service
+}
+
+func (service GroupService) GetGroupsForUser(userId string) ([]models.Group, error) {
+	db := service.GetDB()
 	var groups []models.Group
 
 	groupMemberRepository := repositories.NewGroupMemberRepository(nil)
@@ -33,8 +45,8 @@ func GetGroupsForUser(userId string) ([]models.Group, error) {
 	return groups, nil
 }
 
-func DeleteGroup(groupId string) error {
-	db := repositories.GetDB()
+func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool) error {
+	db := service.GetDB()
 	var receipts []models.Receipt
 
 	uintGroupId, err := simpleutils.StringToUint(groupId)
@@ -43,9 +55,12 @@ func DeleteGroup(groupId string) error {
 	}
 
 	groupRepository := repositories.NewGroupRepository(nil)
-	isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
-	if err != nil || isAllGroup {
-		return err
+
+	if !allowAllGroupDelete {
+		isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+		if err != nil || isAllGroup {
+			return err
+		}
 	}
 
 	group, err := groupRepository.GetGroupById(groupId, false)
@@ -97,10 +112,10 @@ func DeleteGroup(groupId string) error {
 	return nil
 }
 
-func ValidateGroupRole(role models.GroupRole, groupId string, userId string) error {
+func (service GroupService) ValidateGroupRole(role models.GroupRole, groupId string, userId string) error {
 	groupMap := models.BuildGroupMap()
 
-	groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+	groupMemberRepository := repositories.NewGroupMemberRepository(service.GetDB())
 	groupMember, err := groupMemberRepository.GetGroupMemberByUserIdAndGroupId(userId, groupId)
 	if err != nil {
 		return err

@@ -24,8 +24,9 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
+			groupService := services.NewGroupService(nil)
 
-			groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+			groups, err := groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -40,12 +41,14 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 
 			if !hasAllGroup {
 				groupsRepository := repositories.NewGroupRepository(nil)
+				groupService := services.NewGroupService(nil)
+
 				_, err := groupsRepository.CreateAllGroup(token.UserId)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
-				groups, err = services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				groups, err = groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -258,7 +261,9 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 			if isAllGroup {
 				token := structs.GetJWT(r)
 				disabledEmailIntegrationCnt := 0
-				groups, err := services.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				groupService := services.NewGroupService(nil)
+
+				groups, err := groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -312,6 +317,8 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.OWNER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "groupId")
+			groupService := services.NewGroupService(nil)
+
 			uintGroupId, err := simpleutils.StringToUint(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -326,7 +333,7 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, errors.New("cannot delete all group")
 			}
 
-			err = services.DeleteGroup(id)
+			err = groupService.DeleteGroup(id, false)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

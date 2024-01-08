@@ -430,6 +430,7 @@ func HasAccess(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
+			groupService := services.NewGroupService(nil)
 
 			receiptId := r.URL.Query().Get("receiptId")
 			if len(receiptId) == 0 {
@@ -452,7 +453,7 @@ func HasAccess(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, err
 			}
 
-			err = services.ValidateGroupRole(models.GroupRole(validatedGroupRole), fmt.Sprint(receipt.GroupId), fmt.Sprint(token.UserId))
+			err = groupService.ValidateGroupRole(models.GroupRole(validatedGroupRole), fmt.Sprint(receipt.GroupId), fmt.Sprint(token.UserId))
 			if err != nil {
 				return http.StatusForbidden, err
 			}

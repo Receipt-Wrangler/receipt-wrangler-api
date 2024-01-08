@@ -20,6 +20,7 @@ func DeleteUser(userId string) error {
 		var groupIdsToNotDelete []uint
 		notificationsRepository := repositories.NewNotificationRepository(tx)
 		userPreferncesRepository := repositories.NewUserPreferencesRepository(tx)
+		groupService := NewGroupService(tx)
 
 		// Remove receipts that the user paid
 		txErr := tx.Model(models.Receipt{}).Where("paid_by_user_id = ?", userId).Select("id").Find(&receipts).Error
@@ -41,14 +42,14 @@ func DeleteUser(userId string) error {
 		}
 
 		// Remove groups where the user is the only user
-		groups, txErr := GetGroupsForUser(userId)
+		groups, txErr := groupService.GetGroupsForUser(userId)
 		if txErr != nil {
 			return txErr
 		}
 		for i := 0; i < len(groups); i++ {
 			group := groups[i]
 			if len(group.GroupMembers) == 1 {
-				txErr := DeleteGroup(simpleutils.UintToString(group.ID))
+				txErr := groupService.DeleteGroup(simpleutils.UintToString(group.ID), true)
 				if txErr != nil {
 					return txErr
 				} else {

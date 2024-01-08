@@ -320,6 +320,8 @@ func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 
 func validateReceiptImageAccess(r *http.Request, groupRole models.GroupRole, receiptImageId string) (int, error) {
 	token := structs.GetJWT(r)
+	groupService := services.NewGroupService(nil)
+
 	receiptImageIdUint, err := simpleutils.StringToUint(receiptImageId)
 	if err != nil {
 		return http.StatusInternalServerError, err
@@ -331,7 +333,7 @@ func validateReceiptImageAccess(r *http.Request, groupRole models.GroupRole, rec
 		return http.StatusInternalServerError, err
 	}
 
-	err = services.ValidateGroupRole(groupRole, simpleutils.UintToString(receiptImage.Receipt.GroupId), simpleutils.UintToString(token.UserId))
+	err = groupService.ValidateGroupRole(groupRole, simpleutils.UintToString(receiptImage.Receipt.GroupId), simpleutils.UintToString(token.UserId))
 	if err != nil {
 		return http.StatusForbidden, err
 	}

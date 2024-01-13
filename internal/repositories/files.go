@@ -1,8 +1,10 @@
 package repositories
 
 import (
+	"archive/zip"
 	"encoding/base64"
 	"errors"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -245,7 +247,7 @@ func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
 }
 
 func (repository BaseRepository) WriteTempFile(data []byte) (string, error) {
-	tempPath := config.GetBasePath() + "/temp"
+	tempPath := repository.GetTempDirectoryPath()
 	utils.MakeDirectory(tempPath)
 
 	validatedFileType, err := repository.ValidateFileType(data)
@@ -275,7 +277,7 @@ func (repository BaseRepository) WriteTempFile(data []byte) (string, error) {
 }
 
 func (repository BaseRepository) BuildTempFilePath(fileType string) (string, error) {
-	tempPath := config.GetBasePath() + "/temp"
+	tempPath := repository.GetTempDirectoryPath()
 
 	filename, err := utils.GetRandomString(10)
 	if err != nil {
@@ -313,4 +315,55 @@ func (repository BaseRepository) BuildEncodedImageString(bytes []byte) (string, 
 
 	imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
 	return imageData, nil
+}
+
+func (repository BaseRepository) CreateZipFromTempFiles(zipFilename string, filenames []string) (string, error) {
+	tempPath := repository.GetTempDirectoryPath()
+	zipPath := filepath.Join(tempPath, zipFilename)
+
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		return "", err
+	}
+	defer zipFile.Close()
+
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+
+	for _, filename := range filenames {
+		filePath := filepath.Join(tempPath, filename)
+		file, err := os.Open(filePath)
+		if err != nil {
+			return "", err
+		}
+		defer file.Close()
+
+		info, err := file.Stat()
+		if err != nil {
+			return "", err
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return "", err
+		}
+
+		header.Name = filename
+		header.Method = zip.Deflate
+
+		writer, err := zipWriter.CreateHeader(header)
+		if err != nil {
+			return "", err
+		}
+
+		if _, err = io.Copy(writer, file); err != nil {
+			return "", err
+		}
+	}
+
+	return zipPath, nil
+}
+
+func (repository BaseRepository) GetTempDirectoryPath() string {
+	return config.GetBasePath() + "/temp"
 }

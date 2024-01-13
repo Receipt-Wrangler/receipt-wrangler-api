@@ -7,8 +7,10 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/tesseract"
 	"receipt-wrangler/api/internal/utils"
+	"sync"
 )
 
 func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
@@ -54,7 +56,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		pathToReadFrom = receiptImagePath
 	}
 
-	ocrText, err := tesseract.ReadImage(pathToReadFrom)
+	ocrText, err := tesseract.ReadImage(pathToReadFrom, false)
 	if err != nil {
 		return result, nil
 	}
@@ -70,7 +72,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 	var result models.Receipt
 
-	ocrText, err := tesseract.ReadImage(path)
+	ocrText, err := tesseract.ReadImage(path, false)
 	if err != nil {
 		return result, nil
 	}
@@ -104,4 +106,84 @@ func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, erro
 
 	os.Remove(filePath)
 	return filledReceipt, nil
+}
+
+func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData, error) {
+	db := repositories.GetDB()
+	groupRepository := repositories.NewGroupRepository(nil)
+	groupService := NewGroupService(nil)
+	groupIds := make([]uint, 0)
+
+	group, err := groupRepository.GetGroupById(groupId, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if group.IsAllGroup {
+		groups, err := groupService.GetGroupsForUser(userId)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, group := range groups {
+			groupIds = append(groupIds, group.ID)
+		}
+	} else {
+		uintGroupId, err := simpleutils.StringToUint(groupId)
+		if err != nil {
+			return nil, err
+		}
+
+		groupIds = append(groupIds, uintGroupId)
+	}
+
+	fileDataResults := make([]models.FileData, 0)
+	err = db.Table("receipts").Select("receipts.id, receipts.group_id, file_data.*").Joins("inner join file_data on file_data.receipt_id=receipts.id").Where("receipts.group_id IN ?", groupIds).Scan(&fileDataResults).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return fileDataResults, nil
+}
+
+func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrExport, error) {
+	fileRepository := repositories.NewFileRepository(nil)
+	fileDataResults, err := GetReceiptImagesForGroup(groupId, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make(chan structs.OcrExport, len(fileDataResults))
+	var wg sync.WaitGroup
+
+	for _, fileData := range fileDataResults {
+		wg.Add(1)
+		go func(fd models.FileData) {
+			defer wg.Done()
+
+			filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fd.ReceiptId), simpleutils.UintToString(fd.ID), fd.Name)
+			if err != nil {
+				results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
+				return
+			}
+
+			ocrText, err := tesseract.ReadImage(filePath, true)
+			results <- structs.OcrExport{OcrText: ocrText, Filename: fd.Name, Err: err}
+		}(fileData)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	ocrExportResults := make([]structs.OcrExport, 0)
+	for r := range results {
+		if r.Err != nil {
+			return nil, r.Err
+		}
+		ocrExportResults = append(ocrExportResults, r)
+	}
+
+	return ocrExportResults, nil
 }

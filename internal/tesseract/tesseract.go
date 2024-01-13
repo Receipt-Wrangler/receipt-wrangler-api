@@ -15,7 +15,13 @@ func GetClient() *gosseract.Client {
 	return client
 }
 
-func ReadImage(path string) (string, error) {
+func ReadImage(path string, createNewClient bool) (string, error) {
+	client := GetClient()
+	if createNewClient {
+		client = gosseract.NewClient()
+		defer client.Close()
+	}
+
 	bytes, err := prepareImage(path)
 	if err != nil {
 		return "", err

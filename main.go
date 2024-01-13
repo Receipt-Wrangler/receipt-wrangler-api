@@ -91,8 +91,8 @@ func serve(router *chi.Mux) {
 	srv := &http.Server{
 		Handler:      router,
 		Addr:         "0.0.0.0:8081",
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 5 * time.Minute,
+		ReadTimeout:  5 * time.Minute,
 	}
 	logger.Print("Initialize completed")
 	logger.Fatal(srv.ListenAndServe())

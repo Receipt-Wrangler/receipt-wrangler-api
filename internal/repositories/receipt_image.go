@@ -90,3 +90,15 @@ func (repository ReceiptImageRepository) GetReceiptImageById(receiptImageId uint
 
 	return result, nil
 }
+
+func (repository ReceiptImageRepository) GetReceiptImagesByIdArray(receiptImageIds []uint) ([]models.FileData, error) {
+	db := repository.GetDB()
+	var result = make([]models.FileData, 0)
+
+	err := db.Model(models.FileData{}).Where("id IN ?", receiptImageIds).Find(&result).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

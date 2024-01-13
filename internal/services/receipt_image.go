@@ -146,7 +146,7 @@ func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData,
 	return fileDataResults, nil
 }
 
-func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]string, error) {
+func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrExport, error) {
 	fileRepository := repositories.NewFileRepository(nil)
 	fileDataResults, err := GetReceiptImagesForGroup(groupId, userId)
 	if err != nil {
@@ -177,13 +177,13 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]string, erro
 		close(results)
 	}()
 
-	ocrTextResults := make([]string, 0)
+	ocrExportResults := make([]structs.OcrExport, 0)
 	for r := range results {
 		if r.Err != nil {
 			return nil, r.Err
 		}
-		ocrTextResults = append(ocrTextResults, r.OcrText)
+		ocrExportResults = append(ocrExportResults, r)
 	}
 
-	return ocrTextResults, nil
+	return ocrExportResults, nil
 }

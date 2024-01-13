@@ -1,13 +1,16 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -32,9 +35,10 @@ func GetOcrTextForGroup(w http.ResponseWriter, r *http.Request) {
 
 			fileRepository := repositories.NewFileRepository(nil)
 
-			for _, result := range ocrResults {
-				tempPath := fileRepository.GetTempDirectoryPath()
-
+			for i, exportResults := range ocrResults {
+				fileName := strings.Split(exportResults.Filename, ".")[0]
+				tempPath := fileRepository.GetTempDirectoryPath() + "/" + fileName + "-" + fmt.Sprint(i) + ".txt"
+				os.WriteFile(tempPath, []byte(exportResults.OcrText), 0600)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

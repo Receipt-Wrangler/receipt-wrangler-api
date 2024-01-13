@@ -143,3 +143,29 @@ func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData,
 
 	return fileDataResults, nil
 }
+
+func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]string, error) {
+	fileRepository := repositories.NewFileRepository(nil)
+	ocrTextResults := make([]string, 0)
+
+	fileDataResults, err := GetReceiptImagesForGroup(groupId, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, fileData := range fileDataResults {
+		filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		ocrText, err := tesseract.ReadImage(filePath)
+		if err != nil {
+			return nil, err
+		}
+
+		ocrTextResults = append(ocrTextResults, ocrText)
+	}
+
+	return ocrTextResults, nil
+}

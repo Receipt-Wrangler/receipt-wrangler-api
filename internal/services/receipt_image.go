@@ -105,3 +105,41 @@ func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, erro
 	os.Remove(filePath)
 	return filledReceipt, nil
 }
+
+func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData, error) {
+	db := repositories.GetDB()
+	groupRepository := repositories.NewGroupRepository(nil)
+	groupService := NewGroupService(nil)
+	groupIds := make([]uint, 0)
+
+	group, err := groupRepository.GetGroupById(groupId, false)
+	if err != nil {
+		return nil, err
+	}
+
+	if group.IsAllGroup {
+		groups, err := groupService.GetGroupsForUser(userId)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, group := range groups {
+			groupIds = append(groupIds, group.ID)
+		}
+	} else {
+		uintGroupId, err := simpleutils.StringToUint(groupId)
+		if err != nil {
+			return nil, err
+		}
+
+		groupIds = append(groupIds, uintGroupId)
+	}
+
+	fileDataResults := make([]models.FileData, 0)
+	err = db.Table("receipts").Select("receipts.id, receipts.group_id, file_data.*").Joins("inner join file_data on file_data.receipt_id=receipts.id").Where("receipts.group_id IN ?", groupIds).Scan(&fileDataResults).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return fileDataResults, nil
+}

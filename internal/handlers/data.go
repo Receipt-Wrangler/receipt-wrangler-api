@@ -25,38 +25,9 @@ func GetOcrTextForGroup(w http.ResponseWriter, r *http.Request) {
 		UserRole:     models.ADMIN,
 		ResponseType: constants.APPLICATION_ZIP,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := repositories.GetDB()
 			token := structs.GetJWT(r)
 
-			groupIds := make([]uint, 0)
-			groupRepository := repositories.NewGroupRepository(nil)
-			groupService := services.NewGroupService(nil)
-			group, err := groupRepository.GetGroupById(groupId, false)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			if group.IsAllGroup {
-				userId := simpleutils.UintToString(token.UserId)
-				groups, err := groupService.GetGroupsForUser(userId)
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				for _, group := range groups {
-					groupIds = append(groupIds, group.ID)
-				}
-			} else {
-				uintGroupId, err := simpleutils.StringToUint(groupId)
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				groupIds = append(groupIds, uintGroupId)
-			}
-
-			fileDataResults := make([]models.FileData, 0)
-			err = db.Table("receipts").Select("receipts.id, receipts.group_id, file_data.*").Joins("inner join file_data on file_data.receipt_id=receipts.id").Where("receipts.group_id IN ?", groupIds).Scan(&fileDataResults).Error
+			fileDataResults, err := services.GetReceiptImagesForGroup(groupId, simpleutils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -407,6 +407,29 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /group/{groupId}/ocrText:
+    get:
+      tags:
+        - Groups
+      summary: Reads each image in a group and returns the zipped read text
+      description: This will get the ocr text, zipped, for each image in a group and one text file per image
+      operationId: getOcrTextForGroup
+      parameters:
+        - in: path
+          name: groupId
+          schema:
+            type: integer
+          required: true
+          description: Group Id to get ocr text for
+      responses:
+        200:
+          description: Zip file containing text from each image
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: []
   /group/{groupId}/pollGroupEmail:
     post:
       tags:

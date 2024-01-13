@@ -9,6 +9,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/tesseract"
 	"receipt-wrangler/api/internal/utils"
+	"sync"
 )
 
 func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
@@ -54,7 +55,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		pathToReadFrom = receiptImagePath
 	}
 
-	ocrText, err := tesseract.ReadImage(pathToReadFrom)
+	ocrText, err := tesseract.ReadImage(pathToReadFrom, false)
 	if err != nil {
 		return result, nil
 	}
@@ -70,7 +71,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 	var result models.Receipt
 
-	ocrText, err := tesseract.ReadImage(path)
+	ocrText, err := tesseract.ReadImage(path, false)
 	if err != nil {
 		return result, nil
 	}
@@ -146,25 +147,46 @@ func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData,
 
 func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]string, error) {
 	fileRepository := repositories.NewFileRepository(nil)
-	ocrTextResults := make([]string, 0)
-
 	fileDataResults, err := GetReceiptImagesForGroup(groupId, userId)
 	if err != nil {
 		return nil, err
 	}
 
+	type result struct {
+		ocrText string
+		err     error
+	}
+
+	results := make(chan result, len(fileDataResults))
+	var wg sync.WaitGroup
+
 	for _, fileData := range fileDataResults {
-		filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
-		if err != nil {
-			return nil, err
-		}
+		wg.Add(1)
+		go func(fd models.FileData) {
+			defer wg.Done()
 
-		ocrText, err := tesseract.ReadImage(filePath)
-		if err != nil {
-			return nil, err
-		}
+			filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fd.ReceiptId), simpleutils.UintToString(fd.ID), fd.Name)
+			if err != nil {
+				results <- result{"", err}
+				return
+			}
 
-		ocrTextResults = append(ocrTextResults, ocrText)
+			ocrText, err := tesseract.ReadImage(filePath, true)
+			results <- result{ocrText, err}
+		}(fileData)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	ocrTextResults := make([]string, 0)
+	for r := range results {
+		if r.err != nil {
+			return nil, r.err
+		}
+		ocrTextResults = append(ocrTextResults, r.ocrText)
 	}
 
 	return ocrTextResults, nil

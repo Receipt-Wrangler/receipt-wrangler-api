@@ -1,8 +1,10 @@
 package repositories
 
 import (
+	"archive/zip"
 	"encoding/base64"
 	"errors"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -316,7 +318,50 @@ func (repository BaseRepository) BuildEncodedImageString(bytes []byte) (string, 
 }
 
 func (repository BaseRepository) CreateZipFromTempFiles(zipFilename string, filenames []string) (string, error) {
-	return "", nil
+	tempPath := repository.GetTempDirectoryPath()
+	zipPath := filepath.Join(tempPath, zipFilename)
+
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		return "", err
+	}
+	defer zipFile.Close()
+
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+
+	for _, filename := range filenames {
+		filePath := filepath.Join(tempPath, filename)
+		file, err := os.Open(filePath)
+		if err != nil {
+			return "", err
+		}
+		defer file.Close()
+
+		info, err := file.Stat()
+		if err != nil {
+			return "", err
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return "", err
+		}
+
+		header.Name = filename
+		header.Method = zip.Deflate
+
+		writer, err := zipWriter.CreateHeader(header)
+		if err != nil {
+			return "", err
+		}
+
+		if _, err = io.Copy(writer, file); err != nil {
+			return "", err
+		}
+	}
+
+	return zipPath, nil
 }
 
 func (repository BaseRepository) GetTempDirectoryPath() string {

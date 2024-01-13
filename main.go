@@ -192,9 +192,5 @@ func initRoutes() *chi.Mux {
 	dashboardRouter := routers.BuildDashboardRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/dashboard", dashboardRouter)
 
-	// Data router
-	dataRouter := routers.BuildDataRouter(tokenValidatorMiddleware)
-	rootRouter.Mount("/api/data", dataRouter)
-
 	return rootRouter
 }

@@ -20,6 +20,7 @@ func BuildGroupRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	groupRouter.Put("/{groupId}/groupSettings", handlers.UpdateGroupSettings)
 	groupRouter.With(middleware.CanDeleteGroup).Delete("/{groupId}", handlers.DeleteGroup)
 	groupRouter.Post("/{groupId}/pollGroupEmail", handlers.PollGroupEmail)
+	groupRouter.Get("/{groupId}/ocrText", handlers.GetOcrTextForGroup)
 
 	return groupRouter
 }

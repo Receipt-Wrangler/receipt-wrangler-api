@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
@@ -25,12 +25,23 @@ func GetOcrTextForGroup(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 
-			results, err := services.ReadAllReceiptImagesForGroup(groupId, simpleutils.UintToString(token.UserId))
+			ocrResults, err := services.ReadAllReceiptImagesForGroup(groupId, simpleutils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			fmt.Println(results)
+			fileRepository := repositories.NewFileRepository(nil)
+
+			for _, result := range ocrResults {
+				tempPath := fileRepository.GetTempDirectoryPath()
+
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+			}
+
+			// create files
+			// add files to zip
 
 			w.WriteHeader(200)
 			// w.Write(bytes)

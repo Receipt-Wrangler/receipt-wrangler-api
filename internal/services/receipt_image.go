@@ -7,6 +7,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/tesseract"
 	"receipt-wrangler/api/internal/utils"
 	"sync"
@@ -152,12 +153,7 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]string, erro
 		return nil, err
 	}
 
-	type result struct {
-		ocrText string
-		err     error
-	}
-
-	results := make(chan result, len(fileDataResults))
+	results := make(chan structs.OcrExport, len(fileDataResults))
 	var wg sync.WaitGroup
 
 	for _, fileData := range fileDataResults {
@@ -167,12 +163,12 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]string, erro
 
 			filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fd.ReceiptId), simpleutils.UintToString(fd.ID), fd.Name)
 			if err != nil {
-				results <- result{"", err}
+				results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
 				return
 			}
 
 			ocrText, err := tesseract.ReadImage(filePath, true)
-			results <- result{ocrText, err}
+			results <- structs.OcrExport{OcrText: ocrText, Filename: fd.Name, Err: err}
 		}(fileData)
 	}
 
@@ -183,10 +179,10 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]string, erro
 
 	ocrTextResults := make([]string, 0)
 	for r := range results {
-		if r.err != nil {
-			return nil, r.err
+		if r.Err != nil {
+			return nil, r.Err
 		}
-		ocrTextResults = append(ocrTextResults, r.ocrText)
+		ocrTextResults = append(ocrTextResults, r.OcrText)
 	}
 
 	return ocrTextResults, nil

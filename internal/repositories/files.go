@@ -245,7 +245,7 @@ func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
 }
 
 func (repository BaseRepository) WriteTempFile(data []byte) (string, error) {
-	tempPath := config.GetBasePath() + "/temp"
+	tempPath := repository.GetTempDirectoryPath()
 	utils.MakeDirectory(tempPath)
 
 	validatedFileType, err := repository.ValidateFileType(data)
@@ -275,7 +275,7 @@ func (repository BaseRepository) WriteTempFile(data []byte) (string, error) {
 }
 
 func (repository BaseRepository) BuildTempFilePath(fileType string) (string, error) {
-	tempPath := config.GetBasePath() + "/temp"
+	tempPath := repository.GetTempDirectoryPath()
 
 	filename, err := utils.GetRandomString(10)
 	if err != nil {
@@ -313,4 +313,12 @@ func (repository BaseRepository) BuildEncodedImageString(bytes []byte) (string, 
 
 	imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
 	return imageData, nil
+}
+
+func (repository BaseRepository) CreateZipFromTempFiles(zipFilename string, filenames []string) (string, error) {
+	return "", nil
+}
+
+func (repository BaseRepository) GetTempDirectoryPath() string {
+	return config.GetBasePath() + "/temp"
 }

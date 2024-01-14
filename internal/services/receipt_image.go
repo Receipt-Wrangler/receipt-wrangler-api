@@ -156,19 +156,27 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrE
 	results := make(chan structs.OcrExport, len(fileDataResults))
 	var wg sync.WaitGroup
 
+	// Create a semaphore with a buffer size of 5
+	semaphore := make(chan struct{}, 5)
+
 	for _, fileData := range fileDataResults {
 		wg.Add(1)
 		go func(fd models.FileData) {
 			defer wg.Done()
 
+			// Acquire a semaphore slot
+			semaphore <- struct{}{}
+
 			filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fd.ReceiptId), simpleutils.UintToString(fd.ID), fd.Name)
 			if err != nil {
 				results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
-				return
+			} else {
+				ocrText, err := tesseract.ReadImage(filePath, true)
+				results <- structs.OcrExport{OcrText: ocrText, Filename: fd.Name, Err: err}
 			}
 
-			ocrText, err := tesseract.ReadImage(filePath, true)
-			results <- structs.OcrExport{OcrText: ocrText, Filename: fd.Name, Err: err}
+			// Release the semaphore slot
+			<-semaphore
 		}(fileData)
 	}
 

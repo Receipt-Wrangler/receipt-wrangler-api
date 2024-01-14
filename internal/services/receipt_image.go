@@ -187,9 +187,6 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrE
 
 	ocrExportResults := make([]structs.OcrExport, 0)
 	for r := range results {
-		if r.Err != nil {
-			return nil, r.Err
-		}
 		ocrExportResults = append(ocrExportResults, r)
 	}
 

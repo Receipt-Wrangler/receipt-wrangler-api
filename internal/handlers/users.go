@@ -32,11 +32,8 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := repositories.GetDB()
-			var users []structs.UserView
-
-			// TODO: move to repo
-			err := db.Model(models.User{}).Find(&users).Error
+			userRepository := repositories.NewUserRepository(nil)
+			users, err := userRepository.GetAllUserViews()
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

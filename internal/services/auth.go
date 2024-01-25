@@ -8,6 +8,7 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -134,4 +135,17 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 	}
 
 	return signedString, refreshTokenString, accessTokenClaims, nil
+}
+
+func GetClientData(userId uint) (map[string]interface{}, error) {
+	clientData := make(map[string]interface{})
+	groupService := NewGroupService(repositories.GetDB())
+	stringUserId := simpleutils.UintToString(userId)
+
+	groups, err := groupService.GetGroupsForUser(stringUserId)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientData, nil
 }

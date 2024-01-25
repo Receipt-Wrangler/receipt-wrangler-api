@@ -137,15 +137,31 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 	return signedString, refreshTokenString, accessTokenClaims, nil
 }
 
-func GetClientData(userId uint) (map[string]interface{}, error) {
-	clientData := make(map[string]interface{})
+func GetAppData(userId uint) (structs.AppData, error) {
+	appData := structs.AppData{}
 	groupService := NewGroupService(repositories.GetDB())
+	userRepository := repositories.NewUserRepository(repositories.GetDB())
+	userPreferenceRepository := repositories.NewUserPreferencesRepository(repositories.GetDB())
 	stringUserId := simpleutils.UintToString(userId)
 
 	groups, err := groupService.GetGroupsForUser(stringUserId)
 	if err != nil {
-		return nil, err
+		return appData, err
 	}
 
-	return clientData, nil
+	users, err := userRepository.GetAllUserViews()
+	if err != nil {
+		return appData, err
+	}
+
+	userPreferences, err := userPreferenceRepository.GetUserPreferencesOrCreate(userId)
+	if err != nil {
+		return appData, err
+	}
+
+	appData.Groups = groups
+	appData.Users = users
+	appData.UserPreferences = userPreferences
+
+	return appData, nil
 }

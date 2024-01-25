@@ -8,4 +8,5 @@ type AppData struct {
 	RefreshToken    string                `json:"refreshToken"`
 	UserPreferences models.UserPrefernces `json:"userPreferences"`
 	Users           []UserView            `json:"users"`
+	Claims          Claims                `json:"claims"`
 }

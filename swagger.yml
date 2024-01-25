@@ -2585,10 +2585,14 @@ components:
     AppData:
       type: object
       required:
+        - claims
         - groups
         - users
         - userPreferences
       properties:
+        claims:
+          type: object
+          description: User's claims
         groups:
           type: array
           description: Groups in the system

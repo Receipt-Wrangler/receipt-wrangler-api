@@ -51,6 +51,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				http.SetCookie(w, &refreshTokenCookie)
 			}
 
+			appData.Claims = accessTokenClaims
+
 			// TODO: update frontend to use appData
 			bytes, err := utils.MarshalResponseData(appData)
 			if err != nil {

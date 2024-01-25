@@ -2333,10 +2333,10 @@ components:
         - aiPoweredReceipts
       type: object
       properties:
-        AiPoweredReceipts:
+        aiPoweredReceipts:
           type: boolean
           description: Whether AI powered receipts are enabled
-        EnableLocalSignUp:
+        enableLocalSignUp:
           type: boolean
           description: Whether local sign up is enabled
     MagicFillCommand:
@@ -2345,12 +2345,12 @@ components:
         - filename
       type: object
       properties:
-        ImageData:
+        imageData:
           type: array
           items:
             type: integer
           description: Image data
-        Filename:
+        filename:
           type: string
           description: Name of file
     QuickScanCommand:

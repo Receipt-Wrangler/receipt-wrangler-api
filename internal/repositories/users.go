@@ -3,6 +3,7 @@ package repositories
 import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
@@ -113,4 +114,15 @@ func (repository UserRepository) CreateUserIfNoneExist() error {
 	}
 
 	return nil
+}
+
+func (repository UserRepository) GetAllUserViews() ([]structs.UserView, error) {
+	var users []structs.UserView
+
+	err := repository.GetDB().Model(models.User{}).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

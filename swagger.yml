@@ -12,54 +12,6 @@ servers:
   - url: /api
 security:
   - bearerAuth: []
-definitions:
-  ReceiptStatus:
-    type: string
-    enum: &RECEIPTSTATUS
-      - "OPEN"
-      - "NEEDS_ATTENTION"
-      - "RESOLVED"
-      - "DRAFT"
-  ItemStatus:
-    type: string
-    enum: &ITEMSTATUS
-      - "OPEN"
-      - "RESOLVED"
-      - "DRAFT"
-  GroupStatus:
-    type: string
-    enum: &GROUPSTATUS
-      - "ACTIVE"
-      - "ARCHIVED"
-    GroupRole:
-      type: string
-      enum: &GROUPROLE
-        - "OWNER"
-        - "VIEWER"
-        - "EDITOR"
-  FilterOperations:
-    type: string
-    enum: &FILTEROPERATION
-      - CONTAINS
-      - EQUALS
-      - GREATER_THAN
-      - LESS_THAN
-  UserRole:
-    type: string
-    enum: &USERROLE
-      - ADMIN
-      - USER
-  SortDirection:
-    type: string
-    enum: &SORTDIRECTION
-      - asc
-      - desc
-      - ""
-  WidgetType:
-    type: string
-    enum: &WIDGETTYPE
-      - "GROUP_SUMMARY"
-      - "FILTERED_RECEIPTS"
 paths:
   /dashboard/{groupId}:
     parameters:
@@ -564,7 +516,11 @@ paths:
       operationId: login
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: App data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppData"
         500:
           $ref: "#/components/responses/Internal"
   /logout/:
@@ -1502,6 +1458,53 @@ components:
     Internal:
       description: There was an error processing the request
   schemas:
+    ReceiptStatus:
+      type: string
+      enum: &RECEIPTSTATUS
+        - "OPEN"
+        - "NEEDS_ATTENTION"
+        - "RESOLVED"
+        - "DRAFT"
+    ItemStatusEnum:
+      type: string
+      enum: &ITEMSTATUS
+        - "OPEN"
+        - "RESOLVED"
+        - "DRAFT"
+    GroupStatus:
+      type: string
+      enum: &GROUPSTATUS
+        - "ACTIVE"
+        - "ARCHIVED"
+    GroupRole:
+      type: string
+      enum: &GROUPROLE
+        - "OWNER"
+        - "VIEWER"
+        - "EDITOR"
+    FilterOperations:
+      type: string
+      enum: &FILTEROPERATION
+        - CONTAINS
+        - EQUALS
+        - GREATER_THAN
+        - LESS_THAN
+    UserRoleEnum:
+      type: string
+      enum: &USERROLE
+        - ADMIN
+        - USER
+    SortDirection:
+      type: string
+      enum: &SORTDIRECTION
+        - asc
+        - desc
+        - ""
+    WidgetType:
+      type: string
+      enum: &WIDGETTYPE
+        - "GROUP_SUMMARY"
+        - "FILTERED_RECEIPTS"
     BaseModel:
       type: object
       properties:
@@ -2330,10 +2333,10 @@ components:
         - aiPoweredReceipts
       type: object
       properties:
-        AiPoweredReceipts:
+        aiPoweredReceipts:
           type: boolean
           description: Whether AI powered receipts are enabled
-        EnableLocalSignUp:
+        enableLocalSignUp:
           type: boolean
           description: Whether local sign up is enabled
     MagicFillCommand:
@@ -2342,12 +2345,12 @@ components:
         - filename
       type: object
       properties:
-        ImageData:
+        imageData:
           type: array
           items:
             type: integer
           description: Image data
-        Filename:
+        filename:
           type: string
           description: Name of file
     QuickScanCommand:
@@ -2579,3 +2582,35 @@ components:
           type: object
           additionalProperties: {}
           description: Configuration of widget
+    AppData:
+      type: object
+      required:
+        - claims
+        - groups
+        - users
+        - userPreferences
+      properties:
+        claims:
+          type: object
+          description: User's claims
+        groups:
+          type: array
+          description: Groups in the system
+          items:
+            $ref: "#/components/schemas/Group"
+        users:
+          type: array
+          description: Users in the system
+          items:
+            $ref: "#/components/schemas/UserView"
+        userPreferences:
+          type: array
+          description: User preferences in the system
+          items:
+            $ref: "#/components/schemas/UserPreferences"
+        jwt:
+          type: string
+          description: JWT token
+        refreshToken:
+          type: string
+          description: Refresh token

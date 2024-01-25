@@ -34,18 +34,30 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-
 			services.PrepareAccessTokenClaims(accessTokenClaims)
-			bytes, err := utils.MarshalResponseData(accessTokenClaims)
+
+			appData, err := services.GetAppData(dbUser.ID)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			accessTokenCookie, refreshTokenCookie := services.BuildTokenCookies(jwt, refreshToken)
+			if utils.IsMobileDevice(r) {
+				appData.Jwt = jwt
+				appData.RefreshToken = refreshToken
+			} else {
+				accessTokenCookie, refreshTokenCookie := services.BuildTokenCookies(jwt, refreshToken)
 
-			http.SetCookie(w, &accessTokenCookie)
-			http.SetCookie(w, &refreshTokenCookie)
+				http.SetCookie(w, &accessTokenCookie)
+				http.SetCookie(w, &refreshTokenCookie)
+			}
 
+			appData.Claims = accessTokenClaims
+
+			// TODO: update frontend to use appData
+			bytes, err := utils.MarshalResponseData(appData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 			w.WriteHeader(200)
 			w.Write(bytes)
 

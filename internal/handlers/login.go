@@ -6,7 +6,9 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -19,6 +21,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userData := r.Context().Value("user").(commands.LoginCommand)
+			clientData := make(map[string]interface{})
 			var dbUser models.User
 
 			dbUser, err := services.LoginUser(userData)
@@ -34,18 +37,34 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-
 			services.PrepareAccessTokenClaims(accessTokenClaims)
-			bytes, err := utils.MarshalResponseData(accessTokenClaims)
+
+			// Add claims data to clientData
+			clientData["claims"] = accessTokenClaims
+
+			if utils.IsMobileDevice(r) {
+				clientData["jwt"] = jwt
+				clientData["refreshToken"] = refreshToken
+			} else {
+				accessTokenCookie, refreshTokenCookie := services.BuildTokenCookies(jwt, refreshToken)
+
+				http.SetCookie(w, &accessTokenCookie)
+				http.SetCookie(w, &refreshTokenCookie)
+			}
+
+			userId := simpleutils.UintToString(dbUser.ID)
+			groupService := services.NewGroupService(repositories.GetDB())
+			groups, err := groupService.GetGroupsForUser(userId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
+			clientData["groups"] = groups
 
-			accessTokenCookie, refreshTokenCookie := services.BuildTokenCookies(jwt, refreshToken)
-
-			http.SetCookie(w, &accessTokenCookie)
-			http.SetCookie(w, &refreshTokenCookie)
-
+			// TODO: update frontend to use clientData
+			bytes, err := utils.MarshalResponseData(userData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 			w.WriteHeader(200)
 			w.Write(bytes)
 

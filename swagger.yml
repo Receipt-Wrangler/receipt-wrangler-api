@@ -2604,10 +2604,9 @@ components:
           items:
             $ref: "#/components/schemas/UserView"
         userPreferences:
-          type: array
+          type: object
           description: User preferences in the system
-          items:
-            $ref: "#/components/schemas/UserPreferences"
+          $ref: "#/components/schemas/UserPreferences"
         jwt:
           type: string
           description: JWT token

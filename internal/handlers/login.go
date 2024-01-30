@@ -41,7 +41,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			if utils.IsMobileDevice(r) {
+			if utils.IsMobileApp(r) {
 				appData.Jwt = jwt
 				appData.RefreshToken = refreshToken
 			} else {

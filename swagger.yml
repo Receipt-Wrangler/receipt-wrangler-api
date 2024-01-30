@@ -1161,7 +1161,13 @@ paths:
       operationId: getNewRefreshToken
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The new token pair
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/TokenPair"
+                  - $ref: "#/components/schemas/Claims"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -2585,6 +2591,7 @@ components:
         claims:
           type: object
           description: User's claims
+          $ref: "#/components/schemas/Claims"
         groups:
           type: array
           description: Groups in the system
@@ -2604,3 +2611,62 @@ components:
         refreshToken:
           type: string
           description: Refresh token
+    TokenPair:
+      type: object
+      required:
+        - jwt
+        - refreshToken
+      properties:
+        jwt:
+          type: string
+          description: JWT token
+        refreshToken:
+          type: string
+          description: Refresh token
+    Claims:
+      type: object
+      required:
+        - userId
+        - userRole
+        - displayName
+        - defaultAvatarColor
+        - username
+        - iss
+      properties:
+        userId:
+          type: integer
+          description: User foreign key
+        userRole:
+          type: string
+          $ref: "#/components/schemas/UserRole"
+          description: User's role
+        displayName:
+          type: string
+          description: Display name
+        defaultAvatarColor:
+          type: string
+          description: Default avatar color
+        username:
+          type: string
+          description: User's username used to login
+        iss:
+          type: string
+          description: Issuer
+        sub:
+          type: string
+          description: Subject
+        aud:
+          type: string
+          description: Audience
+        exp:
+          type: integer
+          description: Expiration time
+        nbf:
+          type: integer
+          description: Not before
+        iat:
+          type: integer
+          description: Issued at
+        jti:
+          type: string
+          description: JWT ID

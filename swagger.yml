@@ -2632,6 +2632,7 @@ components:
         - defaultAvatarColor
         - username
         - iss
+        - exp
       properties:
         userId:
           type: integer
@@ -2656,7 +2657,9 @@ components:
           type: string
           description: Subject
         aud:
-          type: string
+          type: array
+          items:
+            type: string
           description: Audience
         exp:
           type: integer

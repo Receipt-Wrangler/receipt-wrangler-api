@@ -2593,7 +2593,6 @@ components:
         - userPreferences
       properties:
         claims:
-          type: object
           description: User's claims
           $ref: "#/components/schemas/Claims"
         groups:

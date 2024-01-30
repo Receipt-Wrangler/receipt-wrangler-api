@@ -1387,7 +1387,11 @@ paths:
       operationId: getUserClaims
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The user's claims
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Claims"
         500:
           $ref: "#/components/responses/Internal"
       security:

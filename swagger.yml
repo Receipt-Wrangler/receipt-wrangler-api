@@ -1417,6 +1417,28 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /user/appData:
+    get:
+      tags:
+        - User
+      summary: Get app data
+      description:
+        This will return the user's app data for the currently logged in
+        user [SYSTEM USER]
+      operationId: getAppData
+      responses:
+        200:
+          description: The user's app data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppData"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
   /userPreferences:
     get:
       tags:

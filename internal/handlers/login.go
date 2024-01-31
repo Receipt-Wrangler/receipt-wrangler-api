@@ -36,7 +36,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			}
 			services.PrepareAccessTokenClaims(accessTokenClaims)
 
-			appData, err := services.GetAppData(dbUser.ID)
+			appData, err := services.GetAppData(dbUser.ID, nil)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

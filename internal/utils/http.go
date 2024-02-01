@@ -53,7 +53,7 @@ func SetJSONResponseHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 }
 
-func IsMobileDevice(r *http.Request) bool {
+func IsMobileApp(r *http.Request) bool {
 	userAgent := r.UserAgent()
 	return strings.Contains(userAgent, "(dart:io)")
 }

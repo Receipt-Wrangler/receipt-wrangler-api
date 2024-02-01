@@ -10,6 +10,11 @@ func MoveJWTCookieToHeader(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		errMessage := "JWT not found"
 
+		if utils.IsMobileApp(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		accessTokenCookie, err := r.Cookie(constants.JWT_KEY)
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusBadRequest)

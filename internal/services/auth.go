@@ -137,7 +137,7 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 	return signedString, refreshTokenString, accessTokenClaims, nil
 }
 
-func GetAppData(userId uint) (structs.AppData, error) {
+func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData := structs.AppData{}
 	groupService := NewGroupService(repositories.GetDB())
 	userRepository := repositories.NewUserRepository(repositories.GetDB())
@@ -162,6 +162,13 @@ func GetAppData(userId uint) (structs.AppData, error) {
 	appData.Groups = groups
 	appData.Users = users
 	appData.UserPreferences = userPreferences
+	appData.FeatureConfig = config.GetFeatureConfig()
+
+	if r != nil {
+		claims := structs.GetJWT(r)
+		PrepareAccessTokenClaims(*claims)
+		appData.Claims = *claims
+	}
 
 	return appData, nil
 }

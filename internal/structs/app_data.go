@@ -3,10 +3,10 @@ package structs
 import "receipt-wrangler/api/internal/models"
 
 type AppData struct {
-	Groups          []models.Group        `json:"groups"`
-	Jwt             string                `json:"jwt"`
-	RefreshToken    string                `json:"refreshToken"`
+	Claims Claims         `json:"claims"`
+	Groups []models.Group `json:"groups"`
+	TokenPair
 	UserPreferences models.UserPrefernces `json:"userPreferences"`
 	Users           []UserView            `json:"users"`
-	Claims          Claims                `json:"claims"`
+	FeatureConfig   FeatureConfig         `json:"featureConfig"`
 }

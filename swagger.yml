@@ -72,7 +72,7 @@ paths:
                 $ref: "#/components/schemas/Dashboard"
         400:
           $ref: "#/components/responses/BadRequest"
-        403: 
+        403:
           $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
@@ -209,7 +209,11 @@ paths:
               $ref: "#/components/schemas/Category"
       responses:
         200:
-          $ref: "#/components/schemas/Category"
+          description: The created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -680,7 +684,6 @@ paths:
           name: groupRole
           schema:
             type: string
-            enum: *GROUPROLE
           description: Role required to have access to receipt
       responses:
         200:
@@ -1083,7 +1086,11 @@ paths:
               $ref: "#/components/schemas/UpsertTagCommand"
       responses:
         200:
-          $ref: "#/components/schemas/Tag"
+          description: The updated tag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1136,7 +1143,11 @@ paths:
               $ref: "#/components/schemas/UpsertTagCommand"
       responses:
         200:
-          $ref: "#/components/schemas/Tag"
+          description: The created tag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tag"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1150,7 +1161,13 @@ paths:
       operationId: getNewRefreshToken
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The new token pair
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/TokenPair"
+                  - $ref: "#/components/schemas/Claims"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1370,7 +1387,11 @@ paths:
       operationId: getUserClaims
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The user's claims
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Claims"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1392,6 +1413,28 @@ paths:
       responses:
         200:
           $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: []
+  /user/appData:
+    get:
+      tags:
+        - User
+      summary: Get app data
+      description:
+        This will return the user's app data for the currently logged in
+        user [SYSTEM USER]
+      operationId: getAppData
+      responses:
+        200:
+          description: The user's app data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppData"
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1460,71 +1503,73 @@ components:
   schemas:
     ReceiptStatus:
       type: string
-      enum: &RECEIPTSTATUS
+      enum:
         - "OPEN"
         - "NEEDS_ATTENTION"
         - "RESOLVED"
         - "DRAFT"
-    ItemStatusEnum:
+    ItemStatus:
       type: string
-      enum: &ITEMSTATUS
+      enum:
         - "OPEN"
         - "RESOLVED"
         - "DRAFT"
     GroupStatus:
       type: string
-      enum: &GROUPSTATUS
+      enum:
         - "ACTIVE"
         - "ARCHIVED"
     GroupRole:
       type: string
-      enum: &GROUPROLE
+      enum:
         - "OWNER"
         - "VIEWER"
         - "EDITOR"
-    FilterOperations:
+    FilterOperation:
       type: string
-      enum: &FILTEROPERATION
+      enum:
         - CONTAINS
         - EQUALS
         - GREATER_THAN
         - LESS_THAN
-    UserRoleEnum:
+    UserRole:
       type: string
-      enum: &USERROLE
+      enum:
         - ADMIN
         - USER
     SortDirection:
       type: string
-      enum: &SORTDIRECTION
+      enum:
         - asc
         - desc
         - ""
     WidgetType:
       type: string
-      enum: &WIDGETTYPE
+      enum:
         - "GROUP_SUMMARY"
         - "FILTERED_RECEIPTS"
     BaseModel:
       type: object
+      required:
+        - id
+        - createdAt
       properties:
-        createdAt:
-          type: string
-
-          x-go-name: CreatedAt
-        createdBy:
-          type: integer
-          format: uint64
-          x-go-name: CreatedBy
         id:
           type: integer
           format: uint64
-          x-go-name: ID
+        createdAt:
+          type: string
+        createdBy:
+          type: integer
+          format: uint64
+          default: 0
+        createdByString:
+          type: string
+          description: Created by entity's name
+          default: ""
         updatedAt:
           type: string
-
-          x-go-name: UpdatedAt
-      x-go-package: receipt-wrangler/api/internal/models
+          default: ""
     Category:
       type: object
       properties:
@@ -1714,11 +1759,9 @@ components:
           description: Is all group for user
         status:
           type: string
-          enum: *GROUPSTATUS
+          $ref: "#/components/schemas/GroupStatus"
         updatedAt:
           type: string
-
-          x-go-name: UpdatedAt
       description: Group in the system
       x-go-package: receipt-wrangler/api/internal/models
     GroupMember:
@@ -1730,19 +1773,15 @@ components:
       properties:
         createdAt:
           type: string
-
-          x-go-name: CreatedAt
         groupId:
           type: integer
           description: Group compound primary key
           format: uint64
-          x-go-name: GroupID
         groupRole:
           type: string
-          enum: *GROUPROLE
+          $ref: "#/components/schemas/GroupRole"
         updatedAt:
           type: string
-
           x-go-name: UpdatedAt
         userId:
           type: integer
@@ -1766,44 +1805,31 @@ components:
         amount:
           type: string
           description: Amount the item costs
-          x-go-name: Amount
         chargedToUserId:
           type: integer
           description: User foreign key
           format: uint64
-          x-go-name: ChargedToUserId
         createdAt:
           type: string
-
-          x-go-name: CreatedAt
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         id:
           type: integer
           format: uint64
-          x-go-name: ID
         name:
           type: string
           description: Item name
-          x-go-name: Name
         receiptId:
           type: integer
           description: Receipt foreign key
           format: uint64
-          x-go-name: ReceiptId
         status:
           type: string
-          enum: *ITEMSTATUS
+          $ref: "#/components/schemas/ItemStatus"
         updatedAt:
           type: string
-
-          x-go-name: UpdatedAt
       description: Itemized item on a receipt
-      x-go-package: receipt-wrangler/api/internal/models
-    ItemStatus:
-      type: string
       x-go-package: receipt-wrangler/api/internal/models
     Notification:
       required:
@@ -1914,7 +1940,7 @@ components:
           description: Date resolved
         status:
           type: string
-          enum: *RECEIPTSTATUS
+          $ref: "#/components/schemas/ReceiptStatus"
         tags:
           type: array
           description: Tags associated to receipt
@@ -2007,7 +2033,7 @@ components:
           type: string
         widgetType:
           type: string
-          enum: *WIDGETTYPE
+          $ref: "#/components/schemas/WidgetType"
           description: Type of widget
         configuration:
           type: object
@@ -2095,7 +2121,7 @@ components:
           x-go-name: UpdatedAt
         userRole:
           type: string
-          enum: *USERROLE
+          $ref: "#/components/schemas/UserRole"
           description: User's role
       description: User in the system
       x-go-package: receipt-wrangler/api/internal/models
@@ -2120,29 +2146,21 @@ components:
         defaultAvatarColor:
           type: string
           description: Default avatar color
-          x-go-name: DefaultAvatarColor
         displayName:
           type: string
           description: Display name
-          x-go-name: DisplayName
         id:
           type: integer
         isDummyUser:
           type: boolean
           description: Is dummy user
-          x-go-name: IsDummyUser
         updatedAt:
           type: string
-
-          x-go-name: UpdatedAt
         userRole:
           type: string
-          enum: *USERROLE
+          $ref: "#/components/schemas/UserRole"
           description: User's role
       description: User in the system
-      x-go-package: receipt-wrangler/api/internal/models
-    UserRole:
-      type: string
       x-go-package: receipt-wrangler/api/internal/models
     UpdateProfileCommand:
       required:
@@ -2198,8 +2216,8 @@ components:
           type: boolean
           description: Whether the user is a dummy user
         userRole:
-          type: boolean
-          enum: *USERROLE
+          type: string
+          $ref: "#/components/schemas/UserRole"
           description: User's role
     BulkStatusUpdateCommand:
       required:
@@ -2216,7 +2234,7 @@ components:
         receiptIds:
           type: array
           items:
-            $ref: integer
+            type: integer
           description: Receipt ids to update
     PagedRequestCommand:
       required:
@@ -2235,7 +2253,7 @@ components:
           description: field to order on
         sortDirection:
           type: string
-          enum: *SORTDIRECTION
+          $ref: "#/components/schemas/SortDirection"
     ReceiptPagedRequestCommand:
       required:
         - page
@@ -2253,7 +2271,7 @@ components:
           description: field to order on
         sortDirection:
           type: string
-          enum: *SORTDIRECTION
+          $ref: "#/components/schemas/SortDirection"
         filter:
           $ref: "#/components/schemas/ReceiptPagedRequestFilter"
     ReceiptPagedRequestFilter:
@@ -2283,7 +2301,7 @@ components:
       properties:
         operation:
           type: string
-          enum: *FILTEROPERATION
+          $ref: "#/components/schemas/FilterOperation"
           description: Filter operation
         value:
           oneOf:
@@ -2372,30 +2390,35 @@ components:
           description: User foreign key
         status:
           type: string
-          enum: *RECEIPTSTATUS
+          $ref: "#/components/schemas/ReceiptStatus"
           description: Status of quick scanned receipt
     UserPreferences:
-      type: object
-      required:
-        - id
-        - userId
-      properties:
-        id:
-          type: integer
-          description: User preferences id
-        userId:
-          type: integer
-          description: User foreign key
-        quickScanDefaultGroupId:
-          type: integer
-          description: Group foreign key
-        quickScanDefaultPaidById:
-          type: integer
-          description: User foreign key
-        quickScanDefaultStatus:
-          type: string
-          enum: *RECEIPTSTATUS
-          description: Default quick scan status
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - id
+            - userId
+          properties:
+            id:
+              type: integer
+              description: User preferences id
+            userId:
+              type: integer
+              description: User foreign key
+            quickScanDefaultGroupId:
+              type: integer
+              description: Group foreign key
+              default: 0
+            quickScanDefaultPaidById:
+              type: integer
+              description: User foreign key
+              default: 0
+            quickScanDefaultStatus:
+              type: string
+              $ref: "#/components/schemas/ReceiptStatus"
+              description: Default quick scan status
+              default: "OPEN"
     GroupSettings:
       type: object
       required:
@@ -2426,7 +2449,7 @@ components:
             $ref: "#/components/schemas/GroupSettingsWhiteListEmail"
         emailDefaultReceiptStatus:
           type: string
-          enum: *RECEIPTSTATUS
+          $ref: "#/components/schemas/ReceiptStatus"
           description: Default receipt status
         emailDefaultReceiptPaidById:
           type: integer
@@ -2509,7 +2532,7 @@ components:
             $ref: "#/components/schemas/GroupSettingsWhiteListEmail"
         emailDefaultReceiptStatus:
           type: string
-          enum: *RECEIPTSTATUS
+          $ref: "#/components/schemas/ReceiptStatus"
           description: Default receipt status
         emailDefaultReceiptPaidById:
           type: integer
@@ -2576,7 +2599,7 @@ components:
           description: Widget name
         widgetType:
           type: string
-          enum: *WIDGETTYPE
+          $ref: "#/components/schemas/WidgetType"
           description: Type of widget
         configuration:
           type: object
@@ -2589,10 +2612,11 @@ components:
         - groups
         - users
         - userPreferences
+        - featureConfig
       properties:
         claims:
-          type: object
           description: User's claims
+          $ref: "#/components/schemas/Claims"
         groups:
           type: array
           description: Groups in the system
@@ -2604,13 +2628,76 @@ components:
           items:
             $ref: "#/components/schemas/UserView"
         userPreferences:
-          type: array
           description: User preferences in the system
-          items:
-            $ref: "#/components/schemas/UserPreferences"
+          $ref: "#/components/schemas/UserPreferences"
+        featureConfig:
+          description: Feature config
+          $ref: "#/components/schemas/FeatureConfig"
         jwt:
           type: string
           description: JWT token
         refreshToken:
           type: string
           description: Refresh token
+    TokenPair:
+      type: object
+      required:
+        - jwt
+        - refreshToken
+      properties:
+        jwt:
+          type: string
+          description: JWT token
+        refreshToken:
+          type: string
+          description: Refresh token
+    Claims:
+      type: object
+      required:
+        - userId
+        - userRole
+        - displayName
+        - defaultAvatarColor
+        - username
+        - iss
+        - exp
+      properties:
+        userId:
+          type: integer
+          description: User foreign key
+        userRole:
+          type: string
+          $ref: "#/components/schemas/UserRole"
+          description: User's role
+        displayName:
+          type: string
+          description: Display name
+        defaultAvatarColor:
+          type: string
+          description: Default avatar color
+        username:
+          type: string
+          description: User's username used to login
+        iss:
+          type: string
+          description: Issuer
+        sub:
+          type: string
+          description: Subject
+        aud:
+          type: array
+          items:
+            type: string
+          description: Audience
+        exp:
+          type: integer
+          description: Expiration time
+        nbf:
+          type: integer
+          description: Not before
+        iat:
+          type: integer
+          description: Issued at
+        jti:
+          type: string
+          description: JWT ID

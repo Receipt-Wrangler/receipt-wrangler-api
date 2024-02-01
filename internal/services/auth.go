@@ -162,6 +162,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.Groups = groups
 	appData.Users = users
 	appData.UserPreferences = userPreferences
+	appData.FeatureConfig = config.GetFeatureConfig()
 
 	if r != nil {
 		claims := structs.GetJWT(r)

@@ -72,7 +72,7 @@ paths:
                 $ref: "#/components/schemas/Dashboard"
         400:
           $ref: "#/components/responses/BadRequest"
-        403: 
+        403:
           $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
@@ -1534,7 +1534,7 @@ components:
         - LESS_THAN
     UserRole:
       type: string
-      enum: 
+      enum:
         - ADMIN
         - USER
     SortDirection:
@@ -2343,7 +2343,6 @@ components:
           type: array
           items:
             type: object
-            additionalProperties: true
         totalCount:
           type: integer
     FeatureConfig:
@@ -2398,8 +2397,8 @@ components:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
           required:
-          - id
-          - userId
+            - id
+            - userId
           properties:
             id:
               type: integer
@@ -2613,6 +2612,7 @@ components:
         - groups
         - users
         - userPreferences
+        - featureConfig
       properties:
         claims:
           description: User's claims
@@ -2630,6 +2630,9 @@ components:
         userPreferences:
           description: User preferences in the system
           $ref: "#/components/schemas/UserPreferences"
+        featureConfig:
+          description: Feature config
+          $ref: "#/components/schemas/FeatureConfig"
         jwt:
           type: string
           description: JWT token

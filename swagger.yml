@@ -1371,7 +1371,13 @@ paths:
       operationId: getAmountOwedForUser
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The amount owed
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: 
+                  type: string
         500:
           $ref: "#/components/responses/Internal"
       security:

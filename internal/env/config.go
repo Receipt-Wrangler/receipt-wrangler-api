@@ -11,7 +11,6 @@ import (
 )
 
 var config structs.Config
-var featureConfig structs.FeatureConfig
 var basePath string
 var env string
 var envVariables = make(map[string]string)
@@ -21,7 +20,7 @@ func GetConfig() structs.Config {
 }
 
 func GetFeatureConfig() structs.FeatureConfig {
-	return featureConfig
+	return config.Features
 }
 
 func GetBasePath() string {
@@ -50,11 +49,6 @@ func SetConfigs() error {
 		return err
 	}
 
-	err = setFeatureConfig()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -64,31 +58,6 @@ func ReadEnvVariables() error {
 		value := os.Getenv(key)
 		envVariables[key] = value
 	}
-	return nil
-}
-
-func setFeatureConfig() error {
-	path := filepath.Join(basePath, "config", "feature-config."+env+".json")
-	jsonFile, err := os.Open(path)
-
-	if err != nil {
-		featureConfig = structs.FeatureConfig{
-			EnableLocalSignUp: false,
-		}
-		return nil
-	}
-
-	bytes, err := ioutil.ReadAll(jsonFile)
-
-	var configFile structs.FeatureConfig
-	marshalErr := json.Unmarshal(bytes, &configFile)
-
-	if marshalErr != nil {
-		return err
-	}
-
-	jsonFile.Close()
-	featureConfig = configFile
 	return nil
 }
 

@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -52,6 +53,15 @@ func setSettingsConfig() error {
 	jsonFile, err := os.Open(path)
 
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			configStub := structs.Config{}
+			bytes, err := json.Marshal(configStub)
+			if err != nil {
+				return err
+			}
+
+			os.WriteFile(path, bytes, 0644)
+		}
 		return err
 	}
 

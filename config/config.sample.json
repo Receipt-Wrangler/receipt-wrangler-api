@@ -2,6 +2,7 @@
   "secretKey": "secretKey",
   "aiSettings": {
     "type": "openAi",
+    "url": "urlToLocallyHostedLLM",
     "key": "openAiKey"
   },
   "emailPollingInterval": 1800,

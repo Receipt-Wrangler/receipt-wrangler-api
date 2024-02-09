@@ -45,10 +45,16 @@ func Connect() error {
 
 	if dbEngine == "mariadb" || dbEngine == "mysql" {
 		connectedDb, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString(dbConfig)), &gorm.Config{})
+		if err != nil {
+			return err
+		}
 	}
 
 	if dbEngine == "postgresql" {
 		connectedDb, err = gorm.Open(postgres.Open(BuildPostgresqlConnectionString(dbConfig)), &gorm.Config{})
+		if err != nil {
+			return err
+		}
 	}
 
 	if dbEngine == "sqlite" {

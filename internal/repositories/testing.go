@@ -12,8 +12,8 @@ import (
 
 func SetUpTestEnv() {
 	os.Args = append(os.Args, "-env=test")
-	config.SetConfigs()
 	logging.InitLog()
+	config.SetConfigs()
 }
 
 func TruncateTable(db *gorm.DB, tableName string) error {

@@ -2,26 +2,27 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/structs"
 	"strings"
 )
 
 var config structs.Config
-var featureConfig structs.FeatureConfig
 var basePath string
 var env string
-var envVariables = make(map[string]string)
 
 func GetConfig() structs.Config {
 	return config
 }
 
 func GetFeatureConfig() structs.FeatureConfig {
-	return featureConfig
+	return config.Features
 }
 
 func GetBasePath() string {
@@ -31,10 +32,6 @@ func GetBasePath() string {
 	}
 
 	return envBase
-}
-
-func GetEnvVariables() map[string]string {
-	return envVariables
 }
 
 func GetDeployEnv() string {
@@ -50,45 +47,6 @@ func SetConfigs() error {
 		return err
 	}
 
-	err = setFeatureConfig()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func ReadEnvVariables() error {
-	envKeys := []string{"DB_ROOT_PASSWORD", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_HOST", "DB_PORT", "DB_ENGINE", "DB_FILENAME"}
-	for _, key := range envKeys {
-		value := os.Getenv(key)
-		envVariables[key] = value
-	}
-	return nil
-}
-
-func setFeatureConfig() error {
-	path := filepath.Join(basePath, "config", "feature-config."+env+".json")
-	jsonFile, err := os.Open(path)
-
-	if err != nil {
-		featureConfig = structs.FeatureConfig{
-			EnableLocalSignUp: false,
-		}
-		return nil
-	}
-
-	bytes, err := ioutil.ReadAll(jsonFile)
-
-	var configFile structs.FeatureConfig
-	marshalErr := json.Unmarshal(bytes, &configFile)
-
-	if marshalErr != nil {
-		return err
-	}
-
-	jsonFile.Close()
-	featureConfig = configFile
 	return nil
 }
 
@@ -97,10 +55,23 @@ func setSettingsConfig() error {
 	jsonFile, err := os.Open(path)
 
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			configStub := structs.Config{}
+			bytes, err := json.MarshalIndent(configStub, "", "  ")
+			if err != nil {
+				return err
+			}
+
+			os.WriteFile(path, bytes, 0644)
+			logging.GetLogger().Fatalf(fmt.Sprintf("Config file not found at %s. A stub file has been created. Please fill in the necessary fields and restart the container.", path))
+		}
 		return err
 	}
 
 	bytes, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return err
+	}
 
 	var configFile structs.Config
 	marshalErr := json.Unmarshal(bytes, &configFile)

@@ -13,10 +13,26 @@ type AiSettings struct {
 	Url    string       `json:"url"`
 }
 
+type FeatureConfig struct {
+	EnableLocalSignUp bool `json:"enableLocalSignUp"`
+	AiPoweredReceipts bool `json:"aiPoweredReceipts"`
+}
+
+type DatabaseConfig struct {
+	User         string `json:"user"`
+	Password     string `json:"password"`
+	Name         string `json:"name"`
+	Host         string `json:"host"`
+	Port         int 	`json:"port"`
+	Engine       string `json:"engine"`
+	Filename     string `json:"filename"`
+}
+
 type Config struct {
-	SecretKey            string
-	OpenAiKey            string
-	AiSettings           AiSettings
-	EmailPollingInterval int
-	EmailSettings        []EmailSettings
+	SecretKey            string          `json:"secretKey"`
+	AiSettings           AiSettings      `json:"aiSettings"`
+	EmailPollingInterval int             `json:"emailPollingInterval"`
+	EmailSettings        []EmailSettings `json:"emailSettings"`
+	Features             FeatureConfig   `json:"features"`
+	Database             DatabaseConfig  `json:"database"`
 }

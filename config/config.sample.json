@@ -1,4 +1,30 @@
 {
-  "secretKey": "secret key for jwts here",
-  "openAiKey": "open ai key if using AI powered receipts"
+  "secretKey": "secretKey",
+  "aiSettings": {
+    "type": "openAi",
+    "url": "urlToLocallyHostedLLM",
+    "key": "openAiKey"
+  },
+  "emailPollingInterval": 1800,
+  "emailSettings": [
+    {
+      "host": "emailHost",
+      "port": "emailPort",
+      "username": "emailAddress",
+      "password": "password/apiKey"
+    }
+  ],
+  "features": {
+    "enableLocalSignUp": true,
+    "aiPoweredReceipts": true
+  },
+  "database": {
+    "user": "wrangler",
+    "password": "changeMe",
+    "name": "wrangler",
+    "host": "localhost",
+    "port": 3306,
+    "engine": "sqlite",
+    "filename": "wrangler.sqlite"
+  }
 }

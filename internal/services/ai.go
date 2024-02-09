@@ -19,7 +19,7 @@ var client *openai.Client
 
 func InitOpenAIClient() {
 	config := config.GetConfig()
-	apiKey := config.OpenAiKey
+	apiKey := config.AiSettings.Key
 	if len(apiKey) == 0 && config.AiSettings.AiType == structs.OPEN_AI {
 		apiKey = config.AiSettings.Key
 	}

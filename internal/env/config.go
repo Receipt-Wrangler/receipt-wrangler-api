@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/structs"
 	"strings"
 )
@@ -55,12 +57,13 @@ func setSettingsConfig() error {
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			configStub := structs.Config{}
-			bytes, err := json.Marshal(configStub)
+			bytes, err := json.MarshalIndent(configStub, "", "  ")
 			if err != nil {
 				return err
 			}
 
 			os.WriteFile(path, bytes, 0644)
+			logging.GetLogger().Fatalf(fmt.Sprintf("Config file not found at %s. A stub file has been created. Please fill in the necessary fields and restart the container.", path))
 		}
 		return err
 	}

@@ -19,14 +19,14 @@ type FeatureConfig struct {
 }
 
 type DatabaseConfig struct {
-	RootPassword string
-	User         string
-	Password     string
-	Name         string
-	Host         string
-	Port         int
-	Engine       string
-	Filename     string
+	RootPassword string `json:"rootPassword"`
+	User         string `json:"user"`
+	Password     string `json:"password"`
+	Name         string `json:"name"`
+	Host         string `json:"host"`
+	Port         int 	`json:"port"`
+	Engine       string `json:"engine"`
+	Filename     string `json:"filename"`
 }
 
 type Config struct {

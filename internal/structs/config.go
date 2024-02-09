@@ -19,7 +19,6 @@ type FeatureConfig struct {
 }
 
 type DatabaseConfig struct {
-	RootPassword string `json:"rootPassword"`
 	User         string `json:"user"`
 	Password     string `json:"password"`
 	Name         string `json:"name"`

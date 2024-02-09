@@ -31,7 +31,6 @@ type DatabaseConfig struct {
 
 type Config struct {
 	SecretKey            string          `json:"secretKey"`
-	OpenAiKey            string          `json:"openAiKey"`
 	AiSettings           AiSettings      `json:"aiSettings"`
 	EmailPollingInterval int             `json:"emailPollingInterval"`
 	EmailSettings        []EmailSettings `json:"emailSettings"`

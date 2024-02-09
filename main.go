@@ -50,14 +50,14 @@ func main() {
 	imagick.Initialize()
 	defer imagick.Terminate()
 
-	if config.GetFeatureConfig().AiPoweredReceipts {
-
+	appConfig := config.GetConfig()
+	if appConfig.Features.AiPoweredReceipts {
 		logger.Print("Initializing Tesseract...")
 		tesseract.InitClient()
 		defer tesseract.GetClient().Close()
 	}
 
-	if config.GetFeatureConfig().AiPoweredReceipts && (config.GetConfig().AiSettings.AiType == structs.OPEN_AI || len(config.GetConfig().OpenAiKey) > 0) {
+	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == structs.OPEN_AI {
 		logger.Print("Initializing OpenAI Client...")
 		services.InitOpenAIClient()
 	}
@@ -67,7 +67,7 @@ func main() {
 		err = userRepository.CreateUserIfNoneExist()
 	}
 
-	if len(config.GetConfig().EmailSettings) > 0 && config.GetFeatureConfig().AiPoweredReceipts {
+	if len(appConfig.EmailSettings) > 0 && appConfig.Features.AiPoweredReceipts {
 		email.PollEmails()
 	}
 

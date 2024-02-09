@@ -55,7 +55,7 @@ func setSettingsConfig() error {
 	jsonFile, err := os.Open(path)
 
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) && env != "test"{
 			configStub := structs.Config{}
 			bytes, err := json.MarshalIndent(configStub, "", "  ")
 			if err != nil {

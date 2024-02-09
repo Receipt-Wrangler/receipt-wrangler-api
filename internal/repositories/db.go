@@ -4,6 +4,7 @@ import (
 	"fmt"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
 	"github.com/glebarez/sqlite"
@@ -15,49 +16,51 @@ import (
 
 var db *gorm.DB
 
-func BuildMariaDbConnectionString() string {
-	envVariables := config.GetEnvVariables()
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_HOST"], envVariables["DB_NAME"])
+func BuildMariaDbConnectionString(dbConfig structs.DatabaseConfig) string {
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Name)
 	return connectionString
 }
 
-func BuildPostgresqlConnectionString() string {
-	envVariables := config.GetEnvVariables()
-	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", envVariables["DB_HOST"], envVariables["DB_USER"], envVariables["DB_PASSWORD"], envVariables["DB_NAME"], envVariables["DB_PORT"])
+func BuildPostgresqlConnectionString(dbConfig structs.DatabaseConfig) string {
+	connectionString := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", dbConfig.Host, dbConfig.User, dbConfig.Password, dbConfig.Name, fmt.Sprint(dbConfig.Port))
 	return connectionString
 }
 
-func BuildSqliteConnectionString() (string, error) {
-	envVariables := config.GetEnvVariables()
+func BuildSqliteConnectionString(dbConfig structs.DatabaseConfig) (string, error) {
 	err := utils.DirectoryExists("./sqlite", true)
 	if err != nil {
 		return "", err
 	}
 
-	connectionString := fmt.Sprintf("file:./sqlite/%s?_pragma=foreign_keys(1)", envVariables["DB_FILENAME"])
+	connectionString := fmt.Sprintf("file:./sqlite/%s?_pragma=foreign_keys(1)", dbConfig.Filename)
 	return connectionString, nil
 }
 
 func Connect() error {
-	envVariables := config.GetEnvVariables()
-	dbEngine := envVariables["DB_ENGINE"]
+	dbConfig := config.GetConfig().Database
+	dbEngine := dbConfig.Engine
+
 	var err error
 	var connectedDb *gorm.DB
 
 	if dbEngine == "mariadb" || dbEngine == "mysql" {
-		connectedDb, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString()), &gorm.Config{})
+		connectedDb, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString(dbConfig)), &gorm.Config{})
 	}
 
 	if dbEngine == "postgresql" {
-		connectedDb, err = gorm.Open(postgres.Open(BuildPostgresqlConnectionString()), &gorm.Config{})
+		connectedDb, err = gorm.Open(postgres.Open(BuildPostgresqlConnectionString(dbConfig)), &gorm.Config{})
 	}
 
 	if dbEngine == "sqlite" {
-		connectionString, err := BuildSqliteConnectionString()
+		connectionString, err := BuildSqliteConnectionString(dbConfig)
 		if err != nil {
 			return err
 		}
 		connectedDb, err = gorm.Open(sqlite.Open(connectionString), &gorm.Config{})
+		if err != nil {
+			return err
+
+		}
 	}
 
 	if err != nil {

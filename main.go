@@ -39,12 +39,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	err = config.ReadEnvVariables()
-	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
-	}
-
 	err = repositories.Connect()
 	if err != nil {
 		logger.Print(err.Error())

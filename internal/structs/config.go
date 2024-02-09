@@ -18,11 +18,23 @@ type FeatureConfig struct {
 	AiPoweredReceipts bool `json:"aiPoweredReceipts"`
 }
 
+type DatabaseConfig struct {
+	RootPassword string
+	User         string
+	Password     string
+	Name         string
+	Host         string
+	Port         int
+	Engine       string
+	Filename     string
+}
+
 type Config struct {
-	SecretKey            string          `json:"-"`
-	OpenAiKey            string          `json:"-"`
-	AiSettings           AiSettings      `json:"-"`
-	EmailPollingInterval int             `json:"-"`
-	EmailSettings        []EmailSettings `json:"-"`
+	SecretKey            string          `json:"secretKey"`
+	OpenAiKey            string          `json:"openAiKey"`
+	AiSettings           AiSettings      `json:"aiSettings"`
+	EmailPollingInterval int             `json:"emailPollingInterval"`
+	EmailSettings        []EmailSettings `json:"emailSettings"`
 	Features             FeatureConfig   `json:"features"`
+	Database             DatabaseConfig  `json:"database"`
 }

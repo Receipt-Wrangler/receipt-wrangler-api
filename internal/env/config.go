@@ -13,7 +13,6 @@ import (
 var config structs.Config
 var basePath string
 var env string
-var envVariables = make(map[string]string)
 
 func GetConfig() structs.Config {
 	return config
@@ -32,10 +31,6 @@ func GetBasePath() string {
 	return envBase
 }
 
-func GetEnvVariables() map[string]string {
-	return envVariables
-}
-
 func GetDeployEnv() string {
 	return env
 }
@@ -52,15 +47,6 @@ func SetConfigs() error {
 	return nil
 }
 
-func ReadEnvVariables() error {
-	envKeys := []string{"DB_ROOT_PASSWORD", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_HOST", "DB_PORT", "DB_ENGINE", "DB_FILENAME"}
-	for _, key := range envKeys {
-		value := os.Getenv(key)
-		envVariables[key] = value
-	}
-	return nil
-}
-
 func setSettingsConfig() error {
 	path := filepath.Join(basePath, "config", "config."+env+".json")
 	jsonFile, err := os.Open(path)
@@ -70,6 +56,9 @@ func setSettingsConfig() error {
 	}
 
 	bytes, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return err
+	}
 
 	var configFile structs.Config
 	marshalErr := json.Unmarshal(bytes, &configFile)

@@ -15,11 +15,10 @@
     }
   ],
   "features": {
-      "enableLocalSignUp": true,
-      "aiPoweredReceipts": true
+    "enableLocalSignUp": true,
+    "aiPoweredReceipts": true
   },
   "database": {
-    "rootPassword": "root",
     "user": "wrangler",
     "password": "changeMe",
     "name": "wrangler",

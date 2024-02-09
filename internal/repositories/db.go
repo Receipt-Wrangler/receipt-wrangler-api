@@ -40,6 +40,10 @@ func Connect() error {
 	dbConfig := config.GetConfig().Database
 	dbEngine := dbConfig.Engine
 
+	// TODO: remove
+	fmt.Println(config.GetConfig())
+	fmt.Println(dbConfig)
+
 	var err error
 	var connectedDb *gorm.DB
 

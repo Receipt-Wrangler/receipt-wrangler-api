@@ -80,7 +80,11 @@ func setSettingsConfig() error {
 		return err
 	}
 
-	jsonFile.Close()
+	err = jsonFile.Close()
+	if err != nil {
+		return err
+	}
+
 	config = configFile
 	return nil
 }

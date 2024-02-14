@@ -828,7 +828,11 @@ paths:
       operationId: getReceiptsForGroup
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The receipts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -2348,7 +2352,10 @@ components:
         data:
           type: array
           items:
-            type: object
+            oneOf:
+                - $ref: "#/components/schemas/Receipt"
+                - $ref: "#/components/schemas/Category"
+                - $ref: "#/components/schemas/Tag"
         totalCount:
           type: integer
     FeatureConfig:

@@ -136,55 +136,73 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 	query := db.Model(models.Receipt{})
 
 	// Name
-	name := pagedRequest.Filter.Name.Value.(string)
-	if len(name) > 0 {
-		query = repository.buildFilterQuery(query, name, pagedRequest.Filter.Name.Operation, "name", false)
-	}
-
-	// Date
-	date := pagedRequest.Filter.Date.Value.(string)
-	if len(date) > 0 {
-		query = repository.buildFilterQuery(query, date, pagedRequest.Filter.Date.Operation, "date", false)
-	}
-
-	// Paid By
-	paidBy := pagedRequest.Filter.PaidBy.Value.([]interface{})
-	if len(paidBy) > 0 {
-		query = repository.buildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
-	}
-
-	// Categories
-	categories := pagedRequest.Filter.Categories.Value.([]interface{})
-	if len(categories) > 0 {
-		if pagedRequest.Filter.Categories.Operation == commands.CONTAINS {
-			query = query.Where("id IN (?)", db.Table("receipt_categories").Select("receipt_id").Where("category_id IN ?", categories))
+	if pagedRequest.Filter.Name.Value != nil {
+		name := pagedRequest.Filter.Name.Value.(string)
+		if len(name) > 0 {
+			query = repository.buildFilterQuery(query, name, pagedRequest.Filter.Name.Operation, "name", false)
 		}
 	}
 
+	// Date
+	if pagedRequest.Filter.Date.Value != nil {
+		date := pagedRequest.Filter.Date.Value.(string)
+		if len(date) > 0 {
+			query = repository.buildFilterQuery(query, date, pagedRequest.Filter.Date.Operation, "date", false)
+		}
+	}
+
+	// Paid By
+	if pagedRequest.Filter.PaidBy.Value != nil {
+		paidBy := pagedRequest.Filter.PaidBy.Value.([]interface{})
+		if len(paidBy) > 0 {
+			query = repository.buildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
+		}
+	}
+
+	// Categories
+	if pagedRequest.Filter.Categories.Value != nil {
+		categories := pagedRequest.Filter.Categories.Value.([]interface{})
+		if len(categories) > 0 {
+			if pagedRequest.Filter.Categories.Operation == commands.CONTAINS {
+				query = query.Where("id IN (?)", db.Table("receipt_categories").Select("receipt_id").Where("category_id IN ?", categories))
+			}
+		}
+
+	}
+
 	// Tags
-	tags := pagedRequest.Filter.Tags.Value.([]interface{})
-	if len(tags) > 0 {
-		if pagedRequest.Filter.Tags.Operation == commands.CONTAINS {
-			query = query.Where("id IN (?)", db.Table("receipt_tags").Select("receipt_id").Where("tag_id IN ?", tags))
+	if pagedRequest.Filter.Tags.Value != nil {
+		tags := pagedRequest.Filter.Tags.Value.([]interface{})
+		if len(tags) > 0 {
+			if pagedRequest.Filter.Tags.Operation == commands.CONTAINS {
+				query = query.Where("id IN (?)", db.Table("receipt_tags").Select("receipt_id").Where("tag_id IN ?", tags))
+			}
 		}
 	}
 
 	// Amount
-	amount := pagedRequest.Filter.Amount.Value.(float64)
-	if amount > 0 {
-		query = repository.buildFilterQuery(query, amount, pagedRequest.Filter.Amount.Operation, "amount", false)
+	if pagedRequest.Filter.Amount.Value != nil {
+		amount := pagedRequest.Filter.Amount.Value.(float64)
+		if amount > 0 {
+			query = repository.buildFilterQuery(query, amount, pagedRequest.Filter.Amount.Operation, "amount", false)
+		}
 	}
 
 	// Status
-	status := pagedRequest.Filter.Status.Value.([]interface{})
-	if len(status) > 0 {
-		query = repository.buildFilterQuery(query, status, pagedRequest.Filter.Status.Operation, "status", true)
+
+	if pagedRequest.Filter.Status.Value != nil {
+		status := pagedRequest.Filter.Status.Value.([]interface{})
+		if len(status) > 0 {
+			query = repository.buildFilterQuery(query, status, pagedRequest.Filter.Status.Operation, "status", true)
+		}
 	}
 
 	// Resolved Date
-	resolvedDate := pagedRequest.Filter.ResolvedDate.Value.(string)
-	if len(resolvedDate) > 0 {
-		query = repository.buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
+	if pagedRequest.Filter.ResolvedDate.Value != nil {
+		resolvedDate := pagedRequest.Filter.ResolvedDate.Value.(string)
+		if len(resolvedDate) > 0 {
+			query = repository.buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
+		}
 	}
 
 	return query, nil

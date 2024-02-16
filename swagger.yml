@@ -536,6 +536,13 @@ paths:
         This will log a user out of the system and revoke their token [SYSTEM
         USER]
       operationId: logout
+      requestBody:
+        description: Refresh token
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutCommand"
       responses:
         200:
           $ref: "#/components/responses/Ok"
@@ -2714,3 +2721,11 @@ components:
         jti:
           type: string
           description: JWT ID
+    LogoutCommand:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh token

@@ -1693,7 +1693,6 @@ components:
       x-go-package: receipt-wrangler/api/internal/models
     FileData:
       required:
-        - imageData
         - receiptId
         - id
       type: object
@@ -2633,6 +2632,8 @@ components:
         - users
         - userPreferences
         - featureConfig
+        - categories
+        - tags
       properties:
         claims:
           description: User's claims
@@ -2653,6 +2654,16 @@ components:
         featureConfig:
           description: Feature config
           $ref: "#/components/schemas/FeatureConfig"
+        categories:
+          type: array
+          description: Categories in the system
+          items:
+            $ref: "#/components/schemas/Category"
+        tags:
+          type: array
+          description: Tags in the system
+          items:
+            $ref: "#/components/schemas/Tag"
         jwt:
           type: string
           description: JWT token

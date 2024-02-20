@@ -139,9 +139,11 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 
 func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData := structs.AppData{}
-	groupService := NewGroupService(repositories.GetDB())
-	userRepository := repositories.NewUserRepository(repositories.GetDB())
-	userPreferenceRepository := repositories.NewUserPreferencesRepository(repositories.GetDB())
+	groupService := NewGroupService(nil)
+	userRepository := repositories.NewUserRepository(nil)
+	userPreferenceRepository := repositories.NewUserPreferencesRepository(nil)
+	categoryRepository := repositories.NewCategoryRepository(nil)
+	tagRepository := repositories.NewTagsRepository(nil)
 	stringUserId := simpleutils.UintToString(userId)
 
 	groups, err := groupService.GetGroupsForUser(stringUserId)
@@ -159,10 +161,22 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 		return appData, err
 	}
 
+	categories, err := categoryRepository.GetAllCategories("*")
+	if err != nil {
+		return appData, err
+	}
+
+	tags, err := tagRepository.GetAllTags("*")
+	if err != nil {
+		return appData, err
+	}
+
 	appData.Groups = groups
 	appData.Users = users
 	appData.UserPreferences = userPreferences
 	appData.FeatureConfig = config.GetFeatureConfig()
+	appData.Categories = categories
+	appData.Tags = tags
 
 	if r != nil {
 		claims := structs.GetJWT(r)

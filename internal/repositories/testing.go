@@ -18,7 +18,13 @@ func SetUpTestEnv() {
 
 func TruncateTable(db *gorm.DB, tableName string) error {
 	query := fmt.Sprintf("DELETE FROM %s", tableName)
-	return db.Exec(query).Error
+	err := db.Exec(query).Error
+	if err != nil {
+		return err
+	}
+
+	resetSeqQuery := fmt.Sprintf("DELETE FROM sqlite_sequence WHERE name='%s';", tableName)
+	return db.Exec(resetSeqQuery).Error
 }
 
 func TestTeardown() {

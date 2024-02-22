@@ -1,8 +1,6 @@
 module receipt-wrangler/api
 
-go 1.21
-
-toolchain go1.22.0
+go 1.22
 
 require (
 	github.com/auth0/go-jwt-middleware/v2 v2.2.1
@@ -17,6 +15,7 @@ require (
 	github.com/sashabaranov/go-openai v1.19.4
 	github.com/shopspring/decimal v1.3.1
 	golang.org/x/crypto v0.19.0
+	google.golang.org/api v0.166.0
 	gopkg.in/gographics/imagick.v2 v2.6.3
 	gorm.io/driver/mysql v1.5.4
 	gorm.io/driver/postgres v1.5.6
@@ -62,7 +61,6 @@ require (
 	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	google.golang.org/api v0.166.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240221002015-b0ce06bbee7c // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240221002015-b0ce06bbee7c // indirect

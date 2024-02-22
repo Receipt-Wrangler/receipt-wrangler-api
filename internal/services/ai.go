@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"receipt-wrangler/api/internal/ai"
@@ -12,12 +13,16 @@ import (
 	"receipt-wrangler/api/internal/structs"
 	"time"
 
+	"google.golang.org/api/option"
+
+	"github.com/google/generative-ai-go/genai"
 	"github.com/sashabaranov/go-openai"
 )
 
 var client *openai.Client
+var geminiClient *genai.Client
 
-func InitOpenAIClient() {
+func InitOpenAIClient() error {
 	config := config.GetConfig()
 	apiKey := config.AiSettings.Key
 	if len(apiKey) == 0 && config.AiSettings.AiType == structs.OPEN_AI {
@@ -25,14 +30,36 @@ func InitOpenAIClient() {
 	}
 
 	if len(apiKey) == 0 {
-		logging.GetLogger().Print("OpenAI Key not found!")
+		return fmt.Errorf("OpenAI API key not found")
 	}
 
 	client = openai.NewClient(apiKey)
+	return nil
 }
 
 func GetClient() *openai.Client {
 	return client
+}
+
+func InitGeminiClient() error {
+	ctx := context.Background()
+	config := config.GetConfig()
+
+	if len(config.AiSettings.Key) == 0 {
+		return fmt.Errorf("Gemini API key not found")
+	}
+
+	client, err := genai.NewClient(ctx, option.WithAPIKey(config.AiSettings.Key))
+	if err != nil {
+		return err
+	}
+	geminiClient = client
+
+	return nil
+}
+
+func GetGeminiClient() *genai.Client {
+	return geminiClient
 }
 
 func ReadReceiptData(ocrText string) (models.Receipt, error) {
@@ -40,13 +67,14 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 	logger := logging.GetLogger()
 	config := config.GetConfig()
 	client := GetClient()
+	geminiClient := GetGeminiClient()
 
 	aiType := config.AiSettings.AiType
 	if len(aiType) == 0 {
 		aiType = structs.OPEN_AI
 	}
 
-	aiClient := ai.NewAiClient(aiType, client)
+	aiClient := ai.NewAiClient(aiType, client, geminiClient)
 	clientMessages := []structs.AiClientMessage{}
 
 	prompt, err := getPrompt(ocrText)
@@ -90,22 +118,26 @@ func getPrompt(ocrText string) (string, error) {
 	prompt := fmt.Sprintf(`
 	Find the receipt's name, total cost, and date. Format as:
 	{
-		Name: store name,
-		Amount: amount,
-		Date: date in zulu, with ALL time values set to 0,
-		Categories: categories,
-		Tags: tags
+		"name": store name,
+		"amount": amount,
+		"date": date in zulu, with ALL time values set to 0,
+		"categories": categories,
+		"tags": tags
 	}
 	If a store name cannot be confidently found, use 'Default store name' as the default name.
 	Omit any value if not found with confidence. Assume the date is in the year %s if not provided.
 	The amount must be a float or integer.
 
-	Choose up to 2 categories from the given list based on the receipt's items and store name. If none fit, omit the result. Select only the id, like:
+	Please do NOT add any additional information, only valid JSON.
+	Please return the json in plaintext ONLY, do not ever return it in a code block or any other format.
+
+	Choose up to 2 categories from the given list based on the receipt's items and store name. If no categories fit, please return an empty array for the field and do not select any categories. When selecting categories, select only the id, like:
 	{
 		Id: category id
 	}
 
 	Emphasize the relationship between the category and the receipt, and use the description of the category to fine tune the results. Do not return categories that have an empty name or do not exist.
+
 
 	Categories: %s
 

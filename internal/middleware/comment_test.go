@@ -51,6 +51,7 @@ func teardownCommentMiddlewareTest() {
 }
 
 func TestCanDeleteComment(t *testing.T) {
+	defer teardownCommentMiddlewareTest()
 	// Define user id
 	var userId uint
 	userId = 1
@@ -87,13 +88,13 @@ func TestCanDeleteComment(t *testing.T) {
 	handler := CanDeleteComment(fakeHandler)
 	handler.ServeHTTP(w, r)
 
-	teardownCommentMiddlewareTest()
 	if w.Result().StatusCode != 200 {
 		utils.PrintTestError(t, w.Result().StatusCode, 200)
 	}
 }
 
 func TestCantDeleteComment(t *testing.T) {
+	defer teardownCommentMiddlewareTest()
 	// Define user id
 	var userId uint
 	userId = 2
@@ -138,7 +139,6 @@ func TestCantDeleteComment(t *testing.T) {
 	handler := CanDeleteComment(fakeHandler)
 	handler.ServeHTTP(w, r)
 
-	teardownCommentMiddlewareTest()
 	if w.Result().StatusCode != http.StatusForbidden {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
 	}

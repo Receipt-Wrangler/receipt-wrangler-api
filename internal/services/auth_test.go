@@ -25,6 +25,7 @@ func TestInitTokenValidatorReturnsValidator(t *testing.T) {
 }
 
 func TestGenerateJWTGeneratesJWTCorrectly(t *testing.T) {
+	defer repositories.TruncateTestDb()
 	expectedDisplayname := "Displayname"
 	expectedUsername := "Test"
 	expectedIssuer := "https://receiptWrangler.io"
@@ -89,6 +90,7 @@ func TestGenerateJWTGeneratesJWTCorrectly(t *testing.T) {
 }
 
 func TestGenerateRefreshTokenCorrectly(t *testing.T) {
+	defer repositories.TruncateTestDb()
 	expectedDisplayname := "Another displayname"
 	expectedUsername := "Another username"
 	expectedIssuer := "https://receiptWrangler.io"

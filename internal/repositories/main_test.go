@@ -15,12 +15,10 @@ func TestMain(m *testing.M) {
 }
 
 func run(m *testing.M) (code int, err error) {
+	defer teardown()
 	SetUpTestEnv()
 	InitTestDb()
 	MakeMigrations()
-
-	defer teardown()
-
 	return m.Run(), nil
 }
 

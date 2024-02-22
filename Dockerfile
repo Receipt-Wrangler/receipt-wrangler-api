@@ -1,5 +1,5 @@
 # Pull in source code to container
-FROM golang:1.20.7-bullseye
+FROM golang:1.22.0-bullseye
 WORKDIR .
 RUN mkdir api
 WORKDIR api

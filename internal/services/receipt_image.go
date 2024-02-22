@@ -58,7 +58,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 
 	ocrText, err := tesseract.ReadImage(pathToReadFrom, false)
 	if err != nil {
-		return result, nil
+		return result, err
 	}
 
 	result, err = ReadReceiptData(ocrText)
@@ -74,7 +74,7 @@ func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 
 	ocrText, err := tesseract.ReadImage(path, false)
 	if err != nil {
-		return result, nil
+		return result, err
 	}
 
 	result, err = ReadReceiptData(ocrText)
@@ -101,7 +101,7 @@ func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, erro
 	filledReceipt, err := ReadReceiptImageFromFileOnly(filePath)
 	if err != nil {
 		os.Remove(filePath)
-		return models.Receipt{}, nil
+		return models.Receipt{}, err
 	}
 
 	os.Remove(filePath)

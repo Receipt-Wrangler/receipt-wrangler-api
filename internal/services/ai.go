@@ -90,15 +90,17 @@ func getPrompt(ocrText string) (string, error) {
 	prompt := fmt.Sprintf(`
 	Find the receipt's name, total cost, and date. Format as:
 	{
-		Name: store name,
-		Amount: amount,
-		Date: date in zulu, with ALL time values set to 0,
-		Categories: categories,
-		Tags: tags
+		"name": store name,
+		"amount": amount,
+		"date": date in zulu, with ALL time values set to 0,
+		"categories": categories,
+		"tags": tags
 	}
 	If a store name cannot be confidently found, use 'Default store name' as the default name.
 	Omit any value if not found with confidence. Assume the date is in the year %s if not provided.
 	The amount must be a float or integer.
+
+	Please do NOT add any additional information, only valid JSON.
 
 	Choose up to 2 categories from the given list based on the receipt's items and store name. If none fit, omit the result. Select only the id, like:
 	{

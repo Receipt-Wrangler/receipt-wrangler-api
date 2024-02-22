@@ -25,6 +25,7 @@ func tearDownCategoriesTest() {
 }
 
 func TestShouldGetAllCategories(t *testing.T) {
+	defer tearDownCategoriesTest()
 	categories := make([]models.Category, 0)
 	setupCategoriesTest()
 
@@ -55,6 +56,7 @@ func TestShouldGetAllCategories(t *testing.T) {
 }
 
 func TestShouldCreateCategory(t *testing.T) {
+	defer tearDownCategoriesTest()
 	category := models.Category{}
 	setupCategoriesTest()
 
@@ -85,11 +87,10 @@ func TestShouldCreateCategory(t *testing.T) {
 	if category.ID != 4 {
 		utils.PrintTestError(t, category.ID, 4)
 	}
-
-	tearDownCategoriesTest()
 }
 
 func TestShouldUpdateCategoryIfAdmin(t *testing.T) {
+	defer tearDownCategoriesTest()
 	category := models.Category{}
 	setupCategoriesTest()
 
@@ -120,11 +121,10 @@ func TestShouldUpdateCategoryIfAdmin(t *testing.T) {
 	if category.Description != "Updated Test description" {
 		utils.PrintTestError(t, category.Description, "Updated Test description")
 	}
-
-	tearDownCategoriesTest()
 }
 
 func TestShouldNotUpdateCategoryDueToRole(t *testing.T) {
+	defer tearDownCategoriesTest()
 	category := models.Category{}
 	setupCategoriesTest()
 
@@ -151,11 +151,10 @@ func TestShouldNotUpdateCategoryDueToRole(t *testing.T) {
 	if w.Result().StatusCode != 403 {
 		utils.PrintTestError(t, w.Result().StatusCode, 403)
 	}
-
-	tearDownCategoriesTest()
 }
 
 func TestShouldDeleteCategoryIfAdmin(t *testing.T) {
+	defer tearDownCategoriesTest()
 	setupCategoriesTest()
 
 	reader := strings.NewReader(``)
@@ -181,11 +180,10 @@ func TestShouldDeleteCategoryIfAdmin(t *testing.T) {
 	if w.Result().StatusCode != 200 {
 		utils.PrintTestError(t, w.Result().StatusCode, 200)
 	}
-
-	tearDownCategoriesTest()
 }
 
 func TestShouldNotDeleteCategoryDueToRole(t *testing.T) {
+	defer tearDownCategoriesTest()
 	setupCategoriesTest()
 
 	reader := strings.NewReader(``)
@@ -205,11 +203,10 @@ func TestShouldNotDeleteCategoryDueToRole(t *testing.T) {
 	if w.Result().StatusCode != 403 {
 		utils.PrintTestError(t, w.Result().StatusCode, 403)
 	}
-
-	tearDownCategoriesTest()
 }
 
 func TestShouldGetCategoryNameCountIfAdmin(t *testing.T) {
+	defer tearDownCategoriesTest()
 	expectedStatus := 200
 	var resultCount uint
 	setupCategoriesTest()
@@ -241,11 +238,10 @@ func TestShouldGetCategoryNameCountIfAdmin(t *testing.T) {
 	if resultCount != 1 {
 		utils.PrintTestError(t, resultCount, 1)
 	}
-
-	tearDownCategoriesTest()
 }
 
 func TestShouldGetCategoryNameCountIfAdmin2(t *testing.T) {
+	defer tearDownCategoriesTest()
 	expectedStatus := 200
 	var resultCount uint
 	setupCategoriesTest()
@@ -277,11 +273,10 @@ func TestShouldGetCategoryNameCountIfAdmin2(t *testing.T) {
 	if resultCount != 0 {
 		utils.PrintTestError(t, resultCount, 0)
 	}
-
-	tearDownCategoriesTest()
 }
 
 func TestShouldNotGetCategoryNameDueToRole(t *testing.T) {
+	defer tearDownCategoriesTest()
 	expectedStatus := 403
 	setupCategoriesTest()
 
@@ -302,6 +297,4 @@ func TestShouldNotGetCategoryNameDueToRole(t *testing.T) {
 	if w.Result().StatusCode != expectedStatus {
 		utils.PrintTestError(t, w.Result().StatusCode, expectedStatus)
 	}
-
-	tearDownCategoriesTest()
 }

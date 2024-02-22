@@ -49,7 +49,6 @@ func InitGeminiClient() error {
 		return fmt.Errorf("Gemini API key not found")
 	}
 
-	// Access your API key as an environment variable (see "Set up your API key" above)
 	client, err := genai.NewClient(ctx, option.WithAPIKey(config.AiSettings.Key))
 	if err != nil {
 		return err

@@ -10,6 +10,7 @@ type AiClientType string
 const (
 	LLAMA_GPT AiClientType = "llamaGpt"
 	OPEN_AI   AiClientType = "openAi"
+	GEMINI    AiClientType = "gemini"
 )
 
 func (clientType *AiClientType) Scan(value string) error {

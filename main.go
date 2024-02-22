@@ -62,6 +62,11 @@ func main() {
 		services.InitOpenAIClient()
 	}
 
+	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == structs.GEMINI {
+		logger.Print("Initializing Gemini Client...")
+		services.InitGeminiClient()
+	}
+
 	if config.GetDeployEnv() != "test" {
 		userRepository := repositories.NewUserRepository(nil)
 		err = userRepository.CreateUserIfNoneExist()

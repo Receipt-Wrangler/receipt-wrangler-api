@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"receipt-wrangler/api/internal/ai"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
@@ -12,12 +14,14 @@ import (
 	"receipt-wrangler/api/internal/structs"
 	"time"
 
+	"github.com/google/generative-ai-go/genai"
 	"github.com/sashabaranov/go-openai"
 )
 
 var client *openai.Client
+var geminiClient *openai.Client
 
-func InitOpenAIClient() {
+func InitOpenAIClient() error {
 	config := config.GetConfig()
 	apiKey := config.AiSettings.Key
 	if len(apiKey) == 0 && config.AiSettings.AiType == structs.OPEN_AI {
@@ -25,10 +29,23 @@ func InitOpenAIClient() {
 	}
 
 	if len(apiKey) == 0 {
-		logging.GetLogger().Print("OpenAI Key not found!")
+		return fmt.Errorf("OpenAI API key not found")
 	}
 
 	client = openai.NewClient(apiKey)
+	return nil
+}
+
+func InitGeminiClient() error {
+	ctx := context.Background()
+	// Access your API key as an environment variable (see "Set up your API key" above)
+	client, err := genai.NewClient(ctx, option.WithAPIKey(os.Getenv("API_KEY")))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	return nil
 }
 
 func GetClient() *openai.Client {

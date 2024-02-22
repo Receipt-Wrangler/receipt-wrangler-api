@@ -8,6 +8,7 @@ import (
 )
 
 func TestShouldCreateAdminUserWithGroup(t *testing.T) {
+	defer TruncateTestDb()
 	db := GetDB()
 	userToCreate := commands.SignUpCommand{
 		Username:    "test",
@@ -26,11 +27,10 @@ func TestShouldCreateAdminUserWithGroup(t *testing.T) {
 	db.Table("groups").Where("id = 1").Preload("GroupMembers").First(&group)
 
 	validateGroup(t, group, 1, 1)
-
-	TruncateTestDb()
 }
 
 func TestShouldCreateNonAdminUserWithGroup(t *testing.T) {
+	defer TruncateTestDb()
 	db := GetDB()
 	CreateTestUser()
 	CreateTestGroup()
@@ -51,11 +51,10 @@ func TestShouldCreateNonAdminUserWithGroup(t *testing.T) {
 	db.Table("groups").Where("id = 2").Preload("GroupMembers").First(&group)
 
 	validateGroup(t, group, 2, 2)
-
-	TruncateTestDb()
 }
 
 func TestShouldReturnErrorWhenCreatingUserWithDuplicateUsername(t *testing.T) {
+	defer TruncateTestDb()
 	CreateTestUser()
 	CreateTestGroup()
 	userToCreate := commands.SignUpCommand{
@@ -68,7 +67,6 @@ func TestShouldReturnErrorWhenCreatingUserWithDuplicateUsername(t *testing.T) {
 	if err == nil {
 		utils.PrintTestError(t, err, "error")
 	}
-	TruncateTestDb()
 }
 
 func validateUser(t *testing.T, createdUser models.User, userToCreate commands.SignUpCommand, role models.UserRole, id uint) {

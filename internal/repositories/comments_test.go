@@ -25,10 +25,11 @@ func createTestReceipt() {
 }
 
 func teardownCommentTest() {
- TruncateTestDb()
+	TruncateTestDb()
 }
 
 func TestShouldAddCommentAndSendNotificationToAllGroupUsers(t *testing.T) {
+	defer teardownCommentTest()
 	setupCommentTest()
 	userId := uint(1)
 	comment := models.Comment{
@@ -63,11 +64,10 @@ func TestShouldAddCommentAndSendNotificationToAllGroupUsers(t *testing.T) {
 	if len(user3Notifications) != 1 {
 		utils.PrintTestError(t, len(user3Notifications), 1)
 	}
-
-	teardownCommentTest()
 }
 
 func TestShouldAddCommentAndSendNotificationToThreadUsers(t *testing.T) {
+	defer teardownCommentTest()
 	db := GetDB()
 	setupCommentTest()
 	user1Id := uint(1)
@@ -114,6 +114,4 @@ func TestShouldAddCommentAndSendNotificationToThreadUsers(t *testing.T) {
 	if len(user3Notifications) != 0 {
 		utils.PrintTestError(t, len(user3Notifications), 0)
 	}
-
-	teardownCommentTest()
 }

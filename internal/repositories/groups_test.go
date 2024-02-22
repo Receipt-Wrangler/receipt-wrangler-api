@@ -15,9 +15,8 @@ func setupGroupRepository() GroupRepository {
 }
 
 func teardownGroupTest() {
-TruncateTestDb()
+	TruncateTestDb()
 }
-
 
 func TestShouldCreateGroupSuccessfully(t *testing.T) {
 	groupToCreate := models.Group{Name: "test"}
@@ -49,6 +48,7 @@ func TestShouldCreateGroupSuccessfully(t *testing.T) {
 }
 
 func TestShouldGetGroupById(t *testing.T) {
+	defer teardownGroupTest()
 	CreateTestGroup()
 	setUpGroupTest()
 	groupRepository := setupGroupRepository()
@@ -63,11 +63,10 @@ func TestShouldGetGroupById(t *testing.T) {
 	if testGroup.Name != "test" {
 		utils.PrintTestError(t, err, "1")
 	}
-
-	teardownGroupTest()
 }
 
 func TestShouldGetAGroupWithGroupMembers(t *testing.T) {
+	defer teardownGroupTest()
 	CreateTestGroupWithUsers()
 	groupRepository := setupGroupRepository()
 
@@ -81,30 +80,28 @@ func TestShouldGetAGroupWithGroupMembers(t *testing.T) {
 	if len(testGroup.GroupMembers) != 3 {
 		utils.PrintTestError(t, err, "3")
 	}
-
-	teardownGroupTest()
 }
 
 func TestShouldReturnErrorIfGroupDoesNotExist(t *testing.T) {
+	defer teardownGroupTest()
 	groupRepository := setupGroupRepository()
 	testGroup, err := groupRepository.GetGroupById("2332", false)
 
 	if err == nil {
 		utils.PrintTestError(t, err, "error")
 	}
-	if testGroup.ID != 0  {
+	if testGroup.ID != 0 {
 		utils.PrintTestError(t, testGroup.ID, "0")
 	}
-
-	teardownGroupTest()
 }
 
 func TestShouldUpdateGroup(t *testing.T) {
+	defer teardownGroupTest()
 	CreateTestGroup()
 	updateGroup := models.Group{Name: "new name", Status: models.GROUP_ARCHIVED}
 	groupRepository := setupGroupRepository()
 	updatedGroup, err := groupRepository.UpdateGroup(updateGroup, "1")
-	
+
 	if err != nil {
 		utils.PrintTestError(t, err, "error")
 	}
@@ -114,6 +111,4 @@ func TestShouldUpdateGroup(t *testing.T) {
 	if updatedGroup.Status != models.GROUP_ARCHIVED {
 		utils.PrintTestError(t, updatedGroup.Status, models.GROUP_ARCHIVED)
 	}
-
-	teardownGroupTest()
 }

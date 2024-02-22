@@ -21,6 +21,7 @@ func tearDownGenericHandlerTest() {
 }
 
 func TestShouldSetContentTypeHeader(t *testing.T) {
+	defer tearDownGenericHandlerTest()
 	reader := strings.NewReader("")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api", reader)
@@ -44,6 +45,7 @@ func TestShouldSetContentTypeHeader(t *testing.T) {
 }
 
 func TestShouldRejectReceiptAccessBasedOnGroup(t *testing.T) {
+	defer tearDownGenericHandlerTest()
 	reader := strings.NewReader("")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api", reader)
@@ -76,11 +78,10 @@ func TestShouldRejectReceiptAccessBasedOnGroup(t *testing.T) {
 	if w.Result().StatusCode != http.StatusForbidden {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
 	}
-
-	tearDownGenericHandlerTest()
 }
 
 func TestShouldAcceptReceiptAccessBasedOnGroup(t *testing.T) {
+	defer tearDownGenericHandlerTest()
 	reader := strings.NewReader("")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api", reader)
@@ -115,11 +116,10 @@ func TestShouldAcceptReceiptAccessBasedOnGroup(t *testing.T) {
 	if w.Result().StatusCode != http.StatusOK {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
 	}
-
-	tearDownGenericHandlerTest()
 }
 
 func TestShouldRejectReceiptAccessBasedOnWrongGroupRole(t *testing.T) {
+	defer tearDownGenericHandlerTest()
 	reader := strings.NewReader("")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api", reader)
@@ -154,11 +154,10 @@ func TestShouldRejectReceiptAccessBasedOnWrongGroupRole(t *testing.T) {
 	if w.Result().StatusCode != http.StatusForbidden {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
 	}
-
-	tearDownGenericHandlerTest()
 }
 
 func TestShouldAcceptIfGroupIsAll(t *testing.T) {
+	defer tearDownGenericHandlerTest()
 	reader := strings.NewReader("")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api", reader)
@@ -180,8 +179,6 @@ func TestShouldAcceptIfGroupIsAll(t *testing.T) {
 	if w.Result().StatusCode != http.StatusOK {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
 	}
-
-	tearDownGenericHandlerTest()
 }
 
 // TODO: Fix
@@ -215,6 +212,7 @@ func TestShouldAcceptIfGroupIsAll(t *testing.T) {
 // }
 
 func TestShouldRejectBasedOnUserRole(t *testing.T) {
+	defer tearDownGenericHandlerTest()
 	reader := strings.NewReader("")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api", reader)
@@ -239,6 +237,4 @@ func TestShouldRejectBasedOnUserRole(t *testing.T) {
 	if w.Result().StatusCode != http.StatusForbidden {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
 	}
-
-	tearDownGenericHandlerTest()
 }

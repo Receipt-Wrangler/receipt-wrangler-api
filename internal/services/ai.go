@@ -20,7 +20,7 @@ import (
 )
 
 var client *openai.Client
-var geminiClient *openai.Client
+var geminiClient *genai.Client
 
 func InitOpenAIClient() error {
 	config := config.GetConfig()
@@ -37,6 +37,10 @@ func InitOpenAIClient() error {
 	return nil
 }
 
+func GetClient() *openai.Client {
+	return client
+}
+
 func InitGeminiClient() error {
 	ctx := context.Background()
 	config := config.GetConfig()
@@ -50,13 +54,13 @@ func InitGeminiClient() error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	geminiClient = client
 
 	return nil
 }
 
-func GetClient() *openai.Client {
-	return client
+func GetGeminiClient() *genai.Client {
+	return geminiClient
 }
 
 func ReadReceiptData(ocrText string) (models.Receipt, error) {

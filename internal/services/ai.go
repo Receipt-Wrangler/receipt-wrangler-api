@@ -129,14 +129,16 @@ func getPrompt(ocrText string) (string, error) {
 	Omit any value if not found with confidence. Assume the date is in the year %s if not provided.
 	The amount must be a float or integer.
 
-	Please do NOT add any additional information, only valid JSON in plain text, NO markdown.
+	Please do NOT add any additional information, only valid JSON.
+	Please return the json in plaintext ONLY, do not ever return it in a code block or any other format.
 
-	Choose up to 2 categories from the given list based on the receipt's items and store name. If none fit, omit the result. Select only the id, like:
+	Choose up to 2 categories from the given list based on the receipt's items and store name. If no categories fit, please return an empty array for the field and do not select any categories. When selecting categories, select only the id, like:
 	{
 		Id: category id
 	}
 
 	Emphasize the relationship between the category and the receipt, and use the description of the category to fine tune the results. Do not return categories that have an empty name or do not exist.
+
 
 	Categories: %s
 

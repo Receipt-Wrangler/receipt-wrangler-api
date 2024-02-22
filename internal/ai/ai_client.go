@@ -4,19 +4,22 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/structs"
 	"time"
 
+	"github.com/google/generative-ai-go/genai"
 	"github.com/sashabaranov/go-openai"
 )
 
-func NewAiClient(clientType structs.AiClientType, openAiClient *openai.Client) *AiClient {
+func NewAiClient(clientType structs.AiClientType, openAiClient *openai.Client, geminiClient *genai.Client) *AiClient {
 	return &AiClient{
 		ClientType:   clientType,
 		OpenAiClient: openAiClient,
+		GeminiClient: geminiClient,
 	}
 }
 
@@ -24,6 +27,7 @@ type AiClient struct {
 	ClientType   structs.AiClientType      `json:"clientType"`
 	Messages     []structs.AiClientMessage `json:"messages"`
 	OpenAiClient *openai.Client            `json:"openAiClient"`
+	GeminiClient *genai.Client             `json:"geminiClient"`
 }
 
 func (aiClient *AiClient) CreateChatCompletion() (string, error) {
@@ -34,6 +38,9 @@ func (aiClient *AiClient) CreateChatCompletion() (string, error) {
 
 	case structs.OPEN_AI:
 		return aiClient.OpenAiChatCompletion()
+
+	case structs.GEMINI:
+		return aiClient.GeminiChatCompletion()
 	}
 
 	return "", nil
@@ -110,4 +117,27 @@ func (aiClient *AiClient) OpenAiChatCompletion() (string, error) {
 
 	response := resp.Choices[0].Message.Content
 	return response, nil
+}
+
+func (aiClient *AiClient) GeminiChatCompletion() (string, error) {
+	ctx := context.Background()
+	model := aiClient.GeminiClient.GenerativeModel("gemini-pro")
+	prompt := ""
+	for _, aiMessage := range aiClient.Messages {
+		prompt += aiMessage.Content + " "
+	}
+
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", err
+	}
+
+	if len(resp.Candidates) > 0 {
+		for _, part := range resp.Candidates[0].Content.Parts {
+			json := fmt.Sprintf("%s", part)
+			return json, nil
+		}
+	}
+
+	return "", nil
 }

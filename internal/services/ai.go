@@ -68,13 +68,14 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 	logger := logging.GetLogger()
 	config := config.GetConfig()
 	client := GetClient()
+	geminiClient := GetGeminiClient()
 
 	aiType := config.AiSettings.AiType
 	if len(aiType) == 0 {
 		aiType = structs.OPEN_AI
 	}
 
-	aiClient := ai.NewAiClient(aiType, client)
+	aiClient := ai.NewAiClient(aiType, client, geminiClient)
 	clientMessages := []structs.AiClientMessage{}
 
 	prompt, err := getPrompt(ocrText)
@@ -128,7 +129,7 @@ func getPrompt(ocrText string) (string, error) {
 	Omit any value if not found with confidence. Assume the date is in the year %s if not provided.
 	The amount must be a float or integer.
 
-	Please do NOT add any additional information, only valid JSON.
+	Please do NOT add any additional information, only valid JSON in plain text, NO markdown.
 
 	Choose up to 2 categories from the given list based on the receipt's items and store name. If none fit, omit the result. Select only the id, like:
 	{

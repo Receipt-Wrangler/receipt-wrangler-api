@@ -1170,6 +1170,13 @@ paths:
       summary: Get fresh tokens
       description: This will get a fresh token pair for the user
       operationId: getNewRefreshToken
+      requestBody:
+        description: Refresh token body for clients that don't use cookies
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutCommand"
       responses:
         200:
           description: The new token pair

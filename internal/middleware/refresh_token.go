@@ -35,6 +35,7 @@ func ValidateRefreshToken(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), "refreshToken", refreshToken)
+		ctx = context.WithValue(ctx, "refreshTokenString", refreshTokenString)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -45,14 +46,9 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 		dbToken := models.RefreshToken{}
 		errMessage := "Error refreshing token"
 
-		refreshTokenString, err := getRefreshTokenFromRequest(r, w)
-		if err != nil {
-			utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
-			middleware_logger.Println("Refresh token cookie not found")
-			return
-		}
+		refreshTokenString := r.Context().Value("refreshTokenString")
 
-		err = db.Model(&models.RefreshToken{}).Where("token = ?", refreshTokenString).Find(&dbToken).Error
+		err := db.Model(&models.RefreshToken{}).Where("token = ?", refreshTokenString).Find(&dbToken).Error
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 			middleware_logger.Println(err.Error())

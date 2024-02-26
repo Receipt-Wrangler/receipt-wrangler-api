@@ -1170,6 +1170,13 @@ paths:
       summary: Get fresh tokens
       description: This will get a fresh token pair for the user
       operationId: getNewRefreshToken
+      requestBody:
+        description: Refresh token body for clients that don't use cookies
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutCommand"
       responses:
         200:
           description: The new token pair
@@ -2696,42 +2703,54 @@ components:
         userId:
           type: integer
           description: User foreign key
+          default: 0
         userRole:
           type: string
           $ref: "#/components/schemas/UserRole"
           description: User's role
+          default: "USER"
         displayName:
           type: string
           description: Display name
+          default: ""
         defaultAvatarColor:
           type: string
           description: Default avatar color
+          default: ""
         username:
           type: string
           description: User's username used to login
+          default: ""
         iss:
           type: string
           description: Issuer
+          default: ""
         sub:
           type: string
           description: Subject
+          default: ""
         aud:
           type: array
           items:
             type: string
           description: Audience
+          default: []
         exp:
           type: integer
           description: Expiration time
+          default: 0
         nbf:
           type: integer
           description: Not before
+          default: 0
         iat:
           type: integer
           description: Issued at
+          default: 0
         jti:
           type: string
           description: JWT ID
+          default: ""
     LogoutCommand:
       type: object
       required:

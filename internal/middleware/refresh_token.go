@@ -44,11 +44,20 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		db := repositories.GetDB()
 		dbToken := models.RefreshToken{}
+		err := error(nil)
 		errMessage := "Error refreshing token"
 
 		refreshTokenString := r.Context().Value("refreshTokenString")
+		if refreshTokenString == nil {
+			refreshTokenString, err = getRefreshTokenFromRequest(r, w)
+			if err != nil {
+				utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+				middleware_logger.Println("Refresh token not found")
+				return
+			}
+		}
 
-		err := db.Model(&models.RefreshToken{}).Where("token = ?", refreshTokenString).Find(&dbToken).Error
+		err = db.Model(&models.RefreshToken{}).Where("token = ?", refreshTokenString).Find(&dbToken).Error
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 			middleware_logger.Println(err.Error())

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/base64"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"os"
 	"receipt-wrangler/api/internal/commands"
@@ -12,8 +13,6 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
-
-	"github.com/go-chi/chi/v5"
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
@@ -82,10 +81,8 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			fileDataView := models.FileDataView{
-				Id:           createdFile.ID,
-				EncodedImage: encodedImage,
-			}
+			fileDataView := models.FileDataView{}.FromFileData(createdFile)
+			fileDataView.EncodedImage = encodedImage
 
 			bytes, err := utils.MarshalResponseData(fileDataView)
 			if err != nil {
@@ -138,8 +135,9 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
+
+			result = models.FileDataView{}.FromFileData(fileData)
 			result.EncodedImage = imageData
-			result.Id = fileData.ID
 
 			resultBytes, err := utils.MarshalResponseData(result)
 			if err != nil {

@@ -2579,17 +2579,19 @@ components:
           type: string
           description: Base64 encoded image for file types that aren't viewable natively in the browser, such as PDFs
     FileDataView:
-      type: object
-      required:
-        - id
-        - encodedImage
-      properties:
-        id:
-          type: integer
-          description: File data id
-        encodedImage:
-          type: string
-          description: Base64 encoded image
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - encodedImage
+            - name
+          properties:
+            encodedImage:
+              type: string
+              description: Base64 encoded image
+            name:
+              type: string
+              description: File name
     EncodedImage:
       type: object
       required:

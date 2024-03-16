@@ -2399,15 +2399,17 @@ components:
           description: Name of file
     QuickScanCommand:
       required:
-        - file
+        - files
         - groupId
         - status
         - paidByUserId
       type: object
       properties:
-        file:
-          type: string
-          format: binary
+        files:
+          type: array
+          items:
+            type: string
+            format: binary
         groupId:
           type: integer
           description: Group foreign key

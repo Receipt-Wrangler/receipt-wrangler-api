@@ -57,8 +57,17 @@ func LoginUser(loginAttempt commands.LoginCommand) (models.User, error) {
 }
 
 func BuildTokenCookies(jwt string, refreshToken string) (http.Cookie, http.Cookie) {
-	accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: true, Path: "/", Expires: utils.GetAccessTokenExpiryDate().Time}
-	refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/", Expires: utils.GetRefreshTokenExpiryDate().Time}
+	var env = config.GetDeployEnv()
+	var sameSite = http.SameSiteStrictMode
+	var secure = false
+
+	if env == "dev" {
+		sameSite = http.SameSiteNoneMode
+		secure = true
+	}
+
+	accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: true, Path: "/", Expires: utils.GetAccessTokenExpiryDate().Time, SameSite: sameSite, Secure: secure}
+	refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/", Expires: utils.GetRefreshTokenExpiryDate().Time, SameSite: sameSite, Secure: secure}
 
 	return accessTokenCookie, refreshTokenCookie
 }

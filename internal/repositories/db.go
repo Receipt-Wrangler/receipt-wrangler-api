@@ -44,7 +44,7 @@ func Connect() error {
 	var connectedDb *gorm.DB
 
 	if dbEngine == "mariadb" || dbEngine == "mysql" {
-		db, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString(dbConfig)), &gorm.Config{})
+		connectedDb, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString(dbConfig)), &gorm.Config{})
 		if err != nil {
 			return err
 		}

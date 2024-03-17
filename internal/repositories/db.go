@@ -44,7 +44,7 @@ func Connect() error {
 	var connectedDb *gorm.DB
 
 	if dbEngine == "mariadb" || dbEngine == "mysql" {
-		connectedDb, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString(dbConfig)), &gorm.Config{})
+		db, err = gorm.Open(mysql.Open(BuildMariaDbConnectionString(dbConfig)), &gorm.Config{})
 		if err != nil {
 			return err
 		}
@@ -71,6 +71,10 @@ func Connect() error {
 
 	if err != nil {
 		return err
+	}
+
+	if connectedDb == nil {
+		return fmt.Errorf("database engine of: %s! check your config to make sure it is correct", dbEngine)
 	}
 
 	db = connectedDb

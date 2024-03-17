@@ -2417,9 +2417,7 @@ components:
           type: integer
           description: User foreign key
         status:
-          type: string
           $ref: "#/components/schemas/ReceiptStatus"
-          description: Status of quick scanned receipt
     UserPreferences:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
@@ -2445,7 +2443,6 @@ components:
             quickScanDefaultStatus:
               type: string
               $ref: "#/components/schemas/ReceiptStatus"
-              description: Default quick scan status
               default: "OPEN"
     GroupSettings:
       type: object

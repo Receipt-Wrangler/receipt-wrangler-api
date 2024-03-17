@@ -5,7 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"receipt-wrangler/api/internal/logging"
@@ -55,37 +55,38 @@ func setSettingsConfig() error {
 	jsonFile, err := os.Open(path)
 
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) && env != "test"{
+		if errors.Is(err, os.ErrNotExist) && env != "test" {
 			configStub := structs.Config{}
 			bytes, err := json.MarshalIndent(configStub, "", "  ")
 			if err != nil {
 				return err
 			}
 
-			os.WriteFile(path, bytes, 0644)
+			err = os.WriteFile(path, bytes, 0644)
+			if err != nil {
+				return err
+			}
 			logging.GetLogger().Fatalf(fmt.Sprintf("Config file not found at %s. A stub file has been created. Please fill in the necessary fields and restart the container.", path))
 		}
 		return err
 	}
+	defer func() {
+		closeErr := jsonFile.Close()
+		if closeErr != nil {
+			err = closeErr
+		}
+	}()
 
-	bytes, err := ioutil.ReadAll(jsonFile)
+	bytes, err := io.ReadAll(jsonFile)
 	if err != nil {
 		return err
 	}
 
-	var configFile structs.Config
-	marshalErr := json.Unmarshal(bytes, &configFile)
-
+	marshalErr := json.Unmarshal(bytes, &config)
 	if marshalErr != nil {
 		return err
 	}
 
-	err = jsonFile.Close()
-	if err != nil {
-		return err
-	}
-
-	config = configFile
 	return nil
 }
 

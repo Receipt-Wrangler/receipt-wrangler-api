@@ -73,6 +73,10 @@ func Connect() error {
 		return err
 	}
 
+	if connectedDb == nil {
+		return fmt.Errorf("database engine of: %s! check your config to make sure it is correct", dbEngine)
+	}
+
 	db = connectedDb
 	return nil
 }

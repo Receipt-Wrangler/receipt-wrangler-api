@@ -165,7 +165,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 	errMsg := "Error processing quick scan."
 	var quickScanCommand commands.QuickScanCommand
 
-	_, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
+	vErr, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
@@ -173,6 +173,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 
 	//groupIdString := simpleutils.UintToString(quickScanCommand.GroupId)
 
+	// TODO: handle multiple groups
 	handler := structs.Handler{
 		ErrorMessage: errMsg,
 		Writer:       w,
@@ -181,73 +182,83 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 		GroupId:      "",
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
+				return http.StatusInternalServerError, errors.New("validation error")
+			}
+
+			token := structs.GetJWT(r)
+			for i := 0; i < len(quickScanCommand.Files); i++ {
+				_, err := services.QuickScan(token, quickScanCommand.Files[i], quickScanCommand.FileHeaders[i], quickScanCommand.PaidByUserIds[i], quickScanCommand.GroupIds[i], quickScanCommand.Statuses[i])
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+			}
+
 			//var createdReceipt models.Receipt
 			//db := repositories.GetDB()
 			//fileRepository := repositories.NewFileRepository(nil)
 
-			/*			if len(vErr.Errors) > 0 {
-							structs.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
-							return http.StatusInternalServerError, errors.New("validation error")
-						}
+			/*
 
-						fileBytes := make([]byte, quickScanCommand.FileHeader.Size)
-						_, err := quickScanCommand.File.Read(fileBytes)
-						if err != nil {
-							return http.StatusInternalServerError, err
-						}
-						defer quickScanCommand.File.Close()
+				fileBytes := make([]byte, quickScanCommand.FileHeader.Size)
+				_, err := quickScanCommand.File.Read(fileBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+				defer quickScanCommand.File.Close()
 
-						validatedFileType, err := fileRepository.ValidateFileType(fileBytes)
-						if err != nil {
-							return http.StatusInternalServerError, err
-						}
+				validatedFileType, err := fileRepository.ValidateFileType(fileBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 
-						magicFillCommand := commands.MagicFillCommand{
-							ImageData: fileBytes,
-							Filename:  quickScanCommand.FileHeader.Filename,
-						}
+				magicFillCommand := commands.MagicFillCommand{
+					ImageData: fileBytes,
+					Filename:  quickScanCommand.FileHeader.Filename,
+				}
 
-						token := structs.GetJWT(r)
-						receiptRepository := repositories.NewReceiptRepository(nil)
-						receiptImageRepository := repositories.NewReceiptImageRepository(nil)
+				token := structs.GetJWT(r)
+				receiptRepository := repositories.NewReceiptRepository(nil)
+				receiptImageRepository := repositories.NewReceiptImageRepository(nil)
 
-						receipt, err := services.MagicFillFromImage(magicFillCommand)
-						if err != nil {
-							return http.StatusInternalServerError, err
-						}
+				receipt, err := services.MagicFillFromImage(magicFillCommand)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 
-						receipt.PaidByUserID = quickScanCommand.PaidByUserId
-						receipt.Status = models.ReceiptStatus(quickScanCommand.Status)
-						receipt.GroupId = quickScanCommand.GroupId
+				receipt.PaidByUserID = quickScanCommand.PaidByUserId
+				receipt.Status = models.ReceiptStatus(quickScanCommand.Status)
+				receipt.GroupId = quickScanCommand.GroupId
 
-						db.Transaction(func(tx *gorm.DB) error {
-							receiptRepository.SetTransaction(tx)
-							receiptImageRepository.SetTransaction(tx)
+				db.Transaction(func(tx *gorm.DB) error {
+					receiptRepository.SetTransaction(tx)
+					receiptImageRepository.SetTransaction(tx)
 
-							createdReceipt, err = receiptRepository.CreateReceipt(receipt, token.UserId)
-							if err != nil {
-								return err
-							}
+					createdReceipt, err = receiptRepository.CreateReceipt(receipt, token.UserId)
+					if err != nil {
+						return err
+					}
 
-							fileData := models.FileData{
-								Name:      quickScanCommand.FileHeader.Filename,
-								Size:      uint(quickScanCommand.FileHeader.Size),
-								ReceiptId: createdReceipt.ID,
-								FileType:  validatedFileType,
-							}
+					fileData := models.FileData{
+						Name:      quickScanCommand.FileHeader.Filename,
+						Size:      uint(quickScanCommand.FileHeader.Size),
+						ReceiptId: createdReceipt.ID,
+						FileType:  validatedFileType,
+					}
 
-							_, err := receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
-							if err != nil {
-								return err
-							}
+					_, err := receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
+					if err != nil {
+						return err
+					}
 
-							return nil
-						})
+					return nil
+				})
 
-						bytes, err := utils.MarshalResponseData(createdReceipt)
-						if err != nil {
-							return http.StatusInternalServerError, err
-						}*/
+				bytes, err := utils.MarshalResponseData(createdReceipt)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}*/
 
 			w.WriteHeader(http.StatusOK)
 			// w.Write(bytes)

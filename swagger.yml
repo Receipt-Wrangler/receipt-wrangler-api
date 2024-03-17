@@ -1526,6 +1526,7 @@ components:
       description: There was an error processing the request
   schemas:
     ReceiptStatus:
+      description: Status of a receipt
       type: string
       enum:
         - "OPEN"
@@ -2400,9 +2401,9 @@ components:
     QuickScanCommand:
       required:
         - files
-        - groupId
-        - status
-        - paidByUserId
+        - groupIds
+        - statuses
+        - paidByUserIds
       type: object
       properties:
         files:
@@ -2410,14 +2411,21 @@ components:
           items:
             type: string
             format: binary
-        groupId:
-          type: integer
-          description: Group foreign key
-        paidByUserId:
-          type: integer
-          description: User foreign key
-        status:
-          $ref: "#/components/schemas/ReceiptStatus"
+            description: Files to quick scan
+        groupIds:
+          type: array
+          items:
+            type: integer
+            description: Group foreign key
+        paidByUserIds:
+          type: array
+          items:
+            type: integer
+            description: User foreign key
+        statuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReceiptStatus"
     UserPreferences:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
@@ -2443,6 +2451,7 @@ components:
             quickScanDefaultStatus:
               type: string
               $ref: "#/components/schemas/ReceiptStatus"
+              description: Default quick scan status
               default: "OPEN"
     GroupSettings:
       type: object

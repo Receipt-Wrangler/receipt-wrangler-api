@@ -9,49 +9,71 @@ import (
 )
 
 type QuickScanCommand struct {
-	File         multipart.File        `json:"file"`
-	FileHeader   *multipart.FileHeader `json:"fileHeader"`
-	PaidByUser   models.User           `json:"paidByUser"`
-	PaidByUserId uint                  `json:"paidByUserId"`
-	Group        models.Group          `json:"-"`
-	GroupId      uint                  `json:"groupId"`
-	Status       models.ReceiptStatus  `json:"status"`
+	Files         []multipart.File        `json:"file"`
+	FileHeaders   []*multipart.FileHeader `json:"fileHeader"`
+	PaidByUserIds []uint                  `json:"paidByUserId"`
+	GroupIds      []uint                  `json:"groupId"`
+	Statuses      []models.ReceiptStatus  `json:"status"`
 }
 
 func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
-	var status models.ReceiptStatus
-
 	err := r.ParseMultipartForm(50 << 20)
+
+	var form = r.Form
+
+	var files = make([]multipart.File, 0)
+	var fileHeaders = make([]*multipart.FileHeader, 0)
+	var paidByUserIds = make([]uint, 0)
+	var groupIds = make([]uint, 0)
+	var statuses = make([]models.ReceiptStatus, 0)
+
 	if err != nil {
 		return err
 	}
 
-	groupId, err := simpleutils.StringToUint(r.Form.Get("groupId"))
-	if err != nil {
-		return err
+	for _, fileHeader := range r.MultipartForm.File["files"] {
+		fileHeaders = append(fileHeaders, fileHeader)
+		file, err := fileHeader.Open()
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		files = append(files, file)
 	}
 
-	paidByUserId, err := simpleutils.StringToUint(r.Form.Get("paidByUserId"))
-	if err != nil {
-		return err
+	for _, userId := range form["paidByUserIds"] {
+		formattedUserId, err := simpleutils.StringToUint(userId)
+		if err != nil {
+			return err
+		}
+
+		paidByUserIds = append(paidByUserIds, formattedUserId)
 	}
 
-	err = status.Scan(r.Form.Get("status"))
-	if err != nil {
-		return err
+	for _, groupId := range form["groupIds"] {
+		formattedGroupId, err := simpleutils.StringToUint(groupId)
+		if err != nil {
+			return err
+		}
+
+		groupIds = append(groupIds, formattedGroupId)
 	}
 
-	file, fileHeader, err := r.FormFile("file")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+	for _, status := range form["statuses"] {
+		var formattedStatus models.ReceiptStatus
+		err = formattedStatus.Scan(status)
+		if err != nil {
+			return err
+		}
 
-	command.File = file
-	command.FileHeader = fileHeader
-	command.GroupId = groupId
-	command.Status = status
-	command.PaidByUserId = paidByUserId
+		statuses = append(statuses, formattedStatus)
+	}
+
+	command.Files = files
+	command.FileHeaders = fileHeaders
+	command.PaidByUserIds = paidByUserIds
+	command.GroupIds = groupIds
+	command.Statuses = statuses
 
 	return nil
 }
@@ -61,16 +83,34 @@ func (command QuickScanCommand) Validate() structs.ValidatorError {
 		Errors: make(map[string]string),
 	}
 
-	if command.GroupId == 0 {
+	var filesLength = len(command.Files)
+
+	if filesLength == 0 {
+		vErr.Errors["files"] = "At least one file is required."
+	}
+
+	if len(command.PaidByUserIds) != filesLength {
+		vErr.Errors["paidByUserId"] = "Paid By User Ids must match the number of files."
+	}
+
+	if len(command.GroupIds) != filesLength {
+		vErr.Errors["groupIds"] = "Group Ids must match the number of files."
+	}
+
+	if len(command.Statuses) != filesLength {
+		vErr.Errors["statuses"] = "Statuses must match the number of files."
+	}
+
+	if len(command.PaidByUserIds) == 0 {
+		vErr.Errors["paidByUserId"] = "Paid By User Id is required."
+	}
+
+	if len(command.GroupIds) == 0 {
 		vErr.Errors["groupId"] = "Group Id is required."
 	}
 
-	if len(command.Status) == 0 {
+	if len(command.Statuses) == 0 {
 		vErr.Errors["status"] = "Status is required."
-	}
-
-	if command.FileHeader == nil {
-		vErr.Errors["file"] = "File is required."
 	}
 
 	return vErr

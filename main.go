@@ -15,7 +15,6 @@ import (
 	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/tesseract"
 	"time"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
@@ -51,20 +50,23 @@ func main() {
 	defer imagick.Terminate()
 
 	appConfig := config.GetConfig()
-	if appConfig.Features.AiPoweredReceipts {
-		logger.Print("Initializing Tesseract...")
-		tesseract.InitClient()
-		defer tesseract.GetClient().Close()
-	}
 
 	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == structs.OPEN_AI {
 		logger.Print("Initializing OpenAI Client...")
-		services.InitOpenAIClient()
+		err = services.InitOpenAIClient()
+		if err != nil {
+			logger.Print(err.Error())
+			os.Exit(0)
+		}
 	}
 
 	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == structs.GEMINI {
 		logger.Print("Initializing Gemini Client...")
-		services.InitGeminiClient()
+		err := services.InitGeminiClient()
+		if err != nil {
+			logger.Print(err.Error())
+			os.Exit(0)
+		}
 		defer services.GetGeminiClient().Close()
 	}
 

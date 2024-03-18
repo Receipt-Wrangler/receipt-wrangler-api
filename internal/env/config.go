@@ -87,6 +87,10 @@ func setSettingsConfig() error {
 		return err
 	}
 
+	if config.AiSettings.NumWorkers == 0 {
+		config.AiSettings.NumWorkers = 1
+	}
+
 	return nil
 }
 

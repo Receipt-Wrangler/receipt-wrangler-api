@@ -663,11 +663,13 @@ paths:
       operationId: quickScanReceipt
       responses:
         200:
-          description: The created receipt
+          description: The created receipts
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Receipt"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receipt"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1526,6 +1528,7 @@ components:
       description: There was an error processing the request
   schemas:
     ReceiptStatus:
+      description: Status of a receipt
       type: string
       enum:
         - "OPEN"
@@ -2399,25 +2402,32 @@ components:
           description: Name of file
     QuickScanCommand:
       required:
-        - file
-        - groupId
-        - status
-        - paidByUserId
+        - files
+        - groupIds
+        - statuses
+        - paidByUserIds
       type: object
       properties:
-        file:
-          type: string
-          format: binary
-        groupId:
-          type: integer
-          description: Group foreign key
-        paidByUserId:
-          type: integer
-          description: User foreign key
-        status:
-          type: string
-          $ref: "#/components/schemas/ReceiptStatus"
-          description: Status of quick scanned receipt
+        files:
+          type: array
+          items:
+            type: string
+            format: binary
+            description: Files to quick scan
+        groupIds:
+          type: array
+          items:
+            type: integer
+            description: Group foreign key
+        paidByUserIds:
+          type: array
+          items:
+            type: integer
+            description: User foreign key
+        statuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReceiptStatus"
     UserPreferences:
       allOf:
         - $ref: "#/components/schemas/BaseModel"

@@ -56,7 +56,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 		pathToReadFrom = receiptImagePath
 	}
 
-	ocrText, err := tesseract.ReadImage(pathToReadFrom, false)
+	ocrText, err := tesseract.ReadImage(pathToReadFrom)
 	if err != nil {
 		return result, err
 	}
@@ -72,7 +72,7 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 	var result models.Receipt
 
-	ocrText, err := tesseract.ReadImage(path, false)
+	ocrText, err := tesseract.ReadImage(path)
 	if err != nil {
 		return result, err
 	}
@@ -171,7 +171,7 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrE
 			if err != nil {
 				results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
 			} else {
-				ocrText, err := tesseract.ReadImage(filePath, true)
+				ocrText, err := tesseract.ReadImage(filePath)
 				results <- structs.OcrExport{OcrText: ocrText, Filename: fd.Name, Err: err}
 			}
 

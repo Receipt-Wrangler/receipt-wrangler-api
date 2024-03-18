@@ -15,24 +15,21 @@ func GetClient() *gosseract.Client {
 	return client
 }
 
-func ReadImage(path string, createNewClient bool) (string, error) {
-	client := GetClient()
-	if createNewClient {
-		client = gosseract.NewClient()
-		defer client.Close()
-	}
+func ReadImage(path string) (string, error) {
+	gosseractClient := gosseract.NewClient()
+	defer gosseractClient.Close()
 
 	bytes, err := prepareImage(path)
 	if err != nil {
 		return "", err
 	}
 
-	err = client.SetImageFromBytes(bytes)
+	err = gosseractClient.SetImageFromBytes(bytes)
 	if err != nil {
 		return "", err
 	}
 
-	text, err := client.Text()
+	text, err := gosseractClient.Text()
 	if err != nil {
 		return "", err
 	}

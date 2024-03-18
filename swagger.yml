@@ -663,11 +663,13 @@ paths:
       operationId: quickScanReceipt
       responses:
         200:
-          description: The created receipt
+          description: The created receipts
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Receipt"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receipt"
         500:
           $ref: "#/components/responses/Internal"
       security:

@@ -8,9 +8,10 @@ type EmailSettings struct {
 }
 
 type AiSettings struct {
-	AiType AiClientType `json:"type"`
-	Key    string       `json:"key"`
-	Url    string       `json:"url"`
+	AiType     AiClientType `json:"type"`
+	Key        string       `json:"key"`
+	Url        string       `json:"url"`
+	NumWorkers int          `json:"numWorkers"`
 }
 
 type FeatureConfig struct {
@@ -19,13 +20,13 @@ type FeatureConfig struct {
 }
 
 type DatabaseConfig struct {
-	User         string `json:"user"`
-	Password     string `json:"password"`
-	Name         string `json:"name"`
-	Host         string `json:"host"`
-	Port         int 	`json:"port"`
-	Engine       string `json:"engine"`
-	Filename     string `json:"filename"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Name     string `json:"name"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Engine   string `json:"engine"`
+	Filename string `json:"filename"`
 }
 
 type Config struct {

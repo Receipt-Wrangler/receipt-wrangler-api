@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -190,8 +191,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 
 			var wg sync.WaitGroup
 
-			// TODO: allow this value to be configurable
-			semaphore := make(chan int, 5)
+			semaphore := make(chan int, config.GetConfig().AiSettings.NumWorkers)
 			results := make(chan models.Receipt, len(quickScanCommand.Files))
 			createdReceipts := make([]models.Receipt, 0)
 

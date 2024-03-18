@@ -5,31 +5,21 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
-var client *gosseract.Client
-
-func InitClient() {
-	client = gosseract.NewClient()
-}
-
-func GetClient() *gosseract.Client {
-	return client
-}
-
 func ReadImage(path string) (string, error) {
-	gosseractClient := gosseract.NewClient()
-	defer gosseractClient.Close()
+	client := gosseract.NewClient()
+	defer client.Close()
 
 	bytes, err := prepareImage(path)
 	if err != nil {
 		return "", err
 	}
 
-	err = gosseractClient.SetImageFromBytes(bytes)
+	err = client.SetImageFromBytes(bytes)
 	if err != nil {
 		return "", err
 	}
 
-	text, err := gosseractClient.Text()
+	text, err := client.Text()
 	if err != nil {
 		return "", err
 	}

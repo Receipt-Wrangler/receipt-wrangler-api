@@ -171,17 +171,20 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
 	}
 
-	//groupIdString := simpleutils.UintToString(quickScanCommand.GroupId)
+	var groupIds = make([]string, 0)
+	for i := 0; i < len(quickScanCommand.GroupIds); i++ {
+		groupIds = append(groupIds, simpleutils.UintToString(quickScanCommand.GroupIds[i]))
+	}
 
-	// TODO: handle multiple groups
 	handler := structs.Handler{
 		ErrorMessage: errMsg,
 		Writer:       w,
 		Request:      r,
 		GroupRole:    models.EDITOR,
-		GroupId:      "",
+		GroupIds:     groupIds,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			if len(vErr.Errors) > 0 {

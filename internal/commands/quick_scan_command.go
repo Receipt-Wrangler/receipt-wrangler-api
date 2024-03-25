@@ -6,6 +6,8 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
+	"strings"
 )
 
 type QuickScanCommand struct {
@@ -27,8 +29,18 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 	var groupIds = make([]uint, 0)
 	var statuses = make([]models.ReceiptStatus, 0)
 
+	var formPaidByUserIds = form["paidByUserIds"]
+	var formGroupIds = form["groupIds"]
+	var formStatuses = form["statuses"]
+
 	if err != nil {
 		return err
+	}
+
+	if utils.IsMobileApp(r) {
+		formPaidByUserIds = command.SerializeIdsForMobile(form["paidByUserIds"][0])
+		formGroupIds = command.SerializeIdsForMobile(form["groupIds"][0])
+		formStatuses = command.SerializeIdsForMobile(form["statuses"][0])
 	}
 
 	for _, fileHeader := range r.MultipartForm.File["files"] {
@@ -41,7 +53,7 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 		files = append(files, file)
 	}
 
-	for _, userId := range form["paidByUserIds"] {
+	for _, userId := range formPaidByUserIds {
 		formattedUserId, err := simpleutils.StringToUint(userId)
 		if err != nil {
 			return err
@@ -50,7 +62,7 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 		paidByUserIds = append(paidByUserIds, formattedUserId)
 	}
 
-	for _, groupId := range form["groupIds"] {
+	for _, groupId := range formGroupIds {
 		formattedGroupId, err := simpleutils.StringToUint(groupId)
 		if err != nil {
 			return err
@@ -59,7 +71,7 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 		groupIds = append(groupIds, formattedGroupId)
 	}
 
-	for _, status := range form["statuses"] {
+	for _, status := range formStatuses {
 		var formattedStatus models.ReceiptStatus
 		err = formattedStatus.Scan(status)
 		if err != nil {
@@ -128,4 +140,12 @@ func (command *QuickScanCommand) LoadDataFromRequestAndValidate(w http.ResponseW
 	}
 
 	return structs.ValidatorError{}, nil
+}
+
+// SerializeIdsForMobile
+// The generated mobile client sends the data as "[1,2,3]", which needs to be converted to []string
+// This is not ideal, but it is currently better than fighting with the generated code on the mobile side.
+func (command QuickScanCommand) SerializeIdsForMobile(data string) []string {
+	trimmedStr := strings.Trim(data, "[]")
+	return strings.Split(trimmedStr, ",")
 }

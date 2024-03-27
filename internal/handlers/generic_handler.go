@@ -28,6 +28,22 @@ func HandleRequest(handler structs.Handler) {
 		handler.GroupId = simpleutils.UintToString(receipt.GroupId)
 	}
 
+	if len(handler.ReceiptIds) > 0 {
+		var receipts []models.Receipt
+		db := repositories.GetDB()
+		err := db.Model(models.Receipt{}).Where("id IN (?)", handler.ReceiptIds).Select("group_id").Find(&receipts).Error
+		if err != nil {
+			handler_logger.Print(err.Error())
+			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
+			return
+		}
+
+		for _, receipt := range receipts {
+			handler.GroupIds = append(handler.GroupIds, simpleutils.UintToString(receipt.GroupId))
+		}
+
+	}
+
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		groupService := services.NewGroupService(nil)
 		token := structs.GetJWT(handler.Request)

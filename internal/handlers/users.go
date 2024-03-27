@@ -117,15 +117,22 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 	groupId := r.URL.Query().Get("groupId")
+	err := r.ParseForm()
+	receiptIds := r.Form["receiptIds"]
 
 	handler := structs.Handler{
 		ErrorMessage: "Error calculating amount owed.",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
+		ReceiptIds:   receiptIds,
 		GroupId:      groupId,
 		GroupRole:    models.VIEWER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			db := repositories.GetDB()
 			var itemsOwed []ItemView
 			var itemsOthersOwe []ItemView
@@ -136,33 +143,34 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			totalReceiptIds := make([]uint, 0)
 			totalGroupIds := make([]string, 0)
 
-			groupRepository := repositories.NewGroupRepository(nil)
-			uintGroupId, err := simpleutils.StringToUint(groupId)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-			isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
+			if len(groupId) > 0 {
+				groupRepository := repositories.NewGroupRepository(nil)
+				receiptRepository := repositories.NewReceiptRepository(nil)
 
-			if isAllGroup {
-				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
-				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				uintGroupId, err := simpleutils.StringToUint(groupId)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
-				for _, userGroupId := range userGroupIds {
-					totalGroupIds = append(totalGroupIds, simpleutils.UintToString(userGroupId))
+				isAllGroup, err := groupRepository.IsAllGroup(uintGroupId)
+				if err != nil {
+					return http.StatusInternalServerError, err
 				}
-			}
-			if len(groupId) > 0 {
-				if !isAllGroup {
+
+				if isAllGroup {
+					groupMemberRepository := repositories.NewGroupMemberRepository(nil)
+					userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+					if err != nil {
+						return http.StatusInternalServerError, err
+					}
+
+					for _, userGroupId := range userGroupIds {
+						totalGroupIds = append(totalGroupIds, simpleutils.UintToString(userGroupId))
+					}
+				} else {
 					totalGroupIds = append(totalGroupIds, groupId)
 				}
 
-				receiptRepository := repositories.NewReceiptRepository(nil)
 				groupReceiptIds, err := receiptRepository.GetReceiptsByGroupIds(totalGroupIds, "id", "")
 				if err != nil {
 					return http.StatusInternalServerError, err
@@ -173,19 +181,15 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			err = r.ParseForm()
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
+			if len(receiptIds) > 0 {
+				for _, receiptId := range receiptIds {
+					receiptIdUint, err := simpleutils.StringToUint(receiptId)
+					if err != nil {
+						return http.StatusInternalServerError, err
+					}
 
-			receiptIds := r.Form["receiptIds"]
-			for _, receiptId := range receiptIds {
-				receiptIdUint, err := simpleutils.StringToUint(receiptId)
-				if err != nil {
-					return http.StatusInternalServerError, err
+					totalReceiptIds = append(totalReceiptIds, receiptIdUint)
 				}
-
-				totalReceiptIds = append(totalReceiptIds, receiptIdUint)
 			}
 
 			err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.id IN ? AND items.status=?", id, id, totalReceiptIds, models.ITEM_OPEN).Scan(&itemsOwed).Error

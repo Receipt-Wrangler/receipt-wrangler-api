@@ -13,6 +13,7 @@ type Handler struct {
 	GroupId         string
 	GroupIds        []string
 	ReceiptId       string
+	ReceiptIds      []string
 	UserRole        models.UserRole
 	HandlerFunction func(http.ResponseWriter, *http.Request) (int, error)
 	ResponseType    string

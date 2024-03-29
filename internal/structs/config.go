@@ -29,6 +29,10 @@ type DatabaseConfig struct {
 	Filename string `json:"filename"`
 }
 
+type DebugConfig struct {
+	DebugOcr bool `json:"debugOcr"`
+}
+
 type Config struct {
 	SecretKey            string          `json:"secretKey"`
 	AiSettings           AiSettings      `json:"aiSettings"`
@@ -36,4 +40,5 @@ type Config struct {
 	EmailSettings        []EmailSettings `json:"emailSettings"`
 	Features             FeatureConfig   `json:"features"`
 	Database             DatabaseConfig  `json:"database"`
+	Debug                DebugConfig     `json:"debug"`
 }

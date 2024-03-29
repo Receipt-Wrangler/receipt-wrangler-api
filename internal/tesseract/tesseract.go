@@ -20,6 +20,8 @@ func ReadImage(path string) (string, error) {
 	client := gosseract.NewClient()
 	defer client.Close()
 
+	client.SetVariable("tessedit_char_blacklist", "!@#$%^&*()_+=-[]}{;:'\"\\|~`<>/?")
+
 	imageBytes, err := prepareImage(path)
 	if err != nil {
 		return "", err
@@ -95,6 +97,11 @@ func prepareImage(path string) ([]byte, error) {
 		return nil, err
 	}
 
+	err = mw.TrimImage(0)
+	if err != nil {
+		return nil, err
+	}
+
 	err = mw.SetImageType(imagick.IMAGE_TYPE_BILEVEL)
 	if err != nil {
 		return nil, err
@@ -116,6 +123,11 @@ func prepareImage(path string) ([]byte, error) {
 	}
 
 	err = mw.ContrastImage(false)
+	if err != nil {
+		return nil, err
+	}
+
+	err = mw.DeskewImage(0.10)
 	if err != nil {
 		return nil, err
 	}

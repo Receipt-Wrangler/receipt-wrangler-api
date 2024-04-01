@@ -48,7 +48,8 @@ type ReceiptPagedRequestFilter struct {
 	Categories   PagedRequestField `json:"categories"`
 	Tags         PagedRequestField `json:"Tags"`
 	Status       PagedRequestField `json:"status"`
-	ResolvedDate PagedRequestField `json:"ResolvedDate"`
+	ResolvedDate PagedRequestField `json:"resolvedDate"`
+	CreatedAt    PagedRequestField `json:"createdAt"`
 }
 
 type PagedRequestField struct {

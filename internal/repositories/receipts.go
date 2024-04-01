@@ -104,13 +104,6 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	// Set order by
 	if repository.isTrustedValue(pagedRequest) {
 		orderBy := pagedRequest.OrderBy
-		switch pagedRequest.OrderBy {
-
-		case "paidBy":
-			orderBy = "paid_by_user_id"
-		case "resolvedDate":
-			orderBy = "resolved_date"
-		}
 		query = query.Order(orderBy + " " + pagedRequest.SortDirection)
 	} else {
 		return nil, 0, errors.New("untrusted value " + pagedRequest.OrderBy + " " + pagedRequest.SortDirection)
@@ -205,6 +198,14 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 		}
 	}
 
+	// Added At
+	if pagedRequest.Filter.CreatedAt.Value != nil {
+		addedAt := pagedRequest.Filter.CreatedAt.Value.(string)
+		if len(addedAt) > 0 {
+			query = repository.buildFilterQuery(query, addedAt, pagedRequest.Filter.CreatedAt.Operation, "created_at", false)
+		}
+	}
+
 	return query, nil
 }
 
@@ -236,7 +237,7 @@ func (repository ReceiptRepository) buildFilterQuery(runningQuery *gorm.DB, valu
 }
 
 func (repository ReceiptRepository) isTrustedValue(pagedRequest commands.ReceiptPagedRequestCommand) bool {
-	orderByTrusted := []interface{}{"date", "name", "paidBy", "amount", "categories", "tags", "status", "resolvedDate"}
+	orderByTrusted := []interface{}{"date", "name", "paid_by_user_id", "amount", "categories", "tags", "status", "resolved_date", "created_at"}
 	directionTrusted := []interface{}{"asc", "desc", ""}
 
 	isOrderByTrusted := utils.Contains(orderByTrusted, pagedRequest.OrderBy)

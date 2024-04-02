@@ -2319,6 +2319,8 @@ components:
           $ref: "#/components/schemas/PagedRequestField"
         resolvedDate:
           $ref: "#/components/schemas/PagedRequestField"
+        createdAt:
+          $ref: "#/components/schemas/PagedRequestField"
     PagedRequestField:
       required:
         - value

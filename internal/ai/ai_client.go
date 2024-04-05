@@ -33,8 +33,8 @@ type AiClient struct {
 func (aiClient *AiClient) CreateChatCompletion() (string, error) {
 	switch aiClient.ClientType {
 
-	case structs.LLAMA_GPT:
-		return aiClient.LlamaGptChatCompletion()
+	case structs.OPEN_AI_CUSTOM:
+		return aiClient.OpenAiCustomChatCompletion()
 
 	case structs.OPEN_AI:
 		return aiClient.OpenAiChatCompletion()
@@ -46,12 +46,15 @@ func (aiClient *AiClient) CreateChatCompletion() (string, error) {
 	return "", nil
 }
 
-func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
+func (aiClient *AiClient) OpenAiCustomChatCompletion() (string, error) {
 	result := ""
 	config := config.GetConfig()
 	body := map[string]interface{}{
+		"model":       "TheBloke/Mistral-78-Instruct-v0.2-GGUF/mistral-7b-instructv0.2.Q4_K_S.gguf",
 		"messages":    aiClient.Messages,
 		"temperature": 0,
+		"max_tokens":  -1,
+		"stream":      false,
 	}
 	httpClient := http.Client{}
 	httpClient.Timeout = 10 * time.Minute
@@ -81,7 +84,7 @@ func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
 	}
 	defer response.Body.Close()
 
-	var responseObject LlamaGptResponse
+	var responseObject OpenAiCustomResponse
 
 	err = json.Unmarshal(responseBody, &responseObject)
 	if err != nil {

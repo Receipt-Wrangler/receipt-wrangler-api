@@ -11,6 +11,7 @@ type AiSettings struct {
 	AiType     AiClientType `json:"type"`
 	Key        string       `json:"key"`
 	Url        string       `json:"url"`
+	Model      string       `json:"model"`
 	NumWorkers int          `json:"numWorkers"`
 }
 

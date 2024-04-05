@@ -8,9 +8,9 @@ import (
 type AiClientType string
 
 const (
-	LLAMA_GPT AiClientType = "llamaGpt"
-	OPEN_AI   AiClientType = "openAi"
-	GEMINI    AiClientType = "gemini"
+	OPEN_AI_CUSTOM AiClientType = "openAiCustom"
+	OPEN_AI        AiClientType = "openAi"
+	GEMINI         AiClientType = "gemini"
 )
 
 func (clientType *AiClientType) Scan(value string) error {
@@ -19,7 +19,7 @@ func (clientType *AiClientType) Scan(value string) error {
 }
 
 func (clientType AiClientType) Value() (driver.Value, error) {
-	if clientType != LLAMA_GPT {
+	if clientType != OPEN_AI_CUSTOM {
 		return nil, errors.New("invalid ai client type")
 	}
 	return string(clientType), nil

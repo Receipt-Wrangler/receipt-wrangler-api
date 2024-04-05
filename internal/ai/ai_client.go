@@ -33,8 +33,8 @@ type AiClient struct {
 func (aiClient *AiClient) CreateChatCompletion() (string, error) {
 	switch aiClient.ClientType {
 
-	case structs.LLAMA_GPT:
-		return aiClient.LlamaGptChatCompletion()
+	case structs.OPEN_AI_CUSTOM:
+		return aiClient.OpenAiCustomChatCompletion()
 
 	case structs.OPEN_AI:
 		return aiClient.OpenAiChatCompletion()
@@ -46,12 +46,15 @@ func (aiClient *AiClient) CreateChatCompletion() (string, error) {
 	return "", nil
 }
 
-func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
+func (aiClient *AiClient) OpenAiCustomChatCompletion() (string, error) {
 	result := ""
 	config := config.GetConfig()
 	body := map[string]interface{}{
+		"model":       config.AiSettings.Model,
 		"messages":    aiClient.Messages,
 		"temperature": 0,
+		"max_tokens":  -1,
+		"stream":      false,
 	}
 	httpClient := http.Client{}
 	httpClient.Timeout = 10 * time.Minute
@@ -68,6 +71,7 @@ func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
 		return "", err
 	}
 
+	request.Header.Set("Content-Type", "application/json")
 	request.Close = true
 
 	response, err := httpClient.Do(request)
@@ -81,14 +85,16 @@ func (aiClient *AiClient) LlamaGptChatCompletion() (string, error) {
 	}
 	defer response.Body.Close()
 
-	var responseObject LlamaGptResponse
+	var responseObject OpenAiCustomResponse
 
 	err = json.Unmarshal(responseBody, &responseObject)
 	if err != nil {
 		return "", err
 	}
 
-	result = responseObject.Choices[0].Message.Content
+	if len(responseObject.Choices) >= 0 {
+		result = responseObject.Choices[0].Message.Content
+	}
 
 	return result, nil
 }

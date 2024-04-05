@@ -50,7 +50,7 @@ func (aiClient *AiClient) OpenAiCustomChatCompletion() (string, error) {
 	result := ""
 	config := config.GetConfig()
 	body := map[string]interface{}{
-		"model":       "TheBloke/Mistral-78-Instruct-v0.2-GGUF/mistral-7b-instructv0.2.Q4_K_S.gguf",
+		"model":       config.AiSettings.Model,
 		"messages":    aiClient.Messages,
 		"temperature": 0,
 		"max_tokens":  -1,
@@ -71,6 +71,7 @@ func (aiClient *AiClient) OpenAiCustomChatCompletion() (string, error) {
 		return "", err
 	}
 
+	request.Header.Set("Content-Type", "application/json")
 	request.Close = true
 
 	response, err := httpClient.Do(request)
@@ -91,7 +92,9 @@ func (aiClient *AiClient) OpenAiCustomChatCompletion() (string, error) {
 		return "", err
 	}
 
-	result = responseObject.Choices[0].Message.Content
+	if len(responseObject.Choices) >= 0 {
+		result = responseObject.Choices[0].Message.Content
+	}
 
 	return result, nil
 }

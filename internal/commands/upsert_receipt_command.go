@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type ReceiptUpsertCommand struct {
+type UpsertReceiptCommand struct {
 	Name         string               `json:"name"`
 	Amount       decimal.Decimal      `json:"amount"`
 	Date         time.Time            `json:"date"`
@@ -14,6 +14,6 @@ type ReceiptUpsertCommand struct {
 	PaidByUserID uint                 `json:"paidByUserId"`
 	Status       models.ReceiptStatus `json:"status"`
 	Categories   []models.Category    `json:"categories"`
-	Tags         []models.Tag         `json:"tags"`
-	Items        []models.Item        `json:"receiptItems"`
+	Tags         []UpsertTagCommand   `json:"tags"`
+	Items        []UpsertItemCommand  `json:"receiptItems"`
 }

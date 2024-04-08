@@ -1618,6 +1618,17 @@ components:
           type: string
           x-go-name: UpdatedAt
       description: Category to relate receipts to
+    UpsertCategoryCommand:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+          description: Category name
+        description:
+          type: string
+          description: Category description
     CategoryView:
       required:
         - id
@@ -2078,7 +2089,6 @@ components:
           type: string
           description: Tag description
       description: Tag to relate receipts to
-      x-go-package: receipt-wrangler/api/internal/models
     TagView:
       required:
         - id
@@ -2773,7 +2783,7 @@ components:
         refreshToken:
           type: string
           description: Refresh token
-    ReceiptUpsertCommand:
+    UpsertReceiptCommand:
       type: object
       required:
         - name
@@ -2804,15 +2814,38 @@ components:
           type: array
           description: Categories associated to receipt
           items:
-            $ref: "#/components/schemas/Category"
+            $ref: "#/components/schemas/UpsertCategoryCommand"
         Tags:
           type: array
           description: Tags associated to receipt
           items:
-            $ref: "#/components/schemas/Tag"
+            $ref: "#/components/schemas/UpsertTagCommand"
         Items:
           type: array
           description: Items associated to receipt
           items:
-              $ref: "#/components/schemas/Item"
+              $ref: "#/components/schemas/UpsertItemCommand"
+    UpsertItemCommand:
+      type: object
+      required:
+        - amount
+        - chargedToUserId
+        - name
+        - receiptId
+        - status
+      properties:
+        amount:
+          type: string
+          description: Amount the item costs
+        chargedToUserId:
+          type: integer
+          description: User foreign key
+        name:
+          type: string
+          description: Item name
+        receiptId:
+          type: integer
+          description: Receipt foreign key
+        status:
+          $ref: "#/components/schemas/ItemStatus"
 

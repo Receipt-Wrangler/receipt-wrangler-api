@@ -638,7 +638,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Receipt"
+              $ref: "#/components/schemas/UpsertReceiptCommand"
       operationId: createReceipt
       responses:
         200:
@@ -741,7 +741,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Receipt"
+              $ref: "#/components/schemas/UpsertReceiptCommand"
       operationId: updateReceipt
       responses:
         200:

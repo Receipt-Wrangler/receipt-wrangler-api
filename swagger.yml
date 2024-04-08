@@ -1918,7 +1918,7 @@ components:
       properties:
         amount:
           type: string
-          description: Reciept total amount
+          description: Receipt total amount
         categories:
           type: array
           description: Categories associated to receipt
@@ -2773,3 +2773,46 @@ components:
         refreshToken:
           type: string
           description: Refresh token
+    ReceiptUpsertCommand:
+      type: object
+      required:
+        - name
+        - amount
+        - date
+        - groupId
+        - paidByUserId
+        - status
+      properties:
+        name:
+          type: string
+          description: Receipt name
+        amount:
+          type: string
+          description: Receipt total amount
+        date:
+          type: string
+          description: Receipt date
+        groupId:
+          type: integer
+          description: Group foreign key
+        paidByUserId:
+          type: integer
+          description: User paid foreign key
+        status:
+          $ref: "#/components/schemas/ReceiptStatus"
+        Categories:
+          type: array
+          description: Categories associated to receipt
+          items:
+            $ref: "#/components/schemas/Category"
+        Tags:
+          type: array
+          description: Tags associated to receipt
+          items:
+            $ref: "#/components/schemas/Tag"
+        Items:
+          type: array
+          description: Items associated to receipt
+          items:
+              $ref: "#/components/schemas/Item"
+

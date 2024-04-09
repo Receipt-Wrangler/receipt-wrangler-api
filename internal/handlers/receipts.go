@@ -14,7 +14,6 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
-	"strconv"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
@@ -275,42 +274,53 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
+	receiptId := chi.URLParam(r, "id")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error updating receipt.",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptId,
+		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
+			command := commands.UpsertReceiptCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			vErrs := command.Validate()
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusInternalServerError)
+				return 0, nil
+			}
 
-			id := chi.URLParam(r, "id")
-			u64Id, err := strconv.ParseUint(id, 10, 32)
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			receiptToUpdate, err := receiptRepository.GetReceiptById(receiptId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			bodyData := r.Context().Value("receipt").(models.Receipt)
-			bodyData.ID = uint(u64Id)
-
 			err = db.Transaction(func(tx *gorm.DB) error {
-				txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID", "created_by", "updated_at", "created_at").Where("id = ?", uint(u64Id)).Save(bodyData).Error
+				txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&receiptToUpdate).Updates(command).Error
 				if txErr != nil {
 					handler_logger.Print(txErr.Error())
 					return txErr
 				}
 
-				txErr = tx.Model(&bodyData).Association("Tags").Replace(bodyData.Tags)
+				txErr = tx.Model(&receiptToUpdate).Association("Tags").Replace(command.Tags)
 				if txErr != nil {
 					handler_logger.Print(txErr.Error())
 					return txErr
 				}
 
-				txErr = tx.Model(&bodyData).Association("Categories").Replace(bodyData.Categories)
+				txErr = tx.Model(&receiptToUpdate).Association("Categories").Replace(command.Categories)
 				if txErr != nil {
 					handler_logger.Print(txErr.Error())
 					return txErr
 				}
 
-				txErr = tx.Model(&bodyData).Association("ReceiptItems").Replace(bodyData.ReceiptItems)
+				txErr = tx.Model(&receiptToUpdate).Association("ReceiptItems").Replace(command.Items)
 				if txErr != nil {
 					handler_logger.Print(txErr.Error())
 					return txErr

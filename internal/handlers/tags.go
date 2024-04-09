@@ -50,6 +50,11 @@ func CreateTag(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			tag := commands.UpsertTagCommand{}
 			err := tag.LoadDataFromRequest(w, r)
+			vErrs := tag.Validate()
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return 0, nil
+			}
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

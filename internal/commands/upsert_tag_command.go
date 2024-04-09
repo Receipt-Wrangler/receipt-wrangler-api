@@ -26,11 +26,11 @@ func (tag *UpsertTagCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.
 	return nil
 }
 
-func ValidateTag(command *UpsertTagCommand) structs.ValidatorError {
+func (tag *UpsertTagCommand) Validate() structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
-	if len(command.Name) == 0 {
+	if len(tag.Name) == 0 {
 		errors["name"] = "Name is required"
 	}
 

@@ -12,13 +12,13 @@ type UpsertCategoryCommand struct {
 	Description string `json:"description"`
 }
 
-func (tag *UpsertCategoryCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
+func (category *UpsertCategoryCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
 	bytes, err := utils.GetBodyData(w, r)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(bytes, &tag)
+	err = json.Unmarshal(bytes, &category)
 	if err != nil {
 		return err
 	}
@@ -26,11 +26,11 @@ func (tag *UpsertCategoryCommand) LoadDataFromRequest(w http.ResponseWriter, r *
 	return nil
 }
 
-func ValidateCategory(command *UpsertCategoryCommand) structs.ValidatorError {
+func (category *UpsertCategoryCommand) Validate() structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
-	if len(command.Name) == 0 {
+	if len(category.Name) == 0 {
 		errors["name"] = "Name is required"
 	}
 

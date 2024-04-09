@@ -20,6 +20,7 @@ type UpsertReceiptCommand struct {
 	Categories   []UpsertCategoryCommand `json:"categories"`
 	Tags         []UpsertTagCommand      `json:"tags"`
 	Items        []UpsertItemCommand     `json:"receiptItems"`
+	Comments     []UpsertCommentCommand  `json:"comments"`
 }
 
 func (receipt *UpsertReceiptCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -88,6 +89,14 @@ func (receipt *UpsertReceiptCommand) Validate() structs.ValidatorError {
 		basePath := "receiptItems." + string(i)
 		itemErrors := item.Validate(receipt.Amount)
 		for key, value := range itemErrors.Errors {
+			errors[basePath+"."+key] = value
+		}
+	}
+
+	for i, comment := range receipt.Comments {
+		basePath := "comments." + string(i)
+		commentErrors := comment.Validate(receipt.PaidByUserID)
+		for key, value := range commentErrors.Errors {
 			errors[basePath+"."+key] = value
 		}
 	}

@@ -2667,7 +2667,6 @@ components:
         - tags
       properties:
         claims:
-          description: User's claims
           $ref: "#/components/schemas/Claims"
         groups:
           type: array
@@ -2680,10 +2679,8 @@ components:
           items:
             $ref: "#/components/schemas/UserView"
         userPreferences:
-          description: User preferences in the system
           $ref: "#/components/schemas/UserPreferences"
         featureConfig:
-          description: Feature config
           $ref: "#/components/schemas/FeatureConfig"
         categories:
           type: array
@@ -2783,6 +2780,7 @@ components:
         refreshToken:
           type: string
           description: Refresh token
+
     UpsertReceiptCommand:
       type: object
       required:
@@ -2825,6 +2823,12 @@ components:
           description: Items associated to receipt
           items:
               $ref: "#/components/schemas/UpsertItemCommand"
+        Comments:
+          type: array
+          description: Comments associated to receipt
+          items:
+              $ref: "#/components/schemas/UpsertCommentCommand"
+
     UpsertItemCommand:
       type: object
       required:
@@ -2848,4 +2852,20 @@ components:
           description: Receipt foreign key
         status:
           $ref: "#/components/schemas/ItemStatus"
+    UpsertCommentCommand:
+      type: object
+      required:
+        - comment
+        - receiptId
+        - userId
+      properties:
+        comment:
+          type: string
+          description: Comment itself
+        receiptId:
+          type: integer
+          description: Receipt foreign key
+        userId:
+          type: integer
+          description: User foreign key
 

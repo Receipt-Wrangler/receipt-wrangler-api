@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"receipt-wrangler/api/internal/ai"
+	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
-	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
@@ -62,8 +62,8 @@ func GetGeminiClient() *genai.Client {
 	return geminiClient
 }
 
-func ReadReceiptData(ocrText string) (models.Receipt, error) {
-	var result models.Receipt
+func ReadReceiptData(ocrText string) (commands.UpsertReceiptCommand, error) {
+	var result commands.UpsertReceiptCommand
 	logger := logging.GetLogger()
 	config := config.GetConfig()
 	client := GetClient()
@@ -79,7 +79,7 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 
 	prompt, err := getPrompt(ocrText)
 	if err != nil {
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	clientMessages = append(clientMessages, structs.AiClientMessage{
@@ -90,14 +90,14 @@ func ReadReceiptData(ocrText string) (models.Receipt, error) {
 
 	response, err := aiClient.CreateChatCompletion()
 	if err != nil {
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	logger.Print(response, "raw response")
 
 	err = json.Unmarshal([]byte(response), &result)
 	if err != nil {
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	return result, nil

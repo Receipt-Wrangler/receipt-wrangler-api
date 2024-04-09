@@ -24,15 +24,19 @@ func NewReceiptRepository(tx *gorm.DB) ReceiptRepository {
 	return repository
 }
 
-func (repository ReceiptRepository) CreateReceipt(receipt models.Receipt, createdByUserID uint) (models.Receipt, error) {
+func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceiptCommand, createdByUserID uint) (models.Receipt, error) {
 	db := GetDB()
 	notificationRepository := NewNotificationRepository(nil)
+	receipt, err := command.ToReceipt()
+	if err != nil {
+		return models.Receipt{}, err
+	}
 
 	if receipt.GroupId > 0 {
 		receipt.CreatedBy = &createdByUserID
 	}
 
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
 		notificationRepository.SetTransaction(tx)
 		err := tx.Model(models.Receipt{}).Select("*").Create(&receipt).Error

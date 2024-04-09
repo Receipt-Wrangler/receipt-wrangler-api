@@ -21,8 +21,8 @@ type Receipt struct {
 	Status       ReceiptStatus   `gorm:"default:'OPEN'; not null" json:"status"`
 	GroupId      uint            `gorm:"not null" json:"groupId"`
 	Group        Group           `json:"-"`
-	Tags         []Tag           `gorm:"many2many:receipt_tags" json:"tags"`
 	Categories   []Category      `gorm:"many2many:receipt_categories" json:"categories"`
+	Tags         []Tag           `gorm:"many2many:receipt_tags" json:"tags"`
 	ImageFiles   []FileData      `json:"imageFiles"`
 	ReceiptItems []Item          `json:"receiptItems"`
 	Comments     []Comment       `json:"comments"`

@@ -130,19 +130,35 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
+	errMessage := "Error creating receipt"
+	token := structs.GetJWT(r)
+
+	command := commands.UpsertReceiptCommand{}
+	err := command.LoadDataFromRequest(w, r)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+		return
+	}
+	vErrs := command.Validate(token.UserId)
+	if len(vErrs.Errors) > 0 {
+		structs.WriteValidatorErrorResponse(w, vErrs, http.StatusInternalServerError)
+		return
+	}
+
+	stringId := simpleutils.UintToString(command.GroupId)
 
 	// TODO: Clean up to make sure group id is not an all group, and remove middleware sets and checks
 	handler := structs.Handler{
-		ErrorMessage: "Error creating receipt.",
+		ErrorMessage: errMessage,
 		Writer:       w,
 		Request:      r,
+		GroupId:      stringId,
+		GroupRole:    models.EDITOR,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
 			receiptRepository := repositories.NewReceiptRepository(nil)
-
-			bodyData := r.Context().Value("receipt").(models.Receipt)
-			createdReceipt, err := receiptRepository.CreateReceipt(bodyData, token.UserId)
+			createdReceipt, err := receiptRepository.CreateReceipt(command, token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -283,13 +299,14 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 		ReceiptId:    receiptId,
 		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			token := structs.GetJWT(r)
 			db := repositories.GetDB()
 			command := commands.UpsertReceiptCommand{}
 			err := command.LoadDataFromRequest(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-			vErrs := command.Validate()
+			vErrs := command.Validate(token.UserId)
 			if len(vErrs.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusInternalServerError)
 				return 0, nil

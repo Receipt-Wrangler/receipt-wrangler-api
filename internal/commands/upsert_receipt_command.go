@@ -11,16 +11,17 @@ import (
 )
 
 type UpsertReceiptCommand struct {
-	Name         string                  `json:"name"`
-	Amount       decimal.Decimal         `json:"amount"`
-	Date         time.Time               `json:"date"`
-	GroupId      uint                    `json:"groupId"`
-	PaidByUserID uint                    `json:"paidByUserId"`
-	Status       models.ReceiptStatus    `json:"status"`
-	Categories   []UpsertCategoryCommand `json:"categories"`
-	Tags         []UpsertTagCommand      `json:"tags"`
-	Items        []UpsertItemCommand     `json:"receiptItems"`
-	Comments     []UpsertCommentCommand  `json:"comments"`
+	Name            string                  `json:"name"`
+	Amount          decimal.Decimal         `json:"amount"`
+	Date            time.Time               `json:"date"`
+	GroupId         uint                    `json:"groupId"`
+	PaidByUserID    uint                    `json:"paidByUserId"`
+	Status          models.ReceiptStatus    `json:"status"`
+	Categories      []UpsertCategoryCommand `json:"categories"`
+	Tags            []UpsertTagCommand      `json:"tags"`
+	Items           []UpsertItemCommand     `json:"receiptItems"`
+	Comments        []UpsertCommentCommand  `json:"comments"`
+	CreatedByString string                  `json:"createdByString"`
 }
 
 func (receipt *UpsertReceiptCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -37,7 +38,7 @@ func (receipt *UpsertReceiptCommand) LoadDataFromRequest(w http.ResponseWriter, 
 	return nil
 }
 
-func (receipt *UpsertReceiptCommand) Validate() structs.ValidatorError {
+func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint) structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
@@ -95,7 +96,7 @@ func (receipt *UpsertReceiptCommand) Validate() structs.ValidatorError {
 
 	for i, comment := range receipt.Comments {
 		basePath := "comments." + string(i)
-		commentErrors := comment.Validate(receipt.PaidByUserID)
+		commentErrors := comment.Validate(tokenUserId)
 		for key, value := range commentErrors.Errors {
 			errors[basePath+"."+key] = value
 		}
@@ -103,4 +104,19 @@ func (receipt *UpsertReceiptCommand) Validate() structs.ValidatorError {
 
 	vErr.Errors = errors
 	return vErr
+}
+
+func (receipt *UpsertReceiptCommand) ToReceipt() (models.Receipt, error) {
+	var result models.Receipt
+	bytes, err := json.Marshal(receipt)
+	if err != nil {
+		return result, err
+	}
+
+	err = json.Unmarshal(bytes, &result)
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
 }

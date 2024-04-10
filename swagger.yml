@@ -1623,6 +1623,9 @@ components:
         - name
       type: object
       properties:
+        id:
+          type: integer
+          description: Category id
         name:
           type: string
           description: Category name
@@ -2082,6 +2085,9 @@ components:
         - name
       type: object
       properties:
+        id:
+          type: integer
+          description: Tag id
         name:
           type: string
           description: Tag name
@@ -2808,22 +2814,22 @@ components:
           description: User paid foreign key
         status:
           $ref: "#/components/schemas/ReceiptStatus"
-        Categories:
+        categories:
           type: array
           description: Categories associated to receipt
           items:
             $ref: "#/components/schemas/UpsertCategoryCommand"
-        Tags:
+        tags:
           type: array
           description: Tags associated to receipt
           items:
             $ref: "#/components/schemas/UpsertTagCommand"
-        Items:
+        items:
           type: array
           description: Items associated to receipt
           items:
               $ref: "#/components/schemas/UpsertItemCommand"
-        Comments:
+        comments:
           type: array
           description: Comments associated to receipt
           items:

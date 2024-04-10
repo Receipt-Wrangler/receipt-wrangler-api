@@ -38,7 +38,7 @@ func (receipt *UpsertReceiptCommand) LoadDataFromRequest(w http.ResponseWriter, 
 	return nil
 }
 
-func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint) structs.ValidatorError {
+func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint, isCreate bool) structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
@@ -88,7 +88,7 @@ func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint) structs.Validato
 
 	for i, item := range receipt.Items {
 		basePath := "receiptItems." + string(i)
-		itemErrors := item.Validate(receipt.Amount)
+		itemErrors := item.Validate(receipt.Amount, isCreate)
 		for key, value := range itemErrors.Errors {
 			errors[basePath+"."+key] = value
 		}
@@ -96,7 +96,7 @@ func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint) structs.Validato
 
 	for i, comment := range receipt.Comments {
 		basePath := "comments." + string(i)
-		commentErrors := comment.Validate(tokenUserId)
+		commentErrors := comment.Validate(tokenUserId, isCreate)
 		for key, value := range commentErrors.Errors {
 			errors[basePath+"."+key] = value
 		}

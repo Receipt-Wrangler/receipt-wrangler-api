@@ -140,7 +140,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 		return
 	}
-	vErrs := command.Validate(token.UserId)
+	vErrs := command.Validate(token.UserId, true)
 	if len(vErrs.Errors) > 0 {
 		structs.WriteValidatorErrorResponse(w, vErrs, http.StatusInternalServerError)
 		return
@@ -306,10 +306,15 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-			vErrs := command.Validate(token.UserId)
+			vErrs := command.Validate(token.UserId, false)
 			if len(vErrs.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusInternalServerError)
 				return 0, nil
+			}
+
+			convertedReceipt, err := command.ToReceipt()
+			if err != nil {
+				return http.StatusInternalServerError, err
 			}
 
 			receiptRepository := repositories.NewReceiptRepository(nil)
@@ -319,25 +324,25 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 			}
 
 			err = db.Transaction(func(tx *gorm.DB) error {
-				txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&receiptToUpdate).Updates(command).Error
+				txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&receiptToUpdate).Updates(convertedReceipt).Error
 				if txErr != nil {
 					handler_logger.Print(txErr.Error())
 					return txErr
 				}
 
-				txErr = tx.Model(&receiptToUpdate).Association("Tags").Replace(command.Tags)
+				txErr = tx.Model(&receiptToUpdate).Association("Tags").Replace(convertedReceipt.Tags)
 				if txErr != nil {
 					handler_logger.Print(txErr.Error())
 					return txErr
 				}
 
-				txErr = tx.Model(&receiptToUpdate).Association("Categories").Replace(command.Categories)
+				txErr = tx.Model(&receiptToUpdate).Association("Categories").Replace(convertedReceipt.Categories)
 				if txErr != nil {
 					handler_logger.Print(txErr.Error())
 					return txErr
 				}
 
-				txErr = tx.Model(&receiptToUpdate).Association("ReceiptItems").Replace(command.Items)
+				txErr = tx.Model(&receiptToUpdate).Association("ReceiptItems").Replace(convertedReceipt.ReceiptItems)
 				if txErr != nil {
 					handler_logger.Print(txErr.Error())
 					return txErr

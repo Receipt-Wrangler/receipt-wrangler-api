@@ -15,7 +15,7 @@ type UpsertItemCommand struct {
 	Status          models.ItemStatus `json:"status"`
 }
 
-func (item *UpsertItemCommand) Validate(receiptAmount decimal.Decimal) structs.ValidatorError {
+func (item *UpsertItemCommand) Validate(receiptAmount decimal.Decimal, isCreate bool) structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
@@ -35,8 +35,10 @@ func (item *UpsertItemCommand) Validate(receiptAmount decimal.Decimal) structs.V
 		errors["name"] = "Name is required"
 	}
 
-	if item.ReceiptId == 0 {
-		errors["receiptId"] = "Receipt Id is required"
+	if !isCreate {
+		if item.ReceiptId == 0 {
+			errors["receiptId"] = "Receipt Id is required"
+		}
 	}
 
 	if item.ChargedToUserId == 0 {

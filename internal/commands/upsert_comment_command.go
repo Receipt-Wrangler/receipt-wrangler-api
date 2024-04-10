@@ -10,7 +10,7 @@ type UpsertCommentCommand struct {
 	UserId    uint   `json:"userId"`
 }
 
-func (comment *UpsertCommentCommand) Validate(userRequestId uint) structs.ValidatorError {
+func (comment *UpsertCommentCommand) Validate(userRequestId uint, isCreate bool) structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
@@ -18,8 +18,10 @@ func (comment *UpsertCommentCommand) Validate(userRequestId uint) structs.Valida
 		errors["comment"] = "Comment is required"
 	}
 
-	if comment.ReceiptId == 0 {
-		errors["receiptId"] = "Receipt Id is required"
+	if !isCreate {
+		if comment.ReceiptId == 0 {
+			errors["receiptId"] = "Receipt Id is required"
+		}
 	}
 
 	if comment.UserId == 0 {

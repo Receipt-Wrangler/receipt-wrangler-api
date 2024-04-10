@@ -32,9 +32,13 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.VIEWER,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			pagedRequest := r.Context().Value("pagedRequest").(commands.ReceiptPagedRequestCommand)
-			pagedData := structs.PagedData{}
+			pagedRequest := commands.ReceiptPagedRequestCommand{}
+			err := pagedRequest.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
+			pagedData := structs.PagedData{}
 			token := structs.GetJWT(r)
 
 			receiptRepository := repositories.NewReceiptRepository(nil)
@@ -259,10 +263,14 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetReceipt(w http.ResponseWriter, r *http.Request) {
+	receiptId := chi.URLParam(r, "id")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error retrieving receipt.",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptId,
+		GroupRole:    models.VIEWER,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
@@ -364,26 +372,40 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
+	bulkCommand := commands.BulkStatusUpdateCommand{}
+	err := bulkCommand.LoadDataFromRequest(w, r)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, "Error resolving receipts", http.StatusInternalServerError)
+		return
+	}
+
+	receiptIdStrings := make([]string, len(bulkCommand.ReceiptIds))
+	for i := 0; i < len(bulkCommand.ReceiptIds); i++ {
+		receiptIdStrings[i] = simpleutils.UintToString(bulkCommand.ReceiptIds[i])
+	}
+
 	handler := structs.Handler{
 		ErrorMessage: "Error resolving receipts",
 		Writer:       w,
 		Request:      r,
+		ReceiptIds:   receiptIdStrings,
+		GroupRole:    models.EDITOR,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
-			bulkResolve := r.Context().Value("BulkStatusUpdateCommand").(commands.BulkStatusUpdateCommand)
 			var receipts []models.Receipt
 
-			if len(bulkResolve.Status) == 0 {
+			if len(bulkCommand.Status) == 0 {
 				return http.StatusBadRequest, errors.New("Status required")
 			}
 
-			if !utils.Contains(constants.ReceiptStatuses(), bulkResolve.Status) {
+			if !utils.Contains(constants.ReceiptStatuses(), bulkCommand.Status) {
 				return http.StatusBadRequest, errors.New("Invalid status")
 			}
 
 			err := db.Transaction(func(tx *gorm.DB) error {
-				tErr := tx.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id", "status", "resolved_date").Find(&receipts).Error
+				tErr := tx.Table("receipts").Where("id IN ?", bulkCommand.ReceiptIds).Select("id", "status", "resolved_date").Find(&receipts).Error
 				if tErr != nil {
 					return tErr
 				}
@@ -391,19 +413,19 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				if len(receipts) > 0 {
 					for i := 0; i < len(receipts); i++ {
 						receipt := receipts[i]
-						tErr = tx.Model(&receipt).Updates(map[string]interface{}{"status": bulkResolve.Status}).Error
+						tErr = tx.Model(&receipt).Updates(map[string]interface{}{"status": bulkCommand.Status}).Error
 						if tErr != nil {
 							return tErr
 						}
 					}
 				}
 
-				if len(bulkResolve.Comment) > 0 {
+				if len(bulkCommand.Comment) > 0 {
 					token := structs.GetJWT(r)
-					comments := make([]models.Comment, len(bulkResolve.ReceiptIds))
+					comments := make([]models.Comment, len(bulkCommand.ReceiptIds))
 
-					for i := 0; i < len(bulkResolve.ReceiptIds); i++ {
-						comments[i] = models.Comment{ReceiptId: bulkResolve.ReceiptIds[i], Comment: bulkResolve.Comment, UserId: &token.UserId}
+					for i := 0; i < len(bulkCommand.ReceiptIds); i++ {
+						comments[i] = models.Comment{ReceiptId: bulkCommand.ReceiptIds[i], Comment: bulkCommand.Comment, UserId: &token.UserId}
 					}
 
 					tErr = tx.Create(&comments).Error
@@ -418,7 +440,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			err = db.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id, resolved_date, status").Find(&receipts).Error
+			err = db.Table("receipts").Where("id IN ?", bulkCommand.ReceiptIds).Select("id, resolved_date, status").Find(&receipts).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -484,10 +506,14 @@ func HasAccess(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
+	receiptId := chi.URLParam(r, "id")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error deleting receipt.",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptId,
+		GroupRole:    models.EDITOR,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
@@ -506,10 +532,14 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
+	receiptId := chi.URLParam(r, "id")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error duplicating receipt",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptId,
+		GroupRole:    models.EDITOR,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()

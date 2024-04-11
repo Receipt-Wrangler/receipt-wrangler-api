@@ -40,6 +40,19 @@ type ReceiptPagedRequestCommand struct {
 	Filter ReceiptPagedRequestFilter `json:"filter"`
 }
 
+func (command *ReceiptPagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
+	bytes, err := utils.GetBodyData(w, r)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &command)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type ReceiptPagedRequestFilter struct {
 	Date         PagedRequestField `json:"date"`
 	Amount       PagedRequestField `json:"amount"`

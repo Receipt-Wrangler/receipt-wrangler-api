@@ -147,7 +147,7 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 					return err
 				}
 
-				receipt, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
+				command, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
 				if err != nil {
 					return err
 				}
@@ -168,12 +168,12 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 						return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
 					}
 
-					receipt.GroupId = groupSettingsToUse.GroupId
-					receipt.Status = groupSettingsToUse.EmailDefaultReceiptStatus
-					receipt.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
-					receipt.CreatedByString = "Email Integration"
+					command.GroupId = groupSettingsToUse.GroupId
+					command.Status = groupSettingsToUse.EmailDefaultReceiptStatus
+					command.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
+					command.CreatedByString = "Email Integration"
 
-					createdReceipt, err := receiptRepository.CreateReceipt(receipt, 0)
+					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
 					if err != nil {
 						return err
 					}

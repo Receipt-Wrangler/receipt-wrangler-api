@@ -203,7 +203,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			receiptImageId := r.URL.Query().Get("receiptImageId")
-			filledReceipt := models.Receipt{}
+			receiptCommand := commands.UpsertReceiptCommand{}
 
 			if len(receiptImageId) > 0 {
 				errCode, err := validateReceiptImageAccess(r, models.VIEWER, receiptImageId)
@@ -211,7 +211,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					return errCode, err
 				}
 
-				filledReceipt, err = services.ReadReceiptImage(receiptImageId)
+				receiptCommand, err = services.ReadReceiptImage(receiptImageId)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -238,13 +238,13 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					Filename:  fileHeader.Filename,
 				}
 
-				filledReceipt, err = services.MagicFillFromImage(magicFillCommand)
+				receiptCommand, err = services.MagicFillFromImage(magicFillCommand)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 			}
 
-			bytes, err := utils.MarshalResponseData(filledReceipt)
+			bytes, err := utils.MarshalResponseData(receiptCommand)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

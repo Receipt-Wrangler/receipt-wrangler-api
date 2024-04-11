@@ -1,6 +1,8 @@
 package services
 
 import (
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"mime/multipart"
 	"os"
 	"receipt-wrangler/api/internal/commands"
@@ -9,9 +11,6 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"strconv"
-
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
@@ -102,20 +101,20 @@ func QuickScan(
 	receiptRepository := repositories.NewReceiptRepository(nil)
 	receiptImageRepository := repositories.NewReceiptImageRepository(nil)
 
-	receipt, err := MagicFillFromImage(magicFillCommand)
+	receiptCommand, err := MagicFillFromImage(magicFillCommand)
 	if err != nil {
 		return models.Receipt{}, err
 	}
 
-	receipt.PaidByUserID = paidByUserId
-	receipt.Status = models.ReceiptStatus(status)
-	receipt.GroupId = groupId
+	receiptCommand.PaidByUserID = paidByUserId
+	receiptCommand.Status = models.ReceiptStatus(status)
+	receiptCommand.GroupId = groupId
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		receiptRepository.SetTransaction(tx)
 		receiptImageRepository.SetTransaction(tx)
 
-		createdReceipt, err = receiptRepository.CreateReceipt(receipt, token.UserId)
+		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId)
 		if err != nil {
 			return err
 		}

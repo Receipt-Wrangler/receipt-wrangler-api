@@ -13,8 +13,8 @@ import (
 	"sync"
 )
 
-func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
-	var result models.Receipt
+func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, error) {
+	var result commands.UpsertReceiptCommand
 	var pathToReadFrom string
 
 	receiptImageUint, err := simpleutils.StringToUint(receiptImageId)
@@ -36,19 +36,19 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 
 	receiptImageBytes, err := utils.ReadFile(receiptImagePath)
 	if err != nil {
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	// TODO: make generic
 	if receiptImage.FileType == constants.APPLICATION_PDF {
 		bytes, err := fileRepository.ConvertPdfToJpg(receiptImageBytes)
 		if err != nil {
-			return models.Receipt{}, err
+			return commands.UpsertReceiptCommand{}, err
 		}
 
 		pathToReadFrom, err = fileRepository.WriteTempFile(bytes)
 		if err != nil {
-			return models.Receipt{}, err
+			return commands.UpsertReceiptCommand{}, err
 		}
 
 		defer os.Remove(pathToReadFrom)
@@ -63,14 +63,14 @@ func ReadReceiptImage(receiptImageId string) (models.Receipt, error) {
 
 	result, err = ReadReceiptData(ocrText)
 	if err != nil {
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	return result, nil
 }
 
-func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
-	var result models.Receipt
+func ReadReceiptImageFromFileOnly(path string) (commands.UpsertReceiptCommand, error) {
+	var result commands.UpsertReceiptCommand
 
 	ocrText, err := tesseract.ReadImage(path)
 	if err != nil {
@@ -79,29 +79,29 @@ func ReadReceiptImageFromFileOnly(path string) (models.Receipt, error) {
 
 	result, err = ReadReceiptData(ocrText)
 	if err != nil {
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	return result, nil
 }
 
-func MagicFillFromImage(command commands.MagicFillCommand) (models.Receipt, error) {
+func MagicFillFromImage(command commands.MagicFillCommand) (commands.UpsertReceiptCommand, error) {
 	fileRepository := repositories.NewFileRepository(nil)
 
 	bytes, err := fileRepository.GetBytesFromImageBytes(command.ImageData)
 	if err != nil {
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	filePath, err := fileRepository.WriteTempFile(bytes)
 	if err != nil {
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	filledReceipt, err := ReadReceiptImageFromFileOnly(filePath)
 	if err != nil {
 		os.Remove(filePath)
-		return models.Receipt{}, err
+		return commands.UpsertReceiptCommand{}, err
 	}
 
 	os.Remove(filePath)

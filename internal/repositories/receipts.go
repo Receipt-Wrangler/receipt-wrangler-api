@@ -3,10 +3,13 @@ package repositories
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -24,15 +27,183 @@ func NewReceiptRepository(tx *gorm.DB) ReceiptRepository {
 	return repository
 }
 
-func (repository ReceiptRepository) CreateReceipt(receipt models.Receipt, createdByUserID uint) (models.Receipt, error) {
+func (repository ReceiptRepository) BeforeUpdateReceipt(currentReceipt models.Receipt, updatedReceipt models.Receipt) (err error) {
+	db := repository.GetDB()
+	if updatedReceipt.GroupId > 0 && currentReceipt.GroupId != updatedReceipt.GroupId && len(currentReceipt.ImageFiles) > 0 {
+		var oldGroup models.Group
+		var newGroup models.Group
+
+		err = db.Table("groups").Where("id = ?", currentReceipt.GroupId).Select("id", "name").Find(&oldGroup).Error
+		if err != nil {
+			return err
+		}
+
+		err = db.Table("groups").Where("id = ?", updatedReceipt.GroupId).Select("id", "name").Find(&newGroup).Error
+		if err != nil {
+			return err
+		}
+
+		oldGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(oldGroup.ID), oldGroup.Name)
+		if err != nil {
+			return err
+		}
+
+		newGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(newGroup.ID), newGroup.Name)
+		if err != nil {
+			return err
+		}
+
+		for _, fileData := range currentReceipt.ImageFiles {
+			filename := simpleutils.BuildFileName(simpleutils.UintToString(currentReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+
+			oldFilePath := filepath.Join(oldGroupPath, filename)
+			newFilePathPath := filepath.Join(newGroupPath, filename)
+
+			err := os.Rename(oldFilePath, newFilePathPath)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (repository ReceiptRepository) UpdateReceipt(id string, command commands.UpsertReceiptCommand) (models.Receipt, error) {
+	db := repository.GetDB()
+	var currentReceipt models.Receipt
+
+	updatedReceipt, err := command.ToReceipt()
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	err = db.Table("receipts").Where("id = ?", id).Preload("ImageFiles").Find(&currentReceipt).Error
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	// NOTE: ID and field used for afterReceiptUpdated
+	updatedReceipt.ID = currentReceipt.ID
+	updatedReceipt.ResolvedDate = currentReceipt.ResolvedDate
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		repository.SetTransaction(tx)
+
+		txErr := repository.BeforeUpdateReceipt(currentReceipt, updatedReceipt)
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&currentReceipt).Updates(&updatedReceipt).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Model(&currentReceipt).Association("Tags").Replace(&updatedReceipt.Tags)
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Model(&currentReceipt).Association("Categories").Replace(&updatedReceipt.Categories)
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Model(&currentReceipt).Association("ReceiptItems").Replace(&updatedReceipt.ReceiptItems)
+		if txErr != nil {
+			return txErr
+		}
+
+		err = repository.AfterReceiptUpdated(&updatedReceipt)
+		if err != nil {
+			return err
+		}
+
+		repository.ClearTransaction()
+		return nil
+	})
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	return updatedReceipt, nil
+}
+
+func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.Receipt) error {
+	db := repository.GetDB()
+	err := db.Where("receipt_id IS NULL").Delete(&models.Item{}).Error
+	if err != nil {
+		return err
+	}
+
+	if updatedReceipt.ID > 0 && updatedReceipt.Status == models.RESOLVED && updatedReceipt.ResolvedDate == nil {
+		now := time.Now().UTC()
+		err = db.Table("receipts").Where("id = ?", updatedReceipt.ID).Update("resolved_date", now).Error
+	} else if updatedReceipt.ID > 0 && updatedReceipt.Status != models.RESOLVED && updatedReceipt.ResolvedDate != nil {
+		err = db.Table("receipts").Where("id = ?", updatedReceipt.ID).Update("resolved_date", nil).Error
+	}
+	if err != nil {
+		return err
+	}
+
+	if updatedReceipt.Status == models.RESOLVED && updatedReceipt.ID > 0 {
+		err := repository.UpdateItemsToStatus(updatedReceipt, models.ITEM_RESOLVED)
+		if err != nil {
+			return err
+		}
+	}
+
+	if updatedReceipt.Status == models.DRAFT && updatedReceipt.ID > 0 {
+		err := repository.UpdateItemsToStatus(updatedReceipt, models.ITEM_DRAFT)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt, status models.ItemStatus) error {
+	db := GetDB()
+	var items []models.Item
+	var itemIdsToUpdate []uint
+
+	err := db.Table("items").Where("receipt_id = ?", receipt.ID).Find(&items).Error
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if item.Status != status {
+			itemIdsToUpdate = append(itemIdsToUpdate, item.ID)
+		}
+	}
+
+	if len(itemIdsToUpdate) > 0 {
+		err := db.Table("items").Where("id IN ?", itemIdsToUpdate).UpdateColumn("status", status).Error
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceiptCommand, createdByUserID uint) (models.Receipt, error) {
 	db := GetDB()
 	notificationRepository := NewNotificationRepository(nil)
+	receipt, err := command.ToReceipt()
+	if err != nil {
+		return models.Receipt{}, err
+	}
 
 	if receipt.GroupId > 0 {
 		receipt.CreatedBy = &createdByUserID
 	}
 
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err = db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
 		notificationRepository.SetTransaction(tx)
 		err := tx.Model(models.Receipt{}).Select("*").Create(&receipt).Error
@@ -43,8 +214,16 @@ func (repository ReceiptRepository) CreateReceipt(receipt models.Receipt, create
 		var userIdsToOmit []interface{} = make([]interface{}, 1)
 		userIdsToOmit = append(userIdsToOmit, *receipt.CreatedBy)
 
-		notificationBody := fmt.Sprintf("A receipt has been added in the group %s. Check it out! %s", BuildParamaterisedString("groupId", receipt.GroupId, "name", "string"), BuildParamaterisedString("receiptId", receipt.ID, "", "link"))
-		notificationRepository.SendNotificationToGroup(receipt.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
+		notificationBody := fmt.Sprintf("The receipt: %s has been uploaded to the group %s. Check it out! %s", receipt.Name, BuildParamaterisedString("groupId", receipt.GroupId, "name", "string"), BuildParamaterisedString("receiptId", receipt.ID, "", "link"))
+		err = notificationRepository.SendNotificationToGroup(receipt.GroupId, "Receipt Uploaded", notificationBody, models.NOTIFICATION_TYPE_NORMAL, userIdsToOmit)
+		if err != nil {
+			return err
+		}
+
+		err = repository.AfterReceiptUpdated(&receipt)
+		if err != nil {
+			return err
+		}
 
 		repository.ClearTransaction()
 		notificationRepository.ClearTransaction()

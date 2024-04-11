@@ -14,7 +14,6 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
-	"strconv"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
@@ -33,9 +32,13 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.VIEWER,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			pagedRequest := r.Context().Value("pagedRequest").(commands.ReceiptPagedRequestCommand)
-			pagedData := structs.PagedData{}
+			pagedRequest := commands.ReceiptPagedRequestCommand{}
+			err := pagedRequest.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
+			pagedData := structs.PagedData{}
 			token := structs.GetJWT(r)
 
 			receiptRepository := repositories.NewReceiptRepository(nil)
@@ -131,19 +134,35 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
+	errMessage := "Error creating receipt"
+	token := structs.GetJWT(r)
+
+	command := commands.UpsertReceiptCommand{}
+	err := command.LoadDataFromRequest(w, r)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
+		return
+	}
+	vErrs := command.Validate(token.UserId, true)
+	if len(vErrs.Errors) > 0 {
+		structs.WriteValidatorErrorResponse(w, vErrs, http.StatusInternalServerError)
+		return
+	}
+
+	stringId := simpleutils.UintToString(command.GroupId)
 
 	// TODO: Clean up to make sure group id is not an all group, and remove middleware sets and checks
 	handler := structs.Handler{
-		ErrorMessage: "Error creating receipt.",
+		ErrorMessage: errMessage,
 		Writer:       w,
 		Request:      r,
+		GroupId:      stringId,
+		GroupRole:    models.EDITOR,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
 			receiptRepository := repositories.NewReceiptRepository(nil)
-
-			bodyData := r.Context().Value("receipt").(models.Receipt)
-			createdReceipt, err := receiptRepository.CreateReceipt(bodyData, token.UserId)
+			createdReceipt, err := receiptRepository.CreateReceipt(command, token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -244,10 +263,14 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetReceipt(w http.ResponseWriter, r *http.Request) {
+	receiptId := chi.URLParam(r, "id")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error retrieving receipt.",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptId,
+		GroupRole:    models.VIEWER,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
@@ -275,50 +298,30 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
+	receiptId := chi.URLParam(r, "id")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error updating receipt.",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptId,
+		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := repositories.GetDB()
-
-			id := chi.URLParam(r, "id")
-			u64Id, err := strconv.ParseUint(id, 10, 32)
+			token := structs.GetJWT(r)
+			command := commands.UpsertReceiptCommand{}
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			err := command.LoadDataFromRequest(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			bodyData := r.Context().Value("receipt").(models.Receipt)
-			bodyData.ID = uint(u64Id)
+			vErrs := command.Validate(token.UserId, false)
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusInternalServerError)
+				return 0, nil
+			}
 
-			err = db.Transaction(func(tx *gorm.DB) error {
-				txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&bodyData).Select("*").Omit("ID", "created_by", "updated_at", "created_at").Where("id = ?", uint(u64Id)).Save(bodyData).Error
-				if txErr != nil {
-					handler_logger.Print(txErr.Error())
-					return txErr
-				}
-
-				txErr = tx.Model(&bodyData).Association("Tags").Replace(bodyData.Tags)
-				if txErr != nil {
-					handler_logger.Print(txErr.Error())
-					return txErr
-				}
-
-				txErr = tx.Model(&bodyData).Association("Categories").Replace(bodyData.Categories)
-				if txErr != nil {
-					handler_logger.Print(txErr.Error())
-					return txErr
-				}
-
-				txErr = tx.Model(&bodyData).Association("ReceiptItems").Replace(bodyData.ReceiptItems)
-				if txErr != nil {
-					handler_logger.Print(txErr.Error())
-					return txErr
-				}
-
-				return nil
-			})
-
+			_, err = receiptRepository.UpdateReceipt(receiptId, command)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -332,26 +335,42 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
+	bulkCommand := commands.BulkStatusUpdateCommand{}
+	err := bulkCommand.LoadDataFromRequest(w, r)
+	if err != nil {
+		handler_logger.Print(err.Error())
+		utils.WriteCustomErrorResponse(w, "Error resolving receipts", http.StatusInternalServerError)
+		return
+	}
+
+	receiptIdStrings := make([]string, len(bulkCommand.ReceiptIds))
+	for i := 0; i < len(bulkCommand.ReceiptIds); i++ {
+		receiptIdStrings[i] = simpleutils.UintToString(bulkCommand.ReceiptIds[i])
+	}
+
 	handler := structs.Handler{
 		ErrorMessage: "Error resolving receipts",
 		Writer:       w,
 		Request:      r,
+		ReceiptIds:   receiptIdStrings,
+		GroupRole:    models.EDITOR,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
-			bulkResolve := r.Context().Value("BulkStatusUpdateCommand").(commands.BulkStatusUpdateCommand)
+			receiptRepository := repositories.NewReceiptRepository(nil)
 			var receipts []models.Receipt
 
-			if len(bulkResolve.Status) == 0 {
+			if len(bulkCommand.Status) == 0 {
 				return http.StatusBadRequest, errors.New("Status required")
 			}
 
-			if !utils.Contains(constants.ReceiptStatuses(), bulkResolve.Status) {
+			if !utils.Contains(constants.ReceiptStatuses(), bulkCommand.Status) {
 				return http.StatusBadRequest, errors.New("Invalid status")
 			}
 
 			err := db.Transaction(func(tx *gorm.DB) error {
-				tErr := tx.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id", "status", "resolved_date").Find(&receipts).Error
+				receiptRepository.SetTransaction(tx)
+				tErr := tx.Table("receipts").Where("id IN ?", bulkCommand.ReceiptIds).Select("id", "status", "resolved_date").Find(&receipts).Error
 				if tErr != nil {
 					return tErr
 				}
@@ -359,19 +378,20 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				if len(receipts) > 0 {
 					for i := 0; i < len(receipts); i++ {
 						receipt := receipts[i]
-						tErr = tx.Model(&receipt).Updates(map[string]interface{}{"status": bulkResolve.Status}).Error
+						receipts[i].Status = bulkCommand.Status
+						tErr = tx.Model(&receipt).Updates(map[string]interface{}{"status": bulkCommand.Status}).Error
 						if tErr != nil {
 							return tErr
 						}
 					}
 				}
 
-				if len(bulkResolve.Comment) > 0 {
+				if len(bulkCommand.Comment) > 0 {
 					token := structs.GetJWT(r)
-					comments := make([]models.Comment, len(bulkResolve.ReceiptIds))
+					comments := make([]models.Comment, len(bulkCommand.ReceiptIds))
 
-					for i := 0; i < len(bulkResolve.ReceiptIds); i++ {
-						comments[i] = models.Comment{ReceiptId: bulkResolve.ReceiptIds[i], Comment: bulkResolve.Comment, UserId: &token.UserId}
+					for i := 0; i < len(bulkCommand.ReceiptIds); i++ {
+						comments[i] = models.Comment{ReceiptId: bulkCommand.ReceiptIds[i], Comment: bulkCommand.Comment, UserId: &token.UserId}
 					}
 
 					tErr = tx.Create(&comments).Error
@@ -380,13 +400,21 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
+				for i := 0; i < len(receipts); i++ {
+					err = receiptRepository.AfterReceiptUpdated(&receipts[i])
+					if err != nil {
+						return err
+					}
+				}
+
+				receiptRepository.ClearTransaction()
 				return nil
 			})
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			err = db.Table("receipts").Where("id IN ?", bulkResolve.ReceiptIds).Select("id, resolved_date, status").Find(&receipts).Error
+			err = db.Table("receipts").Where("id IN ?", bulkCommand.ReceiptIds).Select("id, resolved_date, status").Find(&receipts).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -452,10 +480,14 @@ func HasAccess(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
+	receiptId := chi.URLParam(r, "id")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error deleting receipt.",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptId,
+		GroupRole:    models.EDITOR,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
@@ -474,10 +506,14 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 }
 
 func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
+	receiptId := chi.URLParam(r, "id")
+
 	handler := structs.Handler{
 		ErrorMessage: "Error duplicating receipt",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptId,
+		GroupRole:    models.EDITOR,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()

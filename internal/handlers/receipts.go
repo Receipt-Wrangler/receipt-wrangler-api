@@ -309,6 +309,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			command := commands.UpsertReceiptCommand{}
+			receiptRepository := repositories.NewReceiptRepository(nil)
 			err := command.LoadDataFromRequest(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -320,7 +321,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
-			_, err = services.UpdateReceipt(receiptId, command)
+			_, err = receiptRepository.UpdateReceipt(receiptId, command)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -356,6 +357,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
+			receiptRepository := repositories.NewReceiptRepository(nil)
 			var receipts []models.Receipt
 
 			if len(bulkCommand.Status) == 0 {
@@ -367,6 +369,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 			}
 
 			err := db.Transaction(func(tx *gorm.DB) error {
+				receiptRepository.SetTransaction(tx)
 				tErr := tx.Table("receipts").Where("id IN ?", bulkCommand.ReceiptIds).Select("id", "status", "resolved_date").Find(&receipts).Error
 				if tErr != nil {
 					return tErr
@@ -398,12 +401,13 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				}
 
 				for i := 0; i < len(receipts); i++ {
-					err = services.AfterReceiptUpdated(tx, &receipts[i])
+					err = receiptRepository.AfterReceiptUpdated(&receipts[i])
 					if err != nil {
 						return err
 					}
 				}
 
+				receiptRepository.ClearTransaction()
 				return nil
 			})
 			if err != nil {

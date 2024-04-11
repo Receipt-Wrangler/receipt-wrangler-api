@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/shopspring/decimal"
 	"net/http"
 	"receipt-wrangler/api/internal/models"
@@ -71,7 +72,7 @@ func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint, isCreate bool) s
 	}
 
 	for i, category := range receipt.Categories {
-		basePath := "categories." + string(i)
+		basePath := "categories." + fmt.Sprintf("%d", i)
 		categoryErrors := category.Validate()
 		for key, value := range categoryErrors.Errors {
 			errors[basePath+"."+key] = value
@@ -79,7 +80,7 @@ func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint, isCreate bool) s
 	}
 
 	for i, tag := range receipt.Tags {
-		basePath := "tags." + string(i)
+		basePath := "tags." + fmt.Sprintf("%d", i)
 		tagErrors := tag.Validate()
 		for key, value := range tagErrors.Errors {
 			errors[basePath+"."+key] = value
@@ -87,7 +88,7 @@ func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint, isCreate bool) s
 	}
 
 	for i, item := range receipt.Items {
-		basePath := "receiptItems." + string(i)
+		basePath := "receiptItems." + fmt.Sprintf("%d", i)
 		itemErrors := item.Validate(receipt.Amount, isCreate)
 		for key, value := range itemErrors.Errors {
 			errors[basePath+"."+key] = value
@@ -95,7 +96,7 @@ func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint, isCreate bool) s
 	}
 
 	for i, comment := range receipt.Comments {
-		basePath := "comments." + string(i)
+		basePath := "comments." + fmt.Sprintf("%d", i)
 		commentErrors := comment.Validate(tokenUserId, isCreate)
 		for key, value := range commentErrors.Errors {
 			errors[basePath+"."+key] = value

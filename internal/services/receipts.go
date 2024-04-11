@@ -158,7 +158,7 @@ func UpdateReceipt(id string, command commands.UpsertReceiptCommand) (models.Rec
 			return txErr
 		}
 
-		err = afterReceiptUpdated(tx, &updatedReceipt)
+		err = AfterReceiptUpdated(tx, &updatedReceipt)
 		if err != nil {
 			return err
 		}
@@ -172,7 +172,7 @@ func UpdateReceipt(id string, command commands.UpsertReceiptCommand) (models.Rec
 	return updatedReceipt, nil
 }
 
-func afterReceiptUpdated(tx *gorm.DB, updatedReceipt *models.Receipt) error {
+func AfterReceiptUpdated(tx *gorm.DB, updatedReceipt *models.Receipt) error {
 	err := tx.Where("receipt_id IS NULL").Delete(&models.Item{}).Error
 	if err != nil {
 		return err

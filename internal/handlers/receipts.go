@@ -375,6 +375,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				if len(receipts) > 0 {
 					for i := 0; i < len(receipts); i++ {
 						receipt := receipts[i]
+						receipts[i].Status = bulkCommand.Status
 						tErr = tx.Model(&receipt).Updates(map[string]interface{}{"status": bulkCommand.Status}).Error
 						if tErr != nil {
 							return tErr
@@ -393,6 +394,13 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 					tErr = tx.Create(&comments).Error
 					if tErr != nil {
 						return tErr
+					}
+				}
+
+				for i := 0; i < len(receipts); i++ {
+					err = services.AfterReceiptUpdated(tx, &receipts[i])
+					if err != nil {
+						return err
 					}
 				}
 

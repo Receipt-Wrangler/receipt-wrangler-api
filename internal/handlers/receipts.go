@@ -308,57 +308,19 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
-			db := repositories.GetDB()
 			command := commands.UpsertReceiptCommand{}
 			err := command.LoadDataFromRequest(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
+
 			vErrs := command.Validate(token.UserId, false)
 			if len(vErrs.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusInternalServerError)
 				return 0, nil
 			}
 
-			convertedReceipt, err := command.ToReceipt()
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			receiptRepository := repositories.NewReceiptRepository(nil)
-			receiptToUpdate, err := receiptRepository.GetReceiptById(receiptId)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			err = db.Transaction(func(tx *gorm.DB) error {
-				txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&receiptToUpdate).Updates(convertedReceipt).Error
-				if txErr != nil {
-					handler_logger.Print(txErr.Error())
-					return txErr
-				}
-
-				txErr = tx.Model(&receiptToUpdate).Association("Tags").Replace(convertedReceipt.Tags)
-				if txErr != nil {
-					handler_logger.Print(txErr.Error())
-					return txErr
-				}
-
-				txErr = tx.Model(&receiptToUpdate).Association("Categories").Replace(convertedReceipt.Categories)
-				if txErr != nil {
-					handler_logger.Print(txErr.Error())
-					return txErr
-				}
-
-				txErr = tx.Model(&receiptToUpdate).Association("ReceiptItems").Replace(convertedReceipt.ReceiptItems)
-				if txErr != nil {
-					handler_logger.Print(txErr.Error())
-					return txErr
-				}
-
-				return nil
-			})
-
+			_, err = services.UpdateReceipt(receiptId, command)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

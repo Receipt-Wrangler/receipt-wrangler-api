@@ -28,7 +28,12 @@ func ReadImage(path string) (string, error) {
 		return "", err
 	}
 
-	// TODO: make configurable ;)
+	/**
+	TODO: Make configurable (choose your own OCR engine)
+	TODO: Rename package
+	TODO: Update sh file to get easy ocr
+	TODO: update docs
+	*/
 	fileRepository := repositories.NewFileRepository(nil)
 	tempPath, err := fileRepository.WriteTempFile(imageBytes)
 	if err != nil {

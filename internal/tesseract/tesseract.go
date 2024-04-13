@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/jpeg"
 	"os"
+	"os/exec"
 	"path/filepath"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/repositories"
@@ -27,15 +28,27 @@ func ReadImage(path string) (string, error) {
 		return "", err
 	}
 
-	err = client.SetImageFromBytes(imageBytes)
+	// TODO: make configurable ;)
+	fileRepository := repositories.NewFileRepository(nil)
+	tempPath, err := fileRepository.WriteTempFile(imageBytes)
 	if err != nil {
 		return "", err
 	}
+	defer os.Remove(tempPath)
 
-	text, err := client.Text()
+	var textBuffer bytes.Buffer
+	var text string
+	cmd := exec.Command("easyocr", "-l", "en", "-f", tempPath, "--detail", "0")
 	if err != nil {
 		return "", err
 	}
+	cmd.Stdout = &textBuffer
+
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	text = textBuffer.String()
 
 	if config.Debug.DebugOcr {
 		err = writeDebuggingFiles(text, path, imageBytes)

@@ -93,7 +93,7 @@ func ReadReceiptData(ocrText string) (commands.UpsertReceiptCommand, error) {
 		return commands.UpsertReceiptCommand{}, err
 	}
 
-	logger.Print(response, "raw response")
+	logger.Print("Raw chat completion response:", response)
 
 	err = json.Unmarshal([]byte(response), &result)
 	if err != nil {

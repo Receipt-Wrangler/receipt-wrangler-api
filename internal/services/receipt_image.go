@@ -8,7 +8,6 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/tesseract"
 	"receipt-wrangler/api/internal/utils"
 	"sync"
 )
@@ -56,7 +55,7 @@ func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, err
 		pathToReadFrom = receiptImagePath
 	}
 
-	ocrText, err := tesseract.ReadImage(pathToReadFrom)
+	ocrText, err := ReadImage(pathToReadFrom)
 	if err != nil {
 		return result, err
 	}
@@ -72,7 +71,7 @@ func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, err
 func ReadReceiptImageFromFileOnly(path string) (commands.UpsertReceiptCommand, error) {
 	var result commands.UpsertReceiptCommand
 
-	ocrText, err := tesseract.ReadImage(path)
+	ocrText, err := ReadImage(path)
 	if err != nil {
 		return result, err
 	}
@@ -171,7 +170,7 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrE
 			if err != nil {
 				results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
 			} else {
-				ocrText, err := tesseract.ReadImage(filePath)
+				ocrText, err := ReadImage(filePath)
 				results <- structs.OcrExport{OcrText: ocrText, Filename: fd.Name, Err: err}
 			}
 

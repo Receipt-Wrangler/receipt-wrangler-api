@@ -10,6 +10,9 @@ rm get-pip.py
 
 pip3 install -r ./imap-client/requirements.txt
 
+# Install easyocr
+pip3 install easyocr
+
 # Add lsb-release
 apt-get update -y -qq
 apt-get install apt-utils -y -qq

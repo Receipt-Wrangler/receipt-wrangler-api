@@ -1,4 +1,4 @@
-package tesseract
+package services
 
 import (
 	"bytes"
@@ -8,26 +8,64 @@ import (
 	"image"
 	"image/jpeg"
 	"os"
+	"os/exec"
 	"path/filepath"
 	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
+	"time"
 )
 
 func ReadImage(path string) (string, error) {
-	config := config.GetConfig()
-	client := gosseract.NewClient()
-	defer client.Close()
-
-	client.SetVariable("tessedit_char_blacklist", "!@#$%^&*()_+=-[]}{;:'\"\\|~`<>/?")
+	var text string
+	appConfig := config.GetConfig()
+	startTime := time.Now()
 
 	imageBytes, err := prepareImage(path)
 	if err != nil {
 		return "", err
 	}
 
-	err = client.SetImageFromBytes(imageBytes)
+	if appConfig.AiSettings.OcrEngine == structs.TESSERACT || appConfig.AiSettings.OcrEngine == "" {
+		text, err = ReadImageWithTesseract(imageBytes)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if appConfig.AiSettings.OcrEngine == structs.EASY_OCR {
+		text, err = ReadImageWithEasyOcr(imageBytes)
+		if err != nil {
+			return "", err
+		}
+	}
+	endTime := time.Now()
+	elapsedTime := endTime.Sub(startTime)
+	logging.GetLogger().Print("OCR and Image processing took: ", elapsedTime)
+
+	if appConfig.Debug.DebugOcr {
+		err = writeDebuggingFiles(text, path, imageBytes, elapsedTime)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return text, nil
+}
+
+func ReadImageWithTesseract(preparedImageBytes []byte) (string, error) {
+	client := gosseract.NewClient()
+	defer client.Close()
+
+	err := client.SetVariable("tessedit_char_blacklist", "!@#$%^&*()_+=-[]}{;:'\"\\|~`<>/?")
+	if err != nil {
+		return "", nil
+	}
+
+	err = client.SetImageFromBytes(preparedImageBytes)
 	if err != nil {
 		return "", err
 	}
@@ -37,17 +75,32 @@ func ReadImage(path string) (string, error) {
 		return "", err
 	}
 
-	if config.Debug.DebugOcr {
-		err = writeDebuggingFiles(text, path, imageBytes)
-		if err != nil {
-			return "", err
-		}
+	return text, nil
+}
+
+func ReadImageWithEasyOcr(preparedImageBytes []byte) (string, error) {
+	fileRepository := repositories.NewFileRepository(nil)
+	tempPath, err := fileRepository.WriteTempFile(preparedImageBytes)
+	if err != nil {
+		return "", err
 	}
+	defer os.Remove(tempPath)
+
+	var textBuffer bytes.Buffer
+	var text string
+	cmd := exec.Command("easyocr", "-l", "en", "-f", tempPath, "--detail", "0")
+	cmd.Stdout = &textBuffer
+
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+	text = textBuffer.String()
 
 	return text, nil
 }
 
-func writeDebuggingFiles(ocrText string, path string, imageBytes []byte) error {
+func writeDebuggingFiles(ocrText string, path string, imageBytes []byte, ocrDuration time.Duration) error {
 	fileRepository := repositories.NewFileRepository(nil)
 	pathParts := strings.Split(path, "/")
 	filename := pathParts[len(pathParts)-1]
@@ -58,6 +111,7 @@ func writeDebuggingFiles(ocrText string, path string, imageBytes []byte) error {
 
 	textBytes := []byte(ocrText)
 
+	os.Remove(textFilePath)
 	err := utils.WriteFile(textFilePath, textBytes)
 	if err != nil {
 		return err
@@ -68,6 +122,7 @@ func writeDebuggingFiles(ocrText string, path string, imageBytes []byte) error {
 		return err
 	}
 
+	os.Remove(imageFilePath)
 	imgFile, err := os.Create(imageFilePath)
 	if err != nil {
 		return err
@@ -86,6 +141,7 @@ func writeDebuggingFiles(ocrText string, path string, imageBytes []byte) error {
 
 	fmt.Println("OCR Text saved to: ", textFilePath)
 	fmt.Println("OCR Image saved to: ", imageFilePath)
+	fmt.Println("OCR and image processing duration: ", ocrDuration)
 
 	return nil
 }

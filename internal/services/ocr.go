@@ -1,4 +1,4 @@
-package tesseract
+package services
 
 import (
 	"bytes"

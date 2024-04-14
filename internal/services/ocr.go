@@ -26,7 +26,7 @@ func ReadImage(path string) (string, error) {
 		return "", err
 	}
 
-	if appConfig.AiSettings.OcrEngine == structs.TESSERACT {
+	if appConfig.AiSettings.OcrEngine == structs.TESSERACT || appConfig.AiSettings.OcrEngine == "" {
 		text, err = ReadImageWithTesseract(imageBytes)
 		if err != nil {
 			return "", err
@@ -40,10 +40,6 @@ func ReadImage(path string) (string, error) {
 		}
 	}
 
-	/**
-	TODO: Update sh file to get easy ocr
-	TODO: update docs
-	*/
 	if appConfig.Debug.DebugOcr {
 		err = writeDebuggingFiles(text, path, imageBytes)
 		if err != nil {

@@ -12,20 +12,32 @@ import (
 	"path/filepath"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 )
 
 func ReadImage(path string) (string, error) {
-	config := config.GetConfig()
-	client := gosseract.NewClient()
-	defer client.Close()
-
-	client.SetVariable("tessedit_char_blacklist", "!@#$%^&*()_+=-[]}{;:'\"\\|~`<>/?")
+	var text string
+	appConfig := config.GetConfig()
 
 	imageBytes, err := prepareImage(path)
 	if err != nil {
 		return "", err
+	}
+
+	if appConfig.AiSettings.OcrEngine == structs.TESSERACT {
+		text, err = ReadImageWithTesseract(imageBytes)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	if appConfig.AiSettings.OcrEngine == structs.EASY_OCR {
+		text, err = ReadImageWithEasyOcr(imageBytes)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	/**
@@ -34,8 +46,41 @@ func ReadImage(path string) (string, error) {
 	TODO: Update sh file to get easy ocr
 	TODO: update docs
 	*/
+	if appConfig.Debug.DebugOcr {
+		err = writeDebuggingFiles(text, path, imageBytes)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return text, nil
+}
+
+func ReadImageWithTesseract(preparedImageBytes []byte) (string, error) {
+	client := gosseract.NewClient()
+	defer client.Close()
+
+	err := client.SetVariable("tessedit_char_blacklist", "!@#$%^&*()_+=-[]}{;:'\"\\|~`<>/?")
+	if err != nil {
+		return "", nil
+	}
+
+	err = client.SetImageFromBytes(preparedImageBytes)
+	if err != nil {
+		return "", err
+	}
+
+	text, err := client.Text()
+	if err != nil {
+		return "", err
+	}
+
+	return text, nil
+}
+
+func ReadImageWithEasyOcr(preparedImageBytes []byte) (string, error) {
 	fileRepository := repositories.NewFileRepository(nil)
-	tempPath, err := fileRepository.WriteTempFile(imageBytes)
+	tempPath, err := fileRepository.WriteTempFile(preparedImageBytes)
 	if err != nil {
 		return "", err
 	}
@@ -44,9 +89,6 @@ func ReadImage(path string) (string, error) {
 	var textBuffer bytes.Buffer
 	var text string
 	cmd := exec.Command("easyocr", "-l", "en", "-f", tempPath, "--detail", "0")
-	if err != nil {
-		return "", err
-	}
 	cmd.Stdout = &textBuffer
 
 	err = cmd.Run()
@@ -54,13 +96,6 @@ func ReadImage(path string) (string, error) {
 		return "", err
 	}
 	text = textBuffer.String()
-
-	if config.Debug.DebugOcr {
-		err = writeDebuggingFiles(text, path, imageBytes)
-		if err != nil {
-			return "", err
-		}
-	}
 
 	return text, nil
 }

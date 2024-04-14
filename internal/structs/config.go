@@ -13,6 +13,7 @@ type AiSettings struct {
 	Url        string       `json:"url"`
 	Model      string       `json:"model"`
 	NumWorkers int          `json:"numWorkers"`
+	OcrEngine  OcrEngine    `json:"ocrEngine" default:"tesseract"`
 }
 
 type FeatureConfig struct {

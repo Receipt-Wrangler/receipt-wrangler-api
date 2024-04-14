@@ -41,8 +41,6 @@ func ReadImage(path string) (string, error) {
 	}
 
 	/**
-	TODO: Make configurable (choose your own OCR engine)
-	TODO: Rename package
 	TODO: Update sh file to get easy ocr
 	TODO: update docs
 	*/

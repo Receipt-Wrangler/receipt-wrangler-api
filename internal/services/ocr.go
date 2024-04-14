@@ -11,15 +11,18 @@ import (
 	"os/exec"
 	"path/filepath"
 	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
+	"time"
 )
 
 func ReadImage(path string) (string, error) {
 	var text string
 	appConfig := config.GetConfig()
+	startTime := time.Now()
 
 	imageBytes, err := prepareImage(path)
 	if err != nil {
@@ -39,9 +42,12 @@ func ReadImage(path string) (string, error) {
 			return "", err
 		}
 	}
+	endTime := time.Now()
+	elapsedTime := endTime.Sub(startTime)
+	logging.GetLogger().Print("OCR and Image processing took: ", elapsedTime)
 
 	if appConfig.Debug.DebugOcr {
-		err = writeDebuggingFiles(text, path, imageBytes)
+		err = writeDebuggingFiles(text, path, imageBytes, elapsedTime)
 		if err != nil {
 			return "", err
 		}
@@ -94,7 +100,7 @@ func ReadImageWithEasyOcr(preparedImageBytes []byte) (string, error) {
 	return text, nil
 }
 
-func writeDebuggingFiles(ocrText string, path string, imageBytes []byte) error {
+func writeDebuggingFiles(ocrText string, path string, imageBytes []byte, ocrDuration time.Duration) error {
 	fileRepository := repositories.NewFileRepository(nil)
 	pathParts := strings.Split(path, "/")
 	filename := pathParts[len(pathParts)-1]
@@ -105,6 +111,7 @@ func writeDebuggingFiles(ocrText string, path string, imageBytes []byte) error {
 
 	textBytes := []byte(ocrText)
 
+	os.Remove(textFilePath)
 	err := utils.WriteFile(textFilePath, textBytes)
 	if err != nil {
 		return err
@@ -115,6 +122,7 @@ func writeDebuggingFiles(ocrText string, path string, imageBytes []byte) error {
 		return err
 	}
 
+	os.Remove(imageFilePath)
 	imgFile, err := os.Create(imageFilePath)
 	if err != nil {
 		return err
@@ -133,6 +141,7 @@ func writeDebuggingFiles(ocrText string, path string, imageBytes []byte) error {
 
 	fmt.Println("OCR Text saved to: ", textFilePath)
 	fmt.Println("OCR Image saved to: ", imageFilePath)
+	fmt.Println("OCR and image processing duration: ", ocrDuration)
 
 	return nil
 }

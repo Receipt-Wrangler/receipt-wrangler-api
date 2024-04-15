@@ -10,6 +10,9 @@ rm get-pip.py
 
 pip3 install -r ./imap-client/requirements.txt
 
+# Install pytorch cpu
+pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
 # Install easyocr
 pip3 install easyocr
 

@@ -147,6 +147,7 @@ func writeDebuggingFiles(ocrText string, path string, imageBytes []byte, ocrDura
 }
 
 func prepareImage(path string) ([]byte, error) {
+	var appConfig = config.GetConfig()
 	mw := imagick.NewMagickWand()
 	err := mw.ReadImage(path)
 	if err != nil {
@@ -183,12 +184,18 @@ func prepareImage(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	err = mw.DeskewImage(0.10)
+	err = mw.DeskewImage(.40)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes := mw.GetImageBlob()
+	if appConfig.AiSettings.OcrEngine == structs.EASY_OCR {
+		err = mw.ScaleImage(mw.GetImageWidth()/2, mw.GetImageHeight()/2)
+		if err != nil {
+			return nil, err
+		}
+	}
 
+	bytes := mw.GetImageBlob()
 	return bytes, nil
 }

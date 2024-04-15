@@ -183,7 +183,12 @@ func prepareImage(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	err = mw.DeskewImage(0.10)
+	err = mw.DeskewImage(.40)
+	if err != nil {
+		return nil, err
+	}
+
+	err = mw.ScaleImage(mw.GetImageWidth()/2, mw.GetImageHeight()/2)
 	if err != nil {
 		return nil, err
 	}

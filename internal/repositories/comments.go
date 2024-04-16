@@ -27,6 +27,7 @@ func (repository CommentRepository) AddComment(command commands.UpsertCommentCom
 	comment := models.Comment{
 		Comment:   command.Comment,
 		ReceiptId: command.ReceiptId,
+		UserId:    command.UserId,
 	}
 
 	err := db.Transaction(func(tx *gorm.DB) error {

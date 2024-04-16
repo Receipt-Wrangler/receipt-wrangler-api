@@ -25,8 +25,8 @@ func (comment *UpsertCommentCommand) LoadDataFromRequest(w http.ResponseWriter, 
 	}
 
 	if isCreate {
-		defaultValue := uint(0)
-		comment.UserId = &defaultValue
+		token := structs.GetJWT(r)
+		comment.UserId = &token.UserId
 	}
 
 	return nil
@@ -50,8 +50,11 @@ func (comment *UpsertCommentCommand) Validate(userRequestId uint, isCreate bool)
 		errors["userId"] = "User Id is required"
 	}
 
-	if comment.UserId != nil && *comment.UserId != userRequestId {
-		errors["userId"] = "Bad user id"
+	if !isCreate {
+		if comment.UserId != nil && *comment.UserId != userRequestId {
+			errors["userId"] = "Bad user id"
+		}
+
 	}
 
 	vErr.Errors = errors

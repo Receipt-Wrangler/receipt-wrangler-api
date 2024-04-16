@@ -1,13 +1,35 @@
 package commands
 
 import (
+	"encoding/json"
+	"net/http"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 )
 
 type UpsertCommentCommand struct {
 	Comment   string `json:"comment"`
 	ReceiptId uint   `json:"receiptId"`
-	UserId    uint   `json:"userId"`
+	UserId    *uint  `json:"userId"`
+}
+
+func (comment *UpsertCommentCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request, isCreate bool) error {
+	bytes, err := utils.GetBodyData(w, r)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(bytes, &comment)
+	if err != nil {
+		return err
+	}
+
+	if isCreate {
+		defaultValue := uint(0)
+		comment.UserId = &defaultValue
+	}
+
+	return nil
 }
 
 func (comment *UpsertCommentCommand) Validate(userRequestId uint, isCreate bool) structs.ValidatorError {
@@ -24,11 +46,11 @@ func (comment *UpsertCommentCommand) Validate(userRequestId uint, isCreate bool)
 		}
 	}
 
-	if comment.UserId == 0 {
+	if comment.UserId == nil {
 		errors["userId"] = "User Id is required"
 	}
 
-	if comment.UserId != userRequestId {
+	if comment.UserId != nil && *comment.UserId != userRequestId {
 		errors["userId"] = "Bad user id"
 	}
 

@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -12,16 +14,35 @@ import (
 )
 
 func AddComment(w http.ResponseWriter, r *http.Request) {
+	token := structs.GetJWT(r)
+	errMsg := "Error adding comment"
+
+	upsertCommentCommand := commands.UpsertCommentCommand{}
+	err := upsertCommentCommand.LoadDataFromRequest(w, r, true)
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+
+	vErr := upsertCommentCommand.Validate(token.UserId, true)
+	if len(vErr.Errors) > 0 {
+		structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+		return
+	}
+
+	receiptString := simpleutils.UintToString(upsertCommentCommand.ReceiptId)
+
 	handler := structs.Handler{
 		ErrorMessage: "Error adding comment",
 		Writer:       w,
 		Request:      r,
+		ReceiptId:    receiptString,
+		GroupRole:    models.VIEWER,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			bodyData := r.Context().Value("comment").(models.Comment)
 			commentRepository := repositories.NewCommentRepository(nil)
 
-			comment, err := commentRepository.AddComment(bodyData)
+			comment, err := commentRepository.AddComment(upsertCommentCommand)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

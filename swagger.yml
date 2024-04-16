@@ -275,11 +275,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Comment"
+              $ref: "#/components/schemas/UpsertCommentCommand"
       operationId: addComment
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -2863,7 +2867,6 @@ components:
       required:
         - comment
         - receiptId
-        - userId
       properties:
         comment:
           type: string

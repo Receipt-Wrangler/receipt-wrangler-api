@@ -94,6 +94,27 @@ func (repository CommentRepository) GetUsersInCommentThread(comment models.Comme
 	return result, nil
 }
 
+func (repository CommentRepository) DeleteComment(commentId string, tokenUserId uint) error {
+	db := repository.GetDB()
+	var comment models.Comment
+
+	err := db.Model(models.Comment{}).Where("id = ?", commentId).First(&comment).Error
+	if err != nil {
+		return err
+	}
+
+	if *comment.UserId == tokenUserId {
+		err = db.Model(models.Comment{}).Where("id = ?", commentId).Delete(&comment).Error
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("not allowed to delete another user's comment")
+	}
+
+	return nil
+}
+
 func (repository CommentRepository) sendNotificationsToUsers(comment models.Comment) error {
 	var receipt models.Receipt
 	usersToOmit := make([]interface{}, 0)

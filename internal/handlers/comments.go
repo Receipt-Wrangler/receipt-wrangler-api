@@ -69,28 +69,13 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			var comment models.Comment
 			commentId := chi.URLParam(r, "commentId")
+			commentRepository := repositories.NewCommentRepository(nil)
+			token := structs.GetJWT(r)
 
-			db := repositories.GetDB()
-			err := db.Where("id = ?", commentId).Find(&comment).Error
+			err := commentRepository.DeleteComment(commentId, token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
-			}
-
-			if comment.CommentId == nil {
-				err = db.Delete(&models.Comment{}, commentId).Error
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-			} else {
-				var parentComment models.Comment
-				err = db.Where("id = ?", comment.CommentId).Preload("Replies").Find(&parentComment).Error
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				db.Model(&parentComment).Association("Replies").Delete(&comment)
 			}
 
 			w.WriteHeader(http.StatusOK)

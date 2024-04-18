@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"fmt"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
@@ -21,11 +22,16 @@ func NewCommentRepository(tx *gorm.DB) CommentRepository {
 	return repository
 }
 
-func (repository CommentRepository) AddComment(comment models.Comment) (models.Comment, error) {
+func (repository CommentRepository) AddComment(command commands.UpsertCommentCommand) (models.Comment, error) {
 	db := repository.GetDB()
+	comment := models.Comment{
+		Comment:   command.Comment,
+		ReceiptId: command.ReceiptId,
+		UserId:    command.UserId,
+	}
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		repository.TX = tx
+		repository.SetTransaction(tx)
 
 		err := tx.Model(&comment).Create(&comment).Error
 		if err != nil {
@@ -37,6 +43,7 @@ func (repository CommentRepository) AddComment(comment models.Comment) (models.C
 			return err
 		}
 
+		repository.ClearTransaction()
 		return nil
 	})
 
@@ -86,6 +93,27 @@ func (repository CommentRepository) GetUsersInCommentThread(comment models.Comme
 	}
 
 	return result, nil
+}
+
+func (repository CommentRepository) DeleteComment(commentId string, tokenUserId uint) error {
+	db := repository.GetDB()
+	var comment models.Comment
+
+	err := db.Model(models.Comment{}).Where("id = ?", commentId).First(&comment).Error
+	if err != nil {
+		return err
+	}
+
+	if *comment.UserId == tokenUserId {
+		err = db.Model(models.Comment{}).Where("id = ?", commentId).Delete(&comment).Error
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("not allowed to delete another user's comment")
+	}
+
+	return nil
 }
 
 func (repository CommentRepository) sendNotificationsToUsers(comment models.Comment) error {

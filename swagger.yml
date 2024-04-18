@@ -275,11 +275,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Comment"
+              $ref: "#/components/schemas/UpsertCommentCommand"
       operationId: addComment
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1664,31 +1668,24 @@ components:
         - comment
         - receiptId
         - userId
-        - replies
         - id
       type: object
       properties:
         additionalInfo:
           type: string
           description: Additional information about the comment
-          x-go-name: AdditionalInfo
         comment:
           type: string
           description: Comment itself
-          x-go-name: Comment
         commentId:
           type: integer
           description: Comment foreign key used for repleis
           format: uint64
-          x-go-name: CommentId
         createdAt:
           type: string
-
-          x-go-name: CreatedAt
         createdBy:
           type: integer
           format: uint64
-          x-go-name: CreatedBy
         id:
           type: integer
           format: uint64
@@ -1697,22 +1694,14 @@ components:
           type: integer
           description: Receipt foreign key
           format: uint64
-          x-go-name: ReceiptId
-        replies:
-          type: array
-          description: Comment's replies
           items:
             $ref: "#/components/schemas/Comment"
-          x-go-name: Replies
         updatedAt:
           type: string
-
-          x-go-name: UpdatedAt
         userId:
           type: integer
           description: User foreign key
           format: uint64
-          x-go-name: UserId
       description: User comment left on receipts
       x-go-package: receipt-wrangler/api/internal/models
     FileData:
@@ -2863,7 +2852,6 @@ components:
       required:
         - comment
         - receiptId
-        - userId
       properties:
         comment:
           type: string

@@ -116,11 +116,11 @@ func getPrompt(ocrText string) (string, error) {
 
 	currentYear := simpleutils.UintToString(uint(time.Now().Year()))
 	prompt := fmt.Sprintf(`
-	Find the receipt's name, total cost, and date. Format as:
+	Find the receipt's name, total cost, and date. Format the found data as:
 	{
 		"name": store name,
-		"amount": amount,
-		"date": date in zulu, with ALL time values set to 0,
+		"amount": amount as a number,
+		"date": date in ISO 18601 format in UTC with ALL time values set as 0,
 		"categories": categories,
 		"tags": tags
 	}

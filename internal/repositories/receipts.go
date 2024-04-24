@@ -283,9 +283,9 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	// Set order by
 	if repository.isTrustedValue(pagedRequest) {
 		orderBy := pagedRequest.OrderBy
-		query = query.Order(orderBy + " " + pagedRequest.SortDirection)
+		query = query.Order(orderBy + " " + string(pagedRequest.SortDirection))
 	} else {
-		return nil, 0, errors.New("untrusted value " + pagedRequest.OrderBy + " " + pagedRequest.SortDirection)
+		return nil, 0, errors.New("untrusted value " + pagedRequest.OrderBy + " " + string(pagedRequest.SortDirection))
 	}
 
 	err = query.Count(&count).Error

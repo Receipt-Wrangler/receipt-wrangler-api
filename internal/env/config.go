@@ -34,6 +34,10 @@ func GetBasePath() string {
 	return envBase
 }
 
+func GetEncryptionKey() string {
+	return os.Getenv("ENCRYPTION_KEY")
+}
+
 func GetDeployEnv() string {
 	return env
 }

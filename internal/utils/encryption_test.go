@@ -20,6 +20,26 @@ func TestShouldEncryptStringWithAES128(t *testing.T) {
 	}
 }
 
+func TestShouldReturnErrorEncryptingWithEmptyKey(t *testing.T) {
+	key := ""
+	value := []byte("superSecretData")
+
+	_, err := EncryptData(key, value)
+	if err == nil {
+		PrintTestError(t, nil, "error")
+	}
+}
+
+func TestShouldReturnErrorEncryptingWithEmptyValue(t *testing.T) {
+	key := "superSecureKey"
+	value := []byte("")
+
+	_, err := EncryptData(key, value)
+	if err == nil {
+		PrintTestError(t, nil, "error")
+	}
+}
+
 func TestShouldDecryptStringWithAES128(t *testing.T) {
 	key := "superSecureKey"
 	value := []byte("superSecretData")
@@ -42,5 +62,52 @@ func TestShouldDecryptStringWithAES128(t *testing.T) {
 
 	if clearText != "superSecretData" {
 		PrintTestError(t, clearText, "superSecretData")
+	}
+}
+
+func TestShouldReturnErrorDecryptingWithEmptyKey(t *testing.T) {
+	key := ""
+	value := []byte("superSecretData")
+
+	_, err := DecryptData(key, value)
+	if err == nil {
+		PrintTestError(t, nil, "error")
+	}
+}
+
+func TestShouldReturnErrorDecryptingWithEmptyValue(t *testing.T) {
+	key := "superSecureKey"
+	value := []byte("")
+
+	_, err := DecryptData(key, value)
+	if err == nil {
+		PrintTestError(t, nil, "error")
+	}
+}
+
+func TestShouldHashValueWithMD5(t *testing.T) {
+	value := "superSecretData"
+	expected := "jsaLbDi8qpWJ+C8rgZ7DfQ=="
+
+	hashedValue := Md5Hash(value)
+
+	hashedString := EncodeToBase64([]byte(hashedValue))
+
+	if hashedString != expected {
+		PrintTestError(t, hashedValue, expected)
+	}
+	if len(hashedValue) != 16 {
+		PrintTestError(t, len(hashedValue), 16)
+	}
+}
+
+func TestShouldEncodeValueToBase64(t *testing.T) {
+	value := []byte("superSecretData")
+	expected := "c3VwZXJTZWNyZXREYXRh"
+
+	encodedValue := EncodeToBase64(value)
+
+	if encodedValue != expected {
+		PrintTestError(t, encodedValue, expected)
 	}
 }

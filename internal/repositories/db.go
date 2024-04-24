@@ -109,6 +109,22 @@ func GetDB() *gorm.DB {
 	return db
 }
 
+func InitDB() error {
+	var systemSettingsCount int64
+	if err := db.Model(&models.SystemSettings{}).Count(&systemSettingsCount).Error; err != nil {
+		return err
+	}
+
+	if systemSettingsCount == 0 {
+		err := db.Create(&models.SystemSettings{})
+		if err.Error != nil {
+			return err.Error
+		}
+	}
+
+	return nil
+}
+
 func InitTestDb() {
 	sqlite, err := gorm.Open(sqlite.Open("file:test.db?_pragma=foreign_keys(1)"), &gorm.Config{})
 	if err != nil {

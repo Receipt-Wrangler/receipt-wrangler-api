@@ -18,6 +18,10 @@ func (ocrEngine *OcrEngine) Scan(value string) error {
 }
 
 func (ocrEngine OcrEngine) Value() (driver.Value, error) {
+	if len(ocrEngine) == 0 {
+		return "", nil
+	}
+
 	if ocrEngine != TESSERACT && ocrEngine != EASY_OCR {
 		return nil, errors.New("invalid ocr type")
 	}

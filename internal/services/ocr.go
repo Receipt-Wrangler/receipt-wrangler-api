@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 	"time"
@@ -29,14 +29,14 @@ func ReadImage(path string) (string, error) {
 		return "", err
 	}
 
-	if appConfig.AiSettings.OcrEngine == structs.TESSERACT || appConfig.AiSettings.OcrEngine == "" {
+	if appConfig.AiSettings.OcrEngine == models.TESSERACT || appConfig.AiSettings.OcrEngine == "" {
 		text, err = ReadImageWithTesseract(imageBytes)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	if appConfig.AiSettings.OcrEngine == structs.EASY_OCR {
+	if appConfig.AiSettings.OcrEngine == models.EASY_OCR {
 		text, err = ReadImageWithEasyOcr(imageBytes)
 		if err != nil {
 			return "", err
@@ -189,7 +189,7 @@ func prepareImage(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	if appConfig.AiSettings.OcrEngine == structs.EASY_OCR {
+	if appConfig.AiSettings.OcrEngine == models.EASY_OCR {
 		err = mw.ScaleImage(mw.GetImageWidth()/2, mw.GetImageHeight()/2)
 		if err != nil {
 			return nil, err

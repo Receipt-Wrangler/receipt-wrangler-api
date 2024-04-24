@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-func NewAiClient(clientType structs.AiClientType, openAiClient *openai.Client, geminiClient *genai.Client) *AiClient {
+func NewAiClient(clientType models.AiClientType, openAiClient *openai.Client, geminiClient *genai.Client) *AiClient {
 	return &AiClient{
 		ClientType:   clientType,
 		OpenAiClient: openAiClient,
@@ -24,7 +25,7 @@ func NewAiClient(clientType structs.AiClientType, openAiClient *openai.Client, g
 }
 
 type AiClient struct {
-	ClientType   structs.AiClientType      `json:"clientType"`
+	ClientType   models.AiClientType       `json:"clientType"`
 	Messages     []structs.AiClientMessage `json:"messages"`
 	OpenAiClient *openai.Client            `json:"openAiClient"`
 	GeminiClient *genai.Client             `json:"geminiClient"`
@@ -33,13 +34,13 @@ type AiClient struct {
 func (aiClient *AiClient) CreateChatCompletion() (string, error) {
 	switch aiClient.ClientType {
 
-	case structs.OPEN_AI_CUSTOM:
+	case models.OPEN_AI_CUSTOM:
 		return aiClient.OpenAiCustomChatCompletion()
 
-	case structs.OPEN_AI:
+	case models.OPEN_AI:
 		return aiClient.OpenAiChatCompletion()
 
-	case structs.GEMINI:
+	case models.GEMINI:
 		return aiClient.GeminiChatCompletion()
 	}
 

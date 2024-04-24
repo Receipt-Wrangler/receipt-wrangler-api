@@ -14,7 +14,6 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/structs"
 	"time"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
@@ -44,6 +43,11 @@ func main() {
 		os.Exit(0)
 	}
 	repositories.MakeMigrations()
+	err = repositories.InitDB()
+	if err != nil {
+		logger.Print(err.Error())
+		os.Exit(0)
+	}
 
 	logger.Print("Initializing Imagick...")
 	imagick.Initialize()
@@ -51,7 +55,7 @@ func main() {
 
 	appConfig := config.GetConfig()
 
-	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == structs.OPEN_AI {
+	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == models.OPEN_AI {
 		logger.Print("Initializing OpenAI Client...")
 		err = services.InitOpenAIClient()
 		if err != nil {
@@ -60,7 +64,7 @@ func main() {
 		}
 	}
 
-	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == structs.GEMINI {
+	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == models.GEMINI {
 		logger.Print("Initializing Gemini Client...")
 		err := services.InitGeminiClient()
 		if err != nil {

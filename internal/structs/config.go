@@ -1,5 +1,7 @@
 package structs
 
+import "receipt-wrangler/api/internal/models"
+
 type EmailSettings struct {
 	Host     string
 	Port     int
@@ -8,12 +10,12 @@ type EmailSettings struct {
 }
 
 type AiSettings struct {
-	AiType     AiClientType `json:"type"`
-	Key        string       `json:"key"`
-	Url        string       `json:"url"`
-	Model      string       `json:"model"`
-	NumWorkers int          `json:"numWorkers"`
-	OcrEngine  OcrEngine    `json:"ocrEngine"`
+	AiType     models.AiClientType `json:"type"`
+	Key        string              `json:"key"`
+	Url        string              `json:"url"`
+	Model      string              `json:"model"`
+	NumWorkers int                 `json:"numWorkers"`
+	OcrEngine  models.OcrEngine    `json:"ocrEngine"`
 }
 
 type FeatureConfig struct {

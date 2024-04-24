@@ -8,6 +8,7 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
@@ -25,7 +26,7 @@ var geminiClient *genai.Client
 func InitOpenAIClient() error {
 	config := config.GetConfig()
 	apiKey := config.AiSettings.Key
-	if len(apiKey) == 0 && config.AiSettings.AiType == structs.OPEN_AI {
+	if len(apiKey) == 0 && config.AiSettings.AiType == models.OPEN_AI {
 		apiKey = config.AiSettings.Key
 	}
 
@@ -71,7 +72,7 @@ func ReadReceiptData(ocrText string) (commands.UpsertReceiptCommand, error) {
 
 	aiType := config.AiSettings.AiType
 	if len(aiType) == 0 {
-		aiType = structs.OPEN_AI
+		aiType = models.OPEN_AI
 	}
 
 	aiClient := ai.NewAiClient(aiType, client, geminiClient)

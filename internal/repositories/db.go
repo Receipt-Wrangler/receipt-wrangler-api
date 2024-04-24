@@ -100,11 +100,29 @@ func MakeMigrations() {
 		&models.GroupSettings{},
 		&models.Dashboard{},
 		&models.Widget{},
+		&models.SystemSettings{},
+		&models.SystemEmail{},
 	)
 }
 
 func GetDB() *gorm.DB {
 	return db
+}
+
+func InitDB() error {
+	var systemSettingsCount int64
+	if err := db.Model(&models.SystemSettings{}).Count(&systemSettingsCount).Error; err != nil {
+		return err
+	}
+
+	if systemSettingsCount == 0 {
+		err := db.Create(&models.SystemSettings{})
+		if err.Error != nil {
+			return err.Error
+		}
+	}
+
+	return nil
 }
 
 func InitTestDb() {

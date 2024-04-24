@@ -1579,6 +1579,17 @@ components:
       enum:
         - "GROUP_SUMMARY"
         - "FILTERED_RECEIPTS"
+    AiType:
+      type: string
+      enum:
+        - "OPENAI_CUSTOM"
+        - "OPENAI"
+        - "GEMINI"
+    OcrEngine:
+      type: string
+      enum:
+        - "TESSERACT"
+        - "EASY_OCR"
     BaseModel:
       type: object
       required:
@@ -2862,4 +2873,54 @@ components:
         userId:
           type: integer
           description: User foreign key
-
+    SystemEmail:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            host:
+              type: string
+              description: IMAP host
+            port:
+              type: integer
+              description: IMAP port
+            username:
+              type: string
+              description: IMAP username
+            password:
+              type: string
+              description: IMAP password
+    SystemSettings:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            enableLocalSignUp:
+              type: boolean
+              description: Whether local sign up is enabled
+              default: false
+            aiPoweredReceipts:
+              type: boolean
+              description: Whether AI powered receipts are enabled
+              default: false
+            aiType:
+              $ref: "#/components/schemas/AiType"
+            aiUrl:
+              type: string
+              description: URL for AI powered receipts
+            aiKey:
+              type: string
+              description: Key for AI powered receipts
+            aiModel:
+              type: string
+              description: Model for AI powered receipts
+            numWorkers:
+              type: integer
+              description: Number of workers for AI powered receipts
+              default: 1
+            ocrEngine:
+              $ref: "#/components/schemas/OcrEngine"
+            emailPollingInterval:
+              type: integer
+              description: Email polling interval
+              default: 1800

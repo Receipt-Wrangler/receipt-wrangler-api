@@ -100,6 +100,8 @@ func MakeMigrations() {
 		&models.GroupSettings{},
 		&models.Dashboard{},
 		&models.Widget{},
+		&models.SystemSettings{},
+		&models.SystemEmail{},
 	)
 }
 

@@ -17,6 +17,10 @@ const (
 	DEFAULT    SortDirection = ""
 )
 
+func GetValidSortDirections() []any {
+	return []any{ASCENDING, DESCENDING, DEFAULT}
+}
+
 func (sortDirection *SortDirection) Scan(value string) error {
 	*sortDirection = SortDirection(value)
 	return nil

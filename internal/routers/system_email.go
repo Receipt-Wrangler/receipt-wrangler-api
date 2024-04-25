@@ -12,7 +12,7 @@ func BuildSystemEmailRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mu
 	systemEmailRouter := chi.NewRouter()
 
 	systemEmailRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
-	systemEmailRouter.Get("/", handlers.GetAllSystemEmails)
+	systemEmailRouter.Post("/", handlers.GetAllSystemEmails)
 
 	return systemEmailRouter
 }

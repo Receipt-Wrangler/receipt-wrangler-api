@@ -18,6 +18,10 @@ func GetAllSystemEmails(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			pagedData := structs.PagedData{
+				Data:       []any{},
+				TotalCount: 0,
+			}
 			pagedCommand := commands.PagedRequestCommand{}
 			err := pagedCommand.LoadDataFromRequest(w, r)
 			if err != nil {
@@ -30,7 +34,17 @@ func GetAllSystemEmails(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			bytes, err := utils.MarshalResponseData(&systemEmails)
+			count, err := systemEmailRepository.GetCount("system_emails", "")
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			for i := 0; i < len(systemEmails); i++ {
+				pagedData.Data = append(pagedData.Data, systemEmails[i])
+			}
+			pagedData.TotalCount = count
+
+			bytes, err := utils.MarshalResponseData(pagedData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

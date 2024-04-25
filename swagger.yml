@@ -1515,6 +1515,28 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: []
+  /systemEmail/:
+    get:
+      tags:
+        - SystemEmail
+      summary: Gets paged system emails
+      description: This will return paged and sorted system emails
+      operationId: getPagedSystemEmails
+      responses:
+        200:
+          description: The system emails
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SystemEmail"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:

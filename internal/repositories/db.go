@@ -81,8 +81,8 @@ func Connect() error {
 	return nil
 }
 
-func MakeMigrations() {
-	db.AutoMigrate(
+func MakeMigrations() error {
+	err := db.AutoMigrate(
 		&models.RefreshToken{},
 		&models.User{},
 		&models.Receipt{},
@@ -103,6 +103,8 @@ func MakeMigrations() {
 		&models.SystemSettings{},
 		&models.SystemEmail{},
 	)
+
+	return err
 }
 
 func GetDB() *gorm.DB {

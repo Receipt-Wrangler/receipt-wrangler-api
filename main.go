@@ -42,7 +42,11 @@ func main() {
 		logger.Print(err.Error())
 		os.Exit(0)
 	}
-	repositories.MakeMigrations()
+	err = repositories.MakeMigrations()
+	if err != nil {
+		logger.Print(err.Error())
+		os.Exit(0)
+	}
 	err = repositories.InitDB()
 	if err != nil {
 		logger.Print(err.Error())

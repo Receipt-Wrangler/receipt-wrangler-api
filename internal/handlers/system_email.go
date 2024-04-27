@@ -28,6 +28,12 @@ func GetAllSystemEmails(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
+			vErr := pagedCommand.Validate()
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return http.StatusBadRequest, nil
+			}
+
 			systemEmailRepository := repositories.NewSystemEmailRepository(nil)
 			systemEmails, err := systemEmailRepository.GetPagedSystemEmails(pagedCommand)
 			if err != nil {

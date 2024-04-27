@@ -72,6 +72,10 @@ func (command *PagedRequestCommand) Validate() structs.ValidatorError {
 		errorMap["pageSize"] = "PageSize must be greater than or equal to 1"
 	}
 
+	if command.SortDirection != ASCENDING && command.SortDirection != DESCENDING && command.SortDirection != DEFAULT {
+		errorMap["sortDirection"] = "Invalid sort direction"
+	}
+
 	vErr.Errors = errorMap
 	return vErr
 }

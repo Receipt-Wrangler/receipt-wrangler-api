@@ -5,5 +5,5 @@ type SystemEmail struct {
 	Host     string `gorm:"not null;" json:"host"`
 	Port     string `gorm:"not null;" json:"port"`
 	Username string `gorm:"not null;" json:"username"`
-	Password string `gorm:"not null;" json:"password"`
+	Password string `gorm:"not null;" json:"-"`
 }

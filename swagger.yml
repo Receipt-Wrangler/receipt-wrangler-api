@@ -11,7 +11,7 @@ info:
 servers:
   - url: /api
 security:
-  - bearerAuth: []
+  - bearerAuth: [ ]
 paths:
   /dashboard/{groupId}:
     parameters:
@@ -41,7 +41,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /dashboard/{dashboardId}:
     parameters:
       - in: path
@@ -77,7 +77,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - Dashboard
@@ -96,7 +96,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /dashboard/:
     post:
       tags:
@@ -121,7 +121,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /category/{categoryName}:
     parameters:
       - in: path
@@ -148,7 +148,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /category/getPagedCategories:
     post:
       tags:
@@ -173,7 +173,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /category/:
     get:
       tags:
@@ -193,7 +193,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - Category
@@ -217,7 +217,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /category/{categoryId}:
     parameters:
       - in: path
@@ -247,7 +247,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - Category
@@ -262,7 +262,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /comment/:
     post:
       tags:
@@ -287,7 +287,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /comment/{commentId}:
     delete:
       tags:
@@ -308,7 +308,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /featureConfig:
     get:
       tags:
@@ -326,7 +326,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /group:
     get:
       tags:
@@ -346,7 +346,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - Groups
@@ -366,7 +366,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /group/{groupId}/ocrText:
     get:
       tags:
@@ -389,7 +389,7 @@ paths:
         403:
           $ref: "#/components/responses/Forbidden"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /group/{groupId}/pollGroupEmail:
     post:
       tags:
@@ -414,7 +414,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /group/{groupId}:
     parameters:
       - in: path
@@ -435,7 +435,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     put:
       tags:
         - Groups
@@ -457,7 +457,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - Groups
@@ -472,7 +472,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /group/{groupId}/groupSettings:
     put:
       tags:
@@ -506,7 +506,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
 
   /login/:
     post:
@@ -553,7 +553,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /notifications/:
     get:
       tags:
@@ -575,7 +575,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - Notifications
@@ -588,7 +588,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /notifications/{notificationId}:
     delete:
       tags:
@@ -609,7 +609,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /notifications/notificationCount:
     get:
       tags:
@@ -629,7 +629,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receipt/:
     post:
       tags:
@@ -650,7 +650,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receipt/quickScan:
     post:
       tags:
@@ -677,7 +677,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receipt/hasAccess:
     get:
       tags:
@@ -708,7 +708,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receipt/{receiptId}:
     parameters:
       - in: path
@@ -733,7 +733,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     put:
       tags:
         - Receipt
@@ -753,7 +753,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - Receipt
@@ -766,7 +766,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receipt/{receiptId}/duplicate:
     post:
       tags:
@@ -787,7 +787,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receipt/bulkStatusUpdate:
     post:
       tags:
@@ -816,7 +816,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receipt/group/{groupId}:
     post:
       tags:
@@ -849,7 +849,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receiptImage/:
     post:
       tags:
@@ -874,7 +874,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /receiptImage/convertToJpg:
     post:
       tags:
@@ -906,7 +906,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
 
   /receiptImage/magicFill:
     post:
@@ -942,7 +942,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
 
   /receiptImage/{receiptImageId}:
     parameters:
@@ -968,7 +968,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - ReceiptImage
@@ -981,7 +981,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /search/:
     get:
       tags:
@@ -1008,7 +1008,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /signUp:
     post:
       tags:
@@ -1029,7 +1029,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /tag/getPagedTags:
     post:
       tags:
@@ -1054,7 +1054,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /tag/{tagName}:
     parameters:
       - in: path
@@ -1079,7 +1079,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /tag/{tagId}:
     parameters:
       - in: path
@@ -1111,7 +1111,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - Tag
@@ -1124,7 +1124,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /tag/:
     get:
       tags:
@@ -1144,7 +1144,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - Tag
@@ -1168,7 +1168,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /token/:
     post:
       tags:
@@ -1195,7 +1195,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /user:
     get:
       tags:
@@ -1217,7 +1217,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     post:
       tags:
         - User
@@ -1237,7 +1237,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /user/{userId}:
     put:
       tags:
@@ -1265,7 +1265,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     delete:
       tags:
         - User
@@ -1285,7 +1285,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /user/{userId}/convertDummyUserToNormalUser:
     post:
       tags:
@@ -1315,7 +1315,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /user/{userId}/resetPassword:
     post:
       tags:
@@ -1343,7 +1343,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /user/{username}:
     get:
       tags:
@@ -1400,12 +1400,12 @@ paths:
             application/json:
               schema:
                 type: object
-                additionalProperties: 
+                additionalProperties:
                   type: string
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /user/getUserClaims:
     get:
       tags:
@@ -1425,7 +1425,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /user/updateUserProfile:
     put:
       tags:
@@ -1446,7 +1446,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /user/appData:
     get:
       tags:
@@ -1468,7 +1468,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
   /userPreferences:
     get:
       tags:
@@ -1488,7 +1488,7 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
     put:
       tags:
         - UserPreferences
@@ -1514,7 +1514,34 @@ paths:
         500:
           $ref: "#/components/responses/Internal"
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
+  /systemEmail/:
+    post:
+      tags:
+        - SystemEmail
+      summary: Gets paged system emails
+      description: This will return paged and sorted system emails
+      operationId: getPagedSystemEmails
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
+      responses:
+        200:
+          description: Paged system emails
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -1700,13 +1727,9 @@ components:
         id:
           type: integer
           format: uint64
-          x-go-name: ID
         receiptId:
           type: integer
           description: Receipt foreign key
-          format: uint64
-          items:
-            $ref: "#/components/schemas/Comment"
         updatedAt:
           type: string
         userId:
@@ -1714,7 +1737,6 @@ components:
           description: User foreign key
           format: uint64
       description: User comment left on receipts
-      x-go-package: receipt-wrangler/api/internal/models
     FileData:
       required:
         - receiptId
@@ -2077,7 +2099,7 @@ components:
           description: Type of widget
         configuration:
           type: object
-          additionalProperties: {}
+          additionalProperties: { }
           description: Configuration of widget
       description: Widget related to a user's dashboard
     UpsertTagCommand:
@@ -2387,9 +2409,9 @@ components:
           type: array
           items:
             oneOf:
-                - $ref: "#/components/schemas/Receipt"
-                - $ref: "#/components/schemas/Category"
-                - $ref: "#/components/schemas/Tag"
+              - $ref: "#/components/schemas/Receipt"
+              - $ref: "#/components/schemas/Category"
+              - $ref: "#/components/schemas/Tag"
         totalCount:
           type: integer
     FeatureConfig:
@@ -2659,7 +2681,7 @@ components:
           description: Type of widget
         configuration:
           type: object
-          additionalProperties: {}
+          additionalProperties: { }
           description: Configuration of widget
     AppData:
       type: object
@@ -2761,7 +2783,7 @@ components:
           items:
             type: string
           description: Audience
-          default: []
+          default: [ ]
         exp:
           type: integer
           description: Expiration time
@@ -2828,12 +2850,12 @@ components:
           type: array
           description: Items associated to receipt
           items:
-              $ref: "#/components/schemas/UpsertItemCommand"
+            $ref: "#/components/schemas/UpsertItemCommand"
         comments:
           type: array
           description: Comments associated to receipt
           items:
-              $ref: "#/components/schemas/UpsertCommentCommand"
+            $ref: "#/components/schemas/UpsertCommentCommand"
 
     UpsertItemCommand:
       type: object

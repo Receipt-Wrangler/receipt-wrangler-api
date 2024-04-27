@@ -202,5 +202,12 @@ func initRoutes() *chi.Mux {
 	dashboardRouter := routers.BuildDashboardRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/dashboard", dashboardRouter)
 
+	// System email router
+	env = config.GetDeployEnv()
+	if env == "dev" {
+		systemEmailRouter := routers.BuildSystemEmailRouter(tokenValidatorMiddleware)
+		rootRouter.Mount("/api/systemEmail", systemEmailRouter)
+	}
+
 	return rootRouter
 }

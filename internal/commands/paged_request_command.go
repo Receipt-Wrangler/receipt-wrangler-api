@@ -3,15 +3,41 @@ package commands
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
 
+type SortDirection string
+
+const (
+	ASCENDING  SortDirection = "asc"
+	DESCENDING SortDirection = "desc"
+	DEFAULT    SortDirection = ""
+)
+
+func GetValidSortDirections() []any {
+	return []any{ASCENDING, DESCENDING, DEFAULT}
+}
+
+func (sortDirection *SortDirection) Scan(value string) error {
+	*sortDirection = SortDirection(value)
+	return nil
+}
+
+func (sortDirection SortDirection) Value() (driver.Value, error) {
+	if sortDirection != ASCENDING && sortDirection != DESCENDING && sortDirection != DEFAULT {
+		return nil, errors.New("invalid sortDirection")
+	}
+	return string(sortDirection), nil
+}
+
 type PagedRequestCommand struct {
-	Page          int    `json:"page"`
-	PageSize      int    `json:"pageSize"`
-	OrderBy       string `json:"orderBy"`
-	SortDirection string `json:"sortDirection"`
+	Page          int           `json:"page"`
+	PageSize      int           `json:"pageSize"`
+	OrderBy       string        `json:"orderBy"`
+	SortDirection SortDirection `json:"sortDirection"`
 }
 
 func (command *PagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -33,6 +59,25 @@ func (command *PagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r
 	command.SortDirection = pagedRequestCommand.SortDirection
 
 	return nil
+}
+func (command *PagedRequestCommand) Validate() structs.ValidatorError {
+	vErr := structs.ValidatorError{}
+	errorMap := make(map[string]string)
+
+	if command.Page < 1 {
+		errorMap["page"] = "Page must be greater than or equal to 0"
+	}
+
+	if command.PageSize < 1 {
+		errorMap["pageSize"] = "PageSize must be greater than or equal to 1"
+	}
+
+	if command.SortDirection != ASCENDING && command.SortDirection != DESCENDING && command.SortDirection != DEFAULT {
+		errorMap["sortDirection"] = "Invalid sort direction"
+	}
+
+	vErr.Errors = errorMap
+	return vErr
 }
 
 type ReceiptPagedRequestCommand struct {

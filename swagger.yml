@@ -1727,13 +1727,9 @@ components:
         id:
           type: integer
           format: uint64
-          x-go-name: ID
         receiptId:
           type: integer
           description: Receipt foreign key
-          format: uint64
-          items:
-            $ref: "#/components/schemas/Comment"
         updatedAt:
           type: string
         userId:
@@ -1741,7 +1737,6 @@ components:
           description: User foreign key
           format: uint64
       description: User comment left on receipts
-      x-go-package: receipt-wrangler/api/internal/models
     FileData:
       required:
         - receiptId

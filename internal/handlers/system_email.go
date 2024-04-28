@@ -85,6 +85,17 @@ func AddSystemEmail(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, nil
 			}
 
+			systemEmailRepository := repositories.NewSystemEmailRepository(nil)
+			systemEmail, err := systemEmailRepository.AddSystemEmail(command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(systemEmail)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 

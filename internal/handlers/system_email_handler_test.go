@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -20,6 +21,144 @@ import (
 
 func tearDownSystemEmailTest() {
 	repositories.TruncateTestDb()
+}
+
+func TestShouldNotAllowUserToCreateSystemEmail(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	AddSystemEmail(w, r)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestShouldCreateASystemEmail(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	os.Setenv("ENCRYPTION_KEY", "superSecretKey")
+
+	command := commands.UpsertSystemEmailCommand{
+		Host:     "imap.gmail.com",
+		Port:     "993",
+		Username: "test@gmail.com",
+		Password: "superSecretPassword",
+	}
+	bytes, _ := json.Marshal(command)
+
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	AddSystemEmail(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestShouldNotCreateASystemEmailDueToMissingEncryptionKey(t *testing.T) {
+	defer tearDownSystemEmailTest()
+
+	os.Setenv("ENCRYPTION_KEY", "")
+
+	command := commands.UpsertSystemEmailCommand{
+		Host:     "imap.gmail.com",
+		Port:     "993",
+		Username: "test@gmail.com",
+		Password: "superSecretPassword",
+	}
+	bytes, _ := json.Marshal(command)
+
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	AddSystemEmail(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestShouldNotAllowUserToCreateInvalidSystemEmail(t *testing.T) {
+	defer tearDownSystemEmailTest()
+
+	tests := map[string]struct {
+		input  commands.UpsertSystemEmailCommand
+		expect int
+	}{
+		"empty body": {
+			expect: http.StatusBadRequest,
+		},
+		"empty test": {
+			input:  commands.UpsertSystemEmailCommand{},
+			expect: http.StatusBadRequest,
+		},
+		"missing host": {
+			input: commands.UpsertSystemEmailCommand{
+				Host:     "",
+				Port:     "993",
+				Username: "test@gmail.com",
+				Password: "superSecretPassword",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing port": {
+			input: commands.UpsertSystemEmailCommand{
+				Host:     "imap.gmail.com",
+				Port:     "",
+				Username: "username",
+				Password: "password",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing username": {
+			input: commands.UpsertSystemEmailCommand{
+				Host:     "imap.gmail.com",
+				Port:     "993",
+				Username: "",
+				Password: "password",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing password": {
+			input: commands.UpsertSystemEmailCommand{
+				Host:     "imap.gmail.com",
+				Port:     "993",
+				Username: "",
+				Password: "",
+			},
+			expect: http.StatusBadRequest,
+		},
+	}
+
+	for _, test := range tests {
+		bytes, _ := json.Marshal(test.input)
+		reader := strings.NewReader(string(bytes))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/api", reader)
+
+		newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+		r = r.WithContext(newContext)
+
+		AddSystemEmail(w, r)
+
+		if w.Result().StatusCode != test.expect {
+			utils.PrintTestError(t, w.Result().StatusCode, test.expect)
+		}
+	}
 }
 
 func TestShouldNotAllowUserToGetSystemEmails(t *testing.T) {

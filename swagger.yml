@@ -1519,6 +1519,60 @@ paths:
     post:
       tags:
         - SystemEmail
+      summary: Create system email
+      description: This will create a system email
+      operationId: createSystemEmail
+      requestBody:
+        description: System email to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSystemEmailCommand"
+      responses:
+        200:
+          description: The created system email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemEmail"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /systemEmail/{id}:
+    get:
+      tags:
+        - SystemEmail
+      summary: Get system email by id
+      description: This will get a system email by id
+      operationId: getSystemEmailById
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of system email to get
+      responses:
+        200:
+          description: The system email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemEmail"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /systemEmail/getSystemEmails:
+    post:
+      tags:
+        - SystemEmail
       summary: Gets paged system emails
       description: This will return paged and sorted system emails
       operationId: getPagedSystemEmails
@@ -1538,6 +1592,8 @@ paths:
                 $ref: "#/components/schemas/PagedData"
         500:
           $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
         403:
           $ref: "#/components/responses/Forbidden"
       security:
@@ -2912,6 +2968,26 @@ components:
             password:
               type: string
               description: IMAP password
+    UpsertSystemEmailCommand:
+      type: object
+      required:
+        - host
+        - port
+        - username
+        - password
+      properties:
+        host:
+          type: string
+          description: IMAP host
+        port:
+          type: integer
+          description: IMAP port
+        username:
+          type: string
+          description: IMAP username
+        password:
+          type: string
+          description: IMAP password
     SystemSettings:
       allOf:
         - $ref: "#/components/schemas/BaseModel"

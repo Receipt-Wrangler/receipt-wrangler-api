@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
@@ -76,8 +75,6 @@ func GetSystemEmailById(w http.ResponseWriter, r *http.Request) {
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			systemEmailId := chi.URLParam(r, "id")
-			fmt.Println("id")
-			fmt.Println(systemEmailId)
 			systemEmailRepository := repositories.NewSystemEmailRepository(nil)
 
 			systemEmail, err := systemEmailRepository.GetSystemEmailById(systemEmailId)

@@ -41,6 +41,18 @@ func (repository SystemEmailRepository) GetPagedSystemEmails(command commands.Pa
 	return systemEmails, nil
 }
 
+func (repository SystemEmailRepository) GetSystemEmailById(id string) (models.SystemEmail, error) {
+	db := repository.GetDB()
+	var systemEmail models.SystemEmail
+
+	err := db.Model(models.SystemEmail{}).Where("id = ?", id).First(&systemEmail).Error
+	if err != nil {
+		return models.SystemEmail{}, err
+	}
+
+	return systemEmail, nil
+}
+
 func (repository SystemEmailRepository) AddSystemEmail(command commands.UpsertSystemEmailCommand) (models.SystemEmail, error) {
 	db := repository.GetDB()
 

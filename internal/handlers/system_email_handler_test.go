@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -288,5 +289,76 @@ func TestShouldAllowUserToGetSystemEmails(t *testing.T) {
 
 	if pagedData.Data[0].(map[string]interface{})["host"] != "imap.gmail.com" {
 		utils.PrintTestError(t, pagedData.Data[0].(map[string]interface{})["host"], "imap.gmail.com")
+	}
+}
+
+func TestShouldNotGetSystemByIdAsUser(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api", reader)
+	var expectedStatusCode = http.StatusForbidden
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	AddSystemEmail(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldNotGetSystemEmailByIdDueToBadId(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api/systemEmail/{id}", reader)
+
+	var expectedStatusCode = http.StatusInternalServerError
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "badId")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	GetSystemEmailById(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldGetSystemEmailById(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	db := repositories.GetDB()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api/systemEmail/{id}", reader)
+
+	var expectedStatusCode = http.StatusOK
+
+	db.Create(&models.SystemEmail{
+		Host:     "imap.gmail.com",
+		Port:     "993",
+		Username: "test",
+		Password: "password",
+	})
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "1")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	GetSystemEmailById(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
 	}
 }

@@ -1569,6 +1569,46 @@ paths:
           $ref: "#/components/responses/BadRequest"
         403:
           $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - SystemEmail
+      summary: Update system email by id
+      description: This will update a system email by id
+      operationId: updateSystemEmailById
+      requestBody:
+        description: System email to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSystemEmailCommand"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of system email to get
+        - in: query
+          name: updatePassword
+          schema:
+            type: boolean
+          required: true
+          description: Whether or not to update the password
+      responses:
+        200:
+          description: The updated system email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemEmail"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+
   /systemEmail/getSystemEmails:
     post:
       tags:

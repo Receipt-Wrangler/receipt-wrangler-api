@@ -111,7 +111,7 @@ func AddSystemEmail(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			vErr := command.Validate()
+			vErr := command.Validate(true)
 			if len(vErr.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
 				return http.StatusBadRequest, nil
@@ -119,6 +119,53 @@ func AddSystemEmail(w http.ResponseWriter, r *http.Request) {
 
 			systemEmailRepository := repositories.NewSystemEmailRepository(nil)
 			systemEmail, err := systemEmailRepository.AddSystemEmail(command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(systemEmail)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func UpdateSystemEmail(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error adding system email",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		UserRole:     models.ADMIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpsertSystemEmailCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErr := command.Validate(false)
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return http.StatusBadRequest, nil
+			}
+
+			id := chi.URLParam(r, "id")
+			updatePassword := false
+			if r.URL.Query().Get("updatePassword") == "true" {
+				updatePassword = true
+			}
+
+			systemEmailRepository := repositories.NewSystemEmailRepository(nil)
+			systemEmail, err := systemEmailRepository.UpdateSystemEmail(id, command, updatePassword)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

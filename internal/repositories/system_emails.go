@@ -76,6 +76,34 @@ func (repository SystemEmailRepository) AddSystemEmail(command commands.UpsertSy
 	return systemEmail, nil
 }
 
+func (repository SystemEmailRepository) UpdateSystemEmail(id string, command commands.UpsertSystemEmailCommand, updatePassword bool) (models.SystemEmail, error) {
+	db := repository.GetDB()
+
+	action := db.Model(models.SystemEmail{}).Where("id = ?", id)
+	if updatePassword {
+		rawEncryptedPassword, err := utils.EncryptData(config.GetEncryptionKey(), []byte(command.Password))
+		if err != nil {
+			return models.SystemEmail{}, err
+		}
+		command.Password = utils.EncodeToBase64(rawEncryptedPassword)
+	} else {
+		action.Omit("password")
+	}
+
+	err := action.Updates(command).Error
+	if err != nil {
+		return models.SystemEmail{}, err
+	}
+
+	var systemEmail models.SystemEmail
+	err = db.Model(models.SystemEmail{}).Where("id = ?", id).First(&systemEmail).Error
+	if err != nil {
+		return models.SystemEmail{}, err
+	}
+
+	return systemEmail, nil
+}
+
 func isValidColumn(columnName string) bool {
 	columnNames := []string{"username", "host", "created_at", "updated_at"}
 	for _, name := range columnNames {

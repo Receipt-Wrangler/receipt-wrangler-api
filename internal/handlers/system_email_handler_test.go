@@ -139,7 +139,7 @@ func TestShouldNotAllowUserToCreateInvalidSystemEmail(t *testing.T) {
 			input: commands.UpsertSystemEmailCommand{
 				Host:     "imap.gmail.com",
 				Port:     "993",
-				Username: "",
+				Username: "username",
 				Password: "",
 			},
 			expect: http.StatusBadRequest,
@@ -360,5 +360,98 @@ func TestShouldGetSystemEmailById(t *testing.T) {
 
 	if w.Result().StatusCode != expectedStatusCode {
 		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldNotUpdateSystemEmailByIdAsAUser(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api", reader)
+	var expectedStatusCode = http.StatusForbidden
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	UpdateSystemEmail(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldNotAllowUserToUpdateInvalidSystemEmail(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	db := repositories.GetDB()
+	db.Create(&models.SystemEmail{})
+
+	tests := map[string]struct {
+		input  commands.UpsertSystemEmailCommand
+		expect int
+	}{
+		"empty body": {
+			expect: http.StatusBadRequest,
+		},
+		"empty test": {
+			input:  commands.UpsertSystemEmailCommand{},
+			expect: http.StatusBadRequest,
+		},
+		"missing host": {
+			input: commands.UpsertSystemEmailCommand{
+				Host:     "",
+				Port:     "993",
+				Username: "test@gmail.com",
+				Password: "superSecretPassword",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing port": {
+			input: commands.UpsertSystemEmailCommand{
+				Host:     "imap.gmail.com",
+				Port:     "",
+				Username: "username",
+				Password: "password",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing username": {
+			input: commands.UpsertSystemEmailCommand{
+				Host:     "imap.gmail.com",
+				Port:     "993",
+				Username: "",
+				Password: "password",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing password": {
+			input: commands.UpsertSystemEmailCommand{
+				Host:     "imap.gmail.com",
+				Port:     "993",
+				Username: "username",
+				Password: "",
+			},
+			expect: http.StatusOK,
+		},
+	}
+
+	for _, test := range tests {
+		bytes, _ := json.Marshal(test.input)
+		reader := strings.NewReader(string(bytes))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/api", reader)
+
+		chiContext := chi.NewRouteContext()
+		chiContext.URLParams.Add("id", "1")
+		routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+		r = r.WithContext(routeContext)
+
+		newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+		r = r.WithContext(newContext)
+
+		UpdateSystemEmail(w, r)
+
+		if w.Result().StatusCode != test.expect {
+			utils.PrintTestError(t, w.Result().StatusCode, test.expect)
+		}
 	}
 }

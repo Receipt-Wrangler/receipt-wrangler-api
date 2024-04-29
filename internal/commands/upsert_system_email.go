@@ -28,7 +28,7 @@ func (command *UpsertSystemEmailCommand) LoadDataFromRequest(w http.ResponseWrit
 	return nil
 }
 
-func (command *UpsertSystemEmailCommand) Validate() structs.ValidatorError {
+func (command *UpsertSystemEmailCommand) Validate(isCreate bool) structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
@@ -44,8 +44,11 @@ func (command *UpsertSystemEmailCommand) Validate() structs.ValidatorError {
 		errors["username"] = "Username is required"
 	}
 
-	if len(command.Password) == 0 {
-		errors["password"] = "Password is required"
+	if isCreate {
+		if len(command.Password) == 0 {
+			errors["password"] = "Password is required"
+		}
+
 	}
 
 	vErr.Errors = errors

@@ -34,7 +34,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 		command.Port = systemEmail.Port
 		command.Username = systemEmail.Username
 
-		cleartextPassword, err := utils.DecryptDataToDecodedString(config.GetEncryptionKey(), systemEmail.Password)
+		cleartextPassword, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), systemEmail.Password)
 		if err != nil {
 			return err
 		}

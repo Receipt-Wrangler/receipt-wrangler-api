@@ -13,7 +13,7 @@ class ImapClient:
         self.port = port
         self.username = username
         self.password = password
-        self.client = IMAPClient(host=self.host, port=self.port)
 
     def connect(self):
+        self.client = IMAPClient(self.host, self.port)
         self.client.login(self.username, self.password)

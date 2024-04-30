@@ -184,3 +184,27 @@ func UpdateSystemEmail(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func DeleteSystemEmail(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error adding system email",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			systemEmailRepository := repositories.NewSystemEmailRepository(nil)
+
+			err := systemEmailRepository.DeleteSystemEmail(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

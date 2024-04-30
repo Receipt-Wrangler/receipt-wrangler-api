@@ -455,3 +455,67 @@ func TestShouldNotAllowUserToUpdateInvalidSystemEmail(t *testing.T) {
 		}
 	}
 }
+
+func TestShouldNotDeleteEmailByIdAsAUser(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api", reader)
+	var expectedStatusCode = http.StatusForbidden
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	DeleteSystemEmail(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldNotDeleteEmailWithBadId(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api", reader)
+	var expectedStatusCode = http.StatusInternalServerError
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "badId")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	DeleteSystemEmail(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldDeleteEmail(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api", reader)
+	var expectedStatusCode = http.StatusOK
+
+	db := repositories.GetDB()
+	db.Create(&models.SystemEmail{})
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "1")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	DeleteSystemEmail(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}

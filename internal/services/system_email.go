@@ -1,7 +1,11 @@
 package services
 
 import (
+	"bytes"
+	"encoding/json"
 	"gorm.io/gorm"
+	"os"
+	"os/exec"
 	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/repositories"
@@ -42,7 +46,26 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 		command.Password = cleartextPassword
 	}
 
-	// TODO: call python script
+	commandBytes, err := json.Marshal(command)
+	if err != nil {
+		return err
+	}
+
+	var out bytes.Buffer
+
+	// TODO: Set up script
+	cmd := exec.Command("python3", "pathhere")
+	cmd.Stdout = &out
+	cmd.Stdin = bytes.NewReader(commandBytes)
+	cmd.Env = os.Environ()
+
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	// TODO: if successfull and used an ID, update last ran, and status of system email
+	//
 
 	return nil
 }

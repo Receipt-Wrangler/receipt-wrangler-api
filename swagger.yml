@@ -1588,7 +1588,7 @@ paths:
           schema:
             type: integer
           required: true
-          description: Id of system email to get
+          description: Id of system email to update
         - in: query
           name: updatePassword
           schema:
@@ -1602,6 +1602,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SystemEmail"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - SystemEmail
+      summary: Delete system email by id
+      description: This will delete a system email by id
+      operationId: deleteSystemEmailById
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of system email to delete
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
         500:
           $ref: "#/components/responses/Internal"
         400:

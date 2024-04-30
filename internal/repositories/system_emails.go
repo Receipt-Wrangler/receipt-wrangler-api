@@ -104,6 +104,17 @@ func (repository SystemEmailRepository) UpdateSystemEmail(id string, command com
 	return currentSystemEmail, nil
 }
 
+func (repository SystemEmailRepository) DeleteSystemEmail(id string) error {
+	db := repository.GetDB()
+
+	err := db.Delete(&models.SystemEmail{}, id).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func isValidColumn(columnName string) bool {
 	columnNames := []string{"username", "host", "created_at", "updated_at"}
 	for _, name := range columnNames {

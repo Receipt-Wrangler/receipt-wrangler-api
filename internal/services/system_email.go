@@ -53,8 +53,9 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 
 	var out bytes.Buffer
 
-	// TODO: Set up script
-	cmd := exec.Command("python3", "pathhere")
+	basePath := config.GetBasePath()
+
+	cmd := exec.Command("python3", basePath+"/imap-client/connectivity_test.py")
 	cmd.Stdout = &out
 	cmd.Stdin = bytes.NewReader(commandBytes)
 	cmd.Env = os.Environ()
@@ -64,8 +65,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 		return err
 	}
 
-	// TODO: if successfull and used an ID, update last ran, and status of system email
-	//
+	// TODO: If id was created, then create a task for it
 
 	return nil
 }

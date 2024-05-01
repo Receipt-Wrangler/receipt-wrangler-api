@@ -3108,10 +3108,20 @@ components:
               description: Email polling interval
               default: 1800
     CheckEmailConnectivityCommand:
-      allOf:
-        - $ref: "#/components/schemas/UpsertSystemEmailCommand"
-        - type: object
-          properties:
-            id:
-              type: integer
-              format: uint64
+      type: object
+      properties:
+        id:
+          type: integer
+          description: System email id
+        host:
+          type: string
+          description: IMAP host
+        port:
+          type: integer
+          description: IMAP port
+        username:
+          type: string
+          description: IMAP username
+        password:
+          type: string
+          description: IMAP password

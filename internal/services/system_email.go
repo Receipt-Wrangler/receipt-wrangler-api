@@ -26,7 +26,12 @@ func NewSystemEmailService(tx *gorm.DB) SystemEmailService {
 }
 
 func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckEmailConnectivityCommand) error {
-	if command.ID > 0 {
+	hostIsEmpty := len(command.Host) == 0
+	portIsEmpty := len(command.Port) == 0
+	usernameIsEmpty := len(command.Username) == 0
+	passwordIsEmpty := len(command.Password) == 0
+
+	if command.ID > 0 && hostIsEmpty && portIsEmpty && usernameIsEmpty && passwordIsEmpty {
 		stringId := simpleutils.UintToString(command.ID)
 		systemEmailRepository := repositories.NewSystemEmailRepository(nil)
 		systemEmail, err := systemEmailRepository.GetSystemEmailById(stringId)
@@ -51,11 +56,12 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 		return err
 	}
 
+	basePath := config.GetBasePath()
+	path := basePath + "/imap-client/check_connection.py"
+
 	var out bytes.Buffer
 
-	basePath := config.GetBasePath()
-
-	cmd := exec.Command("python3", basePath+"/imap-client/connectivity_test.py")
+	cmd := exec.Command("python3", path)
 	cmd.Stdout = &out
 	cmd.Stdin = bytes.NewReader(commandBytes)
 	cmd.Env = os.Environ()

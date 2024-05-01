@@ -1542,6 +1542,29 @@ paths:
           $ref: "#/components/responses/BadRequest"
         403:
           $ref: "#/components/responses/Forbidden"
+  /systemEmail/checkConnectivity:
+    post:
+      tags:
+        - SystemEmail
+      summary: Check system email connectivity
+      description: This will check system email connectivity
+      operationId: checkSystemEmailConnectivity
+      requestBody:
+        description: System email to check connectivity
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckEmailConnectivityCommand"
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /systemEmail/{id}:
     get:
       tags:
@@ -3084,3 +3107,11 @@ components:
               type: integer
               description: Email polling interval
               default: 1800
+    CheckEmailConnectivityCommand:
+      allOf:
+        - $ref: "#/components/schemas/UpsertSystemEmailCommand"
+        - type: object
+          properties:
+            id:
+              type: integer
+              format: uint64

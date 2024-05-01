@@ -16,6 +16,7 @@ func BuildSystemEmailRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mu
 	systemEmailRouter.Put("/{id}", handlers.UpdateSystemEmail)
 	systemEmailRouter.Delete("/{id}", handlers.DeleteSystemEmail)
 	systemEmailRouter.Post("/", handlers.AddSystemEmail)
+	systemEmailRouter.Post("/checkConnectivity", handlers.CheckConnectivity)
 	systemEmailRouter.Post("/getSystemEmails", handlers.GetAllSystemEmails)
 
 	return systemEmailRouter

@@ -64,6 +64,20 @@ func DecryptData(key string, encryptedData []byte) (string, error) {
 	return string(clearText), nil
 }
 
+func DecryptB64EncodedData(key string, encodedCipherText string) (string, error) {
+	decodedCipherTextBytes, err := Base64Decode(encodedCipherText)
+	if err != nil {
+		return "", err
+	}
+
+	cleartext, err := DecryptData(key, decodedCipherTextBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return cleartext, nil
+}
+
 func Md5Hash(valueToHash string) string {
 	bytesValue := []byte(valueToHash)
 	hashedValue := md5.Sum(bytesValue)
@@ -72,4 +86,13 @@ func Md5Hash(valueToHash string) string {
 
 func EncodeToBase64(value []byte) string {
 	return base64.StdEncoding.EncodeToString(value)
+}
+
+func Base64Decode(b64EncodedValue string) ([]byte, error) {
+	result, err := base64.StdEncoding.DecodeString(b64EncodedValue)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

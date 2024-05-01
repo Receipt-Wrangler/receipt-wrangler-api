@@ -7,6 +7,7 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -140,7 +141,7 @@ func AddSystemEmail(w http.ResponseWriter, r *http.Request) {
 
 func UpdateSystemEmail(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Error adding system email",
+		ErrorMessage: "Error updating system email",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
@@ -187,7 +188,7 @@ func UpdateSystemEmail(w http.ResponseWriter, r *http.Request) {
 
 func DeleteSystemEmail(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Error adding system email",
+		ErrorMessage: "Error deleting system email",
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
@@ -196,6 +197,40 @@ func DeleteSystemEmail(w http.ResponseWriter, r *http.Request) {
 			systemEmailRepository := repositories.NewSystemEmailRepository(nil)
 
 			err := systemEmailRepository.DeleteSystemEmail(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func CheckConnectivity(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Could not connect with credentials",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.CheckEmailConnectivityCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErrs := command.Validate()
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return http.StatusBadRequest, nil
+			}
+
+			systemEmailService := services.NewSystemEmailService(nil)
+			err = systemEmailService.CheckEmailConnectivity(command)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

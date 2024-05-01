@@ -519,3 +519,116 @@ func TestShouldDeleteEmail(t *testing.T) {
 		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
 	}
 }
+
+func TestShouldNotAllowUserCheckConnectivity(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	CheckConnectivity(w, r)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestShouldNotAllowCheckInvalidConnectivityCommand(t *testing.T) {
+	defer tearDownSystemEmailTest()
+
+	db := repositories.GetDB()
+	db.Create(&models.SystemEmail{})
+
+	tests := map[string]struct {
+		input  commands.CheckEmailConnectivityCommand
+		expect int
+	}{
+		"empty body": {
+			expect: http.StatusBadRequest,
+		},
+		"empty test": {
+			input:  commands.CheckEmailConnectivityCommand{},
+			expect: http.StatusBadRequest,
+		},
+		"missing host": {
+			input: commands.CheckEmailConnectivityCommand{
+				UpsertSystemEmailCommand: commands.UpsertSystemEmailCommand{
+					Host:     "",
+					Port:     "993",
+					Username: "test@gmail.com",
+					Password: "superSecretPassword",
+				},
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing port": {
+			input: commands.CheckEmailConnectivityCommand{
+				UpsertSystemEmailCommand: commands.UpsertSystemEmailCommand{
+					Host:     "host",
+					Port:     "",
+					Username: "test@gmail.com",
+					Password: "superSecretPassword",
+				},
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing username": {
+			input: commands.CheckEmailConnectivityCommand{
+				UpsertSystemEmailCommand: commands.UpsertSystemEmailCommand{
+					Host:     "host",
+					Port:     "993",
+					Username: "",
+					Password: "superSecretPassword",
+				},
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing password": {
+			input: commands.CheckEmailConnectivityCommand{
+				UpsertSystemEmailCommand: commands.UpsertSystemEmailCommand{
+					Host:     "host",
+					Port:     "993",
+					Username: "test@gmail.com",
+					Password: "",
+				},
+			},
+			expect: http.StatusBadRequest,
+		},
+		"complete credentials": {
+			input: commands.CheckEmailConnectivityCommand{
+				UpsertSystemEmailCommand: commands.UpsertSystemEmailCommand{
+					Host:     "host",
+					Port:     "993",
+					Username: "test@gmail.com",
+					Password: "password",
+				},
+			},
+			expect: http.StatusInternalServerError,
+		},
+		"just id": {
+			input: commands.CheckEmailConnectivityCommand{
+				ID: 1,
+			},
+			expect: http.StatusInternalServerError,
+		},
+	}
+
+	for _, test := range tests {
+		bytes, _ := json.Marshal(test.input)
+		reader := strings.NewReader(string(bytes))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/api", reader)
+
+		newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+		r = r.WithContext(newContext)
+
+		CheckConnectivity(w, r)
+
+		if w.Result().StatusCode != test.expect {
+			utils.PrintTestError(t, w.Result().StatusCode, test.expect)
+		}
+	}
+}

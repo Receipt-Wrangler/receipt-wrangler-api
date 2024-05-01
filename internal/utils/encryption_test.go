@@ -65,6 +65,36 @@ func TestShouldDecryptStringWithAES128(t *testing.T) {
 	}
 }
 
+func TestShouldDecryptB64EncodedData(t *testing.T) {
+	expected := "superSecretData"
+
+	key := "superSecureKey"
+	value := []byte(expected)
+
+	encryptedData, err := EncryptData(key, value)
+	if err != nil {
+		PrintTestError(t, err, nil)
+		return
+	}
+
+	encodedCipherText := EncodeToBase64(encryptedData)
+	if len(encodedCipherText) != 60 {
+		PrintTestError(t, len(encodedCipherText), 60)
+		return
+	}
+
+	cleartext, err := DecryptB64EncodedData(key, encodedCipherText)
+	if err != nil {
+		PrintTestError(t, err, nil)
+		return
+	}
+
+	if cleartext != expected {
+		PrintTestError(t, cleartext, expected)
+		return
+	}
+}
+
 func TestShouldReturnErrorDecryptingWithEmptyKey(t *testing.T) {
 	key := ""
 	value := []byte("superSecretData")

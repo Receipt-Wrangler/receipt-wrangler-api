@@ -12,7 +12,7 @@ func BuildSystemTaskRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux
 	systemTaskRouter := chi.NewRouter()
 
 	systemTaskRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
-	systemTaskRouter.Post("/", handlers.GetSystemTasks)
+	systemTaskRouter.Post("/getSystemTasks", handlers.GetSystemTasks)
 
 	return systemTaskRouter
 }

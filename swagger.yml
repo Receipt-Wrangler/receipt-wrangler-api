@@ -1683,6 +1683,37 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /systemTask/getSystemTasks:
+    post:
+      tags:
+        - SystemTask
+      summary: Gets system tasks
+      description: This will return system tasks
+      operationId: getSystemTasks
+      requestBody:
+        description: Query command
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetSystemTaskCommand"
+      responses:
+        200:
+          description: System tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SystemTask"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -3157,3 +3188,14 @@ components:
               $ref: "#/components/schemas/AssociatedEntityType"
             resultDescription:
               type: string
+    GetSystemTaskCommand:
+      type: object
+      properties:
+        associatedEntityId:
+          type: integer
+          description: Associated entity id
+        associatedEntityType:
+          $ref: "#/components/schemas/AssociatedEntityType"
+        count:
+          type: integer
+          description: Number of tasks to get

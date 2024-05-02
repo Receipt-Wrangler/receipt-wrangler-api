@@ -44,3 +44,24 @@ func (repository SystemTaskRepository) GetSystemTasks(command commands.GetSystem
 
 	return results, nil
 }
+
+func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertSystemTaskCommand) (models.SystemTask, error) {
+	db := repository.GetDB()
+
+	systemTask := models.SystemTask{
+		Type:                 command.Type,
+		Status:               command.Status,
+		AssociatedEntityType: command.AssociatedEntityType,
+		AssociatedEntityId:   command.AssociatedEntityId,
+		StartedAt:            command.StartedAt,
+		EndedAt:              command.EndedAt,
+		ResultDescription:    command.ResultDescription,
+	}
+
+	err := db.Create(&systemTask).Error
+	if err != nil {
+		return models.SystemTask{}, err
+	}
+
+	return systemTask, nil
+}

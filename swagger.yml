@@ -1558,7 +1558,7 @@ paths:
               $ref: "#/components/schemas/CheckEmailConnectivityCommand"
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          $ref: "#/components/schemas/SystemTask"
         500:
           $ref: "#/components/responses/Internal"
         400:

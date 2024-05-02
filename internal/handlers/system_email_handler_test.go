@@ -606,7 +606,7 @@ func TestShouldNotAllowCheckInvalidConnectivityCommand(t *testing.T) {
 					Password: "password",
 				},
 			},
-			expect: http.StatusInternalServerError,
+			expect: http.StatusOK,
 		},
 		"just id": {
 			input: commands.CheckEmailConnectivityCommand{
@@ -616,7 +616,7 @@ func TestShouldNotAllowCheckInvalidConnectivityCommand(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for name, test := range tests {
 		bytes, _ := json.Marshal(test.input)
 		reader := strings.NewReader(string(bytes))
 		w := httptest.NewRecorder()
@@ -628,7 +628,7 @@ func TestShouldNotAllowCheckInvalidConnectivityCommand(t *testing.T) {
 		CheckConnectivity(w, r)
 
 		if w.Result().StatusCode != test.expect {
-			utils.PrintTestError(t, w.Result().StatusCode, test.expect)
+			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("%s test expected: %d", name, test.expect))
 		}
 	}
 }

@@ -53,6 +53,12 @@ func TestShouldNotAllowAdminToGetSystemTasksWithInvalidCommand(t *testing.T) {
 		},
 		"missing count": {
 			input: commands.GetSystemTaskCommand{
+				PagedRequestCommand: commands.PagedRequestCommand{
+					Page:          1,
+					PageSize:      100,
+					OrderBy:       "id",
+					SortDirection: "asc",
+				},
 				AssociatedEntityId:   1,
 				AssociatedEntityType: models.SYSTEM_EMAIL,
 			},
@@ -60,15 +66,19 @@ func TestShouldNotAllowAdminToGetSystemTasksWithInvalidCommand(t *testing.T) {
 		},
 		"missing associated entityId": {
 			input: commands.GetSystemTaskCommand{
+				PagedRequestCommand: commands.PagedRequestCommand{
+					Page:          1,
+					PageSize:      100,
+					OrderBy:       "id",
+					SortDirection: "asc",
+				},
 				AssociatedEntityType: models.SYSTEM_EMAIL,
-				Count:                10,
 			},
 			expect: http.StatusOK,
 		},
 		"missing associated entityType": {
 			input: commands.GetSystemTaskCommand{
 				AssociatedEntityId: 1,
-				Count:              10,
 			},
 			expect: http.StatusBadRequest,
 		},

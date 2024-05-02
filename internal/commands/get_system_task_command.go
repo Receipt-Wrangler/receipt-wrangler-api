@@ -9,9 +9,9 @@ import (
 )
 
 type GetSystemTaskCommand struct {
+	PagedRequestCommand
 	AssociatedEntityId   uint                        `json:"associatedEntityId"`
 	AssociatedEntityType models.AssociatedEntityType `json:"associatedEntityType"`
-	Count                int                         `json:"count"`
 }
 
 func (command *GetSystemTaskCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -29,21 +29,18 @@ func (command *GetSystemTaskCommand) LoadDataFromRequest(w http.ResponseWriter, 
 }
 
 func (command *GetSystemTaskCommand) Validate() structs.ValidatorError {
-	errors := make(map[string]string)
-	vErr := structs.ValidatorError{}
+	vErrs := command.PagedRequestCommand.Validate()
 
 	associatedEntityIdIsEmpty := command.AssociatedEntityId == 0
 	associatedEntityTypeIsEmpty := len(command.AssociatedEntityType) == 0
-	countIsEmpty := command.Count == 0
 
-	if associatedEntityIdIsEmpty && associatedEntityTypeIsEmpty && countIsEmpty {
-		errors["command"] = "Command cannot be empty."
+	if associatedEntityIdIsEmpty && associatedEntityTypeIsEmpty {
+		vErrs.Errors["command"] = "Command cannot be empty."
 	}
 
 	if !associatedEntityIdIsEmpty && associatedEntityTypeIsEmpty {
-		errors["associatedEntityType"] = "Associated entity type cannot be empty."
+		vErrs.Errors["associatedEntityType"] = "Associated entity type cannot be empty."
 	}
 
-	vErr.Errors = errors
-	return vErr
+	return vErrs
 }

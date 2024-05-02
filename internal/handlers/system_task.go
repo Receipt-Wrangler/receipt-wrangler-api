@@ -31,12 +31,27 @@ func GetSystemTasks(w http.ResponseWriter, r *http.Request) {
 			}
 
 			systemTaskRepository := repositories.NewSystemTaskRepository(nil)
-			systemTasks, err := systemTaskRepository.GetSystemTasks(command)
+			systemTasks, err := systemTaskRepository.GetPagedSystemTasks(command)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			responseBytes, err := utils.MarshalResponseData(systemTasks)
+			count, err := systemTaskRepository.GetCount("system_tasks", "")
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			pagedData := structs.PagedData{}
+			data := make([]any, count)
+
+			for i := 0; i < len(systemTasks); i++ {
+				data[i] = systemTasks[i]
+			}
+
+			pagedData.Data = data
+			pagedData.TotalCount = count
+
+			responseBytes, err := utils.MarshalResponseData(pagedData)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

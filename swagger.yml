@@ -1683,15 +1683,15 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
-  /systemTask/getSystemTasks:
+  /systemTask/getPagedSystemTasks:
     post:
       tags:
         - SystemTask
-      summary: Gets system tasks
-      description: This will return system tasks
-      operationId: getSystemTasks
+      summary: Gets paged system tasks
+      description: This will return paged system tasks
+      operationId: getPagedSystemTasks
       requestBody:
-        description: Query command
+        description: Paging and sorting data
         required: true
         content:
           application/json:
@@ -1699,13 +1699,13 @@ paths:
               $ref: "#/components/schemas/GetSystemTaskCommand"
       responses:
         200:
-          description: System tasks
+          description: Paged system tasks
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/SystemTask"
+                  $ref: "#/components/schemas/PagedData"
         500:
           $ref: "#/components/responses/Internal"
         400:
@@ -3189,13 +3189,12 @@ components:
             resultDescription:
               type: string
     GetSystemTaskCommand:
-      type: object
+      allOf:
+        - $ref: "#/components/schemas/PagedRequestCommand"
+        - type: object
       properties:
         associatedEntityId:
           type: integer
           description: Associated entity id
         associatedEntityType:
           $ref: "#/components/schemas/AssociatedEntityType"
-        count:
-          type: integer
-          description: Number of tasks to get

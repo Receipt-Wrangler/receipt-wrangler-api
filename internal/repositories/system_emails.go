@@ -107,6 +107,8 @@ func (repository SystemEmailRepository) UpdateSystemEmail(id string, command com
 func (repository SystemEmailRepository) DeleteSystemEmail(id string) error {
 	db := repository.GetDB()
 
+	// TODO: Start transaction, and delete all associated system tasks
+
 	err := db.Delete(&models.SystemEmail{}, id).Error
 	if err != nil {
 		return err

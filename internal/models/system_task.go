@@ -14,6 +14,7 @@ type SystemTask struct {
 	AssociatedEntityId   uint                 `json:"associatedEntityId"`
 	StartedAt            time.Time            `json:"startedAt"`
 	EndedAt              *time.Time           `json:"endedAt"`
+	ResultDescription    string               `json:"resultDescription"`
 }
 
 type SystemTaskStatus string

@@ -115,6 +115,18 @@ func (repository SystemEmailRepository) DeleteSystemEmail(id string) error {
 	return nil
 }
 
+func (repository SystemEmailRepository) GetSystemTasksForSystemEmail(id string) ([]models.SystemTask, error) {
+	db := repository.GetDB()
+	var systemTasks []models.SystemTask
+
+	err := db.Model(models.SystemTask{}).Where("associated_entity_id = ? AND associated_entity_type = ?", id, models.SYSTEM_EMAIL).Find(&systemTasks).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return systemTasks, nil
+}
+
 func isValidColumn(columnName string) bool {
 	columnNames := []string{"username", "host", "created_at", "updated_at"}
 	for _, name := range columnNames {

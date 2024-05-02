@@ -1758,6 +1758,19 @@ components:
       enum:
         - "TESSERACT"
         - "EASY_OCR"
+    SystemTaskStatus:
+      type: string
+      enum:
+        - "SUCCEEDED"
+        - "FAILED"
+    SystemTaskType:
+      type: string
+      enum:
+        - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
+    AssociatedEntityType:
+      type: string
+      enum:
+        - "SYSTEM_EMAIL"
     BaseModel:
       type: object
       required:
@@ -3125,3 +3138,20 @@ components:
         password:
           type: string
           description: IMAP password
+    SystemTask:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            type:
+              $ref: "#/components/schemas/SystemTaskType"
+            status:
+              $ref: "#/components/schemas/SystemTaskStatus"
+            startedAt:
+              type: string
+            endedAt:
+              type: string
+            associatedEntityId:
+              type: integer
+            associatedEntityType:
+              $ref: "#/components/schemas/AssociatedEntityType"

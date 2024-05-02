@@ -102,6 +102,7 @@ func MakeMigrations() {
 		&models.Widget{},
 		&models.SystemSettings{},
 		&models.SystemEmail{},
+		&models.SystemTask{},
 	)
 }
 

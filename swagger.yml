@@ -3155,3 +3155,5 @@ components:
               type: integer
             associatedEntityType:
               $ref: "#/components/schemas/AssociatedEntityType"
+            resultDescription:
+              type: string

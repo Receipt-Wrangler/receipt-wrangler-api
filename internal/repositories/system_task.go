@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 
@@ -19,11 +20,14 @@ func NewSystemTaskRepository(tx *gorm.DB) SystemTaskRepository {
 	return repository
 }
 
-// TODO: Validate the column name
 func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetSystemTaskCommand) ([]models.SystemTask, int64, error) {
 	db := repository.GetDB()
 	var results []models.SystemTask
 	var count int64
+
+	if !isColumnNameValid(command.OrderBy) {
+		return nil, 0, errors.New("invalid column name")
+	}
 
 	query := db.Model(&models.SystemTask{})
 
@@ -46,6 +50,10 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	}
 
 	return results, count, nil
+}
+
+func isColumnNameValid(columnName string) bool {
+	return columnName == "type" || columnName == "status" || columnName == "associated_entity_type" || columnName == "associated_entity_id" || columnName == "started_at" || columnName == "ended_at" || columnName == "result_description"
 }
 
 func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertSystemTaskCommand) (models.SystemTask, error) {

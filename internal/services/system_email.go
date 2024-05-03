@@ -27,7 +27,7 @@ func NewSystemEmailService(tx *gorm.DB) SystemEmailService {
 	return service
 }
 
-func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckEmailConnectivityCommand) (models.SystemTask, error) {
+func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckEmailConnectivityCommand, userId uint) (models.SystemTask, error) {
 	hostIsEmpty := len(command.Host) == 0
 	portIsEmpty := len(command.Port) == 0
 	usernameIsEmpty := len(command.Username) == 0
@@ -39,6 +39,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 		Status:               models.SYSTEM_TASK_FAILED,
 		AssociatedEntityType: models.SYSTEM_EMAIL,
 		AssociatedEntityId:   command.ID,
+		RanByUserId:          &userId,
 	}
 
 	if command.ID > 0 && hostIsEmpty && portIsEmpty && usernameIsEmpty && passwordIsEmpty {

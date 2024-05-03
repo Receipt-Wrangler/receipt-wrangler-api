@@ -15,6 +15,7 @@ type SystemTask struct {
 	StartedAt            time.Time            `json:"startedAt"`
 	EndedAt              *time.Time           `json:"endedAt"`
 	ResultDescription    string               `json:"resultDescription"`
+	RanByUserId          *uint                `json:"ranByUserId"`
 }
 
 type SystemTaskStatus string

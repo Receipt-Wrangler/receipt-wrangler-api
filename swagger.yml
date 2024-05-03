@@ -3184,6 +3184,9 @@ components:
               type: integer
             associatedEntityType:
               $ref: "#/components/schemas/AssociatedEntityType"
+            ranByUserId:
+              type: integer
+              format: uint64
             resultDescription:
               type: string
     GetSystemTaskCommand:

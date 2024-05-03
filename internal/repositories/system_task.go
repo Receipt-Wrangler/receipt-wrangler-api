@@ -20,9 +20,10 @@ func NewSystemTaskRepository(tx *gorm.DB) SystemTaskRepository {
 }
 
 // TODO: Validate the column name
-func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetSystemTaskCommand) ([]models.SystemTask, error) {
+func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetSystemTaskCommand) ([]models.SystemTask, int64, error) {
 	db := repository.GetDB()
 	var results []models.SystemTask
+	var count int64
 
 	query := db.Model(&models.SystemTask{})
 
@@ -34,15 +35,17 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 		query = query.Where("associated_entity_type = ?", command.AssociatedEntityType)
 	}
 
+	query.Count(&count)
+
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
 	err := query.Find(&results).Error
 	if query.Error != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return results, nil
+	return results, count, nil
 }
 
 func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertSystemTaskCommand) (models.SystemTask, error) {

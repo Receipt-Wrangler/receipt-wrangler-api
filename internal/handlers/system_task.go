@@ -31,21 +31,16 @@ func GetSystemTasks(w http.ResponseWriter, r *http.Request) {
 			}
 
 			systemTaskRepository := repositories.NewSystemTaskRepository(nil)
-			systemTasks, err := systemTaskRepository.GetPagedSystemTasks(command)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			count, err := systemTaskRepository.GetCount("system_tasks", "")
+			systemTasks, count, err := systemTaskRepository.GetPagedSystemTasks(command)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
 			pagedData := structs.PagedData{}
-			data := make([]any, count)
+			data := make([]any, 0)
 
 			for i := 0; i < len(systemTasks); i++ {
-				data[i] = systemTasks[i]
+				data = append(data, systemTasks[i])
 			}
 
 			pagedData.Data = data

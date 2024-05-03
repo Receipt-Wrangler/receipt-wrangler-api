@@ -1703,9 +1703,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/PagedData"
+                $ref: "#/components/schemas/PagedData"
         500:
           $ref: "#/components/responses/Internal"
         400:

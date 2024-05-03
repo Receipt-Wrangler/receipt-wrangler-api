@@ -77,3 +77,13 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 
 	return systemTask, nil
 }
+
+func (repository SystemTaskRepository) DeleteSystemTaskByAssociatedEntityId(associatedEntityId string) error {
+	db := repository.GetDB()
+	err := db.Where("associated_entity_id = ?", associatedEntityId).Delete(&models.SystemTask{}).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

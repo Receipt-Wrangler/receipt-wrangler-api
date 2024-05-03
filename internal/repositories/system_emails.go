@@ -107,11 +107,26 @@ func (repository SystemEmailRepository) UpdateSystemEmail(id string, command com
 func (repository SystemEmailRepository) DeleteSystemEmail(id string) error {
 	db := repository.GetDB()
 
-	// TODO: Start transaction, and delete all associated system tasks
+	txErr := db.Transaction(func(tx *gorm.DB) error {
+		taskRepository := NewSystemTaskRepository(tx)
+		repository.SetTransaction(tx)
 
-	err := db.Delete(&models.SystemEmail{}, id).Error
-	if err != nil {
-		return err
+		err := taskRepository.DeleteSystemTaskByAssociatedEntityId(id)
+		if err != nil {
+			return err
+		}
+
+		err = tx.Delete(&models.SystemEmail{}, id).Error
+		if err != nil {
+			return err
+		}
+
+		repository.ClearTransaction()
+		return nil
+	})
+
+	if txErr != nil {
+		return txErr
 	}
 
 	return nil

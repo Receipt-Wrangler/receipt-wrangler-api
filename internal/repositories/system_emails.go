@@ -107,12 +107,41 @@ func (repository SystemEmailRepository) UpdateSystemEmail(id string, command com
 func (repository SystemEmailRepository) DeleteSystemEmail(id string) error {
 	db := repository.GetDB()
 
-	err := db.Delete(&models.SystemEmail{}, id).Error
-	if err != nil {
-		return err
+	txErr := db.Transaction(func(tx *gorm.DB) error {
+		taskRepository := NewSystemTaskRepository(tx)
+		repository.SetTransaction(tx)
+
+		err := taskRepository.DeleteSystemTaskByAssociatedEntityId(id)
+		if err != nil {
+			return err
+		}
+
+		err = tx.Delete(&models.SystemEmail{}, id).Error
+		if err != nil {
+			return err
+		}
+
+		repository.ClearTransaction()
+		return nil
+	})
+
+	if txErr != nil {
+		return txErr
 	}
 
 	return nil
+}
+
+func (repository SystemEmailRepository) GetSystemTasksForSystemEmail(id string) ([]models.SystemTask, error) {
+	db := repository.GetDB()
+	var systemTasks []models.SystemTask
+
+	err := db.Model(models.SystemTask{}).Where("associated_entity_id = ? AND associated_entity_type = ?", id, models.SYSTEM_EMAIL).Find(&systemTasks).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return systemTasks, nil
 }
 
 func isValidColumn(columnName string) bool {

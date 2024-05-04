@@ -218,6 +218,8 @@ func CheckConnectivity(w http.ResponseWriter, r *http.Request) {
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.CheckEmailConnectivityCommand{}
+			token := structs.GetJWT(r)
+
 			err := command.LoadDataFromRequest(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -230,12 +232,18 @@ func CheckConnectivity(w http.ResponseWriter, r *http.Request) {
 			}
 
 			systemEmailService := services.NewSystemEmailService(nil)
-			err = systemEmailService.CheckEmailConnectivity(command)
+			systemTask, err := systemEmailService.CheckEmailConnectivity(command, token.UserId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(systemTask)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
 			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
 
 			return 0, nil
 		},

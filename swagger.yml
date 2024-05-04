@@ -1558,7 +1558,7 @@ paths:
               $ref: "#/components/schemas/CheckEmailConnectivityCommand"
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          $ref: "#/components/schemas/SystemTask"
         500:
           $ref: "#/components/responses/Internal"
         400:
@@ -1683,6 +1683,35 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /systemTask/getPagedSystemTasks:
+    post:
+      tags:
+        - SystemTask
+      summary: Gets paged system tasks
+      description: This will return paged system tasks
+      operationId: getPagedSystemTasks
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetSystemTaskCommand"
+      responses:
+        200:
+          description: Paged system tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -1758,6 +1787,19 @@ components:
       enum:
         - "TESSERACT"
         - "EASY_OCR"
+    SystemTaskStatus:
+      type: string
+      enum:
+        - "SUCCEEDED"
+        - "FAILED"
+    SystemTaskType:
+      type: string
+      enum:
+        - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
+    AssociatedEntityType:
+      type: string
+      enum:
+        - "SYSTEM_EMAIL"
     BaseModel:
       type: object
       required:
@@ -3125,3 +3167,35 @@ components:
         password:
           type: string
           description: IMAP password
+    SystemTask:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            type:
+              $ref: "#/components/schemas/SystemTaskType"
+            status:
+              $ref: "#/components/schemas/SystemTaskStatus"
+            startedAt:
+              type: string
+            endedAt:
+              type: string
+            associatedEntityId:
+              type: integer
+            associatedEntityType:
+              $ref: "#/components/schemas/AssociatedEntityType"
+            ranByUserId:
+              type: integer
+              format: uint64
+            resultDescription:
+              type: string
+    GetSystemTaskCommand:
+      allOf:
+        - $ref: "#/components/schemas/PagedRequestCommand"
+        - type: object
+      properties:
+        associatedEntityId:
+          type: integer
+          description: Associated entity id
+        associatedEntityType:
+          $ref: "#/components/schemas/AssociatedEntityType"

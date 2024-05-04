@@ -102,6 +102,7 @@ func MakeMigrations() error {
 		&models.Widget{},
 		&models.SystemSettings{},
 		&models.SystemEmail{},
+		&models.SystemTask{},
 	)
 
 	return err

@@ -56,7 +56,7 @@ func TestShouldNotAllowAdminToGetSystemTasksWithInvalidCommand(t *testing.T) {
 				PagedRequestCommand: commands.PagedRequestCommand{
 					Page:          1,
 					PageSize:      100,
-					OrderBy:       "id",
+					OrderBy:       "type",
 					SortDirection: "asc",
 				},
 				AssociatedEntityId:   1,
@@ -69,12 +69,24 @@ func TestShouldNotAllowAdminToGetSystemTasksWithInvalidCommand(t *testing.T) {
 				PagedRequestCommand: commands.PagedRequestCommand{
 					Page:          1,
 					PageSize:      100,
-					OrderBy:       "id",
+					OrderBy:       "associated_entity_type",
 					SortDirection: "asc",
 				},
 				AssociatedEntityType: models.SYSTEM_EMAIL,
 			},
 			expect: http.StatusOK,
+		},
+		"bad order by": {
+			input: commands.GetSystemTaskCommand{
+				PagedRequestCommand: commands.PagedRequestCommand{
+					Page:          1,
+					PageSize:      100,
+					OrderBy:       "terrible order by",
+					SortDirection: "asc",
+				},
+				AssociatedEntityType: models.SYSTEM_EMAIL,
+			},
+			expect: http.StatusInternalServerError,
 		},
 		"missing associated entityType": {
 			input: commands.GetSystemTaskCommand{

@@ -206,6 +206,9 @@ func initRoutes() *chi.Mux {
 
 		systemTaskRouter := routers.BuildSystemTaskRouter(tokenValidatorMiddleware)
 		rootRouter.Mount("/api/systemTask", systemTaskRouter)
+
+		receiptProcessingSettingsRouter := routers.BuildReceiptProcessingSettingsRouter(tokenValidatorMiddleware)
+		rootRouter.Mount("/api/receiptProcessingSettings", receiptProcessingSettingsRouter)
 	}
 
 	return rootRouter

@@ -103,6 +103,7 @@ func MakeMigrations() {
 		&models.SystemSettings{},
 		&models.SystemEmail{},
 		&models.SystemTask{},
+		&models.ReceiptProcessingSettings{},
 	)
 }
 

@@ -3128,23 +3128,6 @@ components:
               type: boolean
               description: Whether AI powered receipts are enabled
               default: false
-            aiType:
-              $ref: "#/components/schemas/AiType"
-            aiUrl:
-              type: string
-              description: URL for AI powered receipts
-            aiKey:
-              type: string
-              description: Key for AI powered receipts
-            aiModel:
-              type: string
-              description: Model for AI powered receipts
-            numWorkers:
-              type: integer
-              description: Number of workers for AI powered receipts
-              default: 1
-            ocrEngine:
-              $ref: "#/components/schemas/OcrEngine"
             emailPollingInterval:
               type: integer
               description: Email polling interval
@@ -3199,3 +3182,28 @@ components:
           description: Associated entity id
         associatedEntityType:
           $ref: "#/components/schemas/AssociatedEntityType"
+    ReceiptProcessingSettings:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            aiType:
+              $ref: "#/components/schemas/AiType"
+            url:
+              type: string
+              description: URL for custom endpoints
+            key:
+              type: string
+              description: Key for endpoints that require authentication
+            model:
+              type: string
+              description: LLM model
+            numWorkers:
+              type: integer
+              description: Number of workers to use
+              default: 1
+            ocrEngine:
+              $ref: "#/components/schemas/OcrEngine"
+            enabled:
+              type: boolean
+              description: Whether these settings are enabled or not

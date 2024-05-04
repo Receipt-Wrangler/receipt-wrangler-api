@@ -10,6 +10,7 @@ import (
 	"receipt-wrangler/api/internal/utils"
 )
 
+// TODO: add to swagger
 func GetPagedReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error getting receipt processing settings",

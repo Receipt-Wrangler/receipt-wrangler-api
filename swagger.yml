@@ -1712,6 +1712,35 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /prompt/getPagedPrompts:
+    post:
+      tags:
+        - Prompt
+      summary: Gets paged prompts
+      description: This will return paged prompts
+      operationId: getPagedPrompts
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
+      responses:
+        200:
+          description: Paged prompts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -3207,3 +3236,32 @@ components:
             enabled:
               type: boolean
               description: Whether these settings are enabled or not
+    Prompt:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            name:
+              type: string
+              description: Prompt name
+            description:
+              type: string
+              description: Prompt description
+            prompt:
+              type: string
+              description: Prompt text
+    UpsertPromptCommand:
+      type: object
+      required:
+        - name
+        - prompt
+      properties:
+        name:
+          type: string
+          description: Prompt name
+        description:
+          type: string
+          description: Prompt description
+        prompt:
+          type: string
+          description: Prompt text

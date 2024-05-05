@@ -209,6 +209,9 @@ func initRoutes() *chi.Mux {
 
 		receiptProcessingSettingsRouter := routers.BuildReceiptProcessingSettingsRouter(tokenValidatorMiddleware)
 		rootRouter.Mount("/api/receiptProcessingSettings", receiptProcessingSettingsRouter)
+
+		promptRouter := routers.BuildPromptRouter(tokenValidatorMiddleware)
+		rootRouter.Mount("/api/prompt", promptRouter)
 	}
 
 	return rootRouter

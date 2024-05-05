@@ -60,6 +60,7 @@ func (command *PagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r
 
 	return nil
 }
+
 func (command *PagedRequestCommand) Validate() structs.ValidatorError {
 	vErr := structs.ValidatorError{}
 	errorMap := make(map[string]string)

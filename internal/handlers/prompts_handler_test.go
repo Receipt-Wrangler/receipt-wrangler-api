@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"net/http/httptest"
 	"receipt-wrangler/api/internal/commands"
@@ -106,5 +107,66 @@ func TestShouldNotGetPagedPromptsWithBadRequest(t *testing.T) {
 		if w.Result().StatusCode != test.expect {
 			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("%s expected: %d", name, test.expect))
 		}
+	}
+}
+
+func TestShouldNotAllowUserToGetPromptById(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	GetPromptById(w, r)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestShouldNotAllowAdminToGetPromptByIdWithBadId(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "badId")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	GetPromptById(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestShouldAllowAdminToGetPromptById(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "1")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	db := repositories.GetDB()
+	db.Create(&models.Prompt{})
+
+	GetPromptById(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
 	}
 }

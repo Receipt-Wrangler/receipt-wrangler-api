@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -45,6 +46,36 @@ func GetPagedPrompts(w http.ResponseWriter, r *http.Request) {
 			pagedData.Data = data
 
 			responseBytes, err := utils.MarshalResponseData(pagedData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetPromptById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting prompt",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			promptRepository := repositories.NewPromptRepository(nil)
+			prompt, err := promptRepository.GetPromptById(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(prompt)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

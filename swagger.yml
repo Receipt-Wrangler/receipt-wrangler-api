@@ -3240,6 +3240,9 @@ components:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
+          required:
+            - name
+            - prompt
           properties:
             name:
               type: string

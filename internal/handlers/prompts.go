@@ -42,6 +42,7 @@ func GetPagedPrompts(w http.ResponseWriter, r *http.Request) {
 				data = append(data, prompts[i])
 			}
 			pagedData.TotalCount = count
+			pagedData.Data = data
 
 			responseBytes, err := utils.MarshalResponseData(pagedData)
 			if err != nil {

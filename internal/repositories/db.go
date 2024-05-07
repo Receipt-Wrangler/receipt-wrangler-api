@@ -104,6 +104,7 @@ func MakeMigrations() {
 		&models.SystemEmail{},
 		&models.SystemTask{},
 		&models.ReceiptProcessingSettings{},
+		&models.Prompt{},
 	)
 }
 

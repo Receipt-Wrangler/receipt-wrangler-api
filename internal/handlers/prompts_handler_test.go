@@ -81,6 +81,15 @@ func TestShouldNotGetPagedPromptsWithBadRequest(t *testing.T) {
 			},
 			expect: http.StatusBadRequest,
 		},
+		"valid": {
+			input: commands.PagedRequestCommand{
+				Page:          1,
+				PageSize:      25,
+				OrderBy:       "name",
+				SortDirection: "asc",
+			},
+			expect: http.StatusOK,
+		},
 	}
 
 	for name, test := range tests {

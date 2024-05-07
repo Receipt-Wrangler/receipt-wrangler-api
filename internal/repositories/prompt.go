@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
@@ -30,6 +31,11 @@ func (repository PromptRepository) GetPagedPrompts(command commands.PagedRequest
 		return nil, 0, err
 	}
 
+	validColumn := repository.isValidColumn(command.OrderBy)
+	if !validColumn {
+		return nil, 0, errors.New("invalid column: " + command.OrderBy)
+	}
+
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
@@ -39,4 +45,8 @@ func (repository PromptRepository) GetPagedPrompts(command commands.PagedRequest
 	}
 
 	return results, count, nil
+}
+
+func (repository PromptRepository) isValidColumn(orderBy string) bool {
+	return orderBy == "name" || orderBy == "description" || orderBy == "created_at" || orderBy == "updated_at"
 }

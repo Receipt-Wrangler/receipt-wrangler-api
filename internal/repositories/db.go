@@ -103,6 +103,8 @@ func MakeMigrations() error {
 		&models.SystemSettings{},
 		&models.SystemEmail{},
 		&models.SystemTask{},
+		&models.ReceiptProcessingSettings{},
+		&models.Prompt{},
 	)
 
 	return err

@@ -13,6 +13,7 @@ func BuildPromptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	router.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 	router.Get("/{id}", handlers.GetPromptById)
 	router.Put("/{id}", handlers.UpdatePromptById)
+	router.Post("/", handlers.CreatePrompt)
 	router.Post("/getPagedPrompts", handlers.GetPagedPrompts)
 
 	return router

@@ -170,3 +170,134 @@ func TestShouldAllowAdminToGetPromptById(t *testing.T) {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
 	}
 }
+
+func TestShouldNotAllowUserToUpdatePromptById(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	UpdatePromptById(w, r)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestShouldNotAllowAdminToUpdatePromptByIdWithBadId(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "badId")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	UpdatePromptById(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestShouldNotAllowUserToUpdateInvalidPrompt(t *testing.T) {
+	defer tearDownSystemEmailTest()
+	db := repositories.GetDB()
+	db.Create(&models.Prompt{})
+
+	tests := map[string]struct {
+		input  commands.UpsertPromptCommand
+		expect int
+	}{
+		"empty body": {
+			expect: http.StatusBadRequest,
+		},
+		"empty test": {
+			input:  commands.UpsertPromptCommand{},
+			expect: http.StatusBadRequest,
+		},
+		"empty prompt": {
+			input: commands.UpsertPromptCommand{
+				Name: "test",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"empty name": {
+			input: commands.UpsertPromptCommand{
+				Prompt: "test",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"bad template variable in middle": {
+			input: commands.UpsertPromptCommand{
+				Name:   "test",
+				Prompt: "hello this @bad is bad",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"bad template variable at end": {
+			input: commands.UpsertPromptCommand{
+				Name:   "test",
+				Prompt: "hello this @bad",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"bad template variable at beginning": {
+			input: commands.UpsertPromptCommand{
+				Name:   "test",
+				Prompt: "@bad variable",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"bad template embedded variable": {
+			input: commands.UpsertPromptCommand{
+				Name:   "test",
+				Prompt: "asdlfkasjdfldj@badvariablelaksjdfasldjk",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"good prompt no variables": {
+			input: commands.UpsertPromptCommand{
+				Name:   "test",
+				Prompt: "hello variable",
+			},
+			expect: http.StatusOK,
+		},
+		"good prompt with variables": {
+			input: commands.UpsertPromptCommand{
+				Name:   "test",
+				Prompt: "please use, @categories, and @tags",
+			},
+			expect: http.StatusOK,
+		},
+	}
+
+	for _, test := range tests {
+		bytes, _ := json.Marshal(test.input)
+		reader := strings.NewReader(string(bytes))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/api", reader)
+
+		chiContext := chi.NewRouteContext()
+		chiContext.URLParams.Add("id", "1")
+		routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+		r = r.WithContext(routeContext)
+
+		newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+		r = r.WithContext(newContext)
+
+		UpdatePromptById(w, r)
+
+		if w.Result().StatusCode != test.expect {
+			utils.PrintTestError(t, w.Result().StatusCode, test.expect)
+		}
+	}
+}

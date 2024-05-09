@@ -59,6 +59,21 @@ func (repository PromptRepository) GetPromptById(id string) (models.Prompt, erro
 	return prompt, nil
 }
 
+func (repository PromptRepository) UpdatePromptById(id string, command commands.UpsertPromptCommand) (models.Prompt, error) {
+	db := repository.GetDB()
+	prompt, err := repository.GetPromptById(id)
+	if err != nil {
+		return models.Prompt{}, err
+	}
+
+	err = db.Model(&prompt).Updates(command).Error
+	if err != nil {
+		return models.Prompt{}, err
+	}
+
+	return prompt, nil
+}
+
 func (repository PromptRepository) isValidColumn(orderBy string) bool {
 	return orderBy == "name" || orderBy == "description" || orderBy == "created_at" || orderBy == "updated_at"
 }

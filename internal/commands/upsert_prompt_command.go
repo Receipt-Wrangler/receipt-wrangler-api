@@ -37,6 +37,15 @@ func (command *UpsertPromptCommand) Validate() structs.ValidatorError {
 
 	if len(command.Prompt) == 0 {
 		errorMap["prompt"] = "Prompt cannot be empty"
+	} else {
+		regex := utils.GetTriggerRegex()
+		templateVariables := regex.FindAllString(command.Prompt, -1)
+		for i := 0; i < len(templateVariables); i++ {
+			variable := templateVariables[i]
+			if variable != "@categories" && variable != "@tags" {
+				errorMap["prompt"] = "Invalid template variables found"
+			}
+		}
 	}
 
 	vErr.Errors = errorMap

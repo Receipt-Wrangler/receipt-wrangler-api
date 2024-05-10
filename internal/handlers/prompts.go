@@ -172,3 +172,27 @@ func CreatePrompt(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func DeletePromptById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting prompt",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			promptRepository := repositories.NewPromptRepository(nil)
+			err := promptRepository.DeletePromptById(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

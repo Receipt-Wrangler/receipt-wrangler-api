@@ -404,3 +404,64 @@ func TestShouldNotAllowAdminToCreateInvalidPrompt(t *testing.T) {
 		}
 	}
 }
+
+func TestShouldNotAllowUserToDeletePromptById(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	DeletePromptById(w, r)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestShouldNotAllowAdminToDeletePromptWithBadId(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "badId")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	DeletePromptById(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestShouldDeletePromptById(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	db := repositories.GetDB()
+	db.Create(&models.Prompt{})
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "1")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	DeletePromptById(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}

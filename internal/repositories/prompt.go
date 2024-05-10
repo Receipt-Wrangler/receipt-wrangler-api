@@ -93,3 +93,13 @@ func (repository PromptRepository) CreatePrompt(command commands.UpsertPromptCom
 
 	return prompt, nil
 }
+
+func (repository PromptRepository) DeletePromptById(id string) error {
+	db := repository.GetDB()
+	err := db.Delete(&models.Prompt{}, id).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

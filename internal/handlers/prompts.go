@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -51,6 +52,143 @@ func GetPagedPrompts(w http.ResponseWriter, r *http.Request) {
 
 			w.WriteHeader(http.StatusOK)
 			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetPromptById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting prompt",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			promptRepository := repositories.NewPromptRepository(nil)
+			prompt, err := promptRepository.GetPromptById(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(prompt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func UpdatePromptById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error updating prompt",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			command := commands.UpsertPromptCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErr := command.Validate()
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			promptRepository := repositories.NewPromptRepository(nil)
+			prompt, err := promptRepository.UpdatePromptById(id, command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(prompt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func CreatePrompt(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error creating prompt",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpsertPromptCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErr := command.Validate()
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			promptRepository := repositories.NewPromptRepository(nil)
+			prompt, err := promptRepository.CreatePrompt(command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(prompt)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func DeletePromptById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting prompt",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			promptRepository := repositories.NewPromptRepository(nil)
+			err := promptRepository.DeletePromptById(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
 
 			return 0, nil
 		},

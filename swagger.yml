@@ -1712,6 +1712,115 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /prompt/:
+    post:
+      tags:
+        - Prompt
+      summary: Create prompt
+      description: This will create a prompt
+      operationId: createPrompt
+      requestBody:
+        description: Prompt to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPromptCommand"
+      responses:
+        200:
+          description: The created prompt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /prompt/{id}:
+    get:
+      tags:
+        - Prompt
+      summary: Get prompt by id
+      description: This will get a prompt by id
+      operationId: getPromptById
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of prompt to get
+      responses:
+        200:
+          description: The prompt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - Prompt
+      summary: Update prompt by id
+      description: This will update a prompt by id
+      operationId: updatePromptById
+      requestBody:
+        description: Prompt to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPromptCommand"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of prompt to update
+      responses:
+        200:
+          description: The updated prompt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - Prompt
+      summary: Delete prompt by id
+      description: This will delete a prompt by id
+      operationId: deletePromptById
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of prompt to delete
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /prompt/getPagedPrompts:
     post:
       tags:

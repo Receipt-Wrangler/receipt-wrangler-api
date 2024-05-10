@@ -15,7 +15,8 @@ type ReceiptProcessingSettings struct {
 	Model      string       `json:"model"`
 	NumWorkers int          `json:"numWorkers"`
 	OcrEngine  OcrEngine    `json:"ocrEngine"`
-	Enabled    bool         `json:"enabled"`
+	Prompt     Prompt       `json:"prompt"`
+	PromptId   uint         `json:"promptId"`
 }
 
 func (ReceiptProcessingSettings *ReceiptProcessingSettings) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

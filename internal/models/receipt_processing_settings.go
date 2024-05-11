@@ -12,7 +12,7 @@ type ReceiptProcessingSettings struct {
 	Description string       `json:"description"`
 	AiType      AiClientType `json:"type"`
 	Url         string       `json:"url"`
-	Key         string       `json:"key"`
+	Key         string       `json:"-"`
 	Model       string       `json:"model"`
 	NumWorkers  int          `json:"numWorkers"`
 	OcrEngine   OcrEngine    `json:"ocrEngine"`

@@ -37,6 +37,15 @@ func EncryptData(key string, value []byte) ([]byte, error) {
 	return gcm.Seal(nonce, nonce, value, nil), nil
 }
 
+func EncryptAndEncodeToBase64(key string, value string) (string, error) {
+	encryptedData, err := EncryptData(key, []byte(value))
+	if err != nil {
+		return "", err
+	}
+
+	return EncodeToBase64(encryptedData), nil
+}
+
 func DecryptData(key string, encryptedData []byte) (string, error) {
 	if len(key) == 0 {
 		return "", errors.New("key cannot be empty")

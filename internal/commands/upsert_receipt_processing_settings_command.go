@@ -9,14 +9,15 @@ import (
 )
 
 type UpsertReceiptProcessingSettingsCommand struct {
-	Name       string              `json:"name"`
-	AiType     models.AiClientType `json:"type"`
-	Url        string              `json:"url"`
-	Key        string              `json:"key"`
-	Model      string              `json:"model"`
-	NumWorkers int                 `json:"numWorkers"`
-	OcrEngine  models.OcrEngine    `json:"ocrEngine"`
-	PromptId   uint                `json:"promptId"`
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	AiType      models.AiClientType `json:"type"`
+	Url         string              `json:"url"`
+	Key         string              `json:"key"`
+	Model       string              `json:"model"`
+	NumWorkers  int                 `json:"numWorkers"`
+	OcrEngine   models.OcrEngine    `json:"ocrEngine"`
+	PromptId    uint                `json:"promptId"`
 }
 
 func (command *UpsertReceiptProcessingSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -64,6 +65,10 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 	if command.AiType == models.OPEN_AI || command.AiType == models.GEMINI {
 		if command.Key == "" {
 			errors["key"] = "key is required"
+		}
+
+		if command.Url != "" {
+			errors["url"] = "url is not required"
 		}
 	}
 

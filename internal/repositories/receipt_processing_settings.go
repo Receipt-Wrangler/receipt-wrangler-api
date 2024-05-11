@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
@@ -23,6 +24,11 @@ func (repository ReceiptProcessingSettings) GetPagedReceiptProcessingSettings(co
 	var results []models.ReceiptProcessingSettings
 	var count int64
 
+	validColumn := repository.isValidColumn(command.OrderBy)
+	if !validColumn {
+		return nil, 0, errors.New("invalid column: " + command.OrderBy)
+	}
+
 	query := db.Model(&models.ReceiptProcessingSettings{})
 
 	err := query.Count(&count).Error
@@ -39,4 +45,8 @@ func (repository ReceiptProcessingSettings) GetPagedReceiptProcessingSettings(co
 	}
 
 	return results, count, nil
+}
+
+func (repository ReceiptProcessingSettings) isValidColumn(orderBy string) bool {
+	return orderBy == "name" || orderBy == "description" || orderBy == "ai_type" || orderBy == "ocr_engine" || orderBy == "created_at" || orderBy == "updated_at"
 }

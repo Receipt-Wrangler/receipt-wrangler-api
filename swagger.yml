@@ -1850,6 +1850,35 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /receiptProcessingSettings/getPagedProcessingSettings:
+    post:
+      tags:
+        - ReceiptProcessingSettings
+      summary: Gets paged processing settings
+      description: This will return paged processing settings
+      operationId: getPagedProcessingSettings
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
+      responses:
+        200:
+          description: Paged processing settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -3325,6 +3354,12 @@ components:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
           properties:
+            name:
+              type: string
+              description: Name of the settings
+            description:
+              type: string
+              description: Description of the settings
             aiType:
               $ref: "#/components/schemas/AiType"
             url:
@@ -3342,9 +3377,46 @@ components:
               default: 1
             ocrEngine:
               $ref: "#/components/schemas/OcrEngine"
-            enabled:
-              type: boolean
-              description: Whether these settings are enabled or not
+            prompt:
+              $ref: "#/components/schemas/Prompt"
+            promptId:
+              type: integer
+              description: Prompt foreign key
+    UpsertReceiptProcessingSettingsCommand:
+      type: object
+      required:
+        - name
+        - aiType
+        - numWorkers
+        - ocrEngine
+        - promptId
+      properties:
+        name:
+          type: string
+          description: Name of the settings
+        description:
+          type: string
+          description: Description of the settings
+        aiType:
+          $ref: "#/components/schemas/AiType"
+        url:
+          type: string
+          description: URL for custom endpoints
+        key:
+          type: string
+          description: Key for endpoints that require authentication
+        model:
+          type: string
+          description: LLM model
+        numWorkers:
+          type: integer
+          description: Number of workers to use
+          default: 1
+        ocrEngine:
+          $ref: "#/components/schemas/OcrEngine"
+        promptId:
+          type: integer
+          description: Prompt foreign key
     Prompt:
       allOf:
         - $ref: "#/components/schemas/BaseModel"

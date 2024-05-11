@@ -10,7 +10,6 @@ import (
 	"receipt-wrangler/api/internal/utils"
 )
 
-// TODO: add to swagger
 func GetPagedReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error getting receipt processing settings",
@@ -42,6 +41,7 @@ func GetPagedReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 			for i := 0; i < len(receiptProcessingSettings); i++ {
 				data = append(data, receiptProcessingSettings[i])
 			}
+			pagedData.Data = data
 			pagedData.TotalCount = count
 
 			responseBytes, err := utils.MarshalResponseData(pagedData)

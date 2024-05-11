@@ -3,6 +3,7 @@ package routers
 import (
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/go-chi/chi/v5"
+	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/middleware"
 )
 
@@ -10,6 +11,7 @@ func BuildReceiptProcessingSettingsRouter(tokenValidator *jwtmiddleware.JWTMiddl
 	router := chi.NewRouter()
 
 	router.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
+	router.Post("/getPagedProcessingSettings", handlers.GetPagedReceiptProcessingSettings)
 
 	return router
 }

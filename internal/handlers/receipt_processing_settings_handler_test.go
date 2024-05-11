@@ -81,6 +81,15 @@ func TestShouldNotGetReceiptProcessingSettingsWithBadRequest(t *testing.T) {
 			},
 			expect: http.StatusBadRequest,
 		},
+		"good": {
+			input: commands.PagedRequestCommand{
+				Page:          1,
+				PageSize:      50,
+				OrderBy:       "name",
+				SortDirection: "asc",
+			},
+			expect: http.StatusOK,
+		},
 	}
 
 	for name, test := range tests {
@@ -92,7 +101,7 @@ func TestShouldNotGetReceiptProcessingSettingsWithBadRequest(t *testing.T) {
 		newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
 		r = r.WithContext(newContext)
 
-		GetAllSystemEmails(w, r)
+		GetPagedReceiptProcessingSettings(w, r)
 
 		if w.Result().StatusCode != test.expect {
 			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("%s expected: %d", name, test.expect))

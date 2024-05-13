@@ -11,6 +11,7 @@ func BuildReceiptProcessingSettingsRouter(tokenValidator *jwtmiddleware.JWTMiddl
 	router := chi.NewRouter()
 
 	router.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
+	router.Post("/", handlers.CreateReceiptProcessingSettings)
 	router.Post("/getPagedProcessingSettings", handlers.GetPagedReceiptProcessingSettings)
 
 	return router

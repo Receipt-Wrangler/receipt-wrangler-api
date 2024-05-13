@@ -11,7 +11,7 @@ import (
 type UpsertReceiptProcessingSettingsCommand struct {
 	Name        string              `json:"name"`
 	Description string              `json:"description"`
-	AiType      models.AiClientType `json:"type"`
+	AiType      models.AiClientType `json:"aiType"`
 	Url         string              `json:"url"`
 	Key         string              `json:"key"`
 	Model       string              `json:"model"`

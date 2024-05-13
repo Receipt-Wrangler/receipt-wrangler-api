@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -79,6 +80,8 @@ func CreateReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
 				return 0, nil
 			}
+
+			fmt.Println(command)
 
 			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
 			settings, err := receiptProcessingSettingsRepository.CreateReceiptProcessingSettings(command)

@@ -1850,6 +1850,33 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /receiptProcessingSettings:
+    post:
+      tags:
+        - ReceiptProcessingSettings
+      summary: Create receipt processing settings
+      description: This will create receipt processing settings
+      operationId: createReceiptProcessingSettings
+      requestBody:
+        description: Receipt processing settings to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertReceiptProcessingSettingsCommand"
+      responses:
+        200:
+          description: The created receipt processing settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptProcessingSettings"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /receiptProcessingSettings/getPagedProcessingSettings:
     post:
       tags:
@@ -1946,8 +1973,8 @@ components:
     AiType:
       type: string
       enum:
-        - "OPENAI_CUSTOM"
-        - "OPENAI"
+        - "OPEN_AI_CUSTOM"
+        - "OPEN_AI"
         - "GEMINI"
     OcrEngine:
       type: string

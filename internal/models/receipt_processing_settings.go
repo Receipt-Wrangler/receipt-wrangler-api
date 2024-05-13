@@ -10,7 +10,7 @@ type ReceiptProcessingSettings struct {
 	BaseModel
 	Name        string       `gorm:"not null; uniqueIndex" json:"name"`
 	Description string       `json:"description"`
-	AiType      AiClientType `json:"type"`
+	AiType      AiClientType `json:"aiType"`
 	Url         string       `json:"url"`
 	Key         string       `json:"-"`
 	Model       string       `json:"model"`

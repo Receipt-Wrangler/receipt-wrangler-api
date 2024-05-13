@@ -28,6 +28,10 @@ func (repository *BaseRepository) ClearTransaction() {
 
 func (repository BaseRepository) Paginate(page int, pageSize int) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
+		if pageSize == -1 {
+			return db
+		}
+
 		if page <= 0 {
 			page = 1
 		}

@@ -85,6 +85,18 @@ func (repository ReceiptProcessingSettingsRepository) CreateReceiptProcessingSet
 	return settings, nil
 }
 
+func (repository ReceiptProcessingSettingsRepository) GetReceiptProcessingSettingsById(id string) (models.ReceiptProcessingSettings, error) {
+	db := repository.GetDB()
+	var settings models.ReceiptProcessingSettings
+
+	err := db.First(&settings, id).Error
+	if err != nil {
+		return models.ReceiptProcessingSettings{}, err
+	}
+
+	return settings, nil
+}
+
 func (repository ReceiptProcessingSettingsRepository) isValidColumn(orderBy string) bool {
 	return orderBy == "name" || orderBy == "description" || orderBy == "ai_type" || orderBy == "ocr_engine" || orderBy == "created_at" || orderBy == "updated_at"
 }

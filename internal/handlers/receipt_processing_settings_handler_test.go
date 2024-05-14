@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -221,5 +222,73 @@ func TestShouldNotCreateReceiptProcessingSettingsWithBadRequest(t *testing.T) {
 		}
 
 		tearDownReceiptProcessingSettings()
+	}
+}
+
+func TestShouldNotAllowUserToGetReceiptProcessingSettingsById(t *testing.T) {
+	defer tearDownReceiptProcessingSettings()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	GetReceiptProcessingSettingsById(w, r)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestShouldNotReceiptProcessingSettingsByIdDueToBadId(t *testing.T) {
+	defer tearDownReceiptProcessingSettings()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api/", reader)
+
+	var expectedStatusCode = http.StatusInternalServerError
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "badId")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	GetReceiptProcessingSettingsById(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldGetReceiptProcessingSettingsById(t *testing.T) {
+	defer tearDownReceiptProcessingSettings()
+	w := httptest.NewRecorder()
+	reader := strings.NewReader("")
+	r := httptest.NewRequest("POST", "/api/", reader)
+
+	var expectedStatusCode = http.StatusOK
+
+	db := repositories.GetDB()
+	db.Create(&models.Prompt{})
+	db.Create(&models.ReceiptProcessingSettings{
+		PromptId: 1,
+	})
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", "1")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	GetReceiptProcessingSettingsById(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
 	}
 }

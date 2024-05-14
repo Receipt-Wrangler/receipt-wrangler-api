@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -85,6 +86,37 @@ func CreateReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 
 			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
 			settings, err := receiptProcessingSettingsRepository.CreateReceiptProcessingSettings(command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(settings)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting receipt processing settings",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+
+			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
+			settings, err := receiptProcessingSettingsRepository.GetReceiptProcessingSettingsById(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

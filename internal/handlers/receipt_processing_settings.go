@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
@@ -81,8 +80,6 @@ func CreateReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
 				return 0, nil
 			}
-
-			fmt.Println(command)
 
 			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
 			settings, err := receiptProcessingSettingsRepository.CreateReceiptProcessingSettings(command)

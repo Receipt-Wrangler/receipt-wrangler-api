@@ -20,6 +20,20 @@ func TestShouldEncryptStringWithAES128(t *testing.T) {
 	}
 }
 
+func TestShouldEncryptStringWithAES128InOneCall(t *testing.T) {
+	key := "superSecureKey"
+	value := "superSecretData"
+
+	encodedCipherText, err := EncryptAndEncodeToBase64(key, value)
+	if err != nil {
+		PrintTestError(t, err, nil)
+	}
+
+	if len(encodedCipherText) != 60 {
+		PrintTestError(t, len(encodedCipherText), 60)
+	}
+}
+
 func TestShouldReturnErrorEncryptingWithEmptyKey(t *testing.T) {
 	key := ""
 	value := []byte("superSecretData")

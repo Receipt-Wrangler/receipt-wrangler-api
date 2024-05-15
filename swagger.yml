@@ -1850,6 +1850,119 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /receiptProcessingSettings/{id}:
+    get:
+      tags:
+        - ReceiptProcessingSettings
+      summary: Get receipt processing settings by id
+      description: This will get receipt processing settings by id
+      operationId: getReceiptProcessingSettingsById
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of receipt processing settings to get
+      responses:
+        200:
+          description: The receipt processing settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptProcessingSettings"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - ReceiptProcessingSettings
+      summary: Update receipt processing settings by id
+      description: This will update receipt processing settings by id
+      operationId: updateReceiptProcessingSettingsById
+      requestBody:
+        description: Receipt processing settings to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertReceiptProcessingSettingsCommand"
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of receipt processing settings to update
+        - in: query
+          name: updateKey
+          schema:
+            type: boolean
+          required: true
+          description: Whether or not to update the key
+      responses:
+        200:
+          description: The updated receipt processing settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptProcessingSettings"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      tags:
+        - ReceiptProcessingSettings
+      summary: Delete receipt processing settings by id
+      description: This will delete receipt processing settings by id
+      operationId: deleteReceiptProcessingSettingsById
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of receipt processing settings to delete
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /receiptProcessingSettings:
+    post:
+      tags:
+        - ReceiptProcessingSettings
+      summary: Create receipt processing settings
+      description: This will create receipt processing settings
+      operationId: createReceiptProcessingSettings
+      requestBody:
+        description: Receipt processing settings to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertReceiptProcessingSettingsCommand"
+      responses:
+        200:
+          description: The created receipt processing settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptProcessingSettings"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /receiptProcessingSettings/getPagedProcessingSettings:
     post:
       tags:
@@ -1946,8 +2059,8 @@ components:
     AiType:
       type: string
       enum:
-        - "OPENAI_CUSTOM"
-        - "OPENAI"
+        - "OPEN_AI_CUSTOM"
+        - "OPEN_AI"
         - "GEMINI"
     OcrEngine:
       type: string

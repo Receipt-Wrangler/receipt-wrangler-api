@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -52,6 +53,148 @@ func GetPagedReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write(responseBytes)
 
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func CreateReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error creating receipt processing settings",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpsertReceiptProcessingSettingsCommand{}
+
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErr := command.Validate()
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
+			settings, err := receiptProcessingSettingsRepository.CreateReceiptProcessingSettings(command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(settings)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting receipt processing settings",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+
+			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
+			settings, err := receiptProcessingSettingsRepository.GetReceiptProcessingSettingsById(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(settings)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func UpdateReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error updating receipt processing settings",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			updateKey := r.URL.Query().Get("updateKey") == "true"
+
+			command := commands.UpsertReceiptProcessingSettingsCommand{}
+
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErr := command.Validate()
+			if len(vErr.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
+			settings, err := receiptProcessingSettingsRepository.UpdateReceiptProcessingSettingsById(id, updateKey, command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			responseBytes, err := utils.MarshalResponseData(settings)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func DeleteReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting receipt processing settings",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+
+			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
+			err := receiptProcessingSettingsRepository.DeleteReceiptProcessingSettingsById(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
 			return 0, nil
 		},
 	}

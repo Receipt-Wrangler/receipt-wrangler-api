@@ -218,7 +218,7 @@ func TestShouldReturn500WithMalformedPagedRequestCommand(t *testing.T) {
 		"badPageSize": {
 			input: commands.PagedRequestCommand{
 				Page:          1,
-				PageSize:      -1,
+				PageSize:      -2,
 				OrderBy:       "host",
 				SortDirection: "asc",
 			},

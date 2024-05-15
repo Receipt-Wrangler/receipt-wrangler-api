@@ -49,8 +49,6 @@ func (repository ReceiptProcessingSettingsRepository) GetPagedReceiptProcessingS
 	return results, count, nil
 }
 
-// TODO: in update, need to encrypt key on update
-
 func (repository ReceiptProcessingSettingsRepository) CreateReceiptProcessingSettings(command commands.UpsertReceiptProcessingSettingsCommand) (models.ReceiptProcessingSettings, error) {
 	db := repository.GetDB()
 	var encryptedKey string
@@ -95,6 +93,50 @@ func (repository ReceiptProcessingSettingsRepository) GetReceiptProcessingSettin
 	}
 
 	return settings, nil
+}
+
+func (repository ReceiptProcessingSettingsRepository) UpdateReceiptProcessingSettingsById(id string, updateKey bool, command commands.UpsertReceiptProcessingSettingsCommand) (models.ReceiptProcessingSettings, error) {
+	db := repository.GetDB()
+	updateStatement := db.Model(&models.ReceiptProcessingSettings{}).Where("id = ?", id)
+
+	settings := models.ReceiptProcessingSettings{
+		Name:        command.Name,
+		Description: command.Description,
+		AiType:      command.AiType,
+		Url:         command.Url,
+		Model:       command.Model,
+		NumWorkers:  command.NumWorkers,
+		OcrEngine:   command.OcrEngine,
+		PromptId:    command.PromptId,
+	}
+
+	if updateKey {
+		key, err := utils.EncryptAndEncodeToBase64(config.GetEncryptionKey(), command.Key)
+		if err != nil {
+			return models.ReceiptProcessingSettings{}, err
+		}
+
+		settings.Key = key
+	} else {
+		updateStatement = updateStatement.Omit("key")
+	}
+
+	err := updateStatement.Updates(&settings).Error
+	if err != nil {
+		return models.ReceiptProcessingSettings{}, err
+	}
+
+	return settings, nil
+}
+
+func (repository ReceiptProcessingSettingsRepository) DeleteReceiptProcessingSettings(id string) error {
+	db := repository.GetDB()
+	err := db.Delete(&models.ReceiptProcessingSettings{}, id).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (repository ReceiptProcessingSettingsRepository) isValidColumn(orderBy string) bool {

@@ -1897,6 +1897,12 @@ paths:
             type: integer
           required: true
           description: Id of receipt processing settings to update
+        - in: query
+          name: updateKey
+          schema:
+            type: boolean
+          required: true
+          description: Whether or not to update the key
       responses:
         200:
           description: The updated receipt processing settings

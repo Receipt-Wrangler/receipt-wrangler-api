@@ -129,7 +129,7 @@ func (repository ReceiptProcessingSettingsRepository) UpdateReceiptProcessingSet
 	return settings, nil
 }
 
-func (repository ReceiptProcessingSettingsRepository) DeleteReceiptProcessingSettings(id string) error {
+func (repository ReceiptProcessingSettingsRepository) DeleteReceiptProcessingSettingsById(id string) error {
 	db := repository.GetDB()
 	err := db.Delete(&models.ReceiptProcessingSettings{}, id).Error
 	if err != nil {

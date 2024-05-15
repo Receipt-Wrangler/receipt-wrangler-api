@@ -180,3 +180,27 @@ func UpdateReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request)
 
 	HandleRequest(handler)
 }
+
+func DeleteReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting receipt processing settings",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+
+			receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
+			err := receiptProcessingSettingsRepository.DeleteReceiptProcessingSettingsById(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

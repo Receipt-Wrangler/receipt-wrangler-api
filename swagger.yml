@@ -1934,6 +1934,8 @@ paths:
           $ref: "#/components/responses/Ok"
         500:
           $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /receiptProcessingSettings:
     post:
       tags:

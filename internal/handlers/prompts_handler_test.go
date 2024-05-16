@@ -465,3 +465,58 @@ func TestShouldDeletePromptById(t *testing.T) {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
 	}
 }
+
+func TestShouldNotAllowUserToCreateDefaultPrompt(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	CreateDefaultPrompt(w, r)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestShouldCreateDefaultPrompt(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	expectedStatus := http.StatusOK
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	CreateDefaultPrompt(w, r)
+
+	if w.Result().StatusCode != expectedStatus {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatus)
+	}
+}
+
+func TestShouldNotAllowToCreateDuplicateDefaultPrompts(t *testing.T) {
+	defer tearDownPromptTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	w2 := httptest.NewRecorder()
+
+	expectedStatus := http.StatusInternalServerError
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+	r = r.WithContext(newContext)
+
+	CreateDefaultPrompt(w, r)
+	CreateDefaultPrompt(w2, r)
+
+	if w2.Result().StatusCode != expectedStatus {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatus)
+	}
+}

@@ -15,6 +15,7 @@ func BuildPromptRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	router.Put("/{id}", handlers.UpdatePromptById)
 	router.Delete("/{id}", handlers.DeletePromptById)
 	router.Post("/", handlers.CreatePrompt)
+	router.Post("/createDefaultPrompt", handlers.CreateDefaultPrompt)
 	router.Post("/getPagedPrompts", handlers.GetPagedPrompts)
 
 	return router

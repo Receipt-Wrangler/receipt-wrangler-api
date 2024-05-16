@@ -10,6 +10,7 @@ import (
 	"google.golang.org/api/option"
 	"io"
 	"net/http"
+	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -166,6 +167,49 @@ func (aiClient *AiClientNew) OpenAiCustomChatCompletion(messages []structs.AiCli
 	}
 
 	return result, nil
+}
+
+func (aiClient *AiClientNew) CheckConnectivity(ranByUserId uint, decryptKey bool) (models.SystemTask, error) {
+	messages := []structs.AiClientMessage{
+		{
+			Role:    "user",
+			Content: "Respond with 'hello' if you are there!",
+		},
+	}
+
+	systemTaskCommand := commands.UpsertSystemTaskCommand{
+		Type:        models.RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK,
+		RanByUserId: &ranByUserId,
+	}
+
+	startedAt := time.Now()
+	response, err := aiClient.CreateChatCompletion(messages, decryptKey)
+	if err != nil {
+		systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+		systemTaskCommand.ResultDescription = err.Error()
+	} else {
+		systemTaskCommand.Status = models.SYSTEM_TASK_SUCCEEDED
+		systemTaskCommand.ResultDescription = fmt.Sprintf(
+			"The configured model responded with: %s in response to: %s",
+			response, messages[0].Content)
+	}
+	endedAt := time.Now()
+
+	systemTaskCommand.StartedAt = startedAt
+	systemTaskCommand.EndedAt = &endedAt
+
+	if aiClient.ReceiptProcessingSettings.ID > 0 {
+		systemTaskCommand.AssociatedEntityId = aiClient.ReceiptProcessingSettings.ID
+		systemTaskCommand.AssociatedEntityType = models.RECEIPT_PROCESSING_SETTINGS
+	}
+
+	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+	createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTaskCommand)
+	if err != nil {
+		return models.SystemTask{}, err
+	}
+
+	return createdSystemTask, nil
 }
 
 func (aiClient *AiClientNew) getKey(decryptKey bool) (string, error) {

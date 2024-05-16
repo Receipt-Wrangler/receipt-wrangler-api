@@ -27,13 +27,29 @@ func (command *CheckReceiptProcessingSettingsCommand) LoadDataFromRequest(w http
 }
 
 func (command *CheckReceiptProcessingSettingsCommand) Validate() structs.ValidatorError {
-	vErrs := command.UpsertReceiptProcessingSettingsCommand.Validate()
+	vErrs := structs.ValidatorError{}
+	errors := map[string]string{}
+	vErrs.Errors = errors
 
 	idIsEmpty := command.ID == 0
-	commandIsEmpty := command.IsEmpty()
+	settingsEmpty := command.UpsertReceiptProcessingSettingsCommand.IsEmpty()
 
-	if idIsEmpty && commandIsEmpty {
+	if idIsEmpty && settingsEmpty {
 		vErrs.Errors["command"] = "Command and ID cannot be empty."
+		return vErrs
+	}
+
+	if !settingsEmpty {
+		settingsErrors := command.UpsertReceiptProcessingSettingsCommand.Validate()
+		for k, v := range settingsErrors.Errors {
+			vErrs.Errors[k] = v
+		}
+	}
+
+	if !idIsEmpty {
+		if command.ID < 1 {
+			errors["id"] = "id must be greater than 0"
+		}
 	}
 
 	return vErrs

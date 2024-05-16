@@ -1850,6 +1850,24 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /prompt/createDefaultPrompt:
+    post:
+      tags:
+        - Prompt
+      summary: Create default prompt
+      description: This will create a default prompt
+      operationId: createDefaultPrompt
+      responses:
+        200:
+          description: The created prompt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /receiptProcessingSettings/{id}:
     get:
       tags:

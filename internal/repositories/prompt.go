@@ -60,18 +60,18 @@ func (repository PromptRepository) GetPromptById(id string) (models.Prompt, erro
 }
 
 func (repository PromptRepository) UpdatePromptById(id string, command commands.UpsertPromptCommand) (models.Prompt, error) {
-	db := repository.GetDB()
-	prompt, err := repository.GetPromptById(id)
+	promptToUpdate := models.Prompt{
+		Name:        command.Name,
+		Description: command.Description,
+		Prompt:      command.Prompt,
+	}
+
+	err := db.Model(models.Prompt{}).Where("id = ?", id).Updates(&promptToUpdate).Error
 	if err != nil {
 		return models.Prompt{}, err
 	}
 
-	err = db.Model(&prompt).Updates(command).Error
-	if err != nil {
-		return models.Prompt{}, err
-	}
-
-	return prompt, nil
+	return promptToUpdate, nil
 }
 
 func (repository PromptRepository) isValidColumn(orderBy string) bool {

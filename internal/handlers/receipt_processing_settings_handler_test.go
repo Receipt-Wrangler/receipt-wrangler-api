@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"receipt-wrangler/api/internal/commands"
+	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -493,5 +494,111 @@ func TestShouldDeleteReceiptProcessingSettingsById(t *testing.T) {
 
 	if w.Result().StatusCode != expectedStatusCode {
 		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldNotAllowUserToCheckReceiptProcessingSettingsConnectivity(t *testing.T) {
+	defer tearDownReceiptProcessingSettings()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	CheckReceiptProcessingSettingsConnectivity(w, r)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusForbidden)
+	}
+}
+
+func TestShouldNotCheckReceiptProcessingSettingsConnectivityWithBadRequest(t *testing.T) {
+	defer tearDownReceiptProcessingSettings()
+
+	os.Setenv("ENCRYPTION_KEY", "test")
+
+	key, _ := utils.EncryptAndEncodeToBase64(config.GetEncryptionKey(), "key")
+
+	db := repositories.GetDB()
+	db.Create(&models.Prompt{})
+	db.Create(&models.ReceiptProcessingSettings{
+		Name:        "Gemini",
+		Description: "description",
+		AiType:      models.GEMINI,
+		OcrEngine:   models.TESSERACT,
+		Key:         key,
+		PromptId:    1,
+		NumWorkers:  1,
+	})
+
+	tests := map[string]struct {
+		input  commands.CheckReceiptProcessingSettingsCommand
+		expect int
+	}{
+		"empty body": {
+			expect: http.StatusBadRequest,
+		},
+		"empty command": {
+			input:  commands.CheckReceiptProcessingSettingsCommand{},
+			expect: http.StatusBadRequest,
+		},
+		"empty id": {
+			input: commands.CheckReceiptProcessingSettingsCommand{
+				ID: 0,
+			},
+			expect: http.StatusBadRequest,
+		},
+		"empty command and id": {
+			input: commands.CheckReceiptProcessingSettingsCommand{
+				ID:                                     0,
+				UpsertReceiptProcessingSettingsCommand: commands.UpsertReceiptProcessingSettingsCommand{},
+			},
+			expect: http.StatusBadRequest,
+		},
+		"badId": {
+			input: commands.CheckReceiptProcessingSettingsCommand{
+				ID: 200,
+			},
+			expect: http.StatusInternalServerError,
+		},
+		"goodId": {
+			input: commands.CheckReceiptProcessingSettingsCommand{
+				ID:                                     1,
+				UpsertReceiptProcessingSettingsCommand: commands.UpsertReceiptProcessingSettingsCommand{},
+			},
+			expect: http.StatusOK,
+		},
+		"good command": {
+			input: commands.CheckReceiptProcessingSettingsCommand{
+				ID: 0,
+				UpsertReceiptProcessingSettingsCommand: commands.UpsertReceiptProcessingSettingsCommand{
+					Name:        "Gemini",
+					Description: "description",
+					AiType:      models.GEMINI,
+					OcrEngine:   models.TESSERACT,
+					Key:         "key",
+					PromptId:    1,
+					NumWorkers:  1,
+				},
+			},
+			expect: http.StatusOK,
+		},
+	}
+
+	for name, test := range tests {
+		bytes, _ := json.Marshal(test.input)
+		reader := strings.NewReader(string(bytes))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/api", reader)
+
+		newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
+		r = r.WithContext(newContext)
+
+		CheckReceiptProcessingSettingsConnectivity(w, r)
+
+		if w.Result().StatusCode != test.expect {
+			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("%s expected: %d", name, test.expect))
+		}
 	}
 }

@@ -14,6 +14,7 @@ func BuildReceiptProcessingSettingsRouter(tokenValidator *jwtmiddleware.JWTMiddl
 	router.Get("/{id}", handlers.GetReceiptProcessingSettingsById)
 	router.Post("/", handlers.CreateReceiptProcessingSettings)
 	router.Post("/getPagedProcessingSettings", handlers.GetPagedReceiptProcessingSettings)
+	router.Post("/checkConnectivity", handlers.CheckReceiptProcessingSettingsConnectivity)
 	router.Put("/{id}", handlers.UpdateReceiptProcessingSettingsById)
 	router.Delete("/{id}", handlers.DeleteReceiptProcessingSettingsById)
 

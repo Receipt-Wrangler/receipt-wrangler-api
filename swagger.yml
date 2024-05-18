@@ -2010,6 +2010,32 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /receiptProcessingSettings/checkConnectivity:
+    post:
+      tags:
+        - ReceiptProcessingSettings
+      summary: Check receipt processing settings connectivity
+      operationId: checkReceiptProcessingSettingsConnectivity
+      requestBody:
+        description: Receipt processing settings to check connectivity
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckReceiptProcessingSettingsConnectivityCommand"
+      responses:
+        200:
+          description: The system task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemTask"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     bearerAuth:
@@ -2094,10 +2120,12 @@ components:
       type: string
       enum:
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
+        - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
     AssociatedEntityType:
       type: string
       enum:
         - "SYSTEM_EMAIL"
+        - "RECEIPT_PROCESSING_SETTINGS"
     BaseModel:
       type: object
       required:
@@ -3580,3 +3608,31 @@ components:
         prompt:
           type: string
           description: Prompt text
+    CheckReceiptProcessingSettingsConnectivityCommand:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Receipt processing settings id
+        name:
+          type: string
+          description: Name of the settings
+        aiType:
+          $ref: "#/components/schemas/AiType"
+        url:
+          type: string
+          description: URL for custom endpoints
+        key:
+          type: string
+          description: Key for endpoints that require authentication
+        model:
+          type: string
+          description: LLM model
+        numWorkers:
+          type: integer
+          description: Number of workers to use
+        ocrEngine:
+          $ref: "#/components/schemas/OcrEngine"
+        promptId:
+          type: integer
+          description: Prompt foreign key

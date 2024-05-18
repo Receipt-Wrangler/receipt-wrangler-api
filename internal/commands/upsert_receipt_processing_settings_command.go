@@ -80,3 +80,7 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 
 	return vErrs
 }
+
+func (command *UpsertReceiptProcessingSettingsCommand) IsEmpty() bool {
+	return command.Name == "" && command.Description == "" && command.AiType == "" && command.Url == "" && command.Key == "" && command.Model == "" && command.NumWorkers == 0 && command.OcrEngine == "" && command.PromptId == 0
+}

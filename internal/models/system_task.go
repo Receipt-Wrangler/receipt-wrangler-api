@@ -40,7 +40,8 @@ func (self SystemTaskStatus) Value() (driver.Value, error) {
 type SystemTaskType string
 
 const (
-	SYSTEM_EMAIL_CONNECTIVITY_CHECK SystemTaskType = "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
+	SYSTEM_EMAIL_CONNECTIVITY_CHECK                SystemTaskType = "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
+	RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK SystemTaskType = "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
 )
 
 func (self *SystemTaskType) Scan(value string) error {
@@ -49,7 +50,7 @@ func (self *SystemTaskType) Scan(value string) error {
 }
 
 func (self SystemTaskType) Value() (driver.Value, error) {
-	if self != SYSTEM_EMAIL_CONNECTIVITY_CHECK {
+	if self != SYSTEM_EMAIL_CONNECTIVITY_CHECK && self != RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK {
 		return nil, errors.New("invalid SystemTaskType")
 	}
 	return string(self), nil
@@ -58,7 +59,8 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 type AssociatedEntityType string
 
 const (
-	SYSTEM_EMAIL AssociatedEntityType = "SYSTEM_EMAIL"
+	SYSTEM_EMAIL                AssociatedEntityType = "SYSTEM_EMAIL"
+	RECEIPT_PROCESSING_SETTINGS AssociatedEntityType = "RECEIPT_PROCESSING_SETTINGS"
 )
 
 func (self *AssociatedEntityType) Scan(value string) error {
@@ -67,7 +69,7 @@ func (self *AssociatedEntityType) Scan(value string) error {
 }
 
 func (self AssociatedEntityType) Value() (driver.Value, error) {
-	if self != SYSTEM_EMAIL {
+	if self != SYSTEM_EMAIL && self != RECEIPT_PROCESSING_SETTINGS {
 		return nil, errors.New("invalid AssociatedEntityType")
 	}
 	return string(self), nil

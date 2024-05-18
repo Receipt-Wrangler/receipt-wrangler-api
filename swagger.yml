@@ -2036,6 +2036,48 @@ paths:
           $ref: "#/components/responses/BadRequest"
         403:
           $ref: "#/components/responses/Forbidden"
+  /systemSettings:
+    get:
+      tags:
+        - SystemSettings
+      summary: Get system settings
+      description: This will get system settings
+      operationId: getSystemSettings
+      responses:
+        200:
+          description: The system settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemSettings"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags:
+        - SystemSettings
+      summary: Update system settings
+      description: This will update system settings
+      operationId: updateSystemSettings
+      requestBody:
+        description: System settings to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSystemSettingsCommand"
+      responses:
+        200:
+          description: The updated system settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemSettings"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     bearerAuth:
@@ -3450,14 +3492,31 @@ components:
               type: boolean
               description: Whether local sign up is enabled
               default: false
-            aiPoweredReceipts:
-              type: boolean
-              description: Whether AI powered receipts are enabled
-              default: false
             emailPollingInterval:
               type: integer
               description: Email polling interval
               default: 1800
+            receiptProcessingSettingsId:
+              type: integer
+              description: Receipt processing settings foreign key
+            fallbackReceiptProcessingSettingsId:
+              type: integer
+              description: Fallback receipt processing settings foreign key
+    UpsertSystemSettingsCommand:
+      type: object
+      properties:
+        enableLocalSignUp:
+          type: boolean
+          description: Whether local sign up is enabled
+        emailPollingInterval:
+          type: integer
+          description: Email polling interval
+        receiptProcessingSettingsId:
+          type: integer
+          description: Receipt processing settings foreign key
+        fallbackReceiptProcessingSettingsId:
+          type: integer
+          description: Fallback receipt processing settings foreign key
     CheckEmailConnectivityCommand:
       type: object
       properties:

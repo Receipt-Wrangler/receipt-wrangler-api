@@ -49,5 +49,12 @@ func (command *UpsertSystemSettingsCommand) Validate() structs.ValidatorError {
 		errorMap["fallbackReceiptProcessingSettingsId"] = "Fallback receipt processing settings ID cannot be set without receipt processing settings ID"
 	}
 
+	if command.ReceiptProcessingSettingsId != nil &&
+		command.FallbackReceiptProcessingSettingsId != nil &&
+		*command.ReceiptProcessingSettingsId ==
+			*command.FallbackReceiptProcessingSettingsId {
+		errorMap["fallbackReceiptProcessingSettingsId"] = "Fallback receipt processing settings ID cannot be the same as receipt processing settings ID"
+	}
+
 	return vErr
 }

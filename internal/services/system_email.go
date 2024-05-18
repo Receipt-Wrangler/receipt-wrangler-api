@@ -33,8 +33,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 	usernameIsEmpty := len(command.Username) == 0
 	passwordIsEmpty := len(command.Password) == 0
 
-	var createdSystemTask models.SystemTask
-	systemTask := commands.UpsertSystemTaskCommand{
+	systemTaskCommand := commands.UpsertSystemTaskCommand{
 		Type:                 models.SYSTEM_EMAIL_CONNECTIVITY_CHECK,
 		Status:               models.SYSTEM_TASK_FAILED,
 		AssociatedEntityType: models.SYSTEM_EMAIL,
@@ -77,26 +76,25 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 	cmd.Stdin = bytes.NewReader(commandBytes)
 	cmd.Env = os.Environ()
 
-	systemTask.StartedAt = time.Now()
+	systemTaskCommand.StartedAt = time.Now()
 
 	// Note: We ignore error from cmd.Run to capture the output in the system task, so resulting HTTP status code is always 200
 	err = cmd.Run()
 	if err != nil {
-		systemTask.ResultDescription = err.Error()
+		systemTaskCommand.ResultDescription = err.Error()
 	} else {
-		systemTask.Status = models.SYSTEM_TASK_SUCCEEDED
+		systemTaskCommand.Status = models.SYSTEM_TASK_SUCCEEDED
 	}
 	err = nil
 
 	now := time.Now()
-	systemTask.EndedAt = &now
+	systemTaskCommand.EndedAt = &now
 
 	if command.ID > 0 {
-		createdSystemTask, err = repositories.NewSystemTaskRepository(nil).CreateSystemTask(systemTask)
-		if err != nil {
-			return models.SystemTask{}, err
-		}
+		return repositories.NewSystemTaskRepository(nil).CreateSystemTask(systemTaskCommand)
 	}
 
-	return createdSystemTask, err
+	return models.SystemTask{
+		Status: systemTaskCommand.Status,
+	}, err
 }

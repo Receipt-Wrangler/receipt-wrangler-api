@@ -227,7 +227,7 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 			var aiClient *ai.AiClientNew
 			var decryptKey bool
 
-			if command.ID > 0 {
+			if command.ID > 0 && command.UpsertReceiptProcessingSettingsCommand.IsEmpty() {
 				stringId := simpleutils.UintToString(command.ID)
 
 				client, clientErr := ai.NewAiClientNew(stringId)
@@ -239,6 +239,7 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 				decryptKey = true
 			} else {
 				receiptProcessingSettings := models.ReceiptProcessingSettings{
+					BaseModel:   models.BaseModel{ID: command.ID},
 					Name:        command.Name,
 					Description: command.Description,
 					AiType:      command.AiType,

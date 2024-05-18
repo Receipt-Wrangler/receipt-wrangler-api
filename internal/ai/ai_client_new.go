@@ -201,15 +201,14 @@ func (aiClient *AiClientNew) CheckConnectivity(ranByUserId uint, decryptKey bool
 	if aiClient.ReceiptProcessingSettings.ID > 0 {
 		systemTaskCommand.AssociatedEntityId = aiClient.ReceiptProcessingSettings.ID
 		systemTaskCommand.AssociatedEntityType = models.RECEIPT_PROCESSING_SETTINGS
+
+		systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+		return systemTaskRepository.CreateSystemTask(systemTaskCommand)
 	}
 
-	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
-	createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTaskCommand)
-	if err != nil {
-		return models.SystemTask{}, err
-	}
-
-	return createdSystemTask, nil
+	return models.SystemTask{
+		Status: systemTaskCommand.Status,
+	}, nil
 }
 
 func (aiClient *AiClientNew) getKey(decryptKey bool) (string, error) {

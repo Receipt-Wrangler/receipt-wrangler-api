@@ -582,7 +582,7 @@ func TestShouldNotCheckReceiptProcessingSettingsConnectivityWithBadRequest(t *te
 					NumWorkers:  1,
 				},
 			},
-			expect: http.StatusInternalServerError,
+			expect: http.StatusOK,
 		},
 	}
 

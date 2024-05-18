@@ -2120,10 +2120,12 @@ components:
       type: string
       enum:
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
+        - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
     AssociatedEntityType:
       type: string
       enum:
         - "SYSTEM_EMAIL"
+        - "RECEIPT_PROCESSING_SETTINGS"
     BaseModel:
       type: object
       required:

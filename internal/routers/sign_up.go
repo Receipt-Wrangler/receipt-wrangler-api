@@ -12,28 +12,7 @@ import (
 func BuildSignUpRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	signUpRouter := chi.NewRouter()
 
-	// TODO: refactor user validate
 	signUpRouter.Use(middleware.SetGeneralBodyData("signUpCommand", commands.SignUpCommand{}))
-
-	// swagger:route POST /signUp/ Auth auth
-	//
-	// Registers a user
-	//
-	// This will log a user into the system
-	//
-	//     Consumes:
-	//     - application/json
-	//
-	//     Schemes: https
-	//
-	//     Deprecated: false
-	//
-	//     Security:
-	//       api_key:
-	//
-	//     Responses:
-	//       200: Ok
-	//       500: Internal Server Error
 	signUpRouter.Post("/", handlers.SignUp)
 
 	return signUpRouter

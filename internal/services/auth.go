@@ -152,6 +152,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	userRepository := repositories.NewUserRepository(nil)
 	userPreferenceRepository := repositories.NewUserPreferencesRepository(nil)
 	categoryRepository := repositories.NewCategoryRepository(nil)
+	systemSettingsService := NewSystemSettingsService(nil)
 	tagRepository := repositories.NewTagsRepository(nil)
 	stringUserId := simpleutils.UintToString(userId)
 
@@ -180,10 +181,15 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 		return appData, err
 	}
 
+	featureConfig, err := systemSettingsService.GetFeatureConfig()
+	if err != nil {
+		return appData, err
+	}
+
 	appData.Groups = groups
 	appData.Users = users
 	appData.UserPreferences = userPreferences
-	appData.FeatureConfig = config.GetFeatureConfig()
+	appData.FeatureConfig = featureConfig
 	appData.Categories = categories
 	appData.Tags = tags
 

@@ -114,7 +114,6 @@ func initLoggers() {
 }
 
 func initRoutes() *chi.Mux {
-	featureConfig := config.GetFeatureConfig()
 	tokenValidator, err := services.InitTokenValidator()
 	if err != nil {
 		panic(err)
@@ -135,10 +134,8 @@ func initRoutes() *chi.Mux {
 	rootRouter.Mount("/api/token", refreshRouter)
 
 	// Signup Router
-	if featureConfig.EnableLocalSignUp {
-		signUpRouter := routers.BuildSignUpRouter(tokenValidatorMiddleware)
-		rootRouter.Mount("/api/signUp", signUpRouter)
-	}
+	signUpRouter := routers.BuildSignUpRouter(tokenValidatorMiddleware)
+	rootRouter.Mount("/api/signUp", signUpRouter)
 
 	// Login Router
 	loginRouter := routers.BuildLoginRouter(tokenValidatorMiddleware)

@@ -55,7 +55,7 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 	existingSettings.ReceiptProcessingSettingsId = command.ReceiptProcessingSettingsId
 	existingSettings.FallbackReceiptProcessingSettingsId = command.FallbackReceiptProcessingSettingsId
 
-	err := db.Debug().Model(&models.SystemSettings{}).Select("*").Where("id = ?", existingSettings.ID).Updates(&existingSettings).Error
+	err := db.Model(&models.SystemSettings{}).Select("*").Where("id = ?", existingSettings.ID).Updates(&existingSettings).Error
 	if err != nil {
 		return models.SystemSettings{}, err
 	}

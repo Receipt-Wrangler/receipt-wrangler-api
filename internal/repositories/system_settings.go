@@ -46,17 +46,19 @@ func (repository SystemSettingsRepository) GetSystemSettings() (models.SystemSet
 func (repository SystemSettingsRepository) UpdateSystemSettings(command commands.UpsertSystemSettingsCommand) (models.SystemSettings, error) {
 	db := repository.GetDB()
 
-	systemSettings := models.SystemSettings{
-		EnableLocalSignUp:                   command.EnableLocalSignUp,
-		EmailPollingInterval:                command.EmailPollingInterval,
-		ReceiptProcessingSettingsId:         command.ReceiptProcessingSettingsId,
-		FallbackReceiptProcessingSettingsId: command.FallbackReceiptProcessingSettingsId,
-	}
+	var existingSettings models.SystemSettings
 
-	err := db.Model(&models.SystemSettings{}).Where("id = ?", 1).Updates(&systemSettings).Error
+	db.Model(&models.SystemSettings{}).First(&existingSettings)
+
+	existingSettings.EnableLocalSignUp = command.EnableLocalSignUp
+	existingSettings.EmailPollingInterval = command.EmailPollingInterval
+	existingSettings.ReceiptProcessingSettingsId = command.ReceiptProcessingSettingsId
+	existingSettings.FallbackReceiptProcessingSettingsId = command.FallbackReceiptProcessingSettingsId
+
+	err := db.Debug().Model(&models.SystemSettings{}).Select("*").Where("id = ?", existingSettings.ID).Updates(&existingSettings).Error
 	if err != nil {
 		return models.SystemSettings{}, err
 	}
 
-	return systemSettings, nil
+	return existingSettings, nil
 }

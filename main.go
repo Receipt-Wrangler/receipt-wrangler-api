@@ -202,20 +202,27 @@ func initRoutes() *chi.Mux {
 	dashboardRouter := routers.BuildDashboardRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/dashboard", dashboardRouter)
 
-	// System email router
 	env = config.GetDeployEnv()
 	if env == "dev" {
+		// System email router
 		systemEmailRouter := routers.BuildSystemEmailRouter(tokenValidatorMiddleware)
 		rootRouter.Mount("/api/systemEmail", systemEmailRouter)
 
+		// System Task router
 		systemTaskRouter := routers.BuildSystemTaskRouter(tokenValidatorMiddleware)
 		rootRouter.Mount("/api/systemTask", systemTaskRouter)
 
+		// Receipt Processing Settings router
 		receiptProcessingSettingsRouter := routers.BuildReceiptProcessingSettingsRouter(tokenValidatorMiddleware)
 		rootRouter.Mount("/api/receiptProcessingSettings", receiptProcessingSettingsRouter)
 
+		// Prompt router
 		promptRouter := routers.BuildPromptRouter(tokenValidatorMiddleware)
 		rootRouter.Mount("/api/prompt", promptRouter)
+
+		// System Settings router
+		systemSettingsRouter := routers.BuildSystemSettingsRouter(tokenValidatorMiddleware)
+		rootRouter.Mount("/api/systemSettings", systemSettingsRouter)
 	}
 
 	return rootRouter

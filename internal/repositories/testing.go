@@ -138,6 +138,7 @@ func CreateTestCategories() {
 
 func TruncateTestDb() {
 	db := GetDB()
+	TruncateTable(db, "system_settings")
 	TruncateTable(db, "receipt_processing_settings")
 	TruncateTable(db, "notifications")
 	TruncateTable(db, "prompts")

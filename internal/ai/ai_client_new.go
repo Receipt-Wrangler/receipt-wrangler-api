@@ -95,6 +95,7 @@ func (aiClient *AiClientNew) GeminiChatCompletion(messages []structs.AiClientMes
 	if err != nil {
 		return "", err
 	}
+	defer client.Close()
 
 	model := client.GenerativeModel("gemini-pro")
 	prompt := ""

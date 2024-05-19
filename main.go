@@ -59,30 +59,12 @@ func main() {
 
 	appConfig := config.GetConfig()
 
-	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == models.OPEN_AI {
-		logger.Print("Initializing OpenAI Client...")
-		err = services.InitOpenAIClient()
-		if err != nil {
-			logger.Print(err.Error())
-			os.Exit(0)
-		}
-	}
-
-	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == models.GEMINI {
-		logger.Print("Initializing Gemini Client...")
-		err := services.InitGeminiClient()
-		if err != nil {
-			logger.Print(err.Error())
-			os.Exit(0)
-		}
-		defer services.GetGeminiClient().Close()
-	}
-
 	if config.GetDeployEnv() != "test" {
 		userRepository := repositories.NewUserRepository(nil)
 		err = userRepository.CreateUserIfNoneExist()
 	}
 
+	// TODO: V5: Move this to system settings update
 	if len(appConfig.EmailSettings) > 0 && appConfig.Features.AiPoweredReceipts {
 		email.PollEmails()
 	}

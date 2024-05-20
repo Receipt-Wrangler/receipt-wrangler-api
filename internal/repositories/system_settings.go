@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 )
@@ -35,7 +36,7 @@ func (repository SystemSettingsRepository) GetSystemSettings() (models.SystemSet
 		}
 	}
 
-	err = db.Model(&models.SystemSettings{}).First(&systemSettings).Error
+	err = db.Model(&models.SystemSettings{}).Preload(clause.Associations).First(&systemSettings).Error
 	if err != nil {
 		return models.SystemSettings{}, err
 	}

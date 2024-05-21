@@ -1,183 +1,225 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"receipt-wrangler/api/internal/ai"
-	"receipt-wrangler/api/internal/commands"
-	config "receipt-wrangler/api/internal/env"
-	"receipt-wrangler/api/internal/logging"
-	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
-	"receipt-wrangler/api/internal/structs"
-	"time"
-
-	"google.golang.org/api/option"
-
 	"github.com/google/generative-ai-go/genai"
 	"github.com/sashabaranov/go-openai"
+	"google.golang.org/api/option"
+	"io"
+	"net/http"
+	"receipt-wrangler/api/internal/commands"
+	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
+	"time"
 )
 
-var client *openai.Client
-var geminiClient *genai.Client
+func NewAiService(receiptProcessingSettingsId string) (*AiService, error) {
+	repository := repositories.NewReceiptProcessingSettings(nil)
+	client := &AiService{}
 
-func InitOpenAIClient() error {
-	config := config.GetConfig()
-	apiKey := config.AiSettings.Key
-	if len(apiKey) == 0 && config.AiSettings.AiType == models.OPEN_AI {
-		apiKey = config.AiSettings.Key
+	receiptProcessingSettings, err := repository.GetReceiptProcessingSettingsById(receiptProcessingSettingsId)
+	if err != nil {
+		return nil, err
 	}
+	client.ReceiptProcessingSettings = receiptProcessingSettings
 
-	if len(apiKey) == 0 {
-		return fmt.Errorf("OpenAI API key not found")
-	}
-
-	client = openai.NewClient(apiKey)
-	return nil
+	return client, nil
 }
 
-func GetClient() *openai.Client {
-	return client
+type AiService struct {
+	ReceiptProcessingSettings models.ReceiptProcessingSettings
 }
 
-func InitGeminiClient() error {
+func (service *AiService) CreateChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, error) {
+	switch service.ReceiptProcessingSettings.AiType {
+
+	case models.OPEN_AI_CUSTOM_NEW:
+		return service.OpenAiCustomChatCompletion(messages)
+
+	case models.OPEN_AI_NEW:
+		return service.OpenAiChatCompletion(messages, decryptKey)
+
+	case models.GEMINI_NEW:
+		return service.GeminiChatCompletion(messages, decryptKey)
+	}
+
+	return "", nil
+}
+
+func (service *AiService) OpenAiChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, error) {
+	key, err := service.getKey(decryptKey)
+	if err != nil {
+		return "", err
+	}
+	client := openai.NewClient(key)
+
+	openAiMessages := make([]openai.ChatCompletionMessage, len(messages))
+	for index, message := range messages {
+		openAiMessages[index] = openai.ChatCompletionMessage{
+			Role:    message.Role,
+			Content: message.Content,
+		}
+	}
+
+	resp, err := client.CreateChatCompletion(
+		context.Background(),
+		openai.ChatCompletionRequest{
+			Model:       openai.GPT3Dot5Turbo,
+			Messages:    openAiMessages,
+			N:           1,
+			Temperature: 0,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	response := resp.Choices[0].Message.Content
+	return response, nil
+}
+
+func (service *AiService) GeminiChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, error) {
 	ctx := context.Background()
-	config := config.GetConfig()
-
-	if len(config.AiSettings.Key) == 0 {
-		return fmt.Errorf("Gemini API key not found")
-	}
-
-	client, err := genai.NewClient(ctx, option.WithAPIKey(config.AiSettings.Key))
+	key, err := service.getKey(decryptKey)
 	if err != nil {
-		return err
+		return "", err
 	}
-	geminiClient = client
 
-	return nil
+	client, err := genai.NewClient(ctx, option.WithAPIKey(key))
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+
+	model := client.GenerativeModel("gemini-pro")
+	prompt := ""
+	for _, aiMessage := range messages {
+		prompt += aiMessage.Content + " "
+	}
+
+	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	if err != nil {
+		return "", err
+	}
+
+	if len(resp.Candidates) > 0 {
+		for _, part := range resp.Candidates[0].Content.Parts {
+			json := fmt.Sprintf("%s", part)
+			return json, nil
+		}
+	}
+
+	return "", nil
 }
 
-func GetGeminiClient() *genai.Client {
-	return geminiClient
-}
+func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClientMessage) (string, error) {
+	result := ""
+	body := map[string]interface{}{
+		"model":       service.ReceiptProcessingSettings.Model,
+		"messages":    messages,
+		"temperature": 0,
+		"max_tokens":  -1,
+		"stream":      false,
+	}
+	httpClient := http.Client{}
+	httpClient.Timeout = 10 * time.Minute
 
-func ReadReceiptData(ocrText string) (commands.UpsertReceiptCommand, error) {
-	var result commands.UpsertReceiptCommand
-	logger := logging.GetLogger()
-	config := config.GetConfig()
-	client := GetClient()
-	geminiClient := GetGeminiClient()
-
-	aiType := config.AiSettings.AiType
-	if len(aiType) == 0 {
-		aiType = models.OPEN_AI
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return "", err
 	}
 
-	aiClient := ai.NewAiClient(aiType, client, geminiClient)
-	clientMessages := []structs.AiClientMessage{}
+	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
 
-	prompt, err := getPrompt(ocrText)
+	request, err := http.NewRequest(http.MethodPost, service.ReceiptProcessingSettings.Url, bodyBytesBuffer)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, err
+		return "", err
 	}
 
-	clientMessages = append(clientMessages, structs.AiClientMessage{
-		Role:    "user",
-		Content: prompt,
-	})
-	aiClient.Messages = clientMessages
+	request.Header.Set("Content-Type", "application/json")
+	request.Close = true
 
-	response, err := aiClient.CreateChatCompletion()
+	response, err := httpClient.Do(request)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, err
+		return "", err
 	}
 
-	logger.Print("Raw chat completion response:", response)
-
-	err = json.Unmarshal([]byte(response), &result)
+	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, err
+		return "", err
+	}
+	defer response.Body.Close()
+
+	var responseObject structs.OpenAiCustomResponse
+
+	err = json.Unmarshal(responseBody, &responseObject)
+	if err != nil {
+		return "", err
+	}
+
+	if len(responseObject.Choices) >= 0 {
+		result = responseObject.Choices[0].Message.Content
 	}
 
 	return result, nil
 }
 
-func getPrompt(ocrText string) (string, error) {
-	categoriesString, err := getCategoriesString()
+func (service *AiService) CheckConnectivity(ranByUserId uint, decryptKey bool) (models.SystemTask, error) {
+	messages := []structs.AiClientMessage{
+		{
+			Role:    "user",
+			Content: "Respond with 'hello' if you are there!",
+		},
+	}
+
+	systemTaskCommand := commands.UpsertSystemTaskCommand{
+		Type:        models.RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK,
+		RanByUserId: &ranByUserId,
+	}
+
+	startedAt := time.Now()
+	response, err := service.CreateChatCompletion(messages, decryptKey)
 	if err != nil {
-		return "", err
+		systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+		systemTaskCommand.ResultDescription = err.Error()
+	} else {
+		systemTaskCommand.Status = models.SYSTEM_TASK_SUCCEEDED
+		systemTaskCommand.ResultDescription = fmt.Sprintf(
+			"The configured model responded with: %s in response to: %s",
+			response, messages[0].Content)
+	}
+	endedAt := time.Now()
+
+	systemTaskCommand.StartedAt = startedAt
+	systemTaskCommand.EndedAt = &endedAt
+
+	if service.ReceiptProcessingSettings.ID > 0 {
+		systemTaskCommand.AssociatedEntityId = service.ReceiptProcessingSettings.ID
+		systemTaskCommand.AssociatedEntityType = models.RECEIPT_PROCESSING_SETTINGS
+
+		systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+		return systemTaskRepository.CreateSystemTask(systemTaskCommand)
 	}
 
-	tagsString, err := getTagsString()
-	if err != nil {
-		return "", err
-	}
-
-	currentYear := simpleutils.UintToString(uint(time.Now().Year()))
-	prompt := fmt.Sprintf(`
-	Find the receipt's name, total cost, and date. Format the found data as:
-	{
-		"name": store name,
-		"amount": amount as a number,
-		"date": date in ISO 18601 format in UTC with ALL time values set as 0,
-		"categories": categories,
-		"tags": tags
-	}
-	If a store name cannot be confidently found, use 'Default store name' as the default name.
-	Omit any value if not found with confidence. Assume the date is in the year %s if not provided.
-	The amount must be a float or integer.
-
-	Please do NOT add any additional information, only valid JSON.
-	Please return the json in plaintext ONLY, do not ever return it in a code block or any other format.
-
-	Choose up to 2 categories from the given list based on the receipt's items and store name. If no categories fit, please return an empty array for the field and do not select any categories. When selecting categories, select only the id, like:
-	{
-		Id: category id
-	}
-
-	Emphasize the relationship between the category and the receipt, and use the description of the category to fine tune the results. Do not return categories that have an empty name or do not exist.
-
-
-	Categories: %s
-
-	Follow the same process as described for categories for tags.
-
-	Tags: %s
-
-	Receipt text: %s
-`, currentYear, categoriesString, tagsString, ocrText)
-
-	return prompt, nil
+	return models.SystemTask{
+		Status: systemTaskCommand.Status,
+	}, nil
 }
 
-func getCategoriesString() (string, error) {
-	categoryRepository := repositories.NewCategoryRepository(nil)
-	categories, err := categoryRepository.GetAllCategories("id, name, description")
-	if err != nil {
-		return "", err
+func (service *AiService) getKey(decryptKey bool) (string, error) {
+	if decryptKey {
+		return service.decryptKey()
 	}
 
-	categoriesBytes, err := json.Marshal(categories)
-	if err != nil {
-		return "", err
-	}
-
-	return string(categoriesBytes), nil
+	return service.ReceiptProcessingSettings.Key, nil
 }
 
-func getTagsString() (string, error) {
-	tagsRepository := repositories.NewTagsRepository(nil)
-	tags, err := tagsRepository.GetAllTags("id, name")
-	if err != nil {
-		return "", err
-	}
-
-	tagsBytes, err := json.Marshal(tags)
-	if err != nil {
-		return "", err
-	}
-
-	return string(tagsBytes), nil
+func (service *AiService) decryptKey() (string, error) {
+	return utils.DecryptB64EncodedData(config.GetEncryptionKey(), service.ReceiptProcessingSettings.Key)
 }

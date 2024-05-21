@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/json"
 	"gorm.io/gorm"
-	"receipt-wrangler/api/internal/ai"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -94,7 +93,7 @@ func (service ReceiptProcessingService) processImage(imagePath string, receiptPr
 		Content: prompt,
 	})
 
-	aiClient := ai.AiClientNew{
+	aiClient := AiService{
 		ReceiptProcessingSettings: receiptProcessingSettings,
 	}
 

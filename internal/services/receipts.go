@@ -11,6 +11,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"strconv"
+	"time"
 )
 
 func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
@@ -77,6 +78,8 @@ func QuickScan(
 	status models.ReceiptStatus,
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
+	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+	systemTaskService := NewSystemTaskService(nil)
 	var createdReceipt models.Receipt
 
 	fileRepository := repositories.NewFileRepository(nil)
@@ -101,10 +104,61 @@ func QuickScan(
 	receiptRepository := repositories.NewReceiptRepository(nil)
 	receiptImageRepository := repositories.NewReceiptImageRepository(nil)
 
-	receiptCommand, err := MagicFillFromImage(magicFillCommand)
+	now := time.Now()
+
+	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand)
+	finishedAt := time.Now()
+
+	var systemTask commands.UpsertSystemTaskCommand
+	var fallbackSystemTask commands.UpsertSystemTaskCommand
+
+	if receiptProcessingMetadata.ReceiptProcessingSettingsIdRan > 0 {
+
+		systemTask = commands.UpsertSystemTaskCommand{
+			Type:                 models.QUICK_SCAN,
+			Status:               systemTaskService.BoolToSystemTaskStatus(receiptProcessingMetadata.DidReceiptProcessingSettingsSucceed),
+			AssociatedEntityId:   receiptProcessingMetadata.ReceiptProcessingSettingsIdRan,
+			AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
+			StartedAt:            now,
+			EndedAt:              &finishedAt,
+			RanByUserId:          &token.UserId,
+		}
+	}
+
+	if receiptProcessingMetadata.FallbackReceiptProcessingSettingsIdRan > 0 {
+		fallbackSystemTask = commands.UpsertSystemTaskCommand{
+			Type:                 models.QUICK_SCAN,
+			Status:               systemTaskService.BoolToSystemTaskStatus(receiptProcessingMetadata.DidFallbackReceiptProcessingSettingsSucceed),
+			AssociatedEntityId:   receiptProcessingMetadata.FallbackReceiptProcessingSettingsIdRan,
+			AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
+			StartedAt:            now,
+			EndedAt:              &finishedAt,
+			RanByUserId:          &token.UserId,
+		}
+	}
+
 	if err != nil {
+		systemTask.ResultDescription = receiptProcessingMetadata.RawResponse
+		fallbackSystemTask.ResultDescription = receiptProcessingMetadata.FallbackRawResponse
+
+		if receiptProcessingMetadata.ReceiptProcessingSettingsIdRan > 0 {
+			_, err := systemTaskRepository.CreateSystemTask(systemTask)
+			if err != nil {
+				return models.Receipt{}, err
+			}
+		}
+
+		if receiptProcessingMetadata.FallbackReceiptProcessingSettingsIdRan > 0 {
+			_, err := systemTaskRepository.CreateSystemTask(fallbackSystemTask)
+			if err != nil {
+				return models.Receipt{}, err
+			}
+		}
+
 		return models.Receipt{}, err
 	}
+
+	systemTask.ResultDescription = systemTaskService.BuildSuccessReceiptProcessResultDescription(receiptProcessingMetadata)
 
 	receiptCommand.PaidByUserID = paidByUserId
 	receiptCommand.Status = models.ReceiptStatus(status)
@@ -113,6 +167,7 @@ func QuickScan(
 	err = db.Transaction(func(tx *gorm.DB) error {
 		receiptRepository.SetTransaction(tx)
 		receiptImageRepository.SetTransaction(tx)
+		systemTaskRepository.SetTransaction(tx)
 
 		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId)
 		if err != nil {
@@ -129,6 +184,20 @@ func QuickScan(
 		_, err := receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 		if err != nil {
 			return err
+		}
+
+		if receiptProcessingMetadata.ReceiptProcessingSettingsIdRan > 0 {
+			_, err = systemTaskRepository.CreateSystemTask(systemTask)
+			if err != nil {
+				return err
+			}
+		}
+
+		if receiptProcessingMetadata.FallbackReceiptProcessingSettingsIdRan > 0 {
+			_, err = systemTaskRepository.CreateSystemTask(fallbackSystemTask)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil

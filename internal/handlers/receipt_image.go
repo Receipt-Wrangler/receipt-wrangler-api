@@ -218,7 +218,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					return errCode, err
 				}
 
-				receiptCommand, err = services.ReadReceiptImage(receiptImageId)
+				receiptCommand, _, err = services.ReadReceiptImage(receiptImageId)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -245,7 +245,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					Filename:  fileHeader.Filename,
 				}
 
-				receiptCommand, err = services.MagicFillFromImage(magicFillCommand)
+				receiptCommand, _, err = services.MagicFillFromImage(magicFillCommand)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

@@ -15,6 +15,10 @@ import (
 func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, error) {
 	var result commands.UpsertReceiptCommand
 	var pathToReadFrom string
+	systemReceiptProcessingService, err := NewSystemReceiptProcessingService(nil)
+	if err != nil {
+		return result, err
+	}
 
 	receiptImageUint, err := simpleutils.StringToUint(receiptImageId)
 	if err != nil {
@@ -55,37 +59,24 @@ func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, err
 		pathToReadFrom = receiptImagePath
 	}
 
-	ocrText, err := ReadImage(pathToReadFrom)
-	if err != nil {
-		return result, err
-	}
-
-	result, err = ReadReceiptData(ocrText)
-	if err != nil {
-		return commands.UpsertReceiptCommand{}, err
-	}
-
-	return result, nil
+	return systemReceiptProcessingService.ReadReceiptImage(pathToReadFrom)
 }
 
 func ReadReceiptImageFromFileOnly(path string) (commands.UpsertReceiptCommand, error) {
-	var result commands.UpsertReceiptCommand
-
-	ocrText, err := ReadImage(path)
-	if err != nil {
-		return result, err
-	}
-
-	result, err = ReadReceiptData(ocrText)
+	receiptProcessingService, err := NewSystemReceiptProcessingService(nil)
 	if err != nil {
 		return commands.UpsertReceiptCommand{}, err
 	}
 
-	return result, nil
+	return receiptProcessingService.ReadReceiptImage(path)
 }
 
 func MagicFillFromImage(command commands.MagicFillCommand) (commands.UpsertReceiptCommand, error) {
 	fileRepository := repositories.NewFileRepository(nil)
+	receiptProcessingService, err := NewSystemReceiptProcessingService(nil)
+	if err != nil {
+		return commands.UpsertReceiptCommand{}, err
+	}
 
 	bytes, err := fileRepository.GetBytesFromImageBytes(command.ImageData)
 	if err != nil {
@@ -96,15 +87,9 @@ func MagicFillFromImage(command commands.MagicFillCommand) (commands.UpsertRecei
 	if err != nil {
 		return commands.UpsertReceiptCommand{}, err
 	}
+	defer os.Remove(filePath)
 
-	filledReceipt, err := ReadReceiptImageFromFileOnly(filePath)
-	if err != nil {
-		os.Remove(filePath)
-		return commands.UpsertReceiptCommand{}, err
-	}
-
-	os.Remove(filePath)
-	return filledReceipt, nil
+	return receiptProcessingService.ReadReceiptImage(filePath)
 }
 
 func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData, error) {
@@ -170,7 +155,16 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrE
 			if err != nil {
 				results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
 			} else {
-				ocrText, err := ReadImage(filePath)
+				// TODO: V5: Refactor to use new ocr service
+				systemReceiptProcessingSettings, err := repositories.SystemSettingsRepository{}.GetSystemReceiptProcessingSettings()
+				if err != nil {
+					results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
+				}
+				ocrService := NewOcrService(nil, systemReceiptProcessingSettings.ReceiptProcessingSettings)
+				ocrText, err := ocrService.ReadImage(filePath)
+				if err != nil {
+					results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
+				}
 				results <- structs.OcrExport{OcrText: ocrText, Filename: fd.Name, Err: err}
 			}
 

@@ -3,10 +3,12 @@ package services
 import (
 	"fmt"
 	"gorm.io/gorm"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"time"
 )
 
 type SystemTaskService struct {
@@ -46,6 +48,46 @@ func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(met
 		"Receipt processing settings: %s were used, and the raw response generated was: %s",
 		receiptProcessingSettings.Name, metadata.RawResponse,
 	)
+}
+
+func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata structs.ReceiptProcessingMetadata, startDate time.Time, endDate time.Time, taskType models.SystemTaskType, userId uint) error {
+	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+
+	if metadata.ReceiptProcessingSettingsIdRan > 0 {
+		systemTask := commands.UpsertSystemTaskCommand{
+			Type:                 taskType,
+			Status:               service.BoolToSystemTaskStatus(metadata.DidReceiptProcessingSettingsSucceed),
+			AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
+			AssociatedEntityId:   metadata.ReceiptProcessingSettingsIdRan,
+			StartedAt:            startDate,
+			EndedAt:              &endDate,
+			ResultDescription:    metadata.RawResponse,
+			RanByUserId:          &userId,
+		}
+		_, err := systemTaskRepository.CreateSystemTask(systemTask)
+		if err != nil {
+			return err
+		}
+	}
+
+	if metadata.FallbackReceiptProcessingSettingsIdRan > 0 {
+		fallbackSystemTask := commands.UpsertSystemTaskCommand{
+			Type:                 taskType,
+			Status:               service.BoolToSystemTaskStatus(metadata.DidFallbackReceiptProcessingSettingsSucceed),
+			AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
+			AssociatedEntityId:   metadata.FallbackReceiptProcessingSettingsIdRan,
+			StartedAt:            startDate,
+			EndedAt:              &endDate,
+			ResultDescription:    metadata.FallbackRawResponse,
+			RanByUserId:          &userId,
+		}
+		_, err := systemTaskRepository.CreateSystemTask(fallbackSystemTask)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (service SystemTaskService) BoolToSystemTaskStatus(value bool) models.SystemTaskStatus {

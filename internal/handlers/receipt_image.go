@@ -13,6 +13,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"time"
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
@@ -211,6 +212,11 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			receiptImageId := r.URL.Query().Get("receiptImageId")
 			receiptCommand := commands.UpsertReceiptCommand{}
+			systemTaskService := services.NewSystemTaskService(nil)
+			token := structs.GetJWT(r)
+
+			var startTimer time.Time
+			var endTimer time.Time
 
 			if len(receiptImageId) > 0 {
 				errCode, err := validateReceiptImageAccess(r, models.VIEWER, receiptImageId)
@@ -218,10 +224,20 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					return errCode, err
 				}
 
-				receiptCommand, _, err = services.ReadReceiptImage(receiptImageId)
+				startTimer = time.Now()
+				command, metadata, err := services.ReadReceiptImage(receiptImageId)
+				endTimer = time.Now()
+
+				taskErr := systemTaskService.CreateSystemTasksFromMetadata(metadata, startTimer, endTimer, models.MAGIC_FILL, token.UserId)
+				if taskErr != nil {
+					return http.StatusInternalServerError, taskErr
+				}
+
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
+
+				receiptCommand = command
 			} else {
 				err := r.ParseMultipartForm(50 << 20)
 				if err != nil {
@@ -245,10 +261,20 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					Filename:  fileHeader.Filename,
 				}
 
-				receiptCommand, _, err = services.MagicFillFromImage(magicFillCommand)
+				startTimer = time.Now()
+				command, metadata, err := services.MagicFillFromImage(magicFillCommand)
+				endTimer = time.Now()
+
+				taskErr := systemTaskService.CreateSystemTasksFromMetadata(metadata, startTimer, endTimer, models.MAGIC_FILL, token.UserId)
+				if taskErr != nil {
+					return http.StatusInternalServerError, taskErr
+				}
+
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
+
+				receiptCommand = command
 			}
 
 			bytes, err := utils.MarshalResponseData(receiptCommand)
@@ -256,7 +282,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
 			return 0, nil

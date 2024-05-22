@@ -78,7 +78,6 @@ func QuickScan(
 	status models.ReceiptStatus,
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
-	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
 	systemTaskService := NewSystemTaskService(nil)
 	var createdReceipt models.Receipt
 
@@ -108,38 +107,9 @@ func QuickScan(
 	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand)
 	finishedAt := time.Now()
 
-	if receiptProcessingMetadata.ReceiptProcessingSettingsIdRan > 0 {
-		systemTask := commands.UpsertSystemTaskCommand{
-			Type:                 models.QUICK_SCAN,
-			Status:               systemTaskService.BoolToSystemTaskStatus(receiptProcessingMetadata.DidReceiptProcessingSettingsSucceed),
-			AssociatedEntityId:   receiptProcessingMetadata.ReceiptProcessingSettingsIdRan,
-			AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
-			StartedAt:            now,
-			EndedAt:              &finishedAt,
-			RanByUserId:          &token.UserId,
-			ResultDescription:    receiptProcessingMetadata.RawResponse,
-		}
-		_, err := systemTaskRepository.CreateSystemTask(systemTask)
-		if err != nil {
-			return models.Receipt{}, err
-		}
-	}
-
-	if receiptProcessingMetadata.FallbackReceiptProcessingSettingsIdRan > 0 {
-		fallbackSystemTask := commands.UpsertSystemTaskCommand{
-			Type:                 models.QUICK_SCAN,
-			Status:               systemTaskService.BoolToSystemTaskStatus(receiptProcessingMetadata.DidFallbackReceiptProcessingSettingsSucceed),
-			AssociatedEntityId:   receiptProcessingMetadata.FallbackReceiptProcessingSettingsIdRan,
-			AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
-			StartedAt:            now,
-			EndedAt:              &finishedAt,
-			RanByUserId:          &token.UserId,
-			ResultDescription:    receiptProcessingMetadata.FallbackRawResponse,
-		}
-		_, err := systemTaskRepository.CreateSystemTask(fallbackSystemTask)
-		if err != nil {
-			return models.Receipt{}, err
-		}
+	taskErr := systemTaskService.CreateSystemTasksFromMetadata(receiptProcessingMetadata, now, finishedAt, models.QUICK_SCAN, token.UserId)
+	if taskErr != nil {
+		return models.Receipt{}, taskErr
 	}
 
 	if err != nil {

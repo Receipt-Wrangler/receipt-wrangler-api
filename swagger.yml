@@ -2161,6 +2161,8 @@ components:
     SystemTaskType:
       type: string
       enum:
+        - "MAGIC_FILL"
+        - "QUICK_SCAN"
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
     AssociatedEntityType:

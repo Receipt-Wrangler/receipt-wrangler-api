@@ -59,30 +59,12 @@ func main() {
 
 	appConfig := config.GetConfig()
 
-	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == models.OPEN_AI {
-		logger.Print("Initializing OpenAI Client...")
-		err = services.InitOpenAIClient()
-		if err != nil {
-			logger.Print(err.Error())
-			os.Exit(0)
-		}
-	}
-
-	if appConfig.Features.AiPoweredReceipts && appConfig.AiSettings.AiType == models.GEMINI {
-		logger.Print("Initializing Gemini Client...")
-		err := services.InitGeminiClient()
-		if err != nil {
-			logger.Print(err.Error())
-			os.Exit(0)
-		}
-		defer services.GetGeminiClient().Close()
-	}
-
 	if config.GetDeployEnv() != "test" {
 		userRepository := repositories.NewUserRepository(nil)
 		err = userRepository.CreateUserIfNoneExist()
 	}
 
+	// TODO: V5: Move this to system settings update
 	if len(appConfig.EmailSettings) > 0 && appConfig.Features.AiPoweredReceipts {
 		email.PollEmails()
 	}
@@ -114,7 +96,6 @@ func initLoggers() {
 }
 
 func initRoutes() *chi.Mux {
-	featureConfig := config.GetFeatureConfig()
 	tokenValidator, err := services.InitTokenValidator()
 	if err != nil {
 		panic(err)
@@ -135,10 +116,8 @@ func initRoutes() *chi.Mux {
 	rootRouter.Mount("/api/token", refreshRouter)
 
 	// Signup Router
-	if featureConfig.EnableLocalSignUp {
-		signUpRouter := routers.BuildSignUpRouter(tokenValidatorMiddleware)
-		rootRouter.Mount("/api/signUp", signUpRouter)
-	}
+	signUpRouter := routers.BuildSignUpRouter(tokenValidatorMiddleware)
+	rootRouter.Mount("/api/signUp", signUpRouter)
 
 	// Login Router
 	loginRouter := routers.BuildLoginRouter(tokenValidatorMiddleware)

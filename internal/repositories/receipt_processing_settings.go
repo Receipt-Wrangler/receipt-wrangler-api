@@ -3,6 +3,7 @@ package repositories
 import (
 	"errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
@@ -41,7 +42,7 @@ func (repository ReceiptProcessingSettingsRepository) GetPagedReceiptProcessingS
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
-	err = query.Find(&results).Error
+	err = query.Preload(clause.Associations).Find(&results).Error
 	if err != nil {
 		return nil, 0, err
 	}

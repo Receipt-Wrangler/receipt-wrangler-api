@@ -147,7 +147,7 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 					return err
 				}
 
-				command, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
+				command, _, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
 				if err != nil {
 					return err
 				}

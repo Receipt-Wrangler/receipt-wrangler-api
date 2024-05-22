@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
-	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -15,7 +15,12 @@ func GetFeatureConfig(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			featureConfig := config.GetFeatureConfig()
+			systemSettingsService := services.NewSystemSettingsService(nil)
+
+			featureConfig, err := systemSettingsService.GetFeatureConfig()
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
 			bytes, err := utils.MarshalResponseData(featureConfig)
 			if err != nil {

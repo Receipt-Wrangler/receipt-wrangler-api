@@ -12,7 +12,7 @@ import (
 
 func EncryptData(key string, value []byte) ([]byte, error) {
 	if len(key) == 0 {
-		return nil, errors.New("key cannot be empty")
+		return nil, errors.New("encryption key cannot be empty, please set the environment variable: ENCRYPTION_KEY")
 	}
 	if len(value) == 0 {
 		return nil, errors.New("value cannot be empty")

@@ -11,6 +11,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"strconv"
+	"time"
 )
 
 func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
@@ -77,6 +78,7 @@ func QuickScan(
 	status models.ReceiptStatus,
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
+	systemTaskService := NewSystemTaskService(nil)
 	var createdReceipt models.Receipt
 
 	fileRepository := repositories.NewFileRepository(nil)
@@ -101,7 +103,15 @@ func QuickScan(
 	receiptRepository := repositories.NewReceiptRepository(nil)
 	receiptImageRepository := repositories.NewReceiptImageRepository(nil)
 
-	receiptCommand, err := MagicFillFromImage(magicFillCommand)
+	now := time.Now()
+	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand)
+	finishedAt := time.Now()
+
+	taskErr := systemTaskService.CreateSystemTasksFromMetadata(receiptProcessingMetadata, now, finishedAt, models.QUICK_SCAN, token.UserId)
+	if taskErr != nil {
+		return models.Receipt{}, taskErr
+	}
+
 	if err != nil {
 		return models.Receipt{}, err
 	}

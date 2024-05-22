@@ -21,10 +21,6 @@ func GetConfig() structs.Config {
 	return config
 }
 
-func GetFeatureConfig() structs.FeatureConfig {
-	return config.Features
-}
-
 func GetBasePath() string {
 	envBase := os.Getenv("BASE_PATH")
 	if len(envBase) == 0 {

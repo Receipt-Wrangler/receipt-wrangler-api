@@ -1,4 +1,4 @@
-package ai
+package structs
 
 type OpenAiCustomMessage struct {
 	Role    string `json:"role"`

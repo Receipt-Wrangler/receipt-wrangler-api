@@ -114,7 +114,7 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 	}
 
 	// TODO: Fix this repository call to take a preload string instead of a bool
-	query = query.Preload("GroupSettings.SubjectLineRegexes").Preload("GroupSettings.EmailWhiteList")
+	query = query.Preload("GroupSettings.SubjectLineRegexes").Preload("GroupSettings.EmailWhiteList").Preload("GroupSettings.SystemEmail")
 
 	err := query.First(&group).Error
 	if err != nil {

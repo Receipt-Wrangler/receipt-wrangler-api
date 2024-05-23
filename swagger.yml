@@ -3063,6 +3063,11 @@ components:
         emailIntegrationEnabled:
           type: boolean
           description: Whether email integration is enabled
+        systemEmailId:
+          type: integer
+          description: System email foreign key
+        systemEmail:
+          $ref: "#/components/schemas/SystemEmail"
         emailToRead:
           type: string
           description: Email to read
@@ -3139,16 +3144,16 @@ components:
     UpdateGroupSettingsCommand:
       type: object
       required:
-        - emailToRead
+        - systemEmailId
         - subjectLineRegexes
         - emailWhiteList
       properties:
+        systemEmailId:
+          type: integer
+          description: System email foreign key
         emailIntegrationEnabled:
           type: boolean
           description: Whether email integration is enabled
-        emailToRead:
-          type: string
-          description: Email to read
         subjectLineRegexes:
           type: array
           description: Subject line regexes

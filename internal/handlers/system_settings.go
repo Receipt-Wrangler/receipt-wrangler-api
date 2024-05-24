@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/email"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -60,9 +61,21 @@ func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
+			previousSystemSettings, err := systemSettingsRepository.GetSystemSettings()
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			updatedSystemSettings, err := systemSettingsRepository.UpdateSystemSettings(command)
 			if err != nil {
 				return http.StatusInternalServerError, err
+			}
+
+			if previousSystemSettings.EmailPollingInterval != updatedSystemSettings.EmailPollingInterval {
+				err = email.StartEmailPolling()
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 			}
 
 			responseBytes, err := utils.MarshalResponseData(updatedSystemSettings)

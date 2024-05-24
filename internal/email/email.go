@@ -18,9 +18,29 @@ import (
 	"gorm.io/gorm"
 )
 
+var ticker *time.Ticker
+
+func StartEmailPolling() error {
+	if ticker != nil {
+		ticker.Stop()
+	}
+
+	err := PollEmails()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func PollEmails() error {
-	config := config.GetConfig()
-	ticker := time.NewTicker(time.Duration(config.EmailPollingInterval) * time.Second)
+	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
+	systemSettings, err := systemSettingsRepository.GetSystemSettings()
+	if err != nil {
+		return err
+	}
+
+	ticker = time.NewTicker(time.Duration(systemSettings.EmailPollingInterval) * time.Second)
 	done := make(chan bool)
 
 	go func() {
@@ -62,6 +82,18 @@ func CallClient(pollAllGroups bool, groupIds []string) error {
 			logger.Println(err.Error())
 			return err
 		}
+
+		// TODO: Could be more efficient by only decrypting the passwords once for each email
+		for _, gp := range groupSettings {
+			cleartextPassword, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), gp.SystemEmail.Password)
+			if err != nil {
+				logger.Println(err.Error())
+				return err
+			}
+
+			gp.SystemEmail.Password = cleartextPassword
+		}
+
 		err = pollEmailForGroupSettings(groupSettings)
 		if err != nil {
 			logger.Println(err.Error())

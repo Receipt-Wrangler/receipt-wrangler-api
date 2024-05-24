@@ -1,4 +1,13 @@
+import datetime
+import email
+import logging
+import os
+import re
+from mailbox import Message
+
 from imapclient import IMAPClient
+
+base_path = os.environ.get("BASE_PATH", "")
 
 
 class ImapClient:
@@ -6,14 +15,156 @@ class ImapClient:
     port = None
     username = None
     password = None
+    subject_line_regexes = None
+    email_whitelist = None
     client = None
 
-    def __init__(self, host, port, username, password):
+    def __init__(self, host, port, username, password, subject_line_regexes, email_whitelist):
         self.host = host
         self.port = port
         self.username = username
         self.password = password
+        self.subject_line_regexes = subject_line_regexes or []
+        self.email_whitelist = email_whitelist or []
 
     def connect(self):
         self.client = IMAPClient(self.host, self.port)
         self.client.login(self.username, self.password)
+
+    def get_unread_email_metadata(self):
+        unread_emails = self._get_unread_emails()
+        return self._messages_to_email_metadata(unread_emails)
+
+    def _get_unread_emails(self):
+        if self.client is None:
+            self.connect()
+
+        self.client.select_folder('INBOX')
+
+        messages = self.client.search(['UNSEEN'])
+        return self.client.fetch(messages, ['FLAGS', 'RFC822']) or []
+
+    def _messages_to_email_metadata(self, response):
+        results = []
+        for message_id, data in response.items():
+            formatted_data = self._get_formatted_message_data(
+                data)
+            if len(formatted_data) > 0:
+                formatted_data[message_id] = message_id
+                results.append(formatted_data)
+
+        return results
+
+    def _get_formatted_message_data(self, data):
+        message_data = email.message_from_bytes(data[b"RFC822"])
+
+        from_data = self._get_formatted_to_or_from_data(message_data, "From")
+        if from_data["email"] is None:
+            return {}
+
+        to_data = self._get_formatted_to_or_from_data(message_data, "To")
+        if to_data["email"] is None:
+            return {}
+
+        subject = message_data.get("Subject")
+
+        group_settings_ids = []
+        should_process = self._valid_from_email(from_data["email"]) and self._valid_subject(subject)
+
+        # TODO: V5 - Could we set this message to unread if not process?
+        if not should_process:
+            return {}
+
+        formatted_date = self.get_formatted_date(message_data.get("Date"))
+
+        result = {
+            "date": formatted_date,
+            "subject": subject,
+            "to": to_data["email"],
+            "fromName": from_data["name"],
+            "fromEmail": from_data["email"],
+            "attachments": self._get_attachments(message_data),
+            "groupSettingsIds": group_settings_ids,
+        }
+
+        if (len(result["attachments"]) == 0):
+            return {}
+
+        logging.info(f"Formatted message data: {result}")
+        return result
+
+    def _get_formatted_to_or_from_data(self, message_data: Message, key: str):
+        result = {
+            "name": None,
+            "email": None
+        }
+
+        fromData = message_data.get(key).split("<")
+        if len(fromData) == 2:
+            result["name"] = fromData[0]
+            result["email"] = fromData[1].replace("<", "").replace(">", "")
+
+        if len(fromData) == 1:
+            result["email"] = fromData[0]
+
+        logging.info(f"Formatted from data: {result}")
+
+        return result
+
+    def get_formatted_date(self, date):
+        date_parts = date.split(
+            "(")  # Fixes case when date comes back in utc , so (UTC) is appended
+        logging.info(date[0])
+        date = datetime.datetime.strptime(
+            date_parts[0].strip(), "%a, %d %b %Y %H:%M:%S %z")
+        utc_date = date.replace(tzinfo=datetime.timezone.utc)
+        formatted_date = utc_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        return formatted_date
+
+    def _valid_from_email(self, from_email):
+        return from_email in self.email_whitelist
+
+    def _valid_subject(self, subject):
+        for subject_line_regex in self.subject_line_regexes:
+            regex = re.compile(subject_line_regex["regex"])
+            matches = regex.search(subject)
+            logging.info(
+                f"Found match: {matches} on email subject: '{subject}' with regex: '{subject_line_regex['regex']}'")
+            if matches:
+                return True
+
+        return False
+
+    def _get_attachments(self, message_data: Message):
+        result = []
+        for part in message_data.walk():
+            if part.get_content_maintype() == 'multipart':
+                continue
+            if part.get('Content-Disposition') is None:
+                continue
+
+            filename = part.get_filename()
+            mime_type = part.get_content_type()
+
+            logging.info(f"Filename: {filename} mime_type: {mime_type}")
+
+            if len(filename) > 0 and self.valid_mime_type(mime_type):
+                filePath = os.path.join(base_path, "temp", filename)
+                with open(filePath, 'wb') as f:
+                    f.write(part.get_payload(decode=True))
+
+                size = os.path.getsize(filePath)
+
+                result.append({
+                    "filename": filename,
+                    "fileType": mime_type,
+                    "size": size,
+                })
+
+        return result
+
+    def valid_mime_type(self, mime_type):
+        image_mime_types_regex = r"^(image\/(jpeg|png|heic|bmp|webp|tiff)|application\/pdf)$"
+        match = re.search(image_mime_types_regex, mime_type or "")
+        return match is not None

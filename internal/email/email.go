@@ -64,41 +64,28 @@ func PollEmails() error {
 func CallClient(pollAllGroups bool, groupIds []string) error {
 	logger := logging.GetLogger()
 	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+	var groupSettings []models.GroupSettings
 
 	if pollAllGroups {
-		groupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ?", true)
+		allGroupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ?", true)
 		if err != nil {
 			logger.Println(err.Error())
 			return err
 		}
-		err = pollEmailForGroupSettings(groupSettings)
-		if err != nil {
-			logger.Println(err.Error())
-			return err
-		}
+		groupSettings = allGroupSettings
 	} else {
-		groupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ? AND group_id IN ?", true, groupIds)
+		someGroupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ? AND group_id IN ?", true, groupIds)
 		if err != nil {
 			logger.Println(err.Error())
 			return err
 		}
+		groupSettings = someGroupSettings
+	}
 
-		// TODO: Could be more efficient by only decrypting the passwords once for each email
-		for _, gp := range groupSettings {
-			cleartextPassword, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), gp.SystemEmail.Password)
-			if err != nil {
-				logger.Println(err.Error())
-				return err
-			}
-
-			gp.SystemEmail.Password = cleartextPassword
-		}
-
-		err = pollEmailForGroupSettings(groupSettings)
-		if err != nil {
-			logger.Println(err.Error())
-			return err
-		}
+	err := pollEmailForGroupSettings(groupSettings)
+	if err != nil {
+		logger.Println(err.Error())
+		return err
 	}
 	return nil
 }
@@ -106,15 +93,36 @@ func CallClient(pollAllGroups bool, groupIds []string) error {
 func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	logger := logging.GetLogger()
 	basePath := config.GetBasePath()
+	groupSettingsWithPassword := make([]models.GroupSettingsWithSystemEmailPassword, len(groupSettings))
 
-	bytesArr, err := json.Marshal(groupSettings)
+	// TODO: Could be more efficient by only decrypting the passwords once for each email
+	for i := range groupSettings {
+		cleartextPassword, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), groupSettings[i].SystemEmail.Password)
+		if err != nil {
+			logger.Println(err.Error())
+			return err
+		}
+
+		var groupSettingWithPassword models.GroupSettingsWithSystemEmailPassword
+		groupSettingWithPassword.BaseModel = groupSettings[i].BaseModel
+		groupSettingWithPassword.GroupSettings = groupSettings[i]
+		groupSettingWithPassword.SystemEmail = models.SystemEmailWithPassword{
+			BaseModel:   groupSettings[i].SystemEmail.BaseModel,
+			SystemEmail: groupSettings[i].SystemEmail,
+			Password:    cleartextPassword,
+		}
+
+		groupSettingsWithPassword[i] = groupSettingWithPassword
+	}
+
+	bytesArr, err := json.Marshal(groupSettingsWithPassword)
 	if err != nil {
 		logger.Println(err.Error())
 		return err
 	}
 
 	var out bytes.Buffer
-	cmd := exec.Command("python3", basePath+"/imap-client/client.py")
+	cmd := exec.Command("python3", basePath+"/imap-client/client_new.py")
 	cmd.Stdout = &out
 	cmd.Stdin = bytes.NewReader(bytesArr)
 	cmd.Env = os.Environ()
@@ -125,7 +133,8 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 		return err
 	}
 
-	var result []structs.EmailMetadata
+	// TODO: fix unmarshal
+	var result map[structs.ComparableEmailMetadata][]uint
 
 	err = json.Unmarshal(out.Bytes(), &result)
 	if err != nil {
@@ -144,66 +153,69 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	return nil
 }
 
-func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models.GroupSettings) error {
+func processEmails(metadataMap map[structs.ComparableEmailMetadata][]uint, groupSettings []models.GroupSettings) error {
 	basePath := config.GetBasePath() + "/temp"
 	db := repositories.GetDB()
-	imagesToRemove := []string{}
 	fileRepository := repositories.NewCategoryRepository(nil)
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		receiptRepository := repositories.NewReceiptRepository(tx)
-		receiptImageRepository := repositories.NewReceiptImageRepository(tx)
+	for metadata, groupSettingIds := range metadataMap {
+		var attachments []structs.Attachment
 
-		for _, metadata := range emailMetadata {
-			for _, attachment := range metadata.Attachments {
-				tempFilePath := basePath + "/" + attachment.Filename
-				imageForOcrPath := basePath + "/" + "image-" + attachment.Filename
+		err := json.Unmarshal([]byte(metadata.Attachments), &attachments)
+		if err != nil {
+			return err
+		}
 
-				bytes, err := utils.ReadFile(tempFilePath)
-				if err != nil {
-					return err
-				}
+		for _, attachment := range attachments {
+			tempFilePath := basePath + "/" + attachment.Filename
+			defer os.Remove(tempFilePath)
 
-				_, err = fileRepository.ValidateFileType(bytes)
-				if err != nil {
-					return err
-				}
+			imageForOcrPath := basePath + "/" + "image-" + attachment.Filename
+			defer os.Remove(imageForOcrPath)
 
-				ocrBytes, err := fileRepository.GetBytesFromImageBytes(bytes)
-				if err != nil {
-					return err
-				}
+			fileBytes, err := utils.ReadFile(tempFilePath)
+			if err != nil {
+				return err
+			}
 
-				err = utils.WriteFile(imageForOcrPath, ocrBytes)
-				if err != nil {
-					return err
-				}
+			ocrBytes, err := fileRepository.GetBytesFromImageBytes(fileBytes)
+			if err != nil {
+				return err
+			}
 
-				command, _, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
-				if err != nil {
-					return err
-				}
+			err = utils.WriteFile(imageForOcrPath, ocrBytes)
+			if err != nil {
+				return err
+			}
 
-				imagesToRemove = append(imagesToRemove, imageForOcrPath)
+			baseCommand, _, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
+			if err != nil {
+				return err
+			}
 
-				for _, groupSettingsId := range metadata.GroupSettingsIds {
-					groupSettingsToUse := models.GroupSettings{}
+			for _, groupSettingsId := range groupSettingIds {
+				groupSettingsToUse := models.GroupSettings{}
 
-					for _, groupSetting := range groupSettings {
-						if groupSetting.ID == groupSettingsId {
-							groupSettingsToUse = groupSetting
-							break
-						}
+				for _, groupSetting := range groupSettings {
+					if groupSetting.ID == groupSettingsId {
+						groupSettingsToUse = groupSetting
+						break
 					}
+				}
 
-					if groupSettingsToUse.ID == 0 {
-						return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
-					}
+				if groupSettingsToUse.ID == 0 {
+					return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
+				}
 
-					command.GroupId = groupSettingsToUse.GroupId
-					command.Status = groupSettingsToUse.EmailDefaultReceiptStatus
-					command.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
-					command.CreatedByString = "Email Integration"
+				command := baseCommand
+				command.GroupId = groupSettingsToUse.GroupId
+				command.Status = groupSettingsToUse.EmailDefaultReceiptStatus
+				command.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
+				command.CreatedByString = "Email Integration"
+
+				err = db.Transaction(func(tx *gorm.DB) error {
+					receiptRepository := repositories.NewReceiptRepository(tx)
+					receiptImageRepository := repositories.NewReceiptImageRepository(tx)
 
 					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
 					if err != nil {
@@ -217,27 +229,15 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 						Size:      attachment.Size,
 					}
 
-					_, err = receiptImageRepository.CreateReceiptImage(fileData, bytes)
+					_, err = receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 					if err != nil {
 						return err
 					}
 
-				}
-
-				imagesToRemove = append(imagesToRemove, tempFilePath)
+					return nil
+				})
 			}
 		}
-
-		return nil
-	})
-
-	for _, path := range imagesToRemove {
-		os.Remove(path)
-	}
-
-	if err != nil {
-		logging.GetLogger().Println(err.Error())
-		return err
 	}
 
 	return nil

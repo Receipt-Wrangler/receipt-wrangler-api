@@ -44,9 +44,13 @@ class ImapClient:
         self.client.select_folder('INBOX')
 
         messages = self.client.search(['UNSEEN'])
-        return self.client.fetch(messages, ['FLAGS', 'RFC822']) or []
+        response = self.client.fetch(messages, ['FLAGS', 'RFC822'])
+        return response or None
 
     def _messages_to_email_metadata(self, response):
+        if response is None:
+            return []
+
         results = []
         for message_id, data in response.items():
             formatted_data = self._get_formatted_message_data(
@@ -149,12 +153,13 @@ class ImapClient:
                     f.write(part.get_payload(decode=True))
 
                 size = os.path.getsize(filePath)
-
-                result.append({
+                data = {
                     "filename": filename,
                     "fileType": mime_type,
                     "size": size,
-                })
+                }
+
+                result.append(data)
 
         return result
 

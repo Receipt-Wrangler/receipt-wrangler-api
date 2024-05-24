@@ -203,8 +203,7 @@ func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
-		GroupRole:    models.OWNER,
-		GroupId:      groupId,
+		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpdateGroupSettingsCommand{}
 			vErr, err := command.LoadDataFromRequestAndValidate(w, r)

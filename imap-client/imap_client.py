@@ -7,6 +7,8 @@ from mailbox import Message
 
 from imapclient import IMAPClient
 
+from utils import valid_from_email, valid_subject
+
 base_path = os.environ.get("BASE_PATH", "")
 
 
@@ -123,18 +125,10 @@ class ImapClient:
         return formatted_date
 
     def _valid_from_email(self, from_email):
-        return from_email in self.email_whitelist
+        return valid_from_email(from_email, self.email_whitelist)
 
     def _valid_subject(self, subject):
-        for subject_line_regex in self.subject_line_regexes:
-            regex = re.compile(subject_line_regex["regex"])
-            matches = regex.search(subject)
-            logging.info(
-                f"Found match: {matches} on email subject: '{subject}' with regex: '{subject_line_regex['regex']}'")
-            if matches:
-                return True
-
-        return False
+        return valid_subject(subject, self.subject_line_regexes)
 
     def _get_attachments(self, message_data: Message):
         result = []

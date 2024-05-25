@@ -71,7 +71,8 @@ func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			if previousSystemSettings.EmailPollingInterval != updatedSystemSettings.EmailPollingInterval {
+			if previousSystemSettings.EmailPollingInterval != updatedSystemSettings.EmailPollingInterval &&
+				updatedSystemSettings.EmailPollingInterval > 0 {
 				err = email.StartEmailPolling()
 				if err != nil {
 					return http.StatusInternalServerError, err

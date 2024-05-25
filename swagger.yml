@@ -2163,6 +2163,7 @@ components:
       enum:
         - "MAGIC_FILL"
         - "QUICK_SCAN"
+        - "EMAIL_UPLOAD"
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
     AssociatedEntityType:

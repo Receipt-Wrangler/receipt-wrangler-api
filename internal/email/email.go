@@ -133,8 +133,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 		return err
 	}
 
-	// TODO: fix unmarshal
-	var result map[structs.ComparableEmailMetadata][]uint
+	var result []structs.EmailMetadata
 
 	err = json.Unmarshal(out.Bytes(), &result)
 	if err != nil {
@@ -153,20 +152,15 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	return nil
 }
 
-func processEmails(metadataMap map[structs.ComparableEmailMetadata][]uint, groupSettings []models.GroupSettings) error {
+func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.GroupSettings) error {
 	basePath := config.GetBasePath() + "/temp"
 	db := repositories.GetDB()
 	fileRepository := repositories.NewCategoryRepository(nil)
+	systemTaskService := services.NewSystemTaskService(db)
 
-	for metadata, groupSettingIds := range metadataMap {
-		var attachments []structs.Attachment
+	for _, metadata := range metadataList {
 
-		err := json.Unmarshal([]byte(metadata.Attachments), &attachments)
-		if err != nil {
-			return err
-		}
-
-		for _, attachment := range attachments {
+		for _, attachment := range metadata.Attachments {
 			tempFilePath := basePath + "/" + attachment.Filename
 			defer os.Remove(tempFilePath)
 
@@ -188,12 +182,22 @@ func processEmails(metadataMap map[structs.ComparableEmailMetadata][]uint, group
 				return err
 			}
 
-			baseCommand, _, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
+			start := time.Now()
+			baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
+			end := time.Now()
+
+			defer systemTaskService.CreateSystemTasksFromMetadata(
+				processingMetadata,
+				start,
+				end,
+				models.EMAIL_UPLOAD,
+				0)
+
 			if err != nil {
 				return err
 			}
 
-			for _, groupSettingsId := range groupSettingIds {
+			for _, groupSettingsId := range metadata.GroupSettingsIds {
 				groupSettingsToUse := models.GroupSettings{}
 
 				for _, groupSetting := range groupSettings {

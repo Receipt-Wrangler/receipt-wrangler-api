@@ -73,8 +73,6 @@ class ImapClient:
             return {}
 
         subject = message_data.get("Subject")
-
-        group_settings_ids = []
         should_process = self._valid_from_email(from_data["email"]) and self._valid_subject(subject)
 
         # TODO: V5 - Could we set this message to unread if not process?
@@ -90,10 +88,10 @@ class ImapClient:
             "fromName": from_data["name"],
             "fromEmail": from_data["email"],
             "attachments": self._get_attachments(message_data),
-            "groupSettingsIds": group_settings_ids,
+            "groupSettingsIds": [],
         }
 
-        if (len(result["attachments"]) == 0):
+        if len(result["attachments"]) == 0:
             return {}
 
         logging.info(f"Formatted message data: {result}")
@@ -105,13 +103,13 @@ class ImapClient:
             "email": None
         }
 
-        fromData = message_data.get(key).split("<")
-        if len(fromData) == 2:
-            result["name"] = fromData[0]
-            result["email"] = fromData[1].replace("<", "").replace(">", "")
+        from_data = message_data.get(key).split("<")
+        if len(from_data) == 2:
+            result["name"] = from_data[0]
+            result["email"] = from_data[1].replace("<", "").replace(">", "")
 
-        if len(fromData) == 1:
-            result["email"] = fromData[0]
+        if len(from_data) == 1:
+            result["email"] = from_data[0]
 
         logging.info(f"Formatted from data: {result}")
 

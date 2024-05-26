@@ -2,7 +2,7 @@
 name: Build
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
 
 jobs:
   test:
@@ -29,7 +29,7 @@ jobs:
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
       - name: Test imap client
-        run: python3 imap-client/client_test.py
+        run: python3 -m unittest discover -s ./imap-client
 
   build:
     needs: test

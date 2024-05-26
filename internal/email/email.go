@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
@@ -157,6 +158,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 	db := repositories.GetDB()
 	fileRepository := repositories.NewCategoryRepository(nil)
 	systemTaskService := services.NewSystemTaskService(db)
+	emailProcessStart := time.Now()
 
 	for _, metadata := range metadataList {
 
@@ -186,7 +188,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 			baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
 			end := time.Now()
 
-			defer systemTaskService.CreateSystemTasksFromMetadata(
+			processingSystemTasks, err := systemTaskService.CreateSystemTasksFromMetadata(
 				processingMetadata,
 				start,
 				end,
@@ -220,6 +222,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 				err = db.Transaction(func(tx *gorm.DB) error {
 					receiptRepository := repositories.NewReceiptRepository(tx)
 					receiptImageRepository := repositories.NewReceiptImageRepository(tx)
+					systemTaskRepository := repositories.NewSystemTaskRepository(tx)
 
 					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
 					if err != nil {
@@ -234,6 +237,39 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 					}
 
 					_, err = receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
+					emailProcessEnd := time.Now()
+
+					metadataBytes, err := json.Marshal(metadata)
+					if err != nil {
+						return err
+					}
+
+					systemTaskCommand := commands.UpsertSystemTaskCommand{
+						Type:                 models.EMAIL_READ,
+						Status:               models.SYSTEM_TASK_SUCCEEDED,
+						AssociatedEntityType: models.SYSTEM_EMAIL,
+						AssociatedEntityId:   groupSettingsToUse.SystemEmail.ID,
+						StartedAt:            emailProcessStart,
+						EndedAt:              &emailProcessEnd,
+						ResultDescription: fmt.Sprintf(
+							"Created receipt: %d for group: %d from the captured email metadata: %s",
+							createdReceipt.ID,
+							groupSettingsToUse.GroupId,
+							string(metadataBytes)),
+						RanByUserId: nil,
+					}
+
+					if processingSystemTasks.SystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+						systemTaskCommand.AssociatedSystemTaskId = &processingSystemTasks.SystemTask.ID
+					} else if processingSystemTasks.FallbackSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+						systemTaskCommand.AssociatedSystemTaskId = &processingSystemTasks.FallbackSystemTask.ID
+					}
+
+					_, err = systemTaskRepository.CreateSystemTask(systemTaskCommand)
+					if err != nil {
+						return err
+					}
+
 					if err != nil {
 						return err
 					}

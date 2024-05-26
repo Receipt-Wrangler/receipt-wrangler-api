@@ -228,7 +228,12 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 				command, metadata, err := services.ReadReceiptImage(receiptImageId)
 				endTimer = time.Now()
 
-				taskErr := systemTaskService.CreateSystemTasksFromMetadata(metadata, startTimer, endTimer, models.MAGIC_FILL, token.UserId)
+				_, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
+					metadata,
+					startTimer,
+					endTimer,
+					models.MAGIC_FILL,
+					token.UserId)
 				if taskErr != nil {
 					return http.StatusInternalServerError, taskErr
 				}
@@ -265,7 +270,12 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 				command, metadata, err := services.MagicFillFromImage(magicFillCommand)
 				endTimer = time.Now()
 
-				taskErr := systemTaskService.CreateSystemTasksFromMetadata(metadata, startTimer, endTimer, models.MAGIC_FILL, token.UserId)
+				_, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
+					metadata,
+					startTimer,
+					endTimer,
+					models.MAGIC_FILL,
+					token.UserId)
 				if taskErr != nil {
 					return http.StatusInternalServerError, taskErr
 				}

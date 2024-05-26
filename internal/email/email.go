@@ -122,7 +122,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	}
 
 	var out bytes.Buffer
-	cmd := exec.Command("python3", basePath+"/imap-client/client_new.py")
+	cmd := exec.Command("python3", basePath+"/imap-client/client.py")
 	cmd.Stdout = &out
 	cmd.Stdin = bytes.NewReader(bytesArr)
 	cmd.Env = os.Environ()

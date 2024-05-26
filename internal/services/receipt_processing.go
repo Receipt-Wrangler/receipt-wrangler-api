@@ -68,9 +68,10 @@ func (service ReceiptProcessingService) ReadReceiptImage(imagePath string) (comm
 		metadata.RawResponse = err.Error()
 
 		if service.FallbackReceiptProcessingSettings.ID > 0 {
-			fallbackReceipt, fallbackRawResponse, err := service.processImage(imagePath, service.FallbackReceiptProcessingSettings)
+			fallbackReceipt, fallbackRawResponse, fallbackErr := service.processImage(imagePath, service.FallbackReceiptProcessingSettings)
 			metadata.FallbackReceiptProcessingSettingsIdRan = service.FallbackReceiptProcessingSettings.ID
 			receipt = fallbackReceipt
+			err = fallbackErr
 
 			if err != nil {
 				metadata.DidFallbackReceiptProcessingSettingsSucceed = false

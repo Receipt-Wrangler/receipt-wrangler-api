@@ -7,3 +7,9 @@ type SystemEmail struct {
 	Username string `gorm:"not null;" json:"username"`
 	Password string `gorm:"not null;" json:"-"`
 }
+
+type SystemEmailWithPassword struct {
+	BaseModel
+	SystemEmail
+	Password string `json:"password"`
+}

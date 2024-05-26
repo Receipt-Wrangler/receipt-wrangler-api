@@ -107,7 +107,12 @@ func QuickScan(
 	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand)
 	finishedAt := time.Now()
 
-	taskErr := systemTaskService.CreateSystemTasksFromMetadata(receiptProcessingMetadata, now, finishedAt, models.QUICK_SCAN, token.UserId)
+	_, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
+		receiptProcessingMetadata,
+		now,
+		finishedAt,
+		models.QUICK_SCAN,
+		token.UserId)
 	if taskErr != nil {
 		return models.Receipt{}, taskErr
 	}

@@ -57,18 +57,16 @@ func main() {
 	imagick.Initialize()
 	defer imagick.Terminate()
 
-	appConfig := config.GetConfig()
-
 	if config.GetDeployEnv() != "test" {
 		userRepository := repositories.NewUserRepository(nil)
 		err = userRepository.CreateUserIfNoneExist()
 	}
-
-	// TODO: V5: Move this to system settings update
-	if len(appConfig.EmailSettings) > 0 && appConfig.Features.AiPoweredReceipts {
-		email.PollEmails()
+	if err != nil {
+		logger.Print(err.Error())
+		os.Exit(0)
 	}
 
+	err = tryStartEmailPolling()
 	if err != nil {
 		logger.Print(err.Error())
 		os.Exit(0)
@@ -205,4 +203,27 @@ func initRoutes() *chi.Mux {
 	}
 
 	return rootRouter
+}
+
+func tryStartEmailPolling() error {
+	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
+	systemSettings, err := systemSettingsRepository.GetSystemSettings()
+	if err != nil {
+		return err
+	}
+
+	systemSettingsService := services.NewSystemSettingsService(nil)
+	featureConfig, err := systemSettingsService.GetFeatureConfig()
+	if err != nil {
+		return err
+	}
+
+	if systemSettings.EmailPollingInterval > 0 && featureConfig.AiPoweredReceipts {
+		err = email.StartEmailPolling()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

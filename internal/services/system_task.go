@@ -50,8 +50,9 @@ func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(met
 	)
 }
 
-func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata structs.ReceiptProcessingMetadata, startDate time.Time, endDate time.Time, taskType models.SystemTaskType, userId uint) error {
+func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata structs.ReceiptProcessingMetadata, startDate time.Time, endDate time.Time, taskType models.SystemTaskType, userId uint) (structs.ReceiptProcessingSystemTasks, error) {
 	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+	result := structs.ReceiptProcessingSystemTasks{}
 
 	if metadata.ReceiptProcessingSettingsIdRan > 0 {
 		systemTask := commands.UpsertSystemTaskCommand{
@@ -64,10 +65,11 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata structs.
 			ResultDescription:    metadata.RawResponse,
 			RanByUserId:          &userId,
 		}
-		_, err := systemTaskRepository.CreateSystemTask(systemTask)
+		createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTask)
 		if err != nil {
-			return err
+			return structs.ReceiptProcessingSystemTasks{}, err
 		}
+		result.SystemTask = createdSystemTask
 	}
 
 	if metadata.FallbackReceiptProcessingSettingsIdRan > 0 {
@@ -81,13 +83,15 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata structs.
 			ResultDescription:    metadata.FallbackRawResponse,
 			RanByUserId:          &userId,
 		}
-		_, err := systemTaskRepository.CreateSystemTask(fallbackSystemTask)
+		createdFallbackSystemTask, err := systemTaskRepository.CreateSystemTask(fallbackSystemTask)
 		if err != nil {
-			return err
+			return structs.ReceiptProcessingSystemTasks{}, err
 		}
+
+		result.FallbackSystemTask = createdFallbackSystemTask
 	}
 
-	return nil
+	return result, nil
 }
 
 func (service SystemTaskService) BoolToSystemTaskStatus(value bool) models.SystemTaskStatus {

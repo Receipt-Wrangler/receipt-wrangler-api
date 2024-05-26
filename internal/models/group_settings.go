@@ -13,3 +13,9 @@ type GroupSettings struct {
 	EmailDefaultReceiptPaidBy   *User                         `json:"-"`
 	EmailDefaultReceiptPaidById *uint                         `json:"emailDefaultReceiptPaidById"`
 }
+
+type GroupSettingsWithSystemEmailPassword struct {
+	BaseModel
+	GroupSettings
+	SystemEmail SystemEmailWithPassword `json:"systemEmail"`
+}

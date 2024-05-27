@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"errors"
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 
@@ -44,7 +45,7 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
-	err := query.Find(&results).Error
+	err := query.Preload(clause.Associations).Find(&results).Error
 	if query.Error != nil {
 		return nil, 0, err
 	}
@@ -60,14 +61,15 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 	db := repository.GetDB()
 
 	systemTask := models.SystemTask{
-		Type:                 command.Type,
-		Status:               command.Status,
-		AssociatedEntityType: command.AssociatedEntityType,
-		AssociatedEntityId:   command.AssociatedEntityId,
-		StartedAt:            command.StartedAt,
-		EndedAt:              command.EndedAt,
-		ResultDescription:    command.ResultDescription,
-		RanByUserId:          command.RanByUserId,
+		Type:                   command.Type,
+		Status:                 command.Status,
+		AssociatedEntityType:   command.AssociatedEntityType,
+		AssociatedEntityId:     command.AssociatedEntityId,
+		StartedAt:              command.StartedAt,
+		EndedAt:                command.EndedAt,
+		ResultDescription:      command.ResultDescription,
+		RanByUserId:            command.RanByUserId,
+		AssociatedSystemTaskId: command.AssociatedSystemTaskId,
 	}
 
 	err := db.Create(&systemTask).Error

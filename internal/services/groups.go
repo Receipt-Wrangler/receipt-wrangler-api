@@ -22,10 +22,7 @@ func NewGroupService(tx *gorm.DB) GroupService {
 	return service
 }
 
-func (service GroupService) GetGroupsForUser(userId string) ([]models.Group, error) {
-	db := service.GetDB()
-	var groups []models.Group
-
+func (service GroupService) GetGroupIdsForUser(userId string) ([]uint, error) {
 	groupMemberRepository := repositories.NewGroupMemberRepository(nil)
 	groupMembers, err := groupMemberRepository.GetGroupMembersByUserId(userId)
 	if err != nil {
@@ -35,6 +32,18 @@ func (service GroupService) GetGroupsForUser(userId string) ([]models.Group, err
 	groupIds := make([]uint, len(groupMembers))
 	for i := 0; i < len(groupMembers); i++ {
 		groupIds[i] = groupMembers[i].GroupID
+	}
+
+	return groupIds, nil
+}
+
+func (service GroupService) GetGroupsForUser(userId string) ([]models.Group, error) {
+	db := service.GetDB()
+	var groups []models.Group
+
+	groupIds, err := service.GetGroupIdsForUser(userId)
+	if err != nil {
+		return nil, err
 	}
 
 	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Order("is_all_group desc").Find(&groups).Error

@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"errors"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 
@@ -17,6 +19,59 @@ func NewGroupRepository(tx *gorm.DB) GroupRepository {
 		TX: tx,
 	}}
 	return repository
+}
+
+func (repository GroupRepository) GetPagedGroups(command commands.PagedGroupRequestCommand, userId string) ([]models.Group, int64, error) {
+	db := repository.GetDB()
+	var results []models.Group
+	var count int64
+
+	query := db.Model(&models.Group{})
+
+	if !repository.isValidColumn(command.OrderBy) {
+		return nil, 0, errors.New("invalid column")
+	}
+
+	// Apply filter and set counts
+	if command.GroupFilter.AssociatedGroup == commands.ASSOCIATED_GROUP_ALL {
+		query.Count(&count)
+	} else if command.GroupFilter.AssociatedGroup == commands.ASSOCIATED_GROUP_MINE {
+		groupMemberRepository := NewGroupMemberRepository(nil)
+		groupMembers, err := groupMemberRepository.GetGroupMembersByUserId(userId)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		groupIds := make([]uint, len(groupMembers))
+		for i := 0; i < len(groupMembers); i++ {
+			groupIds[i] = groupMembers[i].GroupID
+		}
+
+		query = query.Where("id IN ?", groupIds)
+		err = query.Count(&count).Error
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
+	// Apply sorting and pagination
+	query = repository.Sort(query, command.OrderBy, command.SortDirection)
+	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
+
+	err := query.Find(&results).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return results, count, nil
+}
+
+func (repository GroupRepository) isValidColumn(orderBy string) bool {
+	return orderBy == "name" ||
+		orderBy == "num_of_members" ||
+		orderBy == "default_group" ||
+		orderBy == "created_At" ||
+		orderBy == "updated_at"
 }
 
 func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (models.Group, error) {

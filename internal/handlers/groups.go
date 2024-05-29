@@ -20,6 +20,58 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+func GetPagedGroups(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error retrieving groups.",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.PagedGroupRequestCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErrs := command.Validate(r)
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			token := structs.GetJWT(r)
+			userIdString := simpleutils.UintToString(token.UserId)
+			groupRepository := repositories.NewGroupRepository(nil)
+
+			groups, count, err := groupRepository.GetPagedGroups(command, userIdString)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			anyData := make([]any, len(groups))
+			for i := 0; i < len(groups); i++ {
+				anyData[i] = groups[i]
+			}
+
+			bytes, err := utils.MarshalResponseData(structs.PagedData{
+				TotalCount: count,
+				Data:       anyData,
+			})
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+
+}
+
 func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error retrieving groups.",
@@ -80,6 +132,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      chi.URLParam(r, "groupId"),
 		GroupRole:    models.VIEWER,
+		OrUserRole:   models.ADMIN,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "groupId")

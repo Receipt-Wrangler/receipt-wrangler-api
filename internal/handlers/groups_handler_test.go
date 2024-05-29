@@ -66,7 +66,7 @@ func TestShouldNotUserToUpdateGroupSettingsById(t *testing.T) {
 }
 
 func TestShouldTestUpdateGroupSettingsWithVariousCommands(t *testing.T) {
-	defer tearDownSystemEmailTest()
+	defer tearDownGroupTests()
 	db := repositories.GetDB()
 
 	db.Create(&models.SystemEmail{})
@@ -144,6 +144,100 @@ func TestShouldTestUpdateGroupSettingsWithVariousCommands(t *testing.T) {
 		r = r.WithContext(newContext)
 
 		UpdateGroupSettings(w, r)
+
+		if w.Result().StatusCode != test.expect {
+			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("%s expected %d", name, test.expect))
+		}
+	}
+}
+
+func TestShouldTestUpdateGroupSettingsWithVariousCommandsAsAdmin(t *testing.T) {
+	defer tearDownGroupTests()
+
+	tests := map[string]struct {
+		input    commands.PagedGroupRequestCommand
+		expect   int
+		userRole models.UserRole
+	}{
+		"empty body": {
+			expect: http.StatusBadRequest,
+		},
+		"empty command": {
+			input:  commands.PagedGroupRequestCommand{},
+			expect: http.StatusBadRequest,
+		},
+		"bad command due to bad orderBy": {
+			input: commands.PagedGroupRequestCommand{
+				PagedRequestCommand: commands.PagedRequestCommand{
+					Page:          1,
+					PageSize:      10,
+					OrderBy:       "badOrderBy",
+					SortDirection: commands.ASCENDING,
+				},
+				GroupFilter: commands.GroupFilter{
+					AssociatedGroup: commands.ASSOCIATED_GROUP_ALL,
+				},
+			},
+			userRole: models.ADMIN,
+			expect:   http.StatusInternalServerError,
+		},
+		"valid command with all groups as admin": {
+			input: commands.PagedGroupRequestCommand{
+				PagedRequestCommand: commands.PagedRequestCommand{
+					Page:          1,
+					PageSize:      10,
+					OrderBy:       "name",
+					SortDirection: commands.ASCENDING,
+				},
+				GroupFilter: commands.GroupFilter{
+					AssociatedGroup: commands.ASSOCIATED_GROUP_ALL,
+				},
+			},
+			expect:   http.StatusOK,
+			userRole: models.ADMIN,
+		},
+		"bad command with all groups as user": {
+			input: commands.PagedGroupRequestCommand{
+				PagedRequestCommand: commands.PagedRequestCommand{
+					Page:          1,
+					PageSize:      10,
+					OrderBy:       "name",
+					SortDirection: commands.ASCENDING,
+				},
+				GroupFilter: commands.GroupFilter{
+					AssociatedGroup: commands.ASSOCIATED_GROUP_ALL,
+				},
+			},
+			expect:   http.StatusBadRequest,
+			userRole: models.USER,
+		},
+		"valid command with my groups as admin": {
+			input: commands.PagedGroupRequestCommand{
+				PagedRequestCommand: commands.PagedRequestCommand{
+					Page:          1,
+					PageSize:      10,
+					OrderBy:       "name",
+					SortDirection: commands.ASCENDING,
+				},
+				GroupFilter: commands.GroupFilter{
+					AssociatedGroup: commands.ASSOCIATED_GROUP_MINE,
+				},
+			},
+			expect:   http.StatusOK,
+			userRole: models.ADMIN,
+		},
+	}
+
+	for name, test := range tests {
+		bytes, _ := json.Marshal(test.input)
+		reader := strings.NewReader(string(bytes))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/api", reader)
+
+		newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: test.userRole}})
+		r = r.WithContext(newContext)
+
+		GetPagedGroups(w, r)
 
 		if w.Result().StatusCode != test.expect {
 			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("%s expected %d", name, test.expect))

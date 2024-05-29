@@ -41,14 +41,19 @@ func HandleRequest(handler structs.Handler) {
 		for _, receipt := range receipts {
 			handler.GroupIds = append(handler.GroupIds, simpleutils.UintToString(receipt.GroupId))
 		}
-
 	}
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		groupService := services.NewGroupService(nil)
 		token := structs.GetJWT(handler.Request)
 		err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, simpleutils.UintToString(token.UserId))
-		if err != nil {
+		hasOrUserRole := false
+
+		if len(handler.OrUserRole) > 0 {
+			hasOrUserRole = models.HasRole(handler.OrUserRole, token.UserRole)
+		}
+
+		if err != nil && !hasOrUserRole {
 			handler_logger.Print(err.Error())
 			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
 			return

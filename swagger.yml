@@ -507,6 +507,33 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /group/getPagedGroups:
+    post:
+      tags:
+        - Groups
+      summary: Get paged groups
+      description: This will return paged groups
+      operationId: getPagedGroups
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedGroupRequestCommand"
+      responses:
+        200:
+          description: Paged groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+      security:
+        - bearerAuth: [ ]
 
   /login/:
     post:
@@ -2172,6 +2199,11 @@ components:
       enum:
         - "SYSTEM_EMAIL"
         - "RECEIPT_PROCESSING_SETTINGS"
+    AssociatedGroup:
+      type: string
+      enum:
+        - "MINE"
+        - "ALL"
     BaseModel:
       type: object
       required:
@@ -2873,6 +2905,18 @@ components:
         sortDirection:
           type: string
           $ref: "#/components/schemas/SortDirection"
+    PagedGroupRequestCommand:
+      allOf:
+        - $ref: "#/components/schemas/PagedRequestCommand"
+        - type: object
+          properties:
+            filter:
+              $ref: "#/components/schemas/GroupFilter"
+    GroupFilter:
+      type: object
+      properties:
+        associatedGroup:
+          $ref: "#/components/schemas/AssociatedGroup"
     ReceiptPagedRequestCommand:
       required:
         - page

@@ -70,6 +70,7 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 	db.Model(&models.SystemSettings{}).First(&existingSettings)
 
 	existingSettings.EnableLocalSignUp = command.EnableLocalSignUp
+	existingSettings.DebugOcr = command.DebugOcr
 	existingSettings.EmailPollingInterval = command.EmailPollingInterval
 	existingSettings.ReceiptProcessingSettingsId = command.ReceiptProcessingSettingsId
 	existingSettings.FallbackReceiptProcessingSettingsId = command.FallbackReceiptProcessingSettingsId

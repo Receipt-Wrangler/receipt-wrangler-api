@@ -3545,6 +3545,10 @@ components:
               type: boolean
               description: Whether local sign up is enabled
               default: false
+            debugOcr:
+              type: boolean
+              description: Debug OCR
+              default: false
             emailPollingInterval:
               type: integer
               description: Email polling interval
@@ -3561,6 +3565,8 @@ components:
         enableLocalSignUp:
           type: boolean
           description: Whether local sign up is enabled
+        debugOcr:
+          type: boolean
         emailPollingInterval:
           type: integer
           description: Email polling interval

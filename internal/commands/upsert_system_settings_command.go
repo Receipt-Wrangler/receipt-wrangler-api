@@ -9,6 +9,7 @@ import (
 
 type UpsertSystemSettingsCommand struct {
 	EnableLocalSignUp                   bool  `json:"enableLocalSignUp"`
+	DebugOcr                            bool  `json:"debugOcr"`
 	EmailPollingInterval                int   `json:"emailPollingInterval"`
 	ReceiptProcessingSettingsId         *uint `json:"receiptProcessingSettingsId"`
 	FallbackReceiptProcessingSettingsId *uint `json:"fallbackReceiptProcessingSettingsId"`

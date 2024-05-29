@@ -17,4 +17,5 @@ type Handler struct {
 	UserRole        models.UserRole
 	HandlerFunction func(http.ResponseWriter, *http.Request) (int, error)
 	ResponseType    string
+	OrUserRole      models.UserRole
 }

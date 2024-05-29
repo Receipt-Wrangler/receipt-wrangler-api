@@ -132,6 +132,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      chi.URLParam(r, "groupId"),
 		GroupRole:    models.VIEWER,
+		OrUserRole:   models.ADMIN,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "groupId")

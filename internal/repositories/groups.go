@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"errors"
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -26,7 +27,7 @@ func (repository GroupRepository) GetPagedGroups(command commands.PagedGroupRequ
 	var results []models.Group
 	var count int64
 
-	query := db.Model(&models.Group{})
+	query := db.Model(&models.Group{}).Where("is_all_group = ?", false)
 
 	if !repository.isValidColumn(command.OrderBy) {
 		return nil, 0, errors.New("invalid column")
@@ -58,7 +59,9 @@ func (repository GroupRepository) GetPagedGroups(command commands.PagedGroupRequ
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
-	err := query.Find(&results).Error
+	err := query.Preload(clause.Associations).
+		Find(&results).
+		Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -70,7 +73,7 @@ func (repository GroupRepository) isValidColumn(orderBy string) bool {
 	return orderBy == "name" ||
 		orderBy == "num_of_members" ||
 		orderBy == "default_group" ||
-		orderBy == "created_At" ||
+		orderBy == "created_t" ||
 		orderBy == "updated_at"
 }
 

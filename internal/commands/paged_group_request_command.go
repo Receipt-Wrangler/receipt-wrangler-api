@@ -12,7 +12,7 @@ import (
 
 type PagedGroupRequestCommand struct {
 	PagedRequestCommand
-	GroupFilter
+	GroupFilter `json:"filter"`
 }
 
 func (command *PagedGroupRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -36,6 +36,10 @@ func (command *PagedGroupRequestCommand) Validate(r *http.Request) structs.Valid
 	if command.GroupFilter.AssociatedGroup == ASSOCIATED_GROUP_ALL &&
 		token.UserRole != models.ADMIN {
 		vErrs.Errors["associatedGroup"] = "Must be an admin to view all groups"
+	}
+
+	if command.GroupFilter.AssociatedGroup == "" {
+		vErrs.Errors["associatedGroup"] = "Associated group is required"
 	}
 
 	return vErrs

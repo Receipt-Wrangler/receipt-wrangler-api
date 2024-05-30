@@ -17,7 +17,7 @@ func ImportConfigJson(w http.ResponseWriter, r *http.Request) {
 		UserRole:     models.ADMIN,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			command := commands.ImportCommand{}
+			command := commands.ConfigImportCommand{}
 			err := command.LoadDataFromRequest(w, r)
 			if err != nil {
 				return http.StatusInternalServerError, err

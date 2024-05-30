@@ -30,7 +30,7 @@ func NewImportService(tx *gorm.DB) ImportService {
 	return service
 }
 
-func (repository ImportService) ImportConfigJson(command commands.ImportCommand) error {
+func (repository ImportService) ImportConfigJson(command commands.ConfigImportCommand) error {
 	commandConfig := command.Config
 	txErr := repository.DB.Transaction(func(tx *gorm.DB) error {
 		err := repository.importEmailSettings(tx, commandConfig.EmailSettings)

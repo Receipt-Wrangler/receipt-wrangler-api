@@ -2105,6 +2105,29 @@ paths:
           $ref: "#/components/responses/Internal"
         403:
           $ref: "#/components/responses/Forbidden"
+  /import/importConfigJson:
+    post:
+      tags:
+        - Import
+      summary: Import config json
+      description: This will import a config json
+      operationId: importConfigJson
+      requestBody:
+        description: Config json to import
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigImportCommand"
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     bearerAuth:
@@ -2204,6 +2227,10 @@ components:
       enum:
         - "MINE"
         - "ALL"
+    ImportType:
+      type: string
+      enum:
+        - "IMPORT_CONFIG"
     BaseModel:
       type: object
       required:
@@ -3754,3 +3781,12 @@ components:
         promptId:
           type: integer
           description: Prompt foreign key
+    ConfigImportCommand:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Files to quick scan

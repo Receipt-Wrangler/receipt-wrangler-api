@@ -20,7 +20,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	errMessage := "Error uploading image."
 	fileRepository := repositories.NewFileRepository(nil)
 
-	err := r.ParseMultipartForm(50 << 20)
+	err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
 	if err != nil {
 		handler_logger.Print(err.Error())
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)

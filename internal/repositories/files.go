@@ -165,6 +165,21 @@ func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) 
 	return "", errors.New("invalid file type")
 }
 
+func (repository BaseRepository) ValidateJsonFileType(bytes []byte) (string, error) {
+	fileType := mimetype.Detect(bytes).String()
+	acceptedFileTypes := []string{constants.APPLICATION_JSON}
+
+	for _, acceptedFileType := range acceptedFileTypes {
+		matched, _ := regexp.Match(acceptedFileType, []byte(fileType))
+
+		if matched {
+			return fileType, nil
+		}
+	}
+
+	return "", errors.New("invalid file type")
+}
+
 func (repository BaseRepository) ConvertHeicToJpg(bytes []byte) ([]byte, error) {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()

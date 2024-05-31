@@ -244,7 +244,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 
 				receiptCommand = command
 			} else {
-				err := r.ParseMultipartForm(50 << 20)
+				err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

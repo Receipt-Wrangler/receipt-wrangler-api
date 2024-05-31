@@ -11,7 +11,7 @@ import (
 
 func ImportConfigJson(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Error getting prompts",
+		ErrorMessage: "Error importing config",
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,

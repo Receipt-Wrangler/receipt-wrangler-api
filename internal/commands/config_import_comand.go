@@ -3,7 +3,9 @@ package commands
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gabriel-vasile/mimetype"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
@@ -22,39 +24,38 @@ func (command *ConfigImportCommand) LoadDataFromRequest(w http.ResponseWriter, r
 		return err
 	}
 
-	files := make([]multipart.File, 0)
-	fileHeaders := make([]*multipart.FileHeader, 0)
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		return nil
+	}
 
-	for _, fileHeader := range r.MultipartForm.File["file"] {
-		fileHeaders = append(fileHeaders, fileHeader)
-		file, err := fileHeader.Open()
-		if err != nil {
-			return err
-		}
+	mimeType, err := mimetype.DetectReader(file)
+	if err != nil {
+		return err
+	}
 
-		mimeType, err := mimetype.DetectReader(file)
-		if err != nil {
-			return err
-		}
+	_, err = file.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
 
-		if mimeType.String() != constants.APPLICATION_JSON {
-			return errors.New("Invalid file type")
-		}
-		defer file.Close()
-		files = append(files, file)
+	if mimeType.String() != constants.APPLICATION_JSON {
+		return errors.New("Invalid file type")
+	}
 
-		config := structs.Config{}
-		fileBytes := make([]byte, fileHeader.Size)
+	config := structs.Config{}
+	fileBytes := make([]byte, fileHeader.Size)
 
-		_, err = file.Read(fileBytes)
-		if err != nil {
-			return err
-		}
+	fmt.Println(file)
 
-		err = json.Unmarshal(fileBytes, &config)
-		if err != nil {
-			return err
-		}
+	_, err = file.Read(fileBytes)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(fileBytes, &config)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -193,7 +193,7 @@ func initRoutes() *chi.Mux {
 
 	// Prompt router
 	promptRouter := routers.BuildPromptRouter(tokenValidatorMiddleware)
-	rootRouter.Mount("/api/prompt.go", promptRouter)
+	rootRouter.Mount("/api/prompt", promptRouter)
 
 	// System Settings router
 	systemSettingsRouter := routers.BuildSystemSettingsRouter(tokenValidatorMiddleware)

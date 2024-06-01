@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
@@ -64,8 +63,6 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 	groupSettings.EmailDefaultReceiptPaidById = command.EmailDefaultReceiptPaidById
 	groupSettings.SubjectLineRegexes = command.SubjectLineRegexes
 	groupSettings.EmailWhiteList = command.EmailWhiteList
-
-	fmt.Println(groupSettings.SubjectLineRegexes)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 

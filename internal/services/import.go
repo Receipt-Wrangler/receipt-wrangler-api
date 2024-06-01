@@ -30,15 +30,17 @@ func NewImportService(tx *gorm.DB) ImportService {
 	return service
 }
 
-func (repository ImportService) ImportConfigJson(command commands.ConfigImportCommand) error {
+func (service ImportService) ImportConfigJson(command commands.ConfigImportCommand) error {
 	commandConfig := command.Config
-	txErr := repository.DB.Transaction(func(tx *gorm.DB) error {
-		err := repository.importEmailSettings(tx, commandConfig.EmailSettings)
+	db := service.GetDB()
+
+	txErr := db.Transaction(func(tx *gorm.DB) error {
+		err := service.importEmailSettings(tx, commandConfig.EmailSettings)
 		if err != nil {
 			return err
 		}
 
-		receiptProcessingSettings, err := repository.importAiSettings(tx,
+		receiptProcessingSettings, err := service.importAiSettings(tx,
 			commandConfig.AiSettings)
 		if err != nil {
 			if err.Error() != INVALID_AI_SETTINGS_ERROR {
@@ -46,7 +48,7 @@ func (repository ImportService) ImportConfigJson(command commands.ConfigImportCo
 			}
 		}
 
-		return repository.importSystemSettings(tx, commandConfig, receiptProcessingSettings)
+		return service.importSystemSettings(tx, commandConfig, receiptProcessingSettings)
 	})
 	if txErr != nil {
 		return txErr
@@ -55,7 +57,7 @@ func (repository ImportService) ImportConfigJson(command commands.ConfigImportCo
 	return nil
 }
 
-func (repository ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.AiSettings) (models.ReceiptProcessingSettings, error) {
+func (service ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.AiSettings) (models.ReceiptProcessingSettings, error) {
 	receiptSettingsRepository := repositories.NewReceiptProcessingSettings(tx)
 	var prompt models.Prompt
 	var defaultPromptCount int64
@@ -66,9 +68,13 @@ func (repository ImportService) importAiSettings(tx *gorm.DB, aiSettings structs
 	}
 
 	if defaultPromptCount > 0 {
-		tx.Model(models.Prompt{}).Where("name = ?", constants.DEFAULT_PROMPT_NAME).First(&prompt)
+		err := tx.Model(models.Prompt{}).Where("name = ?", constants.DEFAULT_PROMPT_NAME).First(&prompt).Error
+		if err != nil {
+			return models.ReceiptProcessingSettings{}, err
+		}
 	} else {
-		defaultPrompt, err := CreateDefaultPrompt()
+		promptService := NewPromptService(tx)
+		defaultPrompt, err := promptService.CreateDefaultPrompt()
 		if err != nil {
 			return models.ReceiptProcessingSettings{}, err
 		}
@@ -76,14 +82,37 @@ func (repository ImportService) importAiSettings(tx *gorm.DB, aiSettings structs
 		prompt = defaultPrompt
 	}
 
+	ocrEngine := aiSettings.OcrEngine
+	aiType := aiSettings.AiType
+
+	if aiSettings.OcrEngine == models.TESSERACT {
+		ocrEngine = models.TESSERACT_NEW
+	}
+
+	if aiSettings.OcrEngine == models.EASY_OCR {
+		ocrEngine = models.EASY_OCR_NEW
+	}
+
+	if aiSettings.AiType == models.OPEN_AI {
+		aiType = models.OPEN_AI_NEW
+	}
+
+	if aiSettings.AiType == models.OPEN_AI_CUSTOM {
+		aiType = models.OPEN_AI_CUSTOM_NEW
+	}
+
+	if aiSettings.AiType == models.GEMINI {
+		aiType = models.GEMINI_NEW
+	}
+
 	command := commands.UpsertReceiptProcessingSettingsCommand{
 		Name:       "Imported Settings",
-		AiType:     aiSettings.AiType,
+		AiType:     aiType,
 		Url:        aiSettings.Url,
 		Key:        aiSettings.Key,
 		Model:      aiSettings.Model,
 		NumWorkers: aiSettings.NumWorkers,
-		OcrEngine:  aiSettings.OcrEngine,
+		OcrEngine:  ocrEngine,
 		PromptId:   prompt.ID,
 	}
 	vErrs := command.Validate()
@@ -101,7 +130,7 @@ func (repository ImportService) importAiSettings(tx *gorm.DB, aiSettings structs
 	return createdSettings, nil
 }
 
-func (repository ImportService) importEmailSettings(tx *gorm.DB, settings []structs.EmailSettings) error {
+func (service ImportService) importEmailSettings(tx *gorm.DB, settings []structs.EmailSettings) error {
 	systemEmailRepository := repositories.NewSystemEmailRepository(tx)
 
 	if len(settings) == 0 {
@@ -132,10 +161,10 @@ func (repository ImportService) importEmailSettings(tx *gorm.DB, settings []stru
 		createdSystemEmails = append(createdSystemEmails, systemEmail)
 	}
 
-	return repository.updateGroupSettings(tx, createdSystemEmails)
+	return service.updateGroupSettings(tx, createdSystemEmails)
 }
 
-func (repository ImportService) updateGroupSettings(tx *gorm.DB, createdSystemEmails []models.SystemEmail) error {
+func (service ImportService) updateGroupSettings(tx *gorm.DB, createdSystemEmails []models.SystemEmail) error {
 	groupSettingRepository := repositories.NewGroupSettingsRepository(tx)
 
 	groupSettings := make([]models.GroupSettings, 0)
@@ -173,7 +202,7 @@ func (repository ImportService) updateGroupSettings(tx *gorm.DB, createdSystemEm
 	return nil
 }
 
-func (repository ImportService) importSystemSettings(tx *gorm.DB, config structs.Config, receiptProcessingSettings models.ReceiptProcessingSettings) error {
+func (service ImportService) importSystemSettings(tx *gorm.DB, config structs.Config, receiptProcessingSettings models.ReceiptProcessingSettings) error {
 	systemSettingsRepository := repositories.NewSystemSettingsRepository(tx)
 	_, err := systemSettingsRepository.GetSystemSettings()
 	if err != nil {

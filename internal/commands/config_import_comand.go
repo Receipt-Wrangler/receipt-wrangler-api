@@ -3,7 +3,6 @@ package commands
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/gabriel-vasile/mimetype"
 	"io"
 	"mime/multipart"
@@ -13,7 +12,7 @@ import (
 )
 
 type ConfigImportCommand struct {
-	Files      multipart.File        `json:"file"`
+	File       multipart.File        `json:"file"`
 	FileHeader *multipart.FileHeader `json:"fileHeader"`
 	Config     structs.Config        `json:"config"`
 }
@@ -46,8 +45,6 @@ func (command *ConfigImportCommand) LoadDataFromRequest(w http.ResponseWriter, r
 	config := structs.Config{}
 	fileBytes := make([]byte, fileHeader.Size)
 
-	fmt.Println(file)
-
 	_, err = file.Read(fileBytes)
 	if err != nil {
 		return err
@@ -57,6 +54,10 @@ func (command *ConfigImportCommand) LoadDataFromRequest(w http.ResponseWriter, r
 	if err != nil {
 		return err
 	}
+
+	command.File = file
+	command.FileHeader = fileHeader
+	command.Config = config
 
 	return nil
 }

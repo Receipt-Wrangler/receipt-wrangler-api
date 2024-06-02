@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -32,6 +33,7 @@ func NewImportService(tx *gorm.DB) ImportService {
 
 func (service ImportService) ImportConfigJson(command commands.ConfigImportCommand) error {
 	commandConfig := command.Config
+	receiptProcessingSettings := models.ReceiptProcessingSettings{}
 	db := service.GetDB()
 
 	txErr := db.Transaction(func(tx *gorm.DB) error {
@@ -40,10 +42,10 @@ func (service ImportService) ImportConfigJson(command commands.ConfigImportComma
 			return err
 		}
 
-		receiptProcessingSettings, err := service.importAiSettings(tx,
-			commandConfig.AiSettings)
-		if err != nil {
-			if err.Error() != INVALID_AI_SETTINGS_ERROR {
+		if len(commandConfig.AiSettings.AiType) > 0 {
+			receiptProcessingSettings, err = service.importAiSettings(tx,
+				commandConfig.AiSettings)
+			if err != nil {
 				return err
 			}
 		}
@@ -84,6 +86,7 @@ func (service ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.Ai
 
 	ocrEngine := aiSettings.OcrEngine
 	aiType := aiSettings.AiType
+	numWorkers := aiSettings.NumWorkers
 
 	if aiSettings.OcrEngine == models.TESSERACT {
 		ocrEngine = models.TESSERACT_NEW
@@ -105,13 +108,26 @@ func (service ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.Ai
 		aiType = models.GEMINI_NEW
 	}
 
+	if numWorkers == 0 {
+		numWorkers = 1
+	}
+
+	var importedSettingsCount int64
+	err = tx.Model(models.ReceiptProcessingSettings{}).Where("name LIKE  ?", "Imported Settings%").Count(&importedSettingsCount).Error
+
+	settingsName := "Imported Settings"
+	if importedSettingsCount > 0 {
+		settingsName = fmt.Sprintf("Imported Settings (%d)", importedSettingsCount+1)
+
+	}
+
 	command := commands.UpsertReceiptProcessingSettingsCommand{
-		Name:       "Imported Settings",
+		Name:       settingsName,
 		AiType:     aiType,
 		Url:        aiSettings.Url,
 		Key:        aiSettings.Key,
 		Model:      aiSettings.Model,
-		NumWorkers: aiSettings.NumWorkers,
+		NumWorkers: numWorkers,
 		OcrEngine:  ocrEngine,
 		PromptId:   prompt.ID,
 	}
@@ -215,10 +231,13 @@ func (service ImportService) importSystemSettings(tx *gorm.DB, config structs.Co
 	}
 
 	command := commands.UpsertSystemSettingsCommand{
-		EnableLocalSignUp:           config.Features.EnableLocalSignUp,
-		DebugOcr:                    config.Debug.DebugOcr,
-		EmailPollingInterval:        emailPollingInterval,
-		ReceiptProcessingSettingsId: &receiptProcessingSettings.ID,
+		EnableLocalSignUp:    config.Features.EnableLocalSignUp,
+		DebugOcr:             config.Debug.DebugOcr,
+		EmailPollingInterval: emailPollingInterval,
+	}
+
+	if receiptProcessingSettings.ID != 0 {
+		command.ReceiptProcessingSettingsId = &receiptProcessingSettings.ID
 	}
 
 	_, err = systemSettingsRepository.UpdateSystemSettings(command)

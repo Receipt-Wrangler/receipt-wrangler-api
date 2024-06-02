@@ -206,7 +206,8 @@ func CreateDefaultPrompt(w http.ResponseWriter, r *http.Request) {
 		UserRole:     models.ADMIN,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			prompt, err := services.CreateDefaultPrompt()
+			promptService := services.NewPromptService(nil)
+			prompt, err := promptService.CreateDefaultPrompt()
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

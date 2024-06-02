@@ -3,15 +3,29 @@ package services
 import (
 	"errors"
 	"fmt"
+	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 )
 
-func CreateDefaultPrompt() (models.Prompt, error) {
-	db := repositories.GetDB()
+type PromptService struct {
+	BaseService
+}
+
+func NewPromptService(tx *gorm.DB) PromptService {
+	service := PromptService{BaseService: BaseService{
+		DB: repositories.GetDB(),
+		TX: tx,
+	}}
+	return service
+}
+
+func (service PromptService) CreateDefaultPrompt() (models.Prompt, error) {
+	db := service.GetDB()
 	var defaultPromptCount int64
-	db.Model(models.Prompt{}).Where("name = ?", "Default Prompt").Count(&defaultPromptCount)
+	db.Model(models.Prompt{}).Where("name = ?", constants.DEFAULT_PROMPT_NAME).Count(&defaultPromptCount)
 
 	defaultPrompt := fmt.Sprintf(`
 	Find the receipt's name, total cost, and date. Format the found data as:
@@ -47,12 +61,12 @@ func CreateDefaultPrompt() (models.Prompt, error) {
 `)
 
 	if defaultPromptCount > 0 {
-		return models.Prompt{}, errors.New("Default prompt already exists")
+		return models.Prompt{}, errors.New("default prompt already exists")
 	}
 
-	promptRepository := repositories.NewPromptRepository(nil)
+	promptRepository := repositories.NewPromptRepository(service.TX)
 	command := commands.UpsertPromptCommand{
-		Name:        "Default Prompt",
+		Name:        constants.DEFAULT_PROMPT_NAME,
 		Description: "Default prompt used for previous versions of Receipt Wrangler.",
 		Prompt:      defaultPrompt,
 	}

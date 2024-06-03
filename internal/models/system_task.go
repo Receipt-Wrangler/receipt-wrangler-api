@@ -42,6 +42,7 @@ func (self SystemTaskStatus) Value() (driver.Value, error) {
 type SystemTaskType string
 
 const (
+	CHAT_COMPLETION                                SystemTaskType = "CHAT_COMPLETION"
 	MAGIC_FILL                                     SystemTaskType = "MAGIC_FILL"
 	QUICK_SCAN                                     SystemTaskType = "QUICK_SCAN"
 	EMAIL_UPLOAD                                   SystemTaskType = "EMAIL_UPLOAD"
@@ -56,7 +57,13 @@ func (self *SystemTaskType) Scan(value string) error {
 }
 
 func (self SystemTaskType) Value() (driver.Value, error) {
-	if self != SYSTEM_EMAIL_CONNECTIVITY_CHECK && self != RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK && self != QUICK_SCAN && self != MAGIC_FILL && self != EMAIL_UPLOAD && self != EMAIL_READ {
+	if self != SYSTEM_EMAIL_CONNECTIVITY_CHECK &&
+		self != RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK &&
+		self != QUICK_SCAN &&
+		self != MAGIC_FILL &&
+		self != EMAIL_UPLOAD &&
+		self != EMAIL_READ &&
+		self != CHAT_COMPLETION {
 		return nil, errors.New("invalid SystemTaskType")
 	}
 	return string(self), nil

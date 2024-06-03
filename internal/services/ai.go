@@ -36,11 +36,15 @@ type AiService struct {
 	ReceiptProcessingSettings models.ReceiptProcessingSettings
 }
 
+// TODO: V5 create system task for full raw response
 func (service *AiService) CreateChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, error) {
 	switch service.ReceiptProcessingSettings.AiType {
 
 	case models.OPEN_AI_CUSTOM_NEW:
 		return service.OpenAiCustomChatCompletion(messages)
+
+	case models.OLLAMA:
+		return service.OllamaChatCompletion(messages)
 
 	case models.OPEN_AI_NEW:
 		return service.OpenAiChatCompletion(messages, decryptKey)
@@ -165,6 +169,59 @@ func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClient
 
 	if len(responseObject.Choices) >= 0 {
 		result = responseObject.Choices[0].Message.Content
+	}
+
+	return result, nil
+}
+
+func (service *AiService) OllamaChatCompletion(messages []structs.AiClientMessage) (string, error) {
+	prompt := messages[0].Content
+
+	result := ""
+	body := map[string]interface{}{
+		"model":       service.ReceiptProcessingSettings.Model,
+		"prompt":      prompt,
+		"temperature": 0,
+		"stream":      false,
+	}
+	httpClient := http.Client{}
+	httpClient.Timeout = 10 * time.Minute
+
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return "", err
+	}
+
+	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
+	url := fmt.Sprintf("%s/api/generate", service.ReceiptProcessingSettings.Url)
+
+	request, err := http.NewRequest(http.MethodPost, url, bodyBytesBuffer)
+	if err != nil {
+		return "", err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Close = true
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return "", err
+	}
+
+	responseBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	var responseObject structs.OllamaResponse
+	err = json.Unmarshal(responseBody, &responseObject)
+	if err != nil {
+		return "", err
+	}
+
+	if len(responseObject.Response) >= 0 {
+		result = responseObject.Response
 	}
 
 	return result, nil

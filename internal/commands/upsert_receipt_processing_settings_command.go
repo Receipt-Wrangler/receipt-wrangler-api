@@ -72,7 +72,7 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 		}
 	}
 
-	if command.AiType == models.OPEN_AI_CUSTOM {
+	if command.AiType == models.OPEN_AI_CUSTOM || command.AiType == models.OLLAMA {
 		if len(command.Url) == 0 {
 			errors["url"] = "url is required"
 		}
@@ -82,5 +82,13 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 }
 
 func (command *UpsertReceiptProcessingSettingsCommand) IsEmpty() bool {
-	return command.Name == "" && command.Description == "" && command.AiType == "" && command.Url == "" && command.Key == "" && command.Model == "" && command.NumWorkers == 0 && command.OcrEngine == "" && command.PromptId == 0
+	return command.Name == "" &&
+		command.Description == "" &&
+		command.AiType == "" &&
+		command.Url == "" &&
+		command.Key == "" &&
+		command.Model == "" &&
+		command.NumWorkers == 0 &&
+		command.OcrEngine == "" &&
+		command.PromptId == 0
 }

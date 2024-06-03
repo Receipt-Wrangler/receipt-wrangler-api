@@ -84,6 +84,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 		systemTaskCommand.ResultDescription = err.Error()
 	} else {
 		systemTaskCommand.Status = models.SYSTEM_TASK_SUCCEEDED
+		systemTaskCommand.ResultDescription = "Connection successful"
 	}
 	err = nil
 

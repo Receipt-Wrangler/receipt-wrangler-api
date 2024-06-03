@@ -45,7 +45,9 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
-	err := query.Preload(clause.Associations).Find(&results).Error
+	filteredTypes := []models.SystemTaskType{models.CHAT_COMPLETION}
+
+	err := query.Preload(clause.Associations).Where("type NOT IN ?", filteredTypes).Find(&results).Error
 	if query.Error != nil {
 		return nil, 0, err
 	}

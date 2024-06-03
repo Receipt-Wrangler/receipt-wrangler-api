@@ -1,4 +1,4 @@
-package structs
+package commands
 
 type ReceiptProcessingMetadata struct {
 	ReceiptProcessingSettingsIdRan              uint
@@ -7,4 +7,5 @@ type ReceiptProcessingMetadata struct {
 	DidFallbackReceiptProcessingSettingsSucceed bool
 	RawResponse                                 string
 	FallbackRawResponse                         string
+	ChatCompletionSystemTaskCommand             UpsertSystemTaskCommand
 }

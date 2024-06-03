@@ -57,18 +57,18 @@ func NewReceiptProcessingService(tx *gorm.DB, receiptProcessingSettingsId string
 	return service, nil
 }
 
-func (service ReceiptProcessingService) ReadReceiptImage(imagePath string) (commands.UpsertReceiptCommand, structs.ReceiptProcessingMetadata, error) {
+func (service ReceiptProcessingService) ReadReceiptImage(imagePath string) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
 	var receipt commands.UpsertReceiptCommand
-	metadata := structs.ReceiptProcessingMetadata{}
+	metadata := commands.ReceiptProcessingMetadata{}
 
-	receipt, rawResponse, err := service.processImage(imagePath, service.ReceiptProcessingSettings)
+	receipt, rawResponse, systemTaskCommand, err := service.processImage(imagePath, service.ReceiptProcessingSettings)
 	if err != nil {
 		metadata.ReceiptProcessingSettingsIdRan = service.ReceiptProcessingSettings.ID
 		metadata.DidReceiptProcessingSettingsSucceed = false
 		metadata.RawResponse = err.Error()
 
 		if service.FallbackReceiptProcessingSettings.ID > 0 {
-			fallbackReceipt, fallbackRawResponse, fallbackErr := service.processImage(imagePath, service.FallbackReceiptProcessingSettings)
+			fallbackReceipt, fallbackRawResponse, fallbackSystemTaskCommand, fallbackErr := service.processImage(imagePath, service.FallbackReceiptProcessingSettings)
 			metadata.FallbackReceiptProcessingSettingsIdRan = service.FallbackReceiptProcessingSettings.ID
 			receipt = fallbackReceipt
 			err = fallbackErr
@@ -77,6 +77,7 @@ func (service ReceiptProcessingService) ReadReceiptImage(imagePath string) (comm
 				metadata.DidFallbackReceiptProcessingSettingsSucceed = false
 				metadata.FallbackRawResponse = err.Error()
 			} else {
+				metadata.ChatCompletionSystemTaskCommand = fallbackSystemTaskCommand
 				metadata.DidFallbackReceiptProcessingSettingsSucceed = true
 				metadata.FallbackRawResponse = fallbackRawResponse
 			}
@@ -85,24 +86,25 @@ func (service ReceiptProcessingService) ReadReceiptImage(imagePath string) (comm
 		metadata.ReceiptProcessingSettingsIdRan = service.ReceiptProcessingSettings.ID
 		metadata.DidReceiptProcessingSettingsSucceed = true
 		metadata.RawResponse = rawResponse
+		metadata.ChatCompletionSystemTaskCommand = systemTaskCommand
 	}
 
 	return receipt, metadata, err
 }
 
-func (service ReceiptProcessingService) processImage(imagePath string, receiptProcessingSettings models.ReceiptProcessingSettings) (commands.UpsertReceiptCommand, string, error) {
+func (service ReceiptProcessingService) processImage(imagePath string, receiptProcessingSettings models.ReceiptProcessingSettings) (commands.UpsertReceiptCommand, string, commands.UpsertSystemTaskCommand, error) {
 	aiMessages := []structs.AiClientMessage{}
 	receipt := commands.UpsertReceiptCommand{}
 
 	ocrService := NewOcrService(service.TX, receiptProcessingSettings)
 	ocrText, err := ocrService.ReadImage(imagePath)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, "", err
+		return commands.UpsertReceiptCommand{}, "", commands.UpsertSystemTaskCommand{}, err
 	}
 
 	prompt, err := service.buildPrompt(receiptProcessingSettings, ocrText)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, "", err
+		return commands.UpsertReceiptCommand{}, "", commands.UpsertSystemTaskCommand{}, err
 	}
 
 	aiMessages = append(aiMessages, structs.AiClientMessage{
@@ -114,17 +116,17 @@ func (service ReceiptProcessingService) processImage(imagePath string, receiptPr
 		ReceiptProcessingSettings: receiptProcessingSettings,
 	}
 
-	response, err := aiClient.CreateChatCompletion(aiMessages, true)
+	response, systemTaskCommand, err := aiClient.CreateChatCompletion(aiMessages, true)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, response, err
+		return commands.UpsertReceiptCommand{}, response, commands.UpsertSystemTaskCommand{}, err
 	}
 
 	err = json.Unmarshal([]byte(response), &receipt)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, response, err
+		return commands.UpsertReceiptCommand{}, response, commands.UpsertSystemTaskCommand{}, err
 	}
 
-	return receipt, response, nil
+	return receipt, response, systemTaskCommand, nil
 }
 
 func (service ReceiptProcessingService) buildPrompt(receiptProcessingSettings models.ReceiptProcessingSettings, ocrText string) (string, error) {

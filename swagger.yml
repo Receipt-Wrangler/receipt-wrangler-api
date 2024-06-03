@@ -2198,6 +2198,7 @@ components:
         - "OPEN_AI_CUSTOM"
         - "OPEN_AI"
         - "GEMINI"
+        - "OLLAMA"
     OcrEngine:
       type: string
       enum:

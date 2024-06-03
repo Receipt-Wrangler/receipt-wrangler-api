@@ -36,26 +36,45 @@ type AiService struct {
 	ReceiptProcessingSettings models.ReceiptProcessingSettings
 }
 
-func (service *AiService) CreateChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, error) {
-	switch service.ReceiptProcessingSettings.AiType {
+func (service *AiService) CreateChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, commands.UpsertSystemTaskCommand, error) {
+	systemTask := commands.UpsertSystemTaskCommand{
+		Type:                 models.CHAT_COMPLETION,
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
+		AssociatedEntityId:   service.ReceiptProcessingSettings.ID,
+		StartedAt:            time.Now(),
+	}
+	response, rawResponse := "", ""
+	err := error(nil)
 
+	switch service.ReceiptProcessingSettings.AiType {
 	case models.OPEN_AI_CUSTOM_NEW:
-		return service.OpenAiCustomChatCompletion(messages)
+		response, rawResponse, err = service.OpenAiCustomChatCompletion(messages)
+
+	case models.OLLAMA:
+		response, rawResponse, err = service.OllamaChatCompletion(messages)
 
 	case models.OPEN_AI_NEW:
-		return service.OpenAiChatCompletion(messages, decryptKey)
+		response, rawResponse, err = service.OpenAiChatCompletion(messages, decryptKey)
 
 	case models.GEMINI_NEW:
-		return service.GeminiChatCompletion(messages, decryptKey)
+		response, rawResponse, err = service.GeminiChatCompletion(messages, decryptKey)
+	}
+	if err != nil {
+		return "", commands.UpsertSystemTaskCommand{}, err
 	}
 
-	return "", nil
+	endedAt := time.Now()
+	systemTask.ResultDescription = rawResponse
+	systemTask.EndedAt = &endedAt
+
+	return response, systemTask, nil
 }
 
-func (service *AiService) OpenAiChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, error) {
+func (service *AiService) OpenAiChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, string, error) {
 	key, err := service.getKey(decryptKey)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	client := openai.NewClient(key)
 
@@ -77,23 +96,28 @@ func (service *AiService) OpenAiChatCompletion(messages []structs.AiClientMessag
 		},
 	)
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+
+	responseBytes, err := json.Marshal(resp)
+	if err != nil {
+		return "", "", err
 	}
 
 	response := resp.Choices[0].Message.Content
-	return response, nil
+	return response, string(responseBytes), nil
 }
 
-func (service *AiService) GeminiChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, error) {
+func (service *AiService) GeminiChatCompletion(messages []structs.AiClientMessage, decryptKey bool) (string, string, error) {
 	ctx := context.Background()
 	key, err := service.getKey(decryptKey)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	client, err := genai.NewClient(ctx, option.WithAPIKey(key))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer client.Close()
 
@@ -105,20 +129,26 @@ func (service *AiService) GeminiChatCompletion(messages []structs.AiClientMessag
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+
+	responseBytes, err := json.Marshal(resp)
+	if err != nil {
+		return "", "", err
 	}
 
 	if len(resp.Candidates) > 0 {
 		for _, part := range resp.Candidates[0].Content.Parts {
+
 			json := fmt.Sprintf("%s", part)
-			return json, nil
+			return json, string(responseBytes), nil
 		}
 	}
 
-	return "", nil
+	return "", "", nil
 }
 
-func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClientMessage) (string, error) {
+func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClientMessage) (string, string, error) {
 	result := ""
 	body := map[string]interface{}{
 		"model":       service.ReceiptProcessingSettings.Model,
@@ -132,14 +162,14 @@ func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClient
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
 
 	request, err := http.NewRequest(http.MethodPost, service.ReceiptProcessingSettings.Url, bodyBytesBuffer)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	request.Header.Set("Content-Type", "application/json")
@@ -147,12 +177,12 @@ func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClient
 
 	response, err := httpClient.Do(request)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer response.Body.Close()
 
@@ -160,14 +190,77 @@ func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClient
 
 	err = json.Unmarshal(responseBody, &responseObject)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if len(responseObject.Choices) >= 0 {
 		result = responseObject.Choices[0].Message.Content
 	}
 
-	return result, nil
+	responseBytes, err := json.Marshal(responseObject)
+	if err != nil {
+		return "", "", err
+	}
+
+	return result, string(responseBytes), nil
+}
+
+func (service *AiService) OllamaChatCompletion(messages []structs.AiClientMessage) (string, string, error) {
+	prompt := messages[0].Content
+
+	result := ""
+	body := map[string]interface{}{
+		"model":       service.ReceiptProcessingSettings.Model,
+		"prompt":      prompt,
+		"temperature": 0,
+		"stream":      false,
+	}
+	httpClient := http.Client{}
+	httpClient.Timeout = 10 * time.Minute
+
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return "", "", err
+	}
+
+	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
+	url := fmt.Sprintf("%s/api/generate", service.ReceiptProcessingSettings.Url)
+
+	request, err := http.NewRequest(http.MethodPost, url, bodyBytesBuffer)
+	if err != nil {
+		return "", "", err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Close = true
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return "", "", err
+	}
+
+	responseBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", "", err
+	}
+	defer response.Body.Close()
+
+	var responseObject structs.OllamaResponse
+	err = json.Unmarshal(responseBody, &responseObject)
+	if err != nil {
+		return "", "", err
+	}
+
+	if len(responseObject.Response) >= 0 {
+		result = responseObject.Response
+	}
+
+	responseBytes, err := json.Marshal(responseObject)
+	if err != nil {
+		return "", "", err
+	}
+
+	return result, string(responseBytes), nil
 }
 
 func (service *AiService) CheckConnectivity(ranByUserId uint, decryptKey bool) (models.SystemTask, error) {
@@ -184,7 +277,7 @@ func (service *AiService) CheckConnectivity(ranByUserId uint, decryptKey bool) (
 	}
 
 	startedAt := time.Now()
-	response, err := service.CreateChatCompletion(messages, decryptKey)
+	response, _, err := service.CreateChatCompletion(messages, decryptKey)
 	if err != nil {
 		systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
 		systemTaskCommand.ResultDescription = err.Error()

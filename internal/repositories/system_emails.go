@@ -3,6 +3,7 @@ package repositories
 import (
 	"errors"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
@@ -33,7 +34,7 @@ func (repository SystemEmailRepository) GetPagedSystemEmails(command commands.Pa
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
-	err := db.Model(models.SystemEmail{}).Find(&systemEmails).Error
+	err := db.Model(models.SystemEmail{}).Preload(clause.Associations).Find(&systemEmails).Error
 	if err != nil {
 		return nil, err
 	}

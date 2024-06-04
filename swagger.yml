@@ -3646,6 +3646,10 @@ components:
               format: uint64
             resultDescription:
               type: string
+            childSystemTasks:
+              type: array
+              items:
+                $ref: "#/components/schemas/SystemTask"
     GetSystemTaskCommand:
       allOf:
         - $ref: "#/components/schemas/PagedRequestCommand"

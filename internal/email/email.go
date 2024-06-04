@@ -229,6 +229,11 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						return err
 					}
 
+					receiptBytes, err := json.Marshal(createdReceipt)
+					if err != nil {
+						return err
+					}
+
 					fileData := models.FileData{
 						ReceiptId: createdReceipt.ID,
 						Name:      attachment.Filename,
@@ -251,12 +256,12 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						AssociatedEntityId:   groupSettingsToUse.SystemEmail.ID,
 						StartedAt:            emailProcessStart,
 						EndedAt:              &emailProcessEnd,
+						RanByUserId:          nil,
 						ResultDescription: fmt.Sprintf(
-							"Created receipt: %d for group: %d from the captured email metadata: %s",
-							createdReceipt.ID,
-							groupSettingsToUse.GroupId,
-							string(metadataBytes)),
-						RanByUserId: nil,
+							"Metadata: %s, Created Receipt: %s",
+							string(metadataBytes),
+							string(receiptBytes),
+						),
 					}
 
 					if processingSystemTasks.SystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {

@@ -15,9 +15,11 @@ type SystemTask struct {
 	StartedAt              time.Time            `json:"startedAt"`
 	EndedAt                *time.Time           `json:"endedAt"`
 	ResultDescription      string               `json:"resultDescription"`
+	RanByUser              *User                `json:"-"`
 	RanByUserId            *uint                `json:"ranByUserId"`
-	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
 	AssociatedSystemTask   *SystemTask          `json:"associatedSystemTask"`
+	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
+	ChildSystemTasks       []*SystemTask        `gorm:"foreignKey:AssociatedSystemTaskId" json:"childSystemTasks"`
 }
 
 type SystemTaskStatus string

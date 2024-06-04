@@ -30,7 +30,7 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 		return nil, 0, errors.New("invalid column name")
 	}
 
-	query := db.Model(&models.SystemTask{})
+	query := db.Model(&models.SystemTask{}).Where("associated_system_task_id IS NULL")
 
 	if command.AssociatedEntityId != 0 {
 		query = query.Where("associated_entity_id = ?", command.AssociatedEntityId)
@@ -45,7 +45,7 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
-	err := query.Preload(clause.Associations).Where("associated_system_task_id IS NULL").Find(&results).Error
+	err := query.Preload(clause.Associations).Find(&results).Error
 	if query.Error != nil {
 		return nil, 0, err
 	}

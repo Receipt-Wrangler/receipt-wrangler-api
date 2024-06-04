@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -36,26 +37,33 @@ func NewOcrService(tx *gorm.DB, receiptProcessingSettings models.ReceiptProcessi
 	return service
 }
 
-func (service OcrService) ReadImage(path string) (string, error) {
+func (service OcrService) ReadImage(path string) (string, commands.UpsertSystemTaskCommand, error) {
 	var text string
 	startTime := time.Now()
+	systemTaskCommand := commands.UpsertSystemTaskCommand{
+		Type:                 models.OCR_PROCESSING,
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
+		AssociatedEntityId:   service.ReceiptProcessingSettings.ID,
+		StartedAt:            time.Now(),
+	}
 
 	imageBytes, err := service.prepareImage(path)
 	if err != nil {
-		return "", err
+		return "", commands.UpsertSystemTaskCommand{}, err
 	}
 
 	if service.ReceiptProcessingSettings.OcrEngine == models.TESSERACT_NEW {
 		text, err = service.ReadImageWithTesseract(imageBytes)
 		if err != nil {
-			return "", err
+			return "", commands.UpsertSystemTaskCommand{}, err
 		}
 	}
 
 	if service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
 		text, err = service.ReadImageWithEasyOcr(imageBytes)
 		if err != nil {
-			return "", err
+			return "", commands.UpsertSystemTaskCommand{}, err
 		}
 	}
 	endTime := time.Now()
@@ -65,17 +73,21 @@ func (service OcrService) ReadImage(path string) (string, error) {
 	systemSettingsRepository := repositories.NewSystemSettingsRepository(service.TX)
 	systemSettings, err := systemSettingsRepository.GetSystemSettings()
 	if err != nil {
-		return "", err
+		return "", commands.UpsertSystemTaskCommand{}, err
 	}
 
 	if systemSettings.DebugOcr {
 		err = service.writeDebuggingFiles(text, path, imageBytes, elapsedTime)
 		if err != nil {
-			return "", err
+			return "", commands.UpsertSystemTaskCommand{}, err
 		}
 	}
 
-	return text, nil
+	ocrEndTime := time.Now()
+	systemTaskCommand.EndedAt = &ocrEndTime
+	systemTaskCommand.ResultDescription = text
+
+	return text, systemTaskCommand, nil
 }
 
 func (service OcrService) ReadImageWithTesseract(preparedImageBytes []byte) (string, error) {

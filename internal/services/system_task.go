@@ -52,17 +52,7 @@ func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(met
 
 func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands.ReceiptProcessingMetadata, startDate time.Time, endDate time.Time, taskType models.SystemTaskType, userId uint) (structs.ReceiptProcessingSystemTasks, error) {
 	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
-	var chatCompletionSystemTask models.SystemTask
 	result := structs.ReceiptProcessingSystemTasks{}
-
-	if len(metadata.ChatCompletionSystemTaskCommand.Type) > 0 {
-		createdSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.ChatCompletionSystemTaskCommand)
-		if err != nil {
-			return structs.ReceiptProcessingSystemTasks{}, err
-		}
-
-		chatCompletionSystemTask = createdSystemTask
-	}
 
 	if metadata.ReceiptProcessingSettingsIdRan > 0 {
 		systemTask := commands.UpsertSystemTaskCommand{
@@ -76,15 +66,16 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			RanByUserId:          &userId,
 		}
 
-		if systemTask.Status == models.SYSTEM_TASK_SUCCEEDED && chatCompletionSystemTask.ID > 0 {
-			systemTask.AssociatedSystemTaskId = &chatCompletionSystemTask.ID
-		}
-
 		createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTask)
 		if err != nil {
 			return structs.ReceiptProcessingSystemTasks{}, err
 		}
 		result.SystemTask = createdSystemTask
+
+		_, err = service.CreateChildSystemTasks(createdSystemTask, metadata)
+		if err != nil {
+			return structs.ReceiptProcessingSystemTasks{}, err
+		}
 	}
 
 	if metadata.FallbackReceiptProcessingSettingsIdRan > 0 {
@@ -99,11 +90,12 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			RanByUserId:          &userId,
 		}
 
-		if fallbackSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED && chatCompletionSystemTask.ID > 0 {
-			fallbackSystemTask.AssociatedSystemTaskId = &chatCompletionSystemTask.ID
+		createdFallbackSystemTask, err := systemTaskRepository.CreateSystemTask(fallbackSystemTask)
+		if err != nil {
+			return structs.ReceiptProcessingSystemTasks{}, err
 		}
 
-		createdFallbackSystemTask, err := systemTaskRepository.CreateSystemTask(fallbackSystemTask)
+		_, err = service.CreateChildSystemTasks(createdFallbackSystemTask, metadata)
 		if err != nil {
 			return structs.ReceiptProcessingSystemTasks{}, err
 		}
@@ -112,6 +104,33 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 	}
 
 	return result, nil
+}
+
+func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.SystemTask, metadata commands.ReceiptProcessingMetadata) ([]models.SystemTask, error) {
+	var systemTasks []models.SystemTask
+	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+
+	if len(metadata.OcrSystemTaskCommand.Type) > 0 && parentSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+		metadata.OcrSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		createdSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.OcrSystemTaskCommand)
+		if err != nil {
+			return []models.SystemTask{}, err
+		}
+
+		systemTasks = append(systemTasks, createdSystemTask)
+	}
+
+	if len(metadata.ChatCompletionSystemTaskCommand.Type) > 0 && parentSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+		metadata.ChatCompletionSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		createdSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.ChatCompletionSystemTaskCommand)
+		if err != nil {
+			return []models.SystemTask{}, err
+		}
+
+		systemTasks = append(systemTasks, createdSystemTask)
+	}
+
+	return systemTasks, nil
 }
 
 func (service SystemTaskService) BoolToSystemTaskStatus(value bool) models.SystemTaskStatus {

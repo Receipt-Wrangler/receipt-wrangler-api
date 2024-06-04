@@ -161,7 +161,7 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrE
 					results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
 				}
 				ocrService := NewOcrService(nil, systemReceiptProcessingSettings.ReceiptProcessingSettings)
-				ocrText, err := ocrService.ReadImage(filePath)
+				ocrText, _, err := ocrService.ReadImage(filePath)
 				if err != nil {
 					results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
 				}

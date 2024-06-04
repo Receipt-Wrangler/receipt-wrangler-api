@@ -8,4 +8,5 @@ type ReceiptProcessingMetadata struct {
 	RawResponse                                 string
 	FallbackRawResponse                         string
 	ChatCompletionSystemTaskCommand             UpsertSystemTaskCommand
+	OcrSystemTaskCommand                        UpsertSystemTaskCommand
 }

@@ -208,8 +208,15 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 
 				command := baseCommand
 				command.GroupId = groupSettingsToUse.GroupId
-				command.Status = groupSettingsToUse.EmailDefaultReceiptStatus
-				command.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
+
+				if len(command.Status) == 0 {
+					command.Status = groupSettingsToUse.EmailDefaultReceiptStatus
+				}
+
+				if command.PaidByUserID == 0 {
+					command.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
+				}
+
 				command.CreatedByString = "Email Integration"
 
 				err = db.Transaction(func(tx *gorm.DB) error {

@@ -122,8 +122,14 @@ func QuickScan(
 		return models.Receipt{}, err
 	}
 
-	receiptCommand.PaidByUserID = paidByUserId
-	receiptCommand.Status = models.ReceiptStatus(status)
+	if receiptCommand.PaidByUserID == 0 {
+		receiptCommand.PaidByUserID = paidByUserId
+	}
+
+	if len(receiptCommand.Status) == 0 {
+		receiptCommand.Status = models.ReceiptStatus(status)
+	}
+
 	receiptCommand.GroupId = groupId
 
 	err = db.Transaction(func(tx *gorm.DB) error {

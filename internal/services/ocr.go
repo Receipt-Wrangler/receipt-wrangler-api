@@ -50,20 +50,26 @@ func (service OcrService) ReadImage(path string) (string, commands.UpsertSystemT
 
 	imageBytes, err := service.prepareImage(path)
 	if err != nil {
-		return "", commands.UpsertSystemTaskCommand{}, err
+		systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+		systemTaskCommand.ResultDescription = err.Error()
+		return "", systemTaskCommand, err
 	}
 
 	if service.ReceiptProcessingSettings.OcrEngine == models.TESSERACT_NEW {
 		text, err = service.ReadImageWithTesseract(imageBytes)
 		if err != nil {
-			return "", commands.UpsertSystemTaskCommand{}, err
+			systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+			systemTaskCommand.ResultDescription = err.Error()
+			return "", systemTaskCommand, err
 		}
 	}
 
 	if service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
 		text, err = service.ReadImageWithEasyOcr(imageBytes)
 		if err != nil {
-			return "", commands.UpsertSystemTaskCommand{}, err
+			systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+			systemTaskCommand.ResultDescription = err.Error()
+			return "", systemTaskCommand, err
 		}
 	}
 	endTime := time.Now()
@@ -73,7 +79,9 @@ func (service OcrService) ReadImage(path string) (string, commands.UpsertSystemT
 	systemSettingsRepository := repositories.NewSystemSettingsRepository(service.TX)
 	systemSettings, err := systemSettingsRepository.GetSystemSettings()
 	if err != nil {
-		return "", commands.UpsertSystemTaskCommand{}, err
+		systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+		systemTaskCommand.ResultDescription = err.Error()
+		return "", systemTaskCommand, err
 	}
 
 	if systemSettings.DebugOcr {

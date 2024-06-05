@@ -252,7 +252,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						EndedAt:              &emailProcessEnd,
 						RanByUserId:          nil,
 						ResultDescription: fmt.Sprintf(
-							"Metadata: %s, Created Receipt: %s",
+							"Metadata: %; Created Receipt: %s",
 							string(metadataBytes),
 							string(receiptBytes),
 						),

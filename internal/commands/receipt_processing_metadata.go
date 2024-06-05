@@ -7,6 +7,8 @@ type ReceiptProcessingMetadata struct {
 	DidFallbackReceiptProcessingSettingsSucceed bool
 	RawResponse                                 string
 	FallbackRawResponse                         string
-	ChatCompletionSystemTaskCommand             UpsertSystemTaskCommand
 	OcrSystemTaskCommand                        UpsertSystemTaskCommand
+	ChatCompletionSystemTaskCommand             UpsertSystemTaskCommand
+	FallbackOcrSystemTaskCommand                UpsertSystemTaskCommand
+	FallbackChatCompletionSystemTaskCommand     UpsertSystemTaskCommand
 }

@@ -79,17 +79,18 @@ func (service ReceiptProcessingService) ReadReceiptImage(imagePath string) (comm
 			} else {
 				metadata.DidFallbackReceiptProcessingSettingsSucceed = true
 				metadata.FallbackRawResponse = fallbackRawResponse
-				metadata.ChatCompletionSystemTaskCommand = fallbackSystemTaskCommand
-				metadata.OcrSystemTaskCommand = fallbackOcrSystemTaskCommand
 			}
+
+			metadata.FallbackOcrSystemTaskCommand = fallbackOcrSystemTaskCommand
+			metadata.FallbackChatCompletionSystemTaskCommand = fallbackSystemTaskCommand
 		}
 	} else {
 		metadata.ReceiptProcessingSettingsIdRan = service.ReceiptProcessingSettings.ID
 		metadata.DidReceiptProcessingSettingsSucceed = true
 		metadata.RawResponse = rawResponse
-		metadata.ChatCompletionSystemTaskCommand = systemTaskCommand
-		metadata.OcrSystemTaskCommand = ocrSystemTaskCommand
 	}
+	metadata.OcrSystemTaskCommand = ocrSystemTaskCommand
+	metadata.ChatCompletionSystemTaskCommand = systemTaskCommand
 
 	return receipt, metadata, err
 }
@@ -101,12 +102,12 @@ func (service ReceiptProcessingService) processImage(imagePath string, receiptPr
 	ocrService := NewOcrService(service.TX, receiptProcessingSettings)
 	ocrText, ocrSystemTaskCommand, err := ocrService.ReadImage(imagePath)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, "", commands.UpsertSystemTaskCommand{}, commands.UpsertSystemTaskCommand{}, err
+		return commands.UpsertReceiptCommand{}, "", commands.UpsertSystemTaskCommand{}, ocrSystemTaskCommand, err
 	}
 
 	prompt, err := service.buildPrompt(receiptProcessingSettings, ocrText)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, "", commands.UpsertSystemTaskCommand{}, commands.UpsertSystemTaskCommand{}, err
+		return commands.UpsertReceiptCommand{}, "", commands.UpsertSystemTaskCommand{}, ocrSystemTaskCommand, err
 	}
 
 	aiMessages = append(aiMessages, structs.AiClientMessage{
@@ -120,12 +121,12 @@ func (service ReceiptProcessingService) processImage(imagePath string, receiptPr
 
 	response, chatCompletionSystemTaskCommand, err := aiClient.CreateChatCompletion(aiMessages, true)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, response, commands.UpsertSystemTaskCommand{}, commands.UpsertSystemTaskCommand{}, err
+		return commands.UpsertReceiptCommand{}, response, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, err
 	}
 
 	err = json.Unmarshal([]byte(response), &receipt)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, response, commands.UpsertSystemTaskCommand{}, commands.UpsertSystemTaskCommand{}, err
+		return commands.UpsertReceiptCommand{}, response, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, err
 	}
 
 	return receipt, response, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, nil

@@ -61,7 +61,12 @@ func (service *AiService) CreateChatCompletion(messages []structs.AiClientMessag
 		response, rawResponse, err = service.GeminiChatCompletion(messages, decryptKey)
 	}
 	if err != nil {
-		return "", commands.UpsertSystemTaskCommand{}, err
+		endedAt := time.Now()
+		systemTask.Status = models.SYSTEM_TASK_FAILED
+		systemTask.ResultDescription = fmt.Sprintf("Error: %s; RawResponse: %s", err.Error(), rawResponse)
+		systemTask.EndedAt = &endedAt
+
+		return "", systemTask, err
 	}
 
 	endedAt := time.Now()
@@ -96,7 +101,9 @@ func (service *AiService) OpenAiChatCompletion(messages []structs.AiClientMessag
 		},
 	)
 	if err != nil {
-		return "", "", err
+		responseBytes, _ := json.Marshal(resp)
+
+		return "", string(responseBytes), err
 	}
 
 	responseBytes, err := json.Marshal(resp)
@@ -129,7 +136,9 @@ func (service *AiService) GeminiChatCompletion(messages []structs.AiClientMessag
 
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 	if err != nil {
-		return "", "", err
+		responseBytes, _ := json.Marshal(resp)
+
+		return "", string(responseBytes), err
 	}
 
 	responseBytes, err := json.Marshal(resp)
@@ -177,7 +186,9 @@ func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClient
 
 	response, err := httpClient.Do(request)
 	if err != nil {
-		return "", "", err
+		responseBytes, _ := json.Marshal(response)
+
+		return "", string(responseBytes), err
 	}
 
 	responseBody, err := io.ReadAll(response.Body)
@@ -236,7 +247,8 @@ func (service *AiService) OllamaChatCompletion(messages []structs.AiClientMessag
 
 	response, err := httpClient.Do(request)
 	if err != nil {
-		return "", "", err
+		responseBytes, _ := json.Marshal(response)
+		return "", string(responseBytes), err
 	}
 
 	responseBody, err := io.ReadAll(response.Body)

@@ -117,25 +117,46 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.SystemTask, metadata commands.ReceiptProcessingMetadata) ([]models.SystemTask, error) {
 	var systemTasks []models.SystemTask
 	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
+	isFallback := parentSystemTask.AssociatedEntityId == metadata.FallbackReceiptProcessingSettingsIdRan
 
-	if len(metadata.OcrSystemTaskCommand.Type) > 0 && parentSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+	if !isFallback && len(metadata.OcrSystemTaskCommand.Type) > 0 {
 		metadata.OcrSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
-		createdSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.OcrSystemTaskCommand)
+		ocrSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.OcrSystemTaskCommand)
 		if err != nil {
 			return []models.SystemTask{}, err
 		}
 
-		systemTasks = append(systemTasks, createdSystemTask)
+		systemTasks = append(systemTasks, ocrSystemTask)
 	}
 
-	if len(metadata.ChatCompletionSystemTaskCommand.Type) > 0 && parentSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+	if !isFallback && len(metadata.ChatCompletionSystemTaskCommand.Type) > 0 {
 		metadata.ChatCompletionSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
-		createdSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.ChatCompletionSystemTaskCommand)
+		chatCompletionSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.ChatCompletionSystemTaskCommand)
 		if err != nil {
 			return []models.SystemTask{}, err
 		}
 
-		systemTasks = append(systemTasks, createdSystemTask)
+		systemTasks = append(systemTasks, chatCompletionSystemTask)
+	}
+
+	if isFallback && len(metadata.FallbackOcrSystemTaskCommand.Type) > 0 {
+		metadata.FallbackOcrSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		fallbackOcrSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.FallbackOcrSystemTaskCommand)
+		if err != nil {
+			return []models.SystemTask{}, err
+		}
+
+		systemTasks = append(systemTasks, fallbackOcrSystemTask)
+	}
+
+	if isFallback && len(metadata.FallbackChatCompletionSystemTaskCommand.Type) > 0 {
+		metadata.FallbackChatCompletionSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		fallbackChatCompletionSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.FallbackChatCompletionSystemTaskCommand)
+		if err != nil {
+			return []models.SystemTask{}, err
+		}
+
+		systemTasks = append(systemTasks, fallbackChatCompletionSystemTask)
 	}
 
 	return systemTasks, nil

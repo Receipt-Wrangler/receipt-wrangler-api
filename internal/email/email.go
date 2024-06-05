@@ -188,13 +188,6 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 			baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
 			end := time.Now()
 
-			processingSystemTasks, err := systemTaskService.CreateSystemTasksFromMetadata(
-				processingMetadata,
-				start,
-				end,
-				models.EMAIL_UPLOAD,
-				0)
-
 			if err != nil {
 				return err
 			}
@@ -223,6 +216,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 					receiptRepository := repositories.NewReceiptRepository(tx)
 					receiptImageRepository := repositories.NewReceiptImageRepository(tx)
 					systemTaskRepository := repositories.NewSystemTaskRepository(tx)
+					systemTaskService.SetTransaction(tx)
 
 					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
 					if err != nil {
@@ -264,17 +258,21 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						),
 					}
 
-					if processingSystemTasks.SystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
-						systemTaskCommand.AssociatedSystemTaskId = &processingSystemTasks.SystemTask.ID
-					} else if processingSystemTasks.FallbackSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
-						systemTaskCommand.AssociatedSystemTaskId = &processingSystemTasks.FallbackSystemTask.ID
-					}
-
-					_, err = systemTaskRepository.CreateSystemTask(systemTaskCommand)
+					createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTaskCommand)
 					if err != nil {
 						return err
 					}
 
+					_, err = systemTaskService.CreateSystemTasksFromMetadata(
+						processingMetadata,
+						start,
+						end,
+						models.EMAIL_UPLOAD,
+						nil,
+						func(command commands.UpsertSystemTaskCommand) *uint {
+							return &createdSystemTask.ID
+						},
+					)
 					if err != nil {
 						return err
 					}

@@ -50,8 +50,8 @@ func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(met
 	)
 }
 
-func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands.ReceiptProcessingMetadata, startDate time.Time, endDate time.Time, taskType models.SystemTaskType, userId uint) (structs.ReceiptProcessingSystemTasks, error) {
-	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands.ReceiptProcessingMetadata, startDate time.Time, endDate time.Time, taskType models.SystemTaskType, userId *uint, parentAssociatedSystemTaskId func(command commands.UpsertSystemTaskCommand) *uint) (structs.ReceiptProcessingSystemTasks, error) {
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	result := structs.ReceiptProcessingSystemTasks{}
 
 	if metadata.ReceiptProcessingSettingsIdRan > 0 {
@@ -63,7 +63,11 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			StartedAt:            startDate,
 			EndedAt:              &endDate,
 			ResultDescription:    metadata.RawResponse,
-			RanByUserId:          &userId,
+			RanByUserId:          userId,
+		}
+
+		if parentAssociatedSystemTaskId != nil {
+			systemTask.AssociatedSystemTaskId = parentAssociatedSystemTaskId(systemTask)
 		}
 
 		createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTask)
@@ -87,7 +91,11 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			StartedAt:            startDate,
 			EndedAt:              &endDate,
 			ResultDescription:    metadata.FallbackRawResponse,
-			RanByUserId:          &userId,
+			RanByUserId:          userId,
+		}
+
+		if parentAssociatedSystemTaskId != nil {
+			fallbackSystemTask.AssociatedSystemTaskId = parentAssociatedSystemTaskId(fallbackSystemTask)
 		}
 
 		createdFallbackSystemTask, err := systemTaskRepository.CreateSystemTask(fallbackSystemTask)
@@ -108,7 +116,7 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 
 func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.SystemTask, metadata commands.ReceiptProcessingMetadata) ([]models.SystemTask, error) {
 	var systemTasks []models.SystemTask
-	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 
 	if len(metadata.OcrSystemTaskCommand.Type) > 0 && parentSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
 		metadata.OcrSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID

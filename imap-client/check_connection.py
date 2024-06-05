@@ -13,7 +13,8 @@ def read_system_email():
 
 if __name__ == '__main__':
     credentials = read_system_email()
-    client = ImapClient(credentials["host"], credentials["port"], credentials["username"], credentials["password"])
+    client = ImapClient(credentials["host"], credentials["port"], credentials["username"], credentials["password"], [],
+                        [])
 
     try:
         client.connect()

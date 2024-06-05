@@ -45,7 +45,7 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
-	err := query.Preload(clause.Associations).Find(&results).Error
+	err := query.Preload(clause.Associations).Preload("ChildSystemTasks.ChildSystemTasks").Find(&results).Error
 	if query.Error != nil {
 		return nil, 0, err
 	}

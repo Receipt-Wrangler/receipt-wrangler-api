@@ -112,7 +112,8 @@ func QuickScan(
 		now,
 		finishedAt,
 		models.QUICK_SCAN,
-		token.UserId)
+		&token.UserId,
+		nil)
 	if taskErr != nil {
 		return models.Receipt{}, taskErr
 	}

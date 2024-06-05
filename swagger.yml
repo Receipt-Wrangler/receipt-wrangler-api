@@ -2212,6 +2212,8 @@ components:
     SystemTaskType:
       type: string
       enum:
+        - "OCR_PROCESSING"
+        - "CHAT_COMPLETION"
         - "MAGIC_FILL"
         - "QUICK_SCAN"
         - "EMAIL_READ"
@@ -3644,6 +3646,10 @@ components:
               format: uint64
             resultDescription:
               type: string
+            childSystemTasks:
+              type: array
+              items:
+                $ref: "#/components/schemas/SystemTask"
     GetSystemTaskCommand:
       allOf:
         - $ref: "#/components/schemas/PagedRequestCommand"

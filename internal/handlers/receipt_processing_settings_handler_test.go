@@ -520,6 +520,8 @@ func TestShouldNotCheckReceiptProcessingSettingsConnectivityWithBadRequest(t *te
 
 	key, _ := utils.EncryptAndEncodeToBase64(config.GetEncryptionKey(), "key")
 
+	repositories.CreateTestUser()
+
 	db := repositories.GetDB()
 	db.Create(&models.Prompt{})
 	db.Create(&models.ReceiptProcessingSettings{

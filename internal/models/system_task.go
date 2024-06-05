@@ -15,9 +15,11 @@ type SystemTask struct {
 	StartedAt              time.Time            `json:"startedAt"`
 	EndedAt                *time.Time           `json:"endedAt"`
 	ResultDescription      string               `json:"resultDescription"`
+	RanByUser              *User                `json:"-"`
 	RanByUserId            *uint                `json:"ranByUserId"`
-	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
 	AssociatedSystemTask   *SystemTask          `json:"associatedSystemTask"`
+	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
+	ChildSystemTasks       []*SystemTask        `gorm:"foreignKey:AssociatedSystemTaskId" json:"childSystemTasks"`
 }
 
 type SystemTaskStatus string
@@ -42,6 +44,7 @@ func (self SystemTaskStatus) Value() (driver.Value, error) {
 type SystemTaskType string
 
 const (
+	OCR_PROCESSING                                 SystemTaskType = "OCR_PROCESSING"
 	CHAT_COMPLETION                                SystemTaskType = "CHAT_COMPLETION"
 	MAGIC_FILL                                     SystemTaskType = "MAGIC_FILL"
 	QUICK_SCAN                                     SystemTaskType = "QUICK_SCAN"
@@ -63,7 +66,8 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 		self != MAGIC_FILL &&
 		self != EMAIL_UPLOAD &&
 		self != EMAIL_READ &&
-		self != CHAT_COMPLETION {
+		self != CHAT_COMPLETION &&
+		self != OCR_PROCESSING {
 		return nil, errors.New("invalid SystemTaskType")
 	}
 	return string(self), nil

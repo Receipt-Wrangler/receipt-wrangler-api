@@ -1,13 +1,8 @@
 package config
 
 import (
-	"encoding/json"
-	"errors"
 	"flag"
-	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -78,55 +73,6 @@ func GetDeployEnv() string {
 func SetConfigs() error {
 	setEnv()
 	setBasePath()
-
-	err := setSettingsConfig()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func setSettingsConfig() error {
-	path := filepath.Join(basePath, "config", "config."+env+".json")
-	jsonFile, err := os.Open(path)
-
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) && env != "test" {
-			configStub := structs.Config{}
-			bytes, err := json.MarshalIndent(configStub, "", "  ")
-			if err != nil {
-				return err
-			}
-
-			err = os.WriteFile(path, bytes, 0644)
-			if err != nil {
-				return err
-			}
-			logging.GetLogger().Fatalf(fmt.Sprintf("Config file not found at %s. A stub file has been created. Please fill in the necessary fields and restart the container.", path))
-		}
-		return err
-	}
-	defer func() {
-		closeErr := jsonFile.Close()
-		if closeErr != nil {
-			err = closeErr
-		}
-	}()
-
-	bytes, err := io.ReadAll(jsonFile)
-	if err != nil {
-		return err
-	}
-
-	marshalErr := json.Unmarshal(bytes, &config)
-	if marshalErr != nil {
-		return err
-	}
-
-	if config.AiSettings.NumWorkers == 0 {
-		config.AiSettings.NumWorkers = 1
-	}
 
 	return nil
 }

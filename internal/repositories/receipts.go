@@ -233,7 +233,13 @@ func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceipt
 		return models.Receipt{}, err
 	}
 
-	return receipt, nil
+	var fullyLoadedReceipt models.Receipt
+	err = db.Model(models.Receipt{}).Where("id = ?", receipt.ID).Preload(clause.Associations).Find(&fullyLoadedReceipt).Error
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	return fullyLoadedReceipt, nil
 }
 
 func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Receipt, error) {

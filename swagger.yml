@@ -2220,6 +2220,7 @@ components:
         - "EMAIL_UPLOAD"
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
+        - "RECEIPT_UPLOADED"
     AssociatedEntityType:
       type: string
       enum:

@@ -166,7 +166,7 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 }
 
 func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt, status models.ItemStatus) error {
-	db := GetDB()
+	db := repository.GetDB()
 	var items []models.Item
 	var itemIdsToUpdate []uint
 
@@ -192,7 +192,7 @@ func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt,
 }
 
 func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceiptCommand, createdByUserID uint) (models.Receipt, error) {
-	db := GetDB()
+	db := repository.GetDB()
 	notificationRepository := NewNotificationRepository(nil)
 	receipt, err := command.ToReceipt()
 	if err != nil {
@@ -233,7 +233,13 @@ func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceipt
 		return models.Receipt{}, err
 	}
 
-	return receipt, nil
+	var fullyLoadedReceipt models.Receipt
+	err = db.Model(models.Receipt{}).Where("id = ?", receipt.ID).Preload(clause.Associations).Find(&fullyLoadedReceipt).Error
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	return fullyLoadedReceipt, nil
 }
 
 func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Receipt, error) {
@@ -426,7 +432,7 @@ func (repository ReceiptRepository) isTrustedValue(pagedRequest commands.Receipt
 }
 
 func (repository ReceiptRepository) GetReceiptGroupIdByReceiptId(id string) (uint, error) {
-	db := GetDB()
+	db := repository.GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", id).Select("group_id").Find(&receipt).Error
@@ -438,7 +444,7 @@ func (repository ReceiptRepository) GetReceiptGroupIdByReceiptId(id string) (uin
 }
 
 func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
-	db := GetDB()
+	db := repository.GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Find(&receipt).Error
@@ -450,7 +456,7 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 }
 
 func (repository ReceiptRepository) GetReceiptsByGroupIds(groupIds []string, querySelect string, queryPreload string) ([]models.Receipt, error) {
-	db := GetDB()
+	db := repository.GetDB()
 	var receipts []models.Receipt
 
 	query := db.Model(models.Receipt{}).Where("group_id IN ?", groupIds).Select(querySelect)

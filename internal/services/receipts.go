@@ -107,7 +107,7 @@ func QuickScan(
 	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand)
 	finishedAt := time.Now()
 
-	_, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
+	quickScanSystemTasks, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
 		receiptProcessingMetadata,
 		now,
 		finishedAt,
@@ -135,9 +135,21 @@ func QuickScan(
 	err = db.Transaction(func(tx *gorm.DB) error {
 		receiptRepository.SetTransaction(tx)
 		receiptImageRepository.SetTransaction(tx)
+		systemTaskService.SetTransaction(tx)
+		uploadStart := time.Now()
 
 		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId)
+		taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
+			err,
+			createdReceipt,
+			quickScanSystemTasks,
+			uploadStart,
+		)
+		if taskErr != nil {
+			return taskErr
+		}
 		if err != nil {
+			tx.Commit()
 			return err
 		}
 

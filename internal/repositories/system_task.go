@@ -30,7 +30,13 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 		return nil, 0, errors.New("invalid column name")
 	}
 
-	query := db.Model(&models.SystemTask{}).Where("associated_system_task_id IS NULL")
+	filteredSystemTaskTypes := []models.SystemTaskType{
+		models.RECEIPT_UPLOADED,
+		models.CHAT_COMPLETION,
+		models.OCR_PROCESSING,
+	}
+
+	query := db.Model(&models.SystemTask{}).Where("type NOT IN ?", filteredSystemTaskTypes)
 
 	if command.AssociatedEntityId != 0 {
 		query = query.Where("associated_entity_id = ?", command.AssociatedEntityId)
@@ -75,6 +81,16 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 	err := db.Create(&systemTask).Error
 	if err != nil {
 		return models.SystemTask{}, err
+	}
+
+	if command.AssociatedSystemTaskId != nil && systemTask.Status == models.SYSTEM_TASK_FAILED {
+		var parentSystemTask models.SystemTask
+		db.Model(&models.SystemTask{}).Where("id = ?", command.AssociatedSystemTaskId).Find(&parentSystemTask)
+
+		if parentSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+			db.Model(&parentSystemTask).Update("status", models.SYSTEM_TASK_FAILED)
+		}
+
 	}
 
 	return systemTask, nil

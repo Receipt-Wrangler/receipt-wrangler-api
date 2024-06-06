@@ -224,25 +224,6 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 					receiptImageRepository := repositories.NewReceiptImageRepository(tx)
 					systemTaskRepository := repositories.NewSystemTaskRepository(tx)
 					systemTaskService.SetTransaction(tx)
-
-					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
-					if err != nil {
-						return err
-					}
-
-					receiptBytes, err := json.Marshal(createdReceipt)
-					if err != nil {
-						return err
-					}
-
-					fileData := models.FileData{
-						ReceiptId: createdReceipt.ID,
-						Name:      attachment.Filename,
-						FileType:  attachment.FileType,
-						Size:      attachment.Size,
-					}
-
-					_, err = receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 					emailProcessEnd := time.Now()
 
 					metadataBytes, err := json.Marshal(metadata)
@@ -258,11 +239,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						StartedAt:            emailProcessStart,
 						EndedAt:              &emailProcessEnd,
 						RanByUserId:          nil,
-						ResultDescription: fmt.Sprintf(
-							"Metadata: %s; Created Receipt: %s",
-							string(metadataBytes),
-							string(receiptBytes),
-						),
+						ResultDescription:    string(metadataBytes),
 					}
 
 					createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTaskCommand)
@@ -270,7 +247,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						return err
 					}
 
-					_, err = systemTaskService.CreateSystemTasksFromMetadata(
+					processingSystemTasks, err := systemTaskService.CreateSystemTasksFromMetadata(
 						processingMetadata,
 						start,
 						end,
@@ -280,6 +257,30 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 							return &createdSystemTask.ID
 						},
 					)
+
+					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
+					taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
+						err,
+						createdReceipt,
+						processingSystemTasks,
+						time.Now(),
+					)
+					if taskErr != nil {
+						return taskErr
+					}
+					if err != nil {
+						tx.Commit()
+						return err
+					}
+
+					fileData := models.FileData{
+						ReceiptId: createdReceipt.ID,
+						Name:      attachment.Filename,
+						FileType:  attachment.FileType,
+						Size:      attachment.Size,
+					}
+
+					_, err = receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 					if err != nil {
 						return err
 					}

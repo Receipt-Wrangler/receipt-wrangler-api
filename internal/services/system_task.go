@@ -181,19 +181,23 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 	systemTaskId := quickScanSystemTasks.SystemTask.ID
 	status := models.SYSTEM_TASK_SUCCEEDED
 	uploadFinished := time.Now()
+	resultDescription := ""
 
 	if quickScanSystemTasks.FallbackSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
 		receiptProcessingSettingsId = quickScanSystemTasks.FallbackSystemTask.AssociatedEntityId
 		systemTaskId = quickScanSystemTasks.FallbackSystemTask.ID
 	}
 
-	if createReceiptError != nil {
-		status = models.SYSTEM_TASK_FAILED
-	}
-
 	receiptBytes, err := json.Marshal(createdReceipt)
 	if err != nil {
 		return err
+	}
+
+	resultDescription = string(receiptBytes)
+
+	if createReceiptError != nil {
+		status = models.SYSTEM_TASK_FAILED
+		resultDescription = createReceiptError.Error()
 	}
 
 	_, err = systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
@@ -203,7 +207,7 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 		AssociatedEntityId:     receiptProcessingSettingsId,
 		StartedAt:              uploadStart,
 		EndedAt:                &uploadFinished,
-		ResultDescription:      string(receiptBytes),
+		ResultDescription:      resultDescription,
 		AssociatedSystemTaskId: &systemTaskId,
 	})
 	if err != nil {

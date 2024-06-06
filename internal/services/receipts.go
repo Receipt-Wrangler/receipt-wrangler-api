@@ -146,13 +146,11 @@ func QuickScan(
 			quickScanSystemTasks,
 			uploadStart,
 		)
-		if err != nil {
-			return err
-		}
 		if taskErr != nil {
 			return taskErr
 		}
 		if err != nil {
+			tx.Commit()
 			return err
 		}
 

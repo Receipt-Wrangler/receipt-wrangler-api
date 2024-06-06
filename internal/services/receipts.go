@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/json"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"mime/multipart"
@@ -173,48 +172,4 @@ func QuickScan(
 	}
 
 	return createdReceipt, nil
-}
-
-func createReceiptUploadedSystemTask(
-	tx *gorm.DB,
-	createReceiptError error,
-	createdReceipt models.Receipt,
-	quickScanSystemTasks structs.ReceiptProcessingSystemTasks,
-	uploadStart time.Time,
-) error {
-	systemTaskRepository := repositories.NewSystemTaskRepository(tx)
-	receiptProcessingSettingsId := quickScanSystemTasks.SystemTask.AssociatedEntityId
-	systemTaskId := quickScanSystemTasks.SystemTask.ID
-	status := models.SYSTEM_TASK_SUCCEEDED
-	uploadFinished := time.Now()
-
-	if quickScanSystemTasks.FallbackSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
-		receiptProcessingSettingsId = quickScanSystemTasks.FallbackSystemTask.AssociatedEntityId
-		systemTaskId = quickScanSystemTasks.FallbackSystemTask.ID
-	}
-
-	if createReceiptError != nil {
-		status = models.SYSTEM_TASK_FAILED
-	}
-
-	receiptBytes, err := json.Marshal(createdReceipt)
-	if err != nil {
-		return err
-	}
-
-	_, err = systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
-		Type:                   models.RECEIPT_UPLOADED,
-		Status:                 status,
-		AssociatedEntityType:   models.RECEIPT_PROCESSING_SETTINGS,
-		AssociatedEntityId:     receiptProcessingSettingsId,
-		StartedAt:              uploadStart,
-		EndedAt:                &uploadFinished,
-		ResultDescription:      string(receiptBytes),
-		AssociatedSystemTaskId: &systemTaskId,
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

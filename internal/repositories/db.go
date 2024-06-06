@@ -65,15 +65,12 @@ func Connect() error {
 		if err != nil {
 			return err
 		}
+
 		connectedDb, err = gorm.Open(sqlite.Open(connectionString), &gorm.Config{})
 		if err != nil {
 			return err
 
 		}
-	}
-
-	if err != nil {
-		return err
 	}
 
 	if connectedDb == nil {

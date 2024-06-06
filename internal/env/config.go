@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
@@ -20,6 +21,14 @@ var env string
 
 func GetConfig() structs.Config {
 	return config
+}
+
+func GetSecretKey() string {
+	if len(os.Getenv("SECRET_KEY")) == 0 {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_SECRET_KEY_ERROR)
+	}
+
+	return os.Getenv("SECRET_KEY")
 }
 
 func GetDatabaseConfig() (structs.DatabaseConfig, error) {
@@ -50,7 +59,16 @@ func GetBasePath() string {
 }
 
 func GetEncryptionKey() string {
+	if len(os.Getenv("ENCRYPTION_KEY")) == 0 {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_ENCRYPTION_KEY_ERROR)
+	}
+
 	return os.Getenv("ENCRYPTION_KEY")
+}
+
+func CheckRequiredEnvironmentVariables() {
+	GetEncryptionKey()
+	GetSecretKey()
 }
 
 func GetDeployEnv() string {

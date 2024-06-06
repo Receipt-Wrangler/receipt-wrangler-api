@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 	"receipt-wrangler/api/internal/corspolicy"
 	"receipt-wrangler/api/internal/email"
 	config "receipt-wrangler/api/internal/env"
@@ -24,33 +23,33 @@ import (
 func main() {
 	err := logging.InitLog()
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatalln(err.Error())
 	}
 
 	logger := logging.GetLogger()
-	logger.Print("Initializing app...")
+	logger.Println("Initializing app...")
 	initLoggers()
+
+	config.CheckRequiredEnvironmentVariables()
 
 	err = config.SetConfigs()
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
 	err = repositories.Connect()
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
+
 	err = repositories.MakeMigrations()
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
+
 	err = repositories.InitDB()
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
 	logger.Print("Initializing Imagick...")
@@ -62,14 +61,12 @@ func main() {
 		err = userRepository.CreateUserIfNoneExist()
 	}
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
 	err = tryStartEmailPolling()
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
 	router := initRoutes()
@@ -96,7 +93,7 @@ func initLoggers() {
 func initRoutes() *chi.Mux {
 	tokenValidator, err := services.InitTokenValidator()
 	if err != nil {
-		panic(err)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 	tokenValidatorMiddleware := jwtmiddleware.New(tokenValidator.ValidateToken)
 	env := config.GetDeployEnv()

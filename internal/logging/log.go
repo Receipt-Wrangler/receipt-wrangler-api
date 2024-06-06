@@ -2,6 +2,7 @@ package logging
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 )
@@ -32,4 +33,23 @@ func InitLog() error {
 
 func GetLogger() *log.Logger {
 	return logger
+}
+
+func LogStd(level LogLevel, v ...any) {
+	levelString := fmt.Sprintf("%s: ", level)
+	v = append([]any{levelString}, v...)
+
+	fmt.Println(v...)
+
+	if level == LOG_LEVEL_FATAL {
+		logger.Fatalln(v...)
+	}
+
+	if level == LOG_LEVEL_ERROR {
+		logger.Println(v...)
+	}
+
+	if level == LOG_LEVEL_INFO {
+		logger.Println(v...)
+	}
 }

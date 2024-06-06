@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
@@ -167,4 +168,47 @@ func (service SystemTaskService) BoolToSystemTaskStatus(value bool) models.Syste
 		return models.SYSTEM_TASK_SUCCEEDED
 	}
 	return models.SYSTEM_TASK_FAILED
+}
+
+func (service SystemTaskService) CreateReceiptUploadedSystemTask(
+	createReceiptError error,
+	createdReceipt models.Receipt,
+	quickScanSystemTasks structs.ReceiptProcessingSystemTasks,
+	uploadStart time.Time,
+) error {
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.GetDB())
+	receiptProcessingSettingsId := quickScanSystemTasks.SystemTask.AssociatedEntityId
+	systemTaskId := quickScanSystemTasks.SystemTask.ID
+	status := models.SYSTEM_TASK_SUCCEEDED
+	uploadFinished := time.Now()
+
+	if quickScanSystemTasks.FallbackSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+		receiptProcessingSettingsId = quickScanSystemTasks.FallbackSystemTask.AssociatedEntityId
+		systemTaskId = quickScanSystemTasks.FallbackSystemTask.ID
+	}
+
+	if createReceiptError != nil {
+		status = models.SYSTEM_TASK_FAILED
+	}
+
+	receiptBytes, err := json.Marshal(createdReceipt)
+	if err != nil {
+		return err
+	}
+
+	_, err = systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
+		Type:                   models.RECEIPT_UPLOADED,
+		Status:                 status,
+		AssociatedEntityType:   models.RECEIPT_PROCESSING_SETTINGS,
+		AssociatedEntityId:     receiptProcessingSettingsId,
+		StartedAt:              uploadStart,
+		EndedAt:                &uploadFinished,
+		ResultDescription:      string(receiptBytes),
+		AssociatedSystemTaskId: &systemTaskId,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

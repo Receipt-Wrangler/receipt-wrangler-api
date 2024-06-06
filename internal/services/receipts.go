@@ -136,11 +136,11 @@ func QuickScan(
 	err = db.Transaction(func(tx *gorm.DB) error {
 		receiptRepository.SetTransaction(tx)
 		receiptImageRepository.SetTransaction(tx)
+		systemTaskService.SetTransaction(tx)
 		uploadStart := time.Now()
 
 		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId)
-		taskErr := createReceiptUploadedSystemTask(
-			tx,
+		taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 			err,
 			createdReceipt,
 			quickScanSystemTasks,

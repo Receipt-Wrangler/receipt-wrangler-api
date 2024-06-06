@@ -44,6 +44,7 @@ func (self SystemTaskStatus) Value() (driver.Value, error) {
 type SystemTaskType string
 
 const (
+	RECEIPT_UPLOADED                               SystemTaskType = "RECEIPT_UPLOADED"
 	OCR_PROCESSING                                 SystemTaskType = "OCR_PROCESSING"
 	CHAT_COMPLETION                                SystemTaskType = "CHAT_COMPLETION"
 	MAGIC_FILL                                     SystemTaskType = "MAGIC_FILL"
@@ -67,7 +68,8 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 		self != EMAIL_UPLOAD &&
 		self != EMAIL_READ &&
 		self != CHAT_COMPLETION &&
-		self != OCR_PROCESSING {
+		self != OCR_PROCESSING &&
+		self != RECEIPT_UPLOADED {
 		return nil, errors.New("invalid SystemTaskType")
 	}
 	return string(self), nil

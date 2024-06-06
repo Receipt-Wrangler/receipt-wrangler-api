@@ -25,7 +25,8 @@ func NewReceiptImageRepository(tx *gorm.DB) ReceiptImageRepository {
 
 // TODO: Move to service
 func (repository ReceiptImageRepository) CreateReceiptImage(fileData models.FileData, fileBytes []byte) (models.FileData, error) {
-	fileRepository := NewFileRepository(nil)
+	fileRepository := NewFileRepository(repository.TX)
+	db := repository.GetDB()
 
 	// TODO: refactor to use command
 	validatedFileType, err := fileRepository.ValidateFileType(fileBytes)

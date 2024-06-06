@@ -24,8 +24,7 @@ func customClaims() validator.CustomClaims {
 
 func InitTokenValidator() (*validator.Validator, error) {
 	keyFunc := func(ctx context.Context) (interface{}, error) {
-		config := config.GetConfig()
-		return []byte(config.SecretKey), nil
+		return []byte(config.GetSecretKey()), nil
 	}
 	jwtValidator, err := validator.New(
 		keyFunc,
@@ -87,7 +86,6 @@ func GetEmptyRefreshTokenCookie() http.Cookie {
 
 func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 	db := repositories.GetDB()
-	config := config.GetConfig()
 	var user models.User
 
 	err := db.Model(models.User{}).Where("id = ?", userId).First(&user).Error
@@ -109,7 +107,7 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 	}
 
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS512, accessTokenClaims)
-	signedString, err := accessToken.SignedString([]byte(config.SecretKey))
+	signedString, err := accessToken.SignedString([]byte(config.GetSecretKey()))
 
 	if err != nil {
 		return "", "", structs.Claims{}, err
@@ -125,7 +123,7 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 	}
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS512, refreshTokenClaims)
-	refreshTokenString, err := refreshToken.SignedString([]byte(config.SecretKey))
+	refreshTokenString, err := refreshToken.SignedString([]byte(config.GetSecretKey()))
 
 	if err != nil {
 		return "", "", structs.Claims{}, err

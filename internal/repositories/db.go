@@ -37,10 +37,13 @@ func BuildSqliteConnectionString(dbConfig structs.DatabaseConfig) (string, error
 }
 
 func Connect() error {
-	dbConfig := config.GetConfig().Database
+	dbConfig, err := config.GetDatabaseConfig()
+	if err != nil {
+		return err
+	}
+
 	dbEngine := dbConfig.Engine
 
-	var err error
 	var connectedDb *gorm.DB
 
 	if dbEngine == "mariadb" || dbEngine == "mysql" {

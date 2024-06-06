@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"strings"
 )
@@ -19,6 +20,24 @@ var env string
 
 func GetConfig() structs.Config {
 	return config
+}
+
+func GetDatabaseConfig() (structs.DatabaseConfig, error) {
+	port := os.Getenv("DB_PORT")
+	portInt, err := simpleutils.StringToInt(port)
+	if err != nil {
+
+	}
+
+	return structs.DatabaseConfig{
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		Name:     os.Getenv("DB_NAME"),
+		Host:     os.Getenv("DB_HOST"),
+		Port:     portInt,
+		Engine:   os.Getenv("DB_ENGINE"),
+		Filename: os.Getenv("DB_FILENAME"),
+	}, nil
 }
 
 func GetBasePath() string {

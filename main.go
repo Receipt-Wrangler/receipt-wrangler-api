@@ -30,12 +30,12 @@ func main() {
 	logger.Println("Initializing app...")
 	initLoggers()
 
-	config.CheckRequiredEnvironmentVariables()
-
 	err = config.SetConfigs()
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
+
+	config.CheckRequiredEnvironmentVariables()
 
 	err = repositories.Connect()
 	if err != nil {

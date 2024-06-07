@@ -19,7 +19,7 @@ func GetConfig() structs.Config {
 }
 
 func GetSecretKey() string {
-	if len(os.Getenv("SECRET_KEY")) == 0 {
+	if len(os.Getenv("SECRET_KEY")) == 0 && env != "test" {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_SECRET_KEY_ERROR)
 	}
 
@@ -54,7 +54,7 @@ func GetBasePath() string {
 }
 
 func GetEncryptionKey() string {
-	if len(os.Getenv("ENCRYPTION_KEY")) == 0 {
+	if len(os.Getenv("ENCRYPTION_KEY")) == 0 && env != "test" {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_ENCRYPTION_KEY_ERROR)
 	}
 

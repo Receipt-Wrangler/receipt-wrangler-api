@@ -1,14 +1,11 @@
 package config
 
 import (
-	"encoding/json"
-	"errors"
 	"flag"
-	"fmt"
-	"io"
 	"os"
-	"path/filepath"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"strings"
 )
@@ -17,8 +14,42 @@ var config structs.Config
 var basePath string
 var env string
 
+// TODO: V5 - Refactor remaining get call, add tests for db setup
 func GetConfig() structs.Config {
 	return config
+}
+
+func GetSecretKey() string {
+	if len(os.Getenv("SECRET_KEY")) == 0 && env != "test" {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_SECRET_KEY_ERROR)
+	}
+
+	return os.Getenv("SECRET_KEY")
+}
+
+func GetDatabaseConfig() (structs.DatabaseConfig, error) {
+	dbEngine := os.Getenv("DB_ENGINE")
+	port := os.Getenv("DB_PORT")
+	portToUse := 0
+
+	if dbEngine == "postgresql" || dbEngine == "mariadb" || dbEngine == "mysql" {
+		parsedPort, err := simpleutils.StringToInt(port)
+		if err != nil {
+			return structs.DatabaseConfig{}, err
+		}
+
+		portToUse = parsedPort
+	}
+
+	return structs.DatabaseConfig{
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		Name:     os.Getenv("DB_NAME"),
+		Host:     os.Getenv("DB_HOST"),
+		Port:     portToUse,
+		Engine:   os.Getenv("DB_ENGINE"),
+		Filename: os.Getenv("DB_FILENAME"),
+	}, nil
 }
 
 func GetBasePath() string {
@@ -31,7 +62,16 @@ func GetBasePath() string {
 }
 
 func GetEncryptionKey() string {
+	if len(os.Getenv("ENCRYPTION_KEY")) == 0 && env != "test" {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_ENCRYPTION_KEY_ERROR)
+	}
+
 	return os.Getenv("ENCRYPTION_KEY")
+}
+
+func CheckRequiredEnvironmentVariables() {
+	GetEncryptionKey()
+	GetSecretKey()
 }
 
 func GetDeployEnv() string {
@@ -41,55 +81,6 @@ func GetDeployEnv() string {
 func SetConfigs() error {
 	setEnv()
 	setBasePath()
-
-	err := setSettingsConfig()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func setSettingsConfig() error {
-	path := filepath.Join(basePath, "config", "config."+env+".json")
-	jsonFile, err := os.Open(path)
-
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) && env != "test" {
-			configStub := structs.Config{}
-			bytes, err := json.MarshalIndent(configStub, "", "  ")
-			if err != nil {
-				return err
-			}
-
-			err = os.WriteFile(path, bytes, 0644)
-			if err != nil {
-				return err
-			}
-			logging.GetLogger().Fatalf(fmt.Sprintf("Config file not found at %s. A stub file has been created. Please fill in the necessary fields and restart the container.", path))
-		}
-		return err
-	}
-	defer func() {
-		closeErr := jsonFile.Close()
-		if closeErr != nil {
-			err = closeErr
-		}
-	}()
-
-	bytes, err := io.ReadAll(jsonFile)
-	if err != nil {
-		return err
-	}
-
-	marshalErr := json.Unmarshal(bytes, &config)
-	if marshalErr != nil {
-		return err
-	}
-
-	if config.AiSettings.NumWorkers == 0 {
-		config.AiSettings.NumWorkers = 1
-	}
 
 	return nil
 }

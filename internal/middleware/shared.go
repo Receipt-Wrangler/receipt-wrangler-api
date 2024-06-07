@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -102,33 +102,9 @@ func SetGeneralBodyData(contextKey string, dataType interface{}) (mw func(http.H
 	return
 }
 
-func SetGroupIdByReceiptId(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var receipt models.Receipt
-		db := repositories.GetDB()
-
-		receiptId := r.Context().Value("receiptId").(string)
-		if len(receiptId) == 0 {
-			middleware_logger.Println("Invalid context receiptId", r)
-			utils.WriteCustomErrorResponse(w, "Malformed request", http.StatusBadRequest)
-			return
-		}
-
-		err := db.Model(&models.Receipt{}).Where("id = ?", receiptId).Select("group_id").Find(&receipt).Error
-		if err != nil {
-			middleware_logger.Print(err.Error())
-			utils.WriteCustomErrorResponse(w, "Error getting receipt", http.StatusInternalServerError)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), "groupId", simpleutils.UintToString(receipt.GroupId))
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
 func checkError(err error, w http.ResponseWriter) bool {
 	if err != nil {
-		middleware_logger.Print(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteErrorResponse(w, err, 500)
 		return true
 	}

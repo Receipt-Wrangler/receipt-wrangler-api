@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -35,47 +36,10 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 				err := groupService.ValidateGroupRole(role, groupId, simpleutils.UintToString(token.UserId))
 
 				if err != nil {
-					middleware_logger.Print("Unauthorized request", r)
+					logging.LogStd(logging.LOG_LEVEL_ERROR, "Unauthorized request", r)
 					utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
 					return
 				}
-			}
-			h.ServeHTTP(w, r)
-		})
-	}
-	return
-}
-
-func BulkValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handler) {
-
-	mw = func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			errMsg := "Unauthorized access to entity."
-			groupMap := models.BuildGroupMap()
-			groupIds := r.Context().Value("groupIds").([]string)
-
-			if len(groupIds) > 0 {
-				token := structs.GetJWT(r)
-				for i := 0; i < len(groupIds); i++ {
-					groupId := groupIds[i]
-
-					groupMemberRepository := repositories.NewGroupMemberRepository(nil)
-					groupMember, err := groupMemberRepository.GetGroupMemberByUserIdAndGroupId(simpleutils.UintToString(token.UserId), groupId)
-					if err != nil {
-						middleware_logger.Print(err.Error())
-						utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
-						return
-					}
-
-					var hasAccess = groupMap[groupMember.GroupRole] >= groupMap[role]
-
-					if !hasAccess {
-						middleware_logger.Print("Unauthorized request", r)
-						utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
-						return
-					}
-				}
-
 			}
 			h.ServeHTTP(w, r)
 		})
@@ -91,13 +55,13 @@ func CanDeleteGroup(next http.Handler) http.Handler {
 		groupMemberRepository := repositories.NewGroupMemberRepository(nil)
 		groupMembers, err := groupMemberRepository.GetGroupMembersByUserId(simpleutils.UintToString(token.UserId))
 		if err != nil {
-			middleware_logger.Print(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 			return
 		}
 
 		if len(groupMembers) <= 1 {
-			middleware_logger.Print(errMsg, r)
+			logging.LogStd(logging.LOG_LEVEL_ERROR, errMsg, r)
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 			return
 		}

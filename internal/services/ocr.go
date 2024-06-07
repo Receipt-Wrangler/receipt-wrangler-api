@@ -74,7 +74,7 @@ func (service OcrService) ReadImage(path string) (string, commands.UpsertSystemT
 	}
 	endTime := time.Now()
 	elapsedTime := endTime.Sub(startTime)
-	logging.GetLogger().Print("OCR and Image processing took: ", elapsedTime)
+	logging.LogStd(logging.LOG_LEVEL_INFO, "OCR and Image processing took: ", elapsedTime)
 
 	systemSettingsRepository := repositories.NewSystemSettingsRepository(service.TX)
 	systemSettings, err := systemSettingsRepository.GetSystemSettings()

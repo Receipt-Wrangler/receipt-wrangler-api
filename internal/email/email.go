@@ -52,8 +52,8 @@ func PollEmails() error {
 			case <-ticker.C:
 				err := CallClient(true, nil)
 				if err != nil {
-					logging.GetLogger().Println("Error polling emails")
-					logging.GetLogger().Println(err.Error())
+					logging.LogStd(logging.LOG_LEVEL_ERROR, "Error polling emails")
+					logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 				}
 			}
 		}
@@ -63,21 +63,20 @@ func PollEmails() error {
 }
 
 func CallClient(pollAllGroups bool, groupIds []string) error {
-	logger := logging.GetLogger()
 	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
 	var groupSettings []models.GroupSettings
 
 	if pollAllGroups {
 		allGroupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ?", true)
 		if err != nil {
-			logger.Println(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			return err
 		}
 		groupSettings = allGroupSettings
 	} else {
 		someGroupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ? AND group_id IN ?", true, groupIds)
 		if err != nil {
-			logger.Println(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			return err
 		}
 		groupSettings = someGroupSettings
@@ -85,14 +84,13 @@ func CallClient(pollAllGroups bool, groupIds []string) error {
 
 	err := pollEmailForGroupSettings(groupSettings)
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 	return nil
 }
 
 func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
-	logger := logging.GetLogger()
 	basePath := config.GetBasePath()
 	groupSettingsWithPassword := make([]models.GroupSettingsWithSystemEmailPassword, len(groupSettings))
 
@@ -100,7 +98,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	for i := range groupSettings {
 		cleartextPassword, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), groupSettings[i].SystemEmail.Password)
 		if err != nil {
-			logger.Println(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			return err
 		}
 
@@ -118,7 +116,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 
 	bytesArr, err := json.Marshal(groupSettingsWithPassword)
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 
@@ -130,7 +128,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 
 	err = cmd.Run()
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 
@@ -138,15 +136,15 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 
 	err = json.Unmarshal(out.Bytes(), &result)
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 
-	logger.Println("Emails metadata captured: ", result)
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Emails metadata captured: ", result)
 
 	err = processEmails(result, groupSettings)
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 

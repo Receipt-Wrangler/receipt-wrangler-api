@@ -17,7 +17,8 @@ import (
 var db *gorm.DB
 
 func BuildMariaDbConnectionString(dbConfig structs.DatabaseConfig) string {
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Name)
+	host := fmt.Sprintf("%s:%d", dbConfig.Host, dbConfig.Port)
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, host, dbConfig.Name)
 	return connectionString
 }
 
@@ -37,10 +38,13 @@ func BuildSqliteConnectionString(dbConfig structs.DatabaseConfig) (string, error
 }
 
 func Connect() error {
-	dbConfig := config.GetConfig().Database
+	dbConfig, err := config.GetDatabaseConfig()
+	if err != nil {
+		return err
+	}
+
 	dbEngine := dbConfig.Engine
 
-	var err error
 	var connectedDb *gorm.DB
 
 	if dbEngine == "mariadb" || dbEngine == "mysql" {
@@ -62,15 +66,12 @@ func Connect() error {
 		if err != nil {
 			return err
 		}
+
 		connectedDb, err = gorm.Open(sqlite.Open(connectionString), &gorm.Config{})
 		if err != nil {
 			return err
 
 		}
-	}
-
-	if err != nil {
-		return err
 	}
 
 	if connectedDb == nil {

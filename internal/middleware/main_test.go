@@ -18,7 +18,6 @@ func TestMain(m *testing.M) {
 func run(m *testing.M) (code int, err error) {
 	defer teardown()
 	repositories.SetUpTestEnv()
-	InitMiddlewareLogger()
 	repositories.InitTestDb()
 	repositories.MakeMigrations()
 	return m.Run(), nil

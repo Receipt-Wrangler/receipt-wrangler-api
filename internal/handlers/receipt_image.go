@@ -7,6 +7,7 @@ import (
 	"os"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -22,19 +23,19 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
 	if err != nil {
-		handler_logger.Print(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 	}
 
 	receiptId, err := simpleutils.StringToUint(r.Form.Get("receiptId"))
 	if err != nil {
-		handler_logger.Print(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 	}
 
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
-		handler_logger.Print(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 	}
 	defer file.Close()

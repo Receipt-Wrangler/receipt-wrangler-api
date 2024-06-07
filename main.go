@@ -1,13 +1,12 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"os"
 	"receipt-wrangler/api/internal/corspolicy"
 	"receipt-wrangler/api/internal/email"
 	config "receipt-wrangler/api/internal/env"
-	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/models"
@@ -24,36 +23,35 @@ import (
 func main() {
 	err := logging.InitLog()
 	if err != nil {
-		log.Fatal(err.Error())
+		fmt.Println("Failed to initialize log")
+		os.Exit(1)
 	}
 
-	logger := logging.GetLogger()
-	logger.Print("Initializing app...")
-	initLoggers()
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing...")
 
 	err = config.SetConfigs()
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
+
+	config.CheckRequiredEnvironmentVariables()
 
 	err = repositories.Connect()
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
-	}
-	err = repositories.MakeMigrations()
-	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
-	}
-	err = repositories.InitDB()
-	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
-	logger.Print("Initializing Imagick...")
+	err = repositories.MakeMigrations()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+	}
+
+	err = repositories.InitDB()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+	}
+
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing Imagick...")
 	imagick.Initialize()
 	defer imagick.Terminate()
 
@@ -62,14 +60,12 @@ func main() {
 		err = userRepository.CreateUserIfNoneExist()
 	}
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
 	err = tryStartEmailPolling()
 	if err != nil {
-		logger.Print(err.Error())
-		os.Exit(0)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
 	router := initRoutes()
@@ -77,26 +73,21 @@ func main() {
 }
 
 func serve(router *chi.Mux) {
-	logger := logging.GetLogger()
 	srv := &http.Server{
 		Handler:      router,
 		Addr:         "0.0.0.0:8081",
 		WriteTimeout: 5 * time.Minute,
 		ReadTimeout:  5 * time.Minute,
 	}
-	logger.Print("Initialize completed")
-	logger.Fatal(srv.ListenAndServe())
-}
-
-func initLoggers() {
-	handlers.InitHandlerLogger()
-	middleware.InitMiddlewareLogger()
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Initialize completed")
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Listening on port 8081")
+	logging.LogStd(logging.LOG_LEVEL_FATAL, srv.ListenAndServe())
 }
 
 func initRoutes() *chi.Mux {
 	tokenValidator, err := services.InitTokenValidator()
 	if err != nil {
-		panic(err)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 	tokenValidatorMiddleware := jwtmiddleware.New(tokenValidator.ValidateToken)
 	env := config.GetDeployEnv()

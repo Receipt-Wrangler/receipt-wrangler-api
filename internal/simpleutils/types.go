@@ -27,3 +27,12 @@ func StringToUint64(v string) (uint64, error) {
 
 	return result, nil
 }
+
+func StringToInt(v string) (int, error) {
+	result, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, err
+	}
+
+	return result, nil
+}

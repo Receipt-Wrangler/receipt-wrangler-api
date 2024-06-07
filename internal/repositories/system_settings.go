@@ -71,6 +71,7 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 
 	existingSettings.EnableLocalSignUp = command.EnableLocalSignUp
 	existingSettings.DebugOcr = command.DebugOcr
+	existingSettings.NumWorkers = command.NumWorkers
 	existingSettings.EmailPollingInterval = command.EmailPollingInterval
 	existingSettings.ReceiptProcessingSettingsId = command.ReceiptProcessingSettingsId
 	existingSettings.FallbackReceiptProcessingSettingsId = command.FallbackReceiptProcessingSettingsId

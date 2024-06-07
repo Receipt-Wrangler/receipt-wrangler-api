@@ -169,9 +169,10 @@ func TestShouldRunHandlerWithDifferentInputs(t *testing.T) {
 			input: structs.Config{
 				SecretKey: "doesn't get imported",
 				AiSettings: structs.AiSettings{
-					AiType:    models.GEMINI,
-					Key:       "test",
-					OcrEngine: models.TESSERACT,
+					AiType:     models.GEMINI,
+					Key:        "test",
+					OcrEngine:  models.TESSERACT,
+					NumWorkers: 11,
 				},
 				EmailPollingInterval: 1200,
 				EmailSettings:        []structs.EmailSettings{},
@@ -191,10 +192,11 @@ func TestShouldRunHandlerWithDifferentInputs(t *testing.T) {
 			input: structs.Config{
 				SecretKey: "doesn't get imported",
 				AiSettings: structs.AiSettings{
-					AiType:    models.OPEN_AI_CUSTOM,
-					Key:       "test",
-					Url:       "test",
-					OcrEngine: models.TESSERACT,
+					AiType:     models.OPEN_AI_CUSTOM,
+					Key:        "test",
+					Url:        "test",
+					OcrEngine:  models.TESSERACT,
+					NumWorkers: 10,
 				},
 				EmailPollingInterval: 1200,
 				EmailSettings:        []structs.EmailSettings{},
@@ -295,9 +297,9 @@ func TestShouldRunHandlerWithDifferentInputs(t *testing.T) {
 				utils.PrintTestError(t, systemSettings.DebugOcr, test.input.Debug.DebugOcr)
 			}
 
-			if systemSettings.ReceiptProcessingSettings.NumWorkers != test.input.AiSettings.NumWorkers &&
-				systemSettings.ReceiptProcessingSettings.NumWorkers != 1 {
-				utils.PrintTestError(t, systemSettings.ReceiptProcessingSettings.NumWorkers, test.input.AiSettings.NumWorkers)
+			if systemSettings.NumWorkers != test.input.AiSettings.NumWorkers &&
+				systemSettings.NumWorkers != 1 {
+				utils.PrintTestError(t, systemSettings.NumWorkers, test.input.AiSettings.NumWorkers)
 			}
 
 			if len(systemSettings.ReceiptProcessingSettings.Key) > 0 {

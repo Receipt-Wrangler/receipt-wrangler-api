@@ -122,14 +122,13 @@ func (service ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.Ai
 	}
 
 	command := commands.UpsertReceiptProcessingSettingsCommand{
-		Name:       settingsName,
-		AiType:     aiType,
-		Url:        aiSettings.Url,
-		Key:        aiSettings.Key,
-		Model:      aiSettings.Model,
-		NumWorkers: numWorkers,
-		OcrEngine:  ocrEngine,
-		PromptId:   prompt.ID,
+		Name:      settingsName,
+		AiType:    aiType,
+		Url:       aiSettings.Url,
+		Key:       aiSettings.Key,
+		Model:     aiSettings.Model,
+		OcrEngine: ocrEngine,
+		PromptId:  prompt.ID,
 	}
 	vErrs := command.Validate()
 	if len(vErrs.Errors) > 0 {
@@ -225,6 +224,11 @@ func (service ImportService) importSystemSettings(tx *gorm.DB, config structs.Co
 		return err
 	}
 
+	numWorkersToUse := config.AiSettings.NumWorkers
+	if config.AiSettings.NumWorkers < 0 {
+		numWorkersToUse = 1
+	}
+
 	emailPollingInterval := config.EmailPollingInterval
 	if emailPollingInterval < 0 {
 		emailPollingInterval = 1800
@@ -234,6 +238,7 @@ func (service ImportService) importSystemSettings(tx *gorm.DB, config structs.Co
 		EnableLocalSignUp:    config.Features.EnableLocalSignUp,
 		DebugOcr:             config.Debug.DebugOcr,
 		EmailPollingInterval: emailPollingInterval,
+		NumWorkers:           numWorkersToUse,
 	}
 
 	if receiptProcessingSettings.ID != 0 {

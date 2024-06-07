@@ -3580,6 +3580,10 @@ components:
               type: boolean
               description: Debug OCR
               default: false
+            numWorkers:
+              type: integer
+              description: Number of workers to use
+              default: 1
             emailPollingInterval:
               type: integer
               description: Email polling interval
@@ -3598,6 +3602,10 @@ components:
           description: Whether local sign up is enabled
         debugOcr:
           type: boolean
+        numWorkers:
+          type: integer
+          description: Number of workers to use
+          default: 1
         emailPollingInterval:
           type: integer
           description: Email polling interval
@@ -3683,10 +3691,6 @@ components:
             model:
               type: string
               description: LLM model
-            numWorkers:
-              type: integer
-              description: Number of workers to use
-              default: 1
             ocrEngine:
               $ref: "#/components/schemas/OcrEngine"
             prompt:
@@ -3720,10 +3724,6 @@ components:
         model:
           type: string
           description: LLM model
-        numWorkers:
-          type: integer
-          description: Number of workers to use
-          default: 1
         ocrEngine:
           $ref: "#/components/schemas/OcrEngine"
         promptId:

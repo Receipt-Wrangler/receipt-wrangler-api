@@ -246,7 +246,6 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 					Url:         command.Url,
 					Key:         command.Key,
 					Model:       command.Model,
-					NumWorkers:  command.NumWorkers,
 					OcrEngine:   command.OcrEngine,
 					PromptId:    command.PromptId,
 				}

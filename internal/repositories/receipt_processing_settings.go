@@ -71,7 +71,6 @@ func (repository ReceiptProcessingSettingsRepository) CreateReceiptProcessingSet
 		Url:         command.Url,
 		Key:         encryptedKey,
 		Model:       command.Model,
-		NumWorkers:  command.NumWorkers,
 		OcrEngine:   command.OcrEngine,
 		PromptId:    command.PromptId,
 	}
@@ -106,7 +105,6 @@ func (repository ReceiptProcessingSettingsRepository) UpdateReceiptProcessingSet
 		AiType:      command.AiType,
 		Url:         command.Url,
 		Model:       command.Model,
-		NumWorkers:  command.NumWorkers,
 		OcrEngine:   command.OcrEngine,
 		PromptId:    command.PromptId,
 	}

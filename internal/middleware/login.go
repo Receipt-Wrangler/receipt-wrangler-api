@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/structs"
 )
 
@@ -22,7 +23,7 @@ func ValidateLoginData(next http.Handler) http.Handler {
 		}
 
 		if len(err.Errors) > 0 {
-			middleware_logger.Print(err.Errors, r)
+			logging.LogStd(logging.LOG_LEVEL_ERROR, "Invalid login data")
 			structs.WriteValidatorErrorResponse(w, err, http.StatusBadRequest)
 			return
 		}

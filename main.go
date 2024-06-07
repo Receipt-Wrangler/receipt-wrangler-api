@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
+	"os"
 	"receipt-wrangler/api/internal/corspolicy"
 	"receipt-wrangler/api/internal/email"
 	config "receipt-wrangler/api/internal/env"
-	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/models"
@@ -23,11 +23,11 @@ import (
 func main() {
 	err := logging.InitLog()
 	if err != nil {
-		log.Fatalln(err.Error())
+		fmt.Println("Failed to initialize log")
+		os.Exit(1)
 	}
 
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing...")
-	initLoggers()
 
 	err = config.SetConfigs()
 	if err != nil {
@@ -73,20 +73,15 @@ func main() {
 }
 
 func serve(router *chi.Mux) {
-	logger := logging.GetLogger()
 	srv := &http.Server{
 		Handler:      router,
 		Addr:         "0.0.0.0:8081",
 		WriteTimeout: 5 * time.Minute,
 		ReadTimeout:  5 * time.Minute,
 	}
-	logger.Print("Initialize completed")
-	logger.Fatal(srv.ListenAndServe())
-}
-
-func initLoggers() {
-	handlers.InitHandlerLogger()
-	middleware.InitMiddlewareLogger()
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Initialize completed")
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Listening on port 8081")
+	logging.LogStd(logging.LOG_LEVEL_FATAL, srv.ListenAndServe())
 }
 
 func initRoutes() *chi.Mux {

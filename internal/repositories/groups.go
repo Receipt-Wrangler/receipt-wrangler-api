@@ -73,7 +73,7 @@ func (repository GroupRepository) isValidColumn(orderBy string) bool {
 	return orderBy == "name" ||
 		orderBy == "num_of_members" ||
 		orderBy == "default_group" ||
-		orderBy == "created_t" ||
+		orderBy == "created_at" ||
 		orderBy == "updated_at"
 }
 

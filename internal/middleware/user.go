@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -26,7 +27,7 @@ func SetUserData(next http.Handler) http.Handler {
 
 		marshalErr := json.Unmarshal(bodyData, &user)
 		if marshalErr != nil {
-			middleware_logger.Print(marshalErr.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, marshalErr.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
 		}
@@ -46,14 +47,14 @@ func SetResetPasswordData(next http.Handler) http.Handler {
 		bodyData, err := utils.GetBodyData(w, r)
 
 		if err != nil {
-			middleware_logger.Print(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			utils.WriteErrorResponse(w, err, 500)
 			return
 		}
 
 		marshalErr := json.Unmarshal(bodyData, &resetPasswordData)
 		if marshalErr != nil {
-			middleware_logger.Print(marshalErr.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, marshalErr.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, 500)
 			return
 		}

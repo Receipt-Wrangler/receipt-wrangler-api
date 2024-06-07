@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
@@ -17,7 +18,7 @@ func ValidateRole(role models.UserRole) (mw func(http.Handler) http.Handler) {
 
 			if !hasRole {
 				utils.WriteCustomErrorResponse(w, errMsg, http.StatusForbidden)
-				middleware_logger.Print(errMsg, r)
+				logging.LogStd(logging.LOG_LEVEL_ERROR, errMsg, r)
 				return
 			}
 			h.ServeHTTP(w, r)

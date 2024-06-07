@@ -8,6 +8,7 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -140,7 +141,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	command := commands.UpsertReceiptCommand{}
 	err := command.LoadDataFromRequest(w, r)
 	if err != nil {
-		handler_logger.Print(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 		return
 	}
@@ -188,7 +189,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 
 	vErr, err := quickScanCommand.LoadDataFromRequestAndValidate(w, r)
 	if err != nil {
-		handler_logger.Print(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)
 		return
 	}
@@ -338,7 +339,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 	bulkCommand := commands.BulkStatusUpdateCommand{}
 	err := bulkCommand.LoadDataFromRequest(w, r)
 	if err != nil {
-		handler_logger.Print(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, "Error resolving receipts", http.StatusInternalServerError)
 		return
 	}

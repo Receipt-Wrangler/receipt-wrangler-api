@@ -14,6 +14,7 @@ var config structs.Config
 var basePath string
 var env string
 
+// TODO: V5 - Refactor remaining get call, add tests for db setup
 func GetConfig() structs.Config {
 	return config
 }
@@ -30,7 +31,7 @@ func GetDatabaseConfig() (structs.DatabaseConfig, error) {
 	port := os.Getenv("DB_PORT")
 	portInt, err := simpleutils.StringToInt(port)
 	if err != nil {
-
+		return structs.DatabaseConfig{}, err
 	}
 
 	return structs.DatabaseConfig{

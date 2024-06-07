@@ -17,7 +17,8 @@ import (
 var db *gorm.DB
 
 func BuildMariaDbConnectionString(dbConfig structs.DatabaseConfig) string {
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Name)
+	host := fmt.Sprintf("%s:%d", dbConfig.Host, dbConfig.Port)
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, host, dbConfig.Name)
 	return connectionString
 }
 

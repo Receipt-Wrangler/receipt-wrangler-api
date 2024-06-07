@@ -32,7 +32,7 @@ func GetDatabaseConfig() (structs.DatabaseConfig, error) {
 	port := os.Getenv("DB_PORT")
 	portToUse := 0
 
-	if dbEngine == "postgresql" {
+	if dbEngine == "postgresql" || dbEngine == "mariadb" || dbEngine == "mysql" {
 		parsedPort, err := simpleutils.StringToInt(port)
 		if err != nil {
 			return structs.DatabaseConfig{}, err

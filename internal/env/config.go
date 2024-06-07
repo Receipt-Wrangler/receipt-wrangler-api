@@ -28,10 +28,17 @@ func GetSecretKey() string {
 }
 
 func GetDatabaseConfig() (structs.DatabaseConfig, error) {
+	dbEngine := os.Getenv("DB_ENGINE")
 	port := os.Getenv("DB_PORT")
-	portInt, err := simpleutils.StringToInt(port)
-	if err != nil {
-		return structs.DatabaseConfig{}, err
+	portToUse := 0
+
+	if dbEngine == "postgresql" {
+		parsedPort, err := simpleutils.StringToInt(port)
+		if err != nil {
+			return structs.DatabaseConfig{}, err
+		}
+
+		portToUse = parsedPort
 	}
 
 	return structs.DatabaseConfig{
@@ -39,7 +46,7 @@ func GetDatabaseConfig() (structs.DatabaseConfig, error) {
 		Password: os.Getenv("DB_PASSWORD"),
 		Name:     os.Getenv("DB_NAME"),
 		Host:     os.Getenv("DB_HOST"),
-		Port:     portInt,
+		Port:     portToUse,
 		Engine:   os.Getenv("DB_ENGINE"),
 		Filename: os.Getenv("DB_FILENAME"),
 	}, nil

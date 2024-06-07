@@ -17,12 +17,40 @@ func tearDownConfigTests() {
 }
 
 func TestShouldGetEmptyDatabaseConfig(t *testing.T) {
-	defer tearDownConfigTests()
+	tearDownConfigTests()
 
-	_, err := GetDatabaseConfig()
-	if err == nil {
-		utils.PrintTestError(t, err, "Parse error")
+	dbConfig, err := GetDatabaseConfig()
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
 		return
+	}
+
+	if dbConfig.User != "" {
+		utils.PrintTestError(t, "Expected empty string", dbConfig.User)
+	}
+
+	if dbConfig.Password != "" {
+		utils.PrintTestError(t, "Expected empty string", dbConfig)
+	}
+
+	if dbConfig.Name != "" {
+		utils.PrintTestError(t, "Expected empty string", dbConfig)
+	}
+
+	if dbConfig.Host != "" {
+		utils.PrintTestError(t, "Expected empty string", dbConfig)
+	}
+
+	if dbConfig.Port != 0 {
+		utils.PrintTestError(t, "Expected 0", dbConfig)
+	}
+
+	if dbConfig.Engine != "" {
+		utils.PrintTestError(t, "Expected empty string", dbConfig)
+	}
+
+	if dbConfig.Filename != "" {
+		utils.PrintTestError(t, "Expected empty string", dbConfig)
 	}
 }
 
@@ -59,8 +87,8 @@ func TestShouldGetFullConfig(t *testing.T) {
 		utils.PrintTestError(t, "Expected test_host", dbConfig.Host)
 	}
 
-	if dbConfig.Port != 1234 {
-		utils.PrintTestError(t, "Expected 1234", dbConfig.Port)
+	if dbConfig.Port != 0 {
+		utils.PrintTestError(t, "Expected 0", dbConfig.Port)
 	}
 
 	if dbConfig.Engine != "sqlite" {
@@ -75,11 +103,27 @@ func TestShouldGetFullConfig(t *testing.T) {
 func TestShouldReturnErrorDueToBadPort(t *testing.T) {
 	defer tearDownConfigTests()
 	os.Setenv("DB_PORT", "not a number")
+	os.Setenv("DB_ENGINE", "postgresql")
 
 	_, err := GetDatabaseConfig()
 	if err == nil {
 		utils.PrintTestError(t, err, "Parse error")
 		return
 	}
+}
 
+func TestShouldParsePortCorrectly(t *testing.T) {
+	defer tearDownConfigTests()
+	os.Setenv("DB_PORT", "1234")
+	os.Setenv("DB_ENGINE", "postgresql")
+
+	dbConfig, err := GetDatabaseConfig()
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	if dbConfig.Port != 1234 {
+		utils.PrintTestError(t, "Expected 1234", dbConfig.Port)
+	}
 }

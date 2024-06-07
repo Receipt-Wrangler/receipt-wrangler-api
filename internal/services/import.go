@@ -133,7 +133,7 @@ func (service ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.Ai
 	}
 	vErrs := command.Validate()
 	if len(vErrs.Errors) > 0 {
-		logging.GetLogger().Println("Unable to import invalid AI settings: ", vErrs.Errors)
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Unable to import invalid AI settings: ", vErrs.Errors)
 		return models.ReceiptProcessingSettings{},
 			errors.New(INVALID_AI_SETTINGS_ERROR)
 	}
@@ -165,7 +165,7 @@ func (service ImportService) importEmailSettings(tx *gorm.DB, settings []structs
 		}
 		vErr := systemEmailCommand.Validate(true)
 		if len(vErr.Errors) > 0 {
-			logging.GetLogger().Println("Unable to import invalid email settings: ", vErr.Errors)
+			logging.LogStd(logging.LOG_LEVEL_ERROR, "Unable to import invalid email settings: ", vErr.Errors)
 			return errors.New("invalid email settings")
 		}
 

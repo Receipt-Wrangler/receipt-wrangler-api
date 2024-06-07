@@ -26,8 +26,7 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 
-	logger := logging.GetLogger()
-	logger.Println("Initializing app...")
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing...")
 	initLoggers()
 
 	err = config.SetConfigs()
@@ -52,7 +51,7 @@ func main() {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
-	logger.Print("Initializing Imagick...")
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing Imagick...")
 	imagick.Initialize()
 	defer imagick.Terminate()
 

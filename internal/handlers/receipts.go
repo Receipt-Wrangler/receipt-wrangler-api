@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
-	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -212,9 +211,15 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, errors.New("validation error")
 			}
 
+			systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
+			systemSettings, err := systemSettingsRepository.GetSystemSettings()
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			var wg sync.WaitGroup
 
-			semaphore := make(chan int, config.GetConfig().AiSettings.NumWorkers)
+			semaphore := make(chan int, systemSettings.NumWorkers)
 			results := make(chan models.Receipt, len(quickScanCommand.Files))
 			createdReceipts := make([]models.Receipt, 0)
 
@@ -225,7 +230,14 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 					defer wg.Done()
 					semaphore <- index
 
-					createdReceipt, err := services.QuickScan(token, quickScanCommand.Files[index], quickScanCommand.FileHeaders[index], quickScanCommand.PaidByUserIds[index], quickScanCommand.GroupIds[index], quickScanCommand.Statuses[index])
+					createdReceipt, err := services.QuickScan(
+						token,
+						quickScanCommand.Files[index],
+						quickScanCommand.FileHeaders[index],
+						quickScanCommand.PaidByUserIds[index],
+						quickScanCommand.GroupIds[index],
+						quickScanCommand.Statuses[index],
+					)
 					results <- createdReceipt
 					if err != nil {
 						results <- models.Receipt{}
@@ -392,7 +404,11 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 					comments := make([]models.Comment, len(bulkCommand.ReceiptIds))
 
 					for i := 0; i < len(bulkCommand.ReceiptIds); i++ {
-						comments[i] = models.Comment{ReceiptId: bulkCommand.ReceiptIds[i], Comment: bulkCommand.Comment, UserId: &token.UserId}
+						comments[i] = models.Comment{
+							ReceiptId: bulkCommand.ReceiptIds[i],
+							Comment:   bulkCommand.Comment,
+							UserId:    &token.UserId,
+						}
 					}
 
 					tErr = tx.Create(&comments).Error
@@ -466,7 +482,11 @@ func HasAccess(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, err
 			}
 
-			err = groupService.ValidateGroupRole(models.GroupRole(validatedGroupRole), fmt.Sprint(receipt.GroupId), fmt.Sprint(token.UserId))
+			err = groupService.ValidateGroupRole(
+				models.GroupRole(validatedGroupRole),
+				fmt.Sprint(receipt.GroupId),
+				fmt.Sprint(token.UserId),
+			)
 			if err != nil {
 				return http.StatusForbidden, err
 			}
@@ -583,7 +603,11 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				dstPath, err := fileRepository.BuildFilePath(simpleutils.UintToString(newReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+				dstPath, err := fileRepository.BuildFilePath(
+					simpleutils.UintToString(newReceipt.ID),
+					simpleutils.UintToString(fileData.ID),
+					fileData.Name,
+				)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

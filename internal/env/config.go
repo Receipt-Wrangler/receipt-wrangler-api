@@ -14,11 +14,6 @@ var config structs.Config
 var basePath string
 var env string
 
-// TODO: V5 - Refactor remaining get call, add tests for db setup
-func GetConfig() structs.Config {
-	return config
-}
-
 func GetSecretKey() string {
 	if len(os.Getenv("SECRET_KEY")) == 0 && env != "test" {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_SECRET_KEY_ERROR)

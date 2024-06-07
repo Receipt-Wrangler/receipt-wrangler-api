@@ -15,7 +15,6 @@ type UpsertReceiptProcessingSettingsCommand struct {
 	Url         string              `json:"url"`
 	Key         string              `json:"key"`
 	Model       string              `json:"model"`
-	NumWorkers  int                 `json:"numWorkers"`
 	OcrEngine   models.OcrEngine    `json:"ocrEngine"`
 	PromptId    uint                `json:"promptId"`
 }
@@ -53,10 +52,6 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 		errors["promptId"] = "promptId must be greater than 0"
 	}
 
-	if command.NumWorkers < 1 {
-		errors["numWorkers"] = "numWorkers must be greater than 0"
-	}
-
 	if len(command.AiType) == 0 {
 		errors["type"] = "type is required"
 		return vErrs
@@ -88,7 +83,6 @@ func (command *UpsertReceiptProcessingSettingsCommand) IsEmpty() bool {
 		command.Url == "" &&
 		command.Key == "" &&
 		command.Model == "" &&
-		command.NumWorkers == 0 &&
 		command.OcrEngine == "" &&
 		command.PromptId == 0
 }

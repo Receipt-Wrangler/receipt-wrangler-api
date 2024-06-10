@@ -3481,7 +3481,7 @@ components:
           description: Tags associated to receipt
           items:
             $ref: "#/components/schemas/UpsertTagCommand"
-        items:
+        receiptItems:
           type: array
           description: Items associated to receipt
           items:

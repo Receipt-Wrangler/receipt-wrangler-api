@@ -212,6 +212,29 @@ func TestShouldRunHandlerWithDifferentInputs(t *testing.T) {
 			expectReceiptProcessingSettingsToBeCreated: true,
 			expectSystemEmailsToBeCreated:              true,
 		},
+		"valid Open AI Custom config, with missing ocr engine": {
+			input: structs.Config{
+				SecretKey: "doesn't get imported",
+				AiSettings: structs.AiSettings{
+					AiType:     models.OPEN_AI_CUSTOM,
+					Key:        "test",
+					Url:        "test",
+					NumWorkers: 10,
+				},
+				EmailPollingInterval: 1200,
+				EmailSettings:        []structs.EmailSettings{},
+				Features: structs.FeatureConfig{
+					EnableLocalSignUp: false,
+					AiPoweredReceipts: false,
+				},
+				Debug: structs.DebugConfig{
+					DebugOcr: false,
+				},
+			},
+			expect: http.StatusOK,
+			expectReceiptProcessingSettingsToBeCreated: true,
+			expectSystemEmailsToBeCreated:              true,
+		},
 	}
 
 	for name, test := range tests {

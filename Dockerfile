@@ -5,10 +5,6 @@ RUN mkdir api
 WORKDIR api
 COPY . .
 
-# Set up config volume
-RUN mkdir config
-VOLUME /go/api/config
-
 # Add local bin to path for python dependencies
 ENV PATH="~/.local/bin:${PATH}"
 

@@ -27,7 +27,7 @@ func (repository GroupRepository) GetPagedGroups(command commands.PagedGroupRequ
 	var results []models.Group
 	var count int64
 
-	query := db.Model(&models.Group{}).Where("is_all_group = ?", false)
+	query := db.Model(&models.Group{}).Where("(is_all_group = ? OR is_all_group IS NULL)", false)
 
 	if !repository.isValidColumn(command.OrderBy) {
 		return nil, 0, errors.New("invalid column")

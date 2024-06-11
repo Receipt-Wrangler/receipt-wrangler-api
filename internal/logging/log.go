@@ -2,11 +2,13 @@ package logging
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 )
 
 var logger *log.Logger
+var stdLogger *log.Logger
 
 func InitLog() error {
 	logPath := "logs/app.log"
@@ -24,12 +26,36 @@ func InitLog() error {
 		return err
 	}
 
+	logFlags := log.Lshortfile | log.LstdFlags
+
 	// Flags are for date time, file name, and line number
-	logger = log.New(logFile, "App", log.Lshortfile|log.LstdFlags)
+	logger = log.New(logFile, "App", logFlags)
+	stdLogger = log.New(os.Stdout, "App", logFlags)
 
 	return nil
 }
 
 func GetLogger() *log.Logger {
 	return logger
+}
+
+func LogStd(level LogLevel, v ...any) {
+	levelString := fmt.Sprintf("%s: ", level)
+	v = append([]any{levelString}, v...)
+
+	if level == LOG_LEVEL_FATAL {
+		logger.Println(v...)
+		stdLogger.Println(v...)
+		os.Exit(1)
+	}
+
+	if level == LOG_LEVEL_ERROR {
+		logger.Println(v...)
+		stdLogger.Println(v...)
+	}
+
+	if level == LOG_LEVEL_INFO {
+		logger.Println(v...)
+		stdLogger.Println(v...)
+	}
 }

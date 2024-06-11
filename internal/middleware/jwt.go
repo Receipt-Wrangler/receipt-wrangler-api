@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/utils"
 )
 
@@ -18,7 +19,7 @@ func MoveJWTCookieToHeader(next http.Handler) http.Handler {
 		accessTokenCookie, err := r.Cookie(constants.JWT_KEY)
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusBadRequest)
-			middleware_logger.Println(errMessage)
+			logging.LogStd(logging.LOG_LEVEL_ERROR, errMessage)
 			return
 		}
 

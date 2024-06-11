@@ -11,6 +11,7 @@ import (
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"strconv"
+	"time"
 )
 
 func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
@@ -77,6 +78,7 @@ func QuickScan(
 	status models.ReceiptStatus,
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
+	systemTaskService := NewSystemTaskService(nil)
 	var createdReceipt models.Receipt
 
 	fileRepository := repositories.NewFileRepository(nil)
@@ -101,21 +103,53 @@ func QuickScan(
 	receiptRepository := repositories.NewReceiptRepository(nil)
 	receiptImageRepository := repositories.NewReceiptImageRepository(nil)
 
-	receiptCommand, err := MagicFillFromImage(magicFillCommand)
+	now := time.Now()
+	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand)
+	finishedAt := time.Now()
+
+	quickScanSystemTasks, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
+		receiptProcessingMetadata,
+		now,
+		finishedAt,
+		models.QUICK_SCAN,
+		&token.UserId,
+		nil)
+	if taskErr != nil {
+		return models.Receipt{}, taskErr
+	}
+
 	if err != nil {
 		return models.Receipt{}, err
 	}
 
-	receiptCommand.PaidByUserID = paidByUserId
-	receiptCommand.Status = models.ReceiptStatus(status)
+	if receiptCommand.PaidByUserID == 0 {
+		receiptCommand.PaidByUserID = paidByUserId
+	}
+
+	if len(receiptCommand.Status) == 0 {
+		receiptCommand.Status = models.ReceiptStatus(status)
+	}
+
 	receiptCommand.GroupId = groupId
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		receiptRepository.SetTransaction(tx)
 		receiptImageRepository.SetTransaction(tx)
+		systemTaskService.SetTransaction(tx)
+		uploadStart := time.Now()
 
 		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId)
+		taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
+			err,
+			createdReceipt,
+			quickScanSystemTasks,
+			uploadStart,
+		)
+		if taskErr != nil {
+			return taskErr
+		}
 		if err != nil {
+			tx.Commit()
 			return err
 		}
 

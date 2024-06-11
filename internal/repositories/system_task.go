@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"errors"
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 
@@ -29,7 +30,13 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 		return nil, 0, errors.New("invalid column name")
 	}
 
-	query := db.Model(&models.SystemTask{})
+	filteredSystemTaskTypes := []models.SystemTaskType{
+		models.RECEIPT_UPLOADED,
+		models.CHAT_COMPLETION,
+		models.OCR_PROCESSING,
+	}
+
+	query := db.Model(&models.SystemTask{}).Where("type NOT IN ?", filteredSystemTaskTypes)
 
 	if command.AssociatedEntityId != 0 {
 		query = query.Where("associated_entity_id = ?", command.AssociatedEntityId)
@@ -44,7 +51,7 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	query = repository.Sort(query, command.OrderBy, command.SortDirection)
 	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
 
-	err := query.Find(&results).Error
+	err := query.Preload(clause.Associations).Preload("ChildSystemTasks.ChildSystemTasks").Find(&results).Error
 	if query.Error != nil {
 		return nil, 0, err
 	}
@@ -60,19 +67,30 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 	db := repository.GetDB()
 
 	systemTask := models.SystemTask{
-		Type:                 command.Type,
-		Status:               command.Status,
-		AssociatedEntityType: command.AssociatedEntityType,
-		AssociatedEntityId:   command.AssociatedEntityId,
-		StartedAt:            command.StartedAt,
-		EndedAt:              command.EndedAt,
-		ResultDescription:    command.ResultDescription,
-		RanByUserId:          command.RanByUserId,
+		Type:                   command.Type,
+		Status:                 command.Status,
+		AssociatedEntityType:   command.AssociatedEntityType,
+		AssociatedEntityId:     command.AssociatedEntityId,
+		StartedAt:              command.StartedAt,
+		EndedAt:                command.EndedAt,
+		ResultDescription:      command.ResultDescription,
+		RanByUserId:            command.RanByUserId,
+		AssociatedSystemTaskId: command.AssociatedSystemTaskId,
 	}
 
 	err := db.Create(&systemTask).Error
 	if err != nil {
 		return models.SystemTask{}, err
+	}
+
+	if command.AssociatedSystemTaskId != nil && systemTask.Status == models.SYSTEM_TASK_FAILED {
+		var parentSystemTask models.SystemTask
+		db.Model(&models.SystemTask{}).Where("id = ?", command.AssociatedSystemTaskId).Find(&parentSystemTask)
+
+		if parentSystemTask.Status == models.SYSTEM_TASK_SUCCEEDED {
+			db.Model(&parentSystemTask).Update("status", models.SYSTEM_TASK_FAILED)
+		}
+
 	}
 
 	return systemTask, nil

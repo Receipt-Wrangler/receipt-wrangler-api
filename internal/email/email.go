@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
@@ -18,9 +19,29 @@ import (
 	"gorm.io/gorm"
 )
 
+var ticker *time.Ticker
+
+func StartEmailPolling() error {
+	if ticker != nil {
+		ticker.Stop()
+	}
+
+	err := PollEmails()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func PollEmails() error {
-	config := config.GetConfig()
-	ticker := time.NewTicker(time.Duration(config.EmailPollingInterval) * time.Second)
+	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
+	systemSettings, err := systemSettingsRepository.GetSystemSettings()
+	if err != nil {
+		return err
+	}
+
+	ticker = time.NewTicker(time.Duration(systemSettings.EmailPollingInterval) * time.Second)
 	done := make(chan bool)
 
 	go func() {
@@ -31,8 +52,8 @@ func PollEmails() error {
 			case <-ticker.C:
 				err := CallClient(true, nil)
 				if err != nil {
-					logging.GetLogger().Println("Error polling emails")
-					logging.GetLogger().Println(err.Error())
+					logging.LogStd(logging.LOG_LEVEL_ERROR, "Error polling emails")
+					logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 				}
 			}
 		}
@@ -42,42 +63,60 @@ func PollEmails() error {
 }
 
 func CallClient(pollAllGroups bool, groupIds []string) error {
-	logger := logging.GetLogger()
 	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+	var groupSettings []models.GroupSettings
 
 	if pollAllGroups {
-		groupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ?", true)
+		allGroupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ?", true)
 		if err != nil {
-			logger.Println(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			return err
 		}
-		err = pollEmailForGroupSettings(groupSettings)
-		if err != nil {
-			logger.Println(err.Error())
-			return err
-		}
+		groupSettings = allGroupSettings
 	} else {
-		groupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ? AND group_id IN ?", true, groupIds)
+		someGroupSettings, err := groupSettingsRepository.GetAllGroupSettings("email_integration_enabled = ? AND group_id IN ?", true, groupIds)
 		if err != nil {
-			logger.Println(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			return err
 		}
-		err = pollEmailForGroupSettings(groupSettings)
-		if err != nil {
-			logger.Println(err.Error())
-			return err
-		}
+		groupSettings = someGroupSettings
+	}
+
+	err := pollEmailForGroupSettings(groupSettings)
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+		return err
 	}
 	return nil
 }
 
 func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
-	logger := logging.GetLogger()
 	basePath := config.GetBasePath()
+	groupSettingsWithPassword := make([]models.GroupSettingsWithSystemEmailPassword, len(groupSettings))
 
-	bytesArr, err := json.Marshal(groupSettings)
+	// TODO: Could be more efficient by only decrypting the passwords once for each email
+	for i := range groupSettings {
+		cleartextPassword, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), groupSettings[i].SystemEmail.Password)
+		if err != nil {
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+			return err
+		}
+
+		var groupSettingWithPassword models.GroupSettingsWithSystemEmailPassword
+		groupSettingWithPassword.BaseModel = groupSettings[i].BaseModel
+		groupSettingWithPassword.GroupSettings = groupSettings[i]
+		groupSettingWithPassword.SystemEmail = models.SystemEmailWithPassword{
+			BaseModel:   groupSettings[i].SystemEmail.BaseModel,
+			SystemEmail: groupSettings[i].SystemEmail,
+			Password:    cleartextPassword,
+		}
+
+		groupSettingsWithPassword[i] = groupSettingWithPassword
+	}
+
+	bytesArr, err := json.Marshal(groupSettingsWithPassword)
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 
@@ -89,7 +128,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 
 	err = cmd.Run()
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 
@@ -97,84 +136,138 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 
 	err = json.Unmarshal(out.Bytes(), &result)
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 
-	logger.Println("Emails metadata captured: ", result)
+	logging.LogStd(logging.LOG_LEVEL_INFO, "Emails metadata captured: ", result)
 
 	err = processEmails(result, groupSettings)
 	if err != nil {
-		logger.Println(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
 	}
 
 	return nil
 }
 
-func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models.GroupSettings) error {
+func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.GroupSettings) error {
 	basePath := config.GetBasePath() + "/temp"
 	db := repositories.GetDB()
-	imagesToRemove := []string{}
 	fileRepository := repositories.NewCategoryRepository(nil)
+	systemTaskService := services.NewSystemTaskService(db)
+	emailProcessStart := time.Now()
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		receiptRepository := repositories.NewReceiptRepository(tx)
-		receiptImageRepository := repositories.NewReceiptImageRepository(tx)
+	for _, metadata := range metadataList {
 
-		for _, metadata := range emailMetadata {
-			for _, attachment := range metadata.Attachments {
-				tempFilePath := basePath + "/" + attachment.Filename
-				imageForOcrPath := basePath + "/" + "image-" + attachment.Filename
+		for _, attachment := range metadata.Attachments {
+			tempFilePath := basePath + "/" + attachment.Filename
+			defer os.Remove(tempFilePath)
 
-				bytes, err := utils.ReadFile(tempFilePath)
-				if err != nil {
-					return err
-				}
+			imageForOcrPath := basePath + "/" + "image-" + attachment.Filename
+			defer os.Remove(imageForOcrPath)
 
-				_, err = fileRepository.ValidateFileType(bytes)
-				if err != nil {
-					return err
-				}
+			fileBytes, err := utils.ReadFile(tempFilePath)
+			if err != nil {
+				return err
+			}
 
-				ocrBytes, err := fileRepository.GetBytesFromImageBytes(bytes)
-				if err != nil {
-					return err
-				}
+			ocrBytes, err := fileRepository.GetBytesFromImageBytes(fileBytes)
+			if err != nil {
+				return err
+			}
 
-				err = utils.WriteFile(imageForOcrPath, ocrBytes)
-				if err != nil {
-					return err
-				}
+			err = utils.WriteFile(imageForOcrPath, ocrBytes)
+			if err != nil {
+				return err
+			}
 
-				command, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
-				if err != nil {
-					return err
-				}
+			start := time.Now()
+			baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
+			end := time.Now()
 
-				imagesToRemove = append(imagesToRemove, imageForOcrPath)
+			if err != nil {
+				return err
+			}
 
-				for _, groupSettingsId := range metadata.GroupSettingsIds {
-					groupSettingsToUse := models.GroupSettings{}
+			for _, groupSettingsId := range metadata.GroupSettingsIds {
+				groupSettingsToUse := models.GroupSettings{}
 
-					for _, groupSetting := range groupSettings {
-						if groupSetting.ID == groupSettingsId {
-							groupSettingsToUse = groupSetting
-							break
-						}
+				for _, groupSetting := range groupSettings {
+					if groupSetting.ID == groupSettingsId {
+						groupSettingsToUse = groupSetting
+						break
 					}
+				}
 
-					if groupSettingsToUse.ID == 0 {
-						return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
-					}
+				if groupSettingsToUse.ID == 0 {
+					return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
+				}
 
-					command.GroupId = groupSettingsToUse.GroupId
+				command := baseCommand
+				command.GroupId = groupSettingsToUse.GroupId
+
+				if len(command.Status) == 0 {
 					command.Status = groupSettingsToUse.EmailDefaultReceiptStatus
+				}
+
+				if command.PaidByUserID == 0 {
 					command.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
-					command.CreatedByString = "Email Integration"
+				}
+
+				command.CreatedByString = "Email Integration"
+
+				err = db.Transaction(func(tx *gorm.DB) error {
+					receiptRepository := repositories.NewReceiptRepository(tx)
+					receiptImageRepository := repositories.NewReceiptImageRepository(tx)
+					systemTaskRepository := repositories.NewSystemTaskRepository(tx)
+					systemTaskService.SetTransaction(tx)
+					emailProcessEnd := time.Now()
+
+					metadataBytes, err := json.Marshal(metadata)
+					if err != nil {
+						return err
+					}
+
+					systemTaskCommand := commands.UpsertSystemTaskCommand{
+						Type:                 models.EMAIL_READ,
+						Status:               models.SYSTEM_TASK_SUCCEEDED,
+						AssociatedEntityType: models.SYSTEM_EMAIL,
+						AssociatedEntityId:   groupSettingsToUse.SystemEmail.ID,
+						StartedAt:            emailProcessStart,
+						EndedAt:              &emailProcessEnd,
+						RanByUserId:          nil,
+						ResultDescription:    string(metadataBytes),
+					}
+
+					createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTaskCommand)
+					if err != nil {
+						return err
+					}
+
+					processingSystemTasks, err := systemTaskService.CreateSystemTasksFromMetadata(
+						processingMetadata,
+						start,
+						end,
+						models.EMAIL_UPLOAD,
+						nil,
+						func(command commands.UpsertSystemTaskCommand) *uint {
+							return &createdSystemTask.ID
+						},
+					)
 
 					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
+					taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
+						err,
+						createdReceipt,
+						processingSystemTasks,
+						time.Now(),
+					)
+					if taskErr != nil {
+						return taskErr
+					}
 					if err != nil {
+						tx.Commit()
 						return err
 					}
 
@@ -185,27 +278,15 @@ func processEmails(emailMetadata []structs.EmailMetadata, groupSettings []models
 						Size:      attachment.Size,
 					}
 
-					_, err = receiptImageRepository.CreateReceiptImage(fileData, bytes)
+					_, err = receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 					if err != nil {
 						return err
 					}
 
-				}
-
-				imagesToRemove = append(imagesToRemove, tempFilePath)
+					return nil
+				})
 			}
 		}
-
-		return nil
-	})
-
-	for _, path := range imagesToRemove {
-		os.Remove(path)
-	}
-
-	if err != nil {
-		logging.GetLogger().Println(err.Error())
-		return err
 	}
 
 	return nil

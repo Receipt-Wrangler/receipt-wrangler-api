@@ -11,7 +11,7 @@ import (
 )
 
 type UpdateGroupSettingsCommand struct {
-	EmailToRead                 string                               `json:"emailToRead"`
+	SystemEmailId               *uint                                `json:"SystemEmailId"`
 	EmailIntegrationEnabled     bool                                 `json:"emailIntegrationEnabled"`
 	SubjectLineRegexes          []models.SubjectLineRegex            `json:"subjectLineRegexes"`
 	EmailWhiteList              []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
@@ -34,7 +34,7 @@ func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWr
 	}
 
 	command.EmailIntegrationEnabled = updateGroupSettingsCommand.EmailIntegrationEnabled
-	command.EmailToRead = updateGroupSettingsCommand.EmailToRead
+	command.SystemEmailId = updateGroupSettingsCommand.SystemEmailId
 	command.SubjectLineRegexes = updateGroupSettingsCommand.SubjectLineRegexes
 	command.EmailWhiteList = updateGroupSettingsCommand.EmailWhiteList
 	command.EmailDefaultReceiptStatus = updateGroupSettingsCommand.EmailDefaultReceiptStatus
@@ -48,8 +48,8 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 		Errors: make(map[string]string),
 	}
 
-	if command.EmailToRead == "" && command.EmailIntegrationEnabled {
-		vErr.Errors["emailToRead"] = "Email to read is required when email integration is enabled"
+	if command.SystemEmailId == nil && command.EmailIntegrationEnabled {
+		vErr.Errors["systemEmailId"] = "System email is required"
 	}
 
 	if command.EmailDefaultReceiptStatus == "" && command.EmailIntegrationEnabled {
@@ -58,11 +58,6 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 
 	if (command.EmailDefaultReceiptPaidById == nil || *command.EmailDefaultReceiptPaidById == 0) && command.EmailIntegrationEnabled {
 		vErr.Errors["emailDefaultReceiptPaidById"] = "Default receipt paid by is required when email integration is enabled"
-	}
-
-	_, err := mail.ParseAddress(command.EmailToRead)
-	if err != nil {
-		vErr.Errors["emailToRead"] = "Email to read is invalid"
 	}
 
 	for index, email := range command.EmailWhiteList {

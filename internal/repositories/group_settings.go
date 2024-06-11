@@ -1,11 +1,10 @@
 package repositories
 
 import (
-	"receipt-wrangler/api/internal/commands"
-	"receipt-wrangler/api/internal/models"
-
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/models"
 )
 
 type GroupSettingsRepository struct {
@@ -50,6 +49,7 @@ func (repository GroupSettingsRepository) CreateGroupSettings(groupSettings mode
 
 func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, command commands.UpdateGroupSettingsCommand) (models.GroupSettings, error) {
 	db := repository.GetDB()
+
 	var groupSettings models.GroupSettings
 
 	err := db.Model(&models.GroupSettings{}).Where("group_id = ?", groupId).First(&groupSettings).Error
@@ -57,19 +57,26 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 		return models.GroupSettings{}, err
 	}
 
+	groupSettings.SystemEmailId = command.SystemEmailId
+	groupSettings.EmailIntegrationEnabled = command.EmailIntegrationEnabled
+	groupSettings.EmailDefaultReceiptStatus = command.EmailDefaultReceiptStatus
+	groupSettings.EmailDefaultReceiptPaidById = command.EmailDefaultReceiptPaidById
+	groupSettings.SubjectLineRegexes = command.SubjectLineRegexes
+	groupSettings.EmailWhiteList = command.EmailWhiteList
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 
-		err = tx.Model(&groupSettings).Select("*").Updates(map[string]interface{}{"email_to_read": command.EmailToRead, "email_integration_enabled": command.EmailIntegrationEnabled, "email_default_receipt_paid_by_id": command.EmailDefaultReceiptPaidById, "email_default_receipt_status": command.EmailDefaultReceiptStatus}).Error
+		err = tx.Session(&gorm.Session{FullSaveAssociations: true}).Select("*").Model(&groupSettings).Updates(&groupSettings).Error
 		if err != nil {
 			return err
 		}
 
-		err = tx.Model(&groupSettings).Association("SubjectLineRegexes").Replace(&command.SubjectLineRegexes)
+		err = tx.Model(&groupSettings).Association("SubjectLineRegexes").Replace(&groupSettings.SubjectLineRegexes)
 		if err != nil {
 			return err
 		}
 
-		err = tx.Model(&groupSettings).Association("EmailWhiteList").Replace(&command.EmailWhiteList)
+		err = tx.Model(&groupSettings).Association("EmailWhiteList").Replace(&groupSettings.EmailWhiteList)
 		if err != nil {
 			return err
 		}

@@ -100,11 +100,11 @@ func TestShouldValidateUpsertSystemSettingsCommand(t *testing.T) {
 		expect int
 	}{
 		"empty body": {
-			expect: http.StatusOK,
+			expect: http.StatusBadRequest,
 		},
 		"empty command": {
 			input:  commands.UpsertSystemSettingsCommand{},
-			expect: http.StatusOK,
+			expect: http.StatusBadRequest,
 		},
 		"invalid email polling interval": {
 			input: commands.UpsertSystemSettingsCommand{
@@ -137,12 +137,24 @@ func TestShouldValidateUpsertSystemSettingsCommand(t *testing.T) {
 			},
 			expect: http.StatusBadRequest,
 		},
+
+		"bad num workers": {
+			input: commands.UpsertSystemSettingsCommand{
+				EmailPollingInterval:                1,
+				EnableLocalSignUp:                   true,
+				ReceiptProcessingSettingsId:         &id,
+				FallbackReceiptProcessingSettingsId: &id2,
+				NumWorkers:                          0,
+			},
+			expect: http.StatusBadRequest,
+		},
 		"valid command": {
 			input: commands.UpsertSystemSettingsCommand{
 				EmailPollingInterval:                1,
 				EnableLocalSignUp:                   true,
 				ReceiptProcessingSettingsId:         &id,
 				FallbackReceiptProcessingSettingsId: &id2,
+				NumWorkers:                          1,
 			},
 			expect: http.StatusOK,
 		},

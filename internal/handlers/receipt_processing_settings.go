@@ -3,11 +3,11 @@ package handlers
 import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
-	"receipt-wrangler/api/internal/ai"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
@@ -224,13 +224,13 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
 				return 0, nil
 			}
-			var aiClient *ai.AiClientNew
+			var aiClient *services.AiService
 			var decryptKey bool
 
 			if command.ID > 0 && command.UpsertReceiptProcessingSettingsCommand.IsEmpty() {
 				stringId := simpleutils.UintToString(command.ID)
 
-				client, clientErr := ai.NewAiClientNew(stringId)
+				client, clientErr := services.NewAiService(stringId)
 				if clientErr != nil {
 					return http.StatusInternalServerError, clientErr
 				}
@@ -246,12 +246,11 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 					Url:         command.Url,
 					Key:         command.Key,
 					Model:       command.Model,
-					NumWorkers:  command.NumWorkers,
 					OcrEngine:   command.OcrEngine,
 					PromptId:    command.PromptId,
 				}
 
-				client := ai.AiClientNew{}
+				client := services.AiService{}
 				client.ReceiptProcessingSettings = receiptProcessingSettings
 
 				aiClient = &client

@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"github.com/otiai10/gosseract/v2"
 	"gopkg.in/gographics/imagick.v2/imagick"
+	"gorm.io/gorm"
 	"image"
 	"image/jpeg"
 	"os"
 	"os/exec"
 	"path/filepath"
-	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -19,44 +20,85 @@ import (
 	"time"
 )
 
-func ReadImage(path string) (string, error) {
-	var text string
-	appConfig := config.GetConfig()
-	startTime := time.Now()
+type OcrService struct {
+	BaseService
+	ReceiptProcessingSettings models.ReceiptProcessingSettings
+}
 
-	imageBytes, err := prepareImage(path)
-	if err != nil {
-		return "", err
+func NewOcrService(tx *gorm.DB, receiptProcessingSettings models.ReceiptProcessingSettings) OcrService {
+	service := OcrService{
+		BaseService: BaseService{
+			DB: repositories.GetDB(),
+			TX: tx,
+		},
+		ReceiptProcessingSettings: receiptProcessingSettings,
 	}
 
-	if appConfig.AiSettings.OcrEngine == models.TESSERACT || appConfig.AiSettings.OcrEngine == "" {
-		text, err = ReadImageWithTesseract(imageBytes)
+	return service
+}
+
+func (service OcrService) ReadImage(path string) (string, commands.UpsertSystemTaskCommand, error) {
+	var text string
+	startTime := time.Now()
+	systemTaskCommand := commands.UpsertSystemTaskCommand{
+		Type:                 models.OCR_PROCESSING,
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		AssociatedEntityType: models.RECEIPT_PROCESSING_SETTINGS,
+		AssociatedEntityId:   service.ReceiptProcessingSettings.ID,
+		StartedAt:            time.Now(),
+	}
+
+	imageBytes, err := service.prepareImage(path)
+	if err != nil {
+		systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+		systemTaskCommand.ResultDescription = err.Error()
+		return "", systemTaskCommand, err
+	}
+
+	if service.ReceiptProcessingSettings.OcrEngine == models.TESSERACT_NEW {
+		text, err = service.ReadImageWithTesseract(imageBytes)
 		if err != nil {
-			return "", err
+			systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+			systemTaskCommand.ResultDescription = err.Error()
+			return "", systemTaskCommand, err
 		}
 	}
 
-	if appConfig.AiSettings.OcrEngine == models.EASY_OCR {
-		text, err = ReadImageWithEasyOcr(imageBytes)
+	if service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
+		text, err = service.ReadImageWithEasyOcr(imageBytes)
 		if err != nil {
-			return "", err
+			systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+			systemTaskCommand.ResultDescription = err.Error()
+			return "", systemTaskCommand, err
 		}
 	}
 	endTime := time.Now()
 	elapsedTime := endTime.Sub(startTime)
-	logging.GetLogger().Print("OCR and Image processing took: ", elapsedTime)
+	logging.LogStd(logging.LOG_LEVEL_INFO, "OCR and Image processing took: ", elapsedTime)
 
-	if appConfig.Debug.DebugOcr {
-		err = writeDebuggingFiles(text, path, imageBytes, elapsedTime)
+	systemSettingsRepository := repositories.NewSystemSettingsRepository(service.TX)
+	systemSettings, err := systemSettingsRepository.GetSystemSettings()
+	if err != nil {
+		systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+		systemTaskCommand.ResultDescription = err.Error()
+		return "", systemTaskCommand, err
+	}
+
+	if systemSettings.DebugOcr {
+		err = service.writeDebuggingFiles(text, path, imageBytes, elapsedTime)
 		if err != nil {
-			return "", err
+			return "", commands.UpsertSystemTaskCommand{}, err
 		}
 	}
 
-	return text, nil
+	ocrEndTime := time.Now()
+	systemTaskCommand.EndedAt = &ocrEndTime
+	systemTaskCommand.ResultDescription = text
+
+	return text, systemTaskCommand, nil
 }
 
-func ReadImageWithTesseract(preparedImageBytes []byte) (string, error) {
+func (service OcrService) ReadImageWithTesseract(preparedImageBytes []byte) (string, error) {
 	client := gosseract.NewClient()
 	defer client.Close()
 
@@ -78,7 +120,7 @@ func ReadImageWithTesseract(preparedImageBytes []byte) (string, error) {
 	return text, nil
 }
 
-func ReadImageWithEasyOcr(preparedImageBytes []byte) (string, error) {
+func (service OcrService) ReadImageWithEasyOcr(preparedImageBytes []byte) (string, error) {
 	fileRepository := repositories.NewFileRepository(nil)
 	tempPath, err := fileRepository.WriteTempFile(preparedImageBytes)
 	if err != nil {
@@ -100,7 +142,7 @@ func ReadImageWithEasyOcr(preparedImageBytes []byte) (string, error) {
 	return text, nil
 }
 
-func writeDebuggingFiles(ocrText string, path string, imageBytes []byte, ocrDuration time.Duration) error {
+func (service OcrService) writeDebuggingFiles(ocrText string, path string, imageBytes []byte, ocrDuration time.Duration) error {
 	fileRepository := repositories.NewFileRepository(nil)
 	pathParts := strings.Split(path, "/")
 	filename := pathParts[len(pathParts)-1]
@@ -146,8 +188,7 @@ func writeDebuggingFiles(ocrText string, path string, imageBytes []byte, ocrDura
 	return nil
 }
 
-func prepareImage(path string) ([]byte, error) {
-	var appConfig = config.GetConfig()
+func (service OcrService) prepareImage(path string) ([]byte, error) {
 	mw := imagick.NewMagickWand()
 	err := mw.ReadImage(path)
 	if err != nil {
@@ -189,7 +230,7 @@ func prepareImage(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	if appConfig.AiSettings.OcrEngine == models.EASY_OCR {
+	if service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
 		err = mw.ScaleImage(mw.GetImageWidth()/2, mw.GetImageHeight()/2)
 		if err != nil {
 			return nil, err

@@ -8,14 +8,18 @@ import (
 
 type SystemTask struct {
 	BaseModel
-	Type                 SystemTaskType       `json:"type"`
-	Status               SystemTaskStatus     `json:"status"`
-	AssociatedEntityType AssociatedEntityType `json:"associatedEntityType"`
-	AssociatedEntityId   uint                 `json:"associatedEntityId"`
-	StartedAt            time.Time            `json:"startedAt"`
-	EndedAt              *time.Time           `json:"endedAt"`
-	ResultDescription    string               `json:"resultDescription"`
-	RanByUserId          *uint                `json:"ranByUserId"`
+	Type                   SystemTaskType       `json:"type"`
+	Status                 SystemTaskStatus     `json:"status"`
+	AssociatedEntityType   AssociatedEntityType `json:"associatedEntityType"`
+	AssociatedEntityId     uint                 `json:"associatedEntityId"`
+	StartedAt              time.Time            `json:"startedAt"`
+	EndedAt                *time.Time           `json:"endedAt"`
+	ResultDescription      string               `json:"resultDescription"`
+	RanByUser              *User                `json:"-"`
+	RanByUserId            *uint                `json:"ranByUserId"`
+	AssociatedSystemTask   *SystemTask          `json:"associatedSystemTask"`
+	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
+	ChildSystemTasks       []*SystemTask        `gorm:"foreignKey:AssociatedSystemTaskId" json:"childSystemTasks"`
 }
 
 type SystemTaskStatus string
@@ -40,6 +44,13 @@ func (self SystemTaskStatus) Value() (driver.Value, error) {
 type SystemTaskType string
 
 const (
+	RECEIPT_UPLOADED                               SystemTaskType = "RECEIPT_UPLOADED"
+	OCR_PROCESSING                                 SystemTaskType = "OCR_PROCESSING"
+	CHAT_COMPLETION                                SystemTaskType = "CHAT_COMPLETION"
+	MAGIC_FILL                                     SystemTaskType = "MAGIC_FILL"
+	QUICK_SCAN                                     SystemTaskType = "QUICK_SCAN"
+	EMAIL_UPLOAD                                   SystemTaskType = "EMAIL_UPLOAD"
+	EMAIL_READ                                     SystemTaskType = "EMAIL_READ"
 	SYSTEM_EMAIL_CONNECTIVITY_CHECK                SystemTaskType = "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
 	RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK SystemTaskType = "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
 )
@@ -50,7 +61,15 @@ func (self *SystemTaskType) Scan(value string) error {
 }
 
 func (self SystemTaskType) Value() (driver.Value, error) {
-	if self != SYSTEM_EMAIL_CONNECTIVITY_CHECK && self != RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK {
+	if self != SYSTEM_EMAIL_CONNECTIVITY_CHECK &&
+		self != RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK &&
+		self != QUICK_SCAN &&
+		self != MAGIC_FILL &&
+		self != EMAIL_UPLOAD &&
+		self != EMAIL_READ &&
+		self != CHAT_COMPLETION &&
+		self != OCR_PROCESSING &&
+		self != RECEIPT_UPLOADED {
 		return nil, errors.New("invalid SystemTaskType")
 	}
 	return string(self), nil

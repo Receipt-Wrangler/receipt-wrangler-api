@@ -75,7 +75,10 @@ func (repository PromptRepository) UpdatePromptById(id string, command commands.
 }
 
 func (repository PromptRepository) isValidColumn(orderBy string) bool {
-	return orderBy == "name" || orderBy == "description" || orderBy == "created_at" || orderBy == "updated_at"
+	return orderBy == "name" ||
+		orderBy == "description" ||
+		orderBy == "created_at" ||
+		orderBy == "updated_at"
 }
 
 func (repository PromptRepository) CreatePrompt(command commands.UpsertPromptCommand) (models.Prompt, error) {

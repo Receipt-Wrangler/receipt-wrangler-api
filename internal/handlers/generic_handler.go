@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -20,7 +21,7 @@ func HandleRequest(handler structs.Handler) {
 		db := repositories.GetDB()
 		err := db.Model(models.Receipt{}).Where("id = ?", handler.ReceiptId).Select("group_id").First(&receipt).Error
 		if err != nil {
-			handler_logger.Print(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
 			return
 		}
@@ -33,7 +34,7 @@ func HandleRequest(handler structs.Handler) {
 		db := repositories.GetDB()
 		err := db.Model(models.Receipt{}).Where("id IN (?)", handler.ReceiptIds).Select("group_id").Find(&receipts).Error
 		if err != nil {
-			handler_logger.Print(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
 			return
 		}
@@ -41,15 +42,20 @@ func HandleRequest(handler structs.Handler) {
 		for _, receipt := range receipts {
 			handler.GroupIds = append(handler.GroupIds, simpleutils.UintToString(receipt.GroupId))
 		}
-
 	}
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		groupService := services.NewGroupService(nil)
 		token := structs.GetJWT(handler.Request)
 		err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, simpleutils.UintToString(token.UserId))
-		if err != nil {
-			handler_logger.Print(err.Error())
+		hasOrUserRole := false
+
+		if len(handler.OrUserRole) > 0 {
+			hasOrUserRole = models.HasRole(handler.OrUserRole, token.UserRole)
+		}
+
+		if err != nil && !hasOrUserRole {
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
 			return
 		}
@@ -62,7 +68,7 @@ func HandleRequest(handler structs.Handler) {
 		for _, groupId := range handler.GroupIds {
 			err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), groupId, simpleutils.UintToString(token.UserId))
 			if err != nil {
-				handler_logger.Print(err.Error())
+				logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 				utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)
 				return
 			}
@@ -73,7 +79,7 @@ func HandleRequest(handler structs.Handler) {
 		token := structs.GetJWT(handler.Request)
 		hasUserRole := models.HasRole(handler.UserRole, token.UserRole)
 		if !hasUserRole {
-			handler_logger.Print("User is unauthorized to perform this action.")
+			logging.LogStd(logging.LOG_LEVEL_ERROR, "User is unauthorized to perform this action.")
 			utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to perform this action.", http.StatusForbidden)
 			return
 		}
@@ -82,7 +88,7 @@ func HandleRequest(handler structs.Handler) {
 	errCode, err := handler.HandlerFunction(handler.Writer, handler.Request)
 
 	if err != nil {
-		handler_logger.Print(err.Error())
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(handler.Writer, handler.ErrorMessage, errCode)
 		return
 	}

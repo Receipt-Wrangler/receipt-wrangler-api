@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -16,21 +17,21 @@ func ValidateRefreshToken(next http.Handler) http.Handler {
 		errMessage := "Error refreshing token"
 
 		if err != nil {
-			middleware_logger.Fatal(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 			return
 		}
 
 		refreshTokenString, err := getRefreshTokenFromRequest(r, w)
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
-			middleware_logger.Println("Refresh token not found")
+			logging.LogStd(logging.LOG_LEVEL_ERROR, "Refresh token not found")
 			return
 		}
 
 		refreshToken, err := tokenValidator.ValidateToken(context.TODO(), refreshTokenString)
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
-			middleware_logger.Println(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			return
 		}
 
@@ -52,7 +53,7 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 			refreshTokenString, err = getRefreshTokenFromRequest(r, w)
 			if err != nil {
 				utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
-				middleware_logger.Println("Refresh token not found")
+				logging.LogStd(logging.LOG_LEVEL_ERROR, "Refresh token not found")
 				return
 			}
 		}
@@ -60,7 +61,7 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 		err = db.Model(&models.RefreshToken{}).Where("token = ?", refreshTokenString).Find(&dbToken).Error
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
-			middleware_logger.Println(err.Error())
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			return
 		}
 
@@ -72,14 +73,14 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 			http.SetCookie(w, &emptyRefreshTokenCookie)
 
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
-			middleware_logger.Println("Refresh token has been used already.", r, dbToken)
+			logging.LogStd(logging.LOG_LEVEL_ERROR, "Refresh token has been used already.")
 
 			return
 		} else {
 			err = db.Model(&dbToken).Update("is_used", true).Error
 			if err != nil {
 				utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
-				middleware_logger.Println(err.Error())
+				logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 				return
 			}
 		}

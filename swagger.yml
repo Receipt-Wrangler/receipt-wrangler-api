@@ -507,6 +507,33 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /group/getPagedGroups:
+    post:
+      tags:
+        - Groups
+      summary: Get paged groups
+      description: This will return paged groups
+      operationId: getPagedGroups
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedGroupRequestCommand"
+      responses:
+        200:
+          description: Paged groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+      security:
+        - bearerAuth: [ ]
 
   /login/:
     post:
@@ -2078,6 +2105,29 @@ paths:
           $ref: "#/components/responses/Internal"
         403:
           $ref: "#/components/responses/Forbidden"
+  /import/importConfigJson:
+    post:
+      tags:
+        - Import
+      summary: Import config json
+      description: This will import a config json
+      operationId: importConfigJson
+      requestBody:
+        description: Config json to import
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ConfigImportCommand"
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     bearerAuth:
@@ -2148,6 +2198,7 @@ components:
         - "OPEN_AI_CUSTOM"
         - "OPEN_AI"
         - "GEMINI"
+        - "OLLAMA"
     OcrEngine:
       type: string
       enum:
@@ -2161,13 +2212,29 @@ components:
     SystemTaskType:
       type: string
       enum:
+        - "OCR_PROCESSING"
+        - "CHAT_COMPLETION"
+        - "MAGIC_FILL"
+        - "QUICK_SCAN"
+        - "EMAIL_READ"
+        - "EMAIL_UPLOAD"
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
+        - "RECEIPT_UPLOADED"
     AssociatedEntityType:
       type: string
       enum:
         - "SYSTEM_EMAIL"
         - "RECEIPT_PROCESSING_SETTINGS"
+    AssociatedGroup:
+      type: string
+      enum:
+        - "MINE"
+        - "ALL"
+    ImportType:
+      type: string
+      enum:
+        - "IMPORT_CONFIG"
     BaseModel:
       type: object
       required:
@@ -2869,6 +2936,18 @@ components:
         sortDirection:
           type: string
           $ref: "#/components/schemas/SortDirection"
+    PagedGroupRequestCommand:
+      allOf:
+        - $ref: "#/components/schemas/PagedRequestCommand"
+        - type: object
+          properties:
+            filter:
+              $ref: "#/components/schemas/GroupFilter"
+    GroupFilter:
+      type: object
+      properties:
+        associatedGroup:
+          $ref: "#/components/schemas/AssociatedGroup"
     ReceiptPagedRequestCommand:
       required:
         - page
@@ -3061,6 +3140,11 @@ components:
         emailIntegrationEnabled:
           type: boolean
           description: Whether email integration is enabled
+        systemEmailId:
+          type: integer
+          description: System email foreign key
+        systemEmail:
+          $ref: "#/components/schemas/SystemEmail"
         emailToRead:
           type: string
           description: Email to read
@@ -3137,16 +3221,16 @@ components:
     UpdateGroupSettingsCommand:
       type: object
       required:
-        - emailToRead
+        - systemEmailId
         - subjectLineRegexes
         - emailWhiteList
       properties:
+        systemEmailId:
+          type: integer
+          description: System email foreign key
         emailIntegrationEnabled:
           type: boolean
           description: Whether email integration is enabled
-        emailToRead:
-          type: string
-          description: Email to read
         subjectLineRegexes:
           type: array
           description: Subject line regexes
@@ -3397,7 +3481,7 @@ components:
           description: Tags associated to receipt
           items:
             $ref: "#/components/schemas/UpsertTagCommand"
-        items:
+        receiptItems:
           type: array
           description: Items associated to receipt
           items:
@@ -3492,6 +3576,14 @@ components:
               type: boolean
               description: Whether local sign up is enabled
               default: false
+            debugOcr:
+              type: boolean
+              description: Debug OCR
+              default: false
+            numWorkers:
+              type: integer
+              description: Number of workers to use
+              default: 1
             emailPollingInterval:
               type: integer
               description: Email polling interval
@@ -3508,6 +3600,12 @@ components:
         enableLocalSignUp:
           type: boolean
           description: Whether local sign up is enabled
+        debugOcr:
+          type: boolean
+        numWorkers:
+          type: integer
+          description: Number of workers to use
+          default: 1
         emailPollingInterval:
           type: integer
           description: Email polling interval
@@ -3557,6 +3655,10 @@ components:
               format: uint64
             resultDescription:
               type: string
+            childSystemTasks:
+              type: array
+              items:
+                $ref: "#/components/schemas/SystemTask"
     GetSystemTaskCommand:
       allOf:
         - $ref: "#/components/schemas/PagedRequestCommand"
@@ -3589,10 +3691,6 @@ components:
             model:
               type: string
               description: LLM model
-            numWorkers:
-              type: integer
-              description: Number of workers to use
-              default: 1
             ocrEngine:
               $ref: "#/components/schemas/OcrEngine"
             prompt:
@@ -3626,10 +3724,6 @@ components:
         model:
           type: string
           description: LLM model
-        numWorkers:
-          type: integer
-          description: Number of workers to use
-          default: 1
         ocrEngine:
           $ref: "#/components/schemas/OcrEngine"
         promptId:
@@ -3695,3 +3789,12 @@ components:
         promptId:
           type: integer
           description: Prompt foreign key
+    ConfigImportCommand:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Files to quick scan

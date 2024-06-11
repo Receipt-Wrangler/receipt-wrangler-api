@@ -14,7 +14,6 @@ type ReceiptProcessingSettings struct {
 	Url         string       `json:"url"`
 	Key         string       `json:"-"`
 	Model       string       `json:"model"`
-	NumWorkers  int          `json:"numWorkers"`
 	OcrEngine   OcrEngine    `json:"ocrEngine"`
 	Prompt      Prompt       `json:"prompt"`
 	PromptId    uint         `json:"promptId"`

@@ -9,6 +9,8 @@ import (
 
 type UpsertSystemSettingsCommand struct {
 	EnableLocalSignUp                   bool  `json:"enableLocalSignUp"`
+	DebugOcr                            bool  `json:"debugOcr"`
+	NumWorkers                          int   `json:"numWorkers"`
 	EmailPollingInterval                int   `json:"emailPollingInterval"`
 	ReceiptProcessingSettingsId         *uint `json:"receiptProcessingSettingsId"`
 	FallbackReceiptProcessingSettingsId *uint `json:"fallbackReceiptProcessingSettingsId"`
@@ -35,6 +37,10 @@ func (command *UpsertSystemSettingsCommand) Validate() structs.ValidatorError {
 
 	if command.EmailPollingInterval < 0 {
 		errorMap["emailPollingInterval"] = "Email polling interval must be greater than 0"
+	}
+
+	if command.NumWorkers < 1 {
+		errorMap["numWorkers"] = "Number of workers must be greater than 1"
 	}
 
 	if command.ReceiptProcessingSettingsId != nil && *command.ReceiptProcessingSettingsId <= 0 {

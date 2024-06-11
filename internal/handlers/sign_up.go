@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 )
 
@@ -14,9 +16,19 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			systemSettingsService := services.NewSystemSettingsService(nil)
+			featureConfig, err := systemSettingsService.GetFeatureConfig()
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			if !featureConfig.EnableLocalSignUp {
+				return http.StatusNotFound, errors.New("Local sign up is disabled")
+			}
+
 			userData := r.Context().Value("signUpCommand").(commands.SignUpCommand)
 			userRepository := repositories.NewUserRepository(nil)
-			_, err := userRepository.CreateUser(userData)
+			_, err = userRepository.CreateUser(userData)
 
 			if err != nil {
 				return http.StatusInternalServerError, err

@@ -149,7 +149,6 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 				OcrEngine:   models.TESSERACT,
 				Key:         "key",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusBadRequest,
 		},
@@ -160,7 +159,6 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 				AiType:      models.GEMINI,
 				Key:         "key",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusBadRequest,
 		},
@@ -172,7 +170,6 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 				OcrEngine:   models.TESSERACT,
 				Key:         "key",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusOK,
 		},
@@ -184,7 +181,6 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 				OcrEngine:   models.TESSERACT,
 				Key:         "key",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusOK,
 		},
@@ -197,7 +193,6 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 				Key:         "optionalKey",
 				Url:         "http://localhost:8080/v1/chat/completions",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusOK,
 		},
@@ -353,7 +348,6 @@ func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *test
 				OcrEngine:   models.TESSERACT,
 				Key:         "key",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusBadRequest,
 		},
@@ -364,7 +358,6 @@ func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *test
 				AiType:      models.GEMINI,
 				Key:         "key",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusBadRequest,
 		},
@@ -376,7 +369,6 @@ func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *test
 				OcrEngine:   models.TESSERACT,
 				Key:         "key",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusOK,
 		},
@@ -388,7 +380,6 @@ func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *test
 				OcrEngine:   models.TESSERACT,
 				Key:         "key",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusOK,
 		},
@@ -401,7 +392,6 @@ func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *test
 				Key:         "optionalKey",
 				Url:         "http://localhost:8080/v1/chat/completions",
 				PromptId:    1,
-				NumWorkers:  1,
 			},
 			expect: http.StatusOK,
 		},
@@ -520,6 +510,8 @@ func TestShouldNotCheckReceiptProcessingSettingsConnectivityWithBadRequest(t *te
 
 	key, _ := utils.EncryptAndEncodeToBase64(config.GetEncryptionKey(), "key")
 
+	repositories.CreateTestUser()
+
 	db := repositories.GetDB()
 	db.Create(&models.Prompt{})
 	db.Create(&models.ReceiptProcessingSettings{
@@ -529,7 +521,6 @@ func TestShouldNotCheckReceiptProcessingSettingsConnectivityWithBadRequest(t *te
 		OcrEngine:   models.TESSERACT,
 		Key:         key,
 		PromptId:    1,
-		NumWorkers:  1,
 	})
 
 	tests := map[string]struct {
@@ -579,7 +570,6 @@ func TestShouldNotCheckReceiptProcessingSettingsConnectivityWithBadRequest(t *te
 					OcrEngine:   models.TESSERACT,
 					Key:         "key",
 					PromptId:    1,
-					NumWorkers:  1,
 				},
 			},
 			expect: http.StatusOK,

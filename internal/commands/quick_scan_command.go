@@ -3,6 +3,7 @@ package commands
 import (
 	"mime/multipart"
 	"net/http"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
@@ -19,7 +20,7 @@ type QuickScanCommand struct {
 }
 
 func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
-	err := r.ParseMultipartForm(50 << 20)
+	err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
 
 	var form = r.Form
 

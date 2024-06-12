@@ -12,6 +12,10 @@ type GroupSettings struct {
 	EmailDefaultReceiptStatus   ReceiptStatus                 `json:"emailDefaultReceiptStatus"`
 	EmailDefaultReceiptPaidBy   *User                         `json:"-"`
 	EmailDefaultReceiptPaidById *uint                         `json:"emailDefaultReceiptPaidById"`
+	PromptId                    *uint                         `json:"promptId"`
+	Prompt                      *Prompt                       `json:"prompt"`
+	FallbackPromptId            *uint                         `json:"fallbackPromptId"`
+	FallbackPrompt              *Prompt                       `json:"fallbackPrompt"`
 }
 
 type GroupSettingsWithSystemEmailPassword struct {

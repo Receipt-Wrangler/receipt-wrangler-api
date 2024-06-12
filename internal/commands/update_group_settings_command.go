@@ -18,6 +18,8 @@ type UpdateGroupSettingsCommand struct {
 	EmailDefaultReceiptStatus   models.ReceiptStatus                 `json:"emailDefaultReceiptStatus"`
 	EmailDefaultReceiptPaidBy   *models.User                         `json:"-"`
 	EmailDefaultReceiptPaidById *uint                                `json:"emailDefaultReceiptPaidById"`
+	PromptId                    *uint                                `json:"promptId"`
+	FallbackPromptId            *uint                                `json:"fallbackPromptId"`
 }
 
 func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -39,6 +41,8 @@ func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWr
 	command.EmailWhiteList = updateGroupSettingsCommand.EmailWhiteList
 	command.EmailDefaultReceiptStatus = updateGroupSettingsCommand.EmailDefaultReceiptStatus
 	command.EmailDefaultReceiptPaidById = updateGroupSettingsCommand.EmailDefaultReceiptPaidById
+	command.PromptId = updateGroupSettingsCommand.PromptId
+	command.FallbackPromptId = updateGroupSettingsCommand.FallbackPromptId
 
 	return nil
 }
@@ -58,6 +62,18 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 
 	if (command.EmailDefaultReceiptPaidById == nil || *command.EmailDefaultReceiptPaidById == 0) && command.EmailIntegrationEnabled {
 		vErr.Errors["emailDefaultReceiptPaidById"] = "Default receipt paid by is required when email integration is enabled"
+	}
+
+	if command.FallbackPromptId != nil && command.PromptId == nil {
+		vErr.Errors["promptId"] = "Prompt is required when fallback prompt is set"
+	}
+
+	if command.PromptId != nil && *command.PromptId < 1 {
+		vErr.Errors["promptId"] = "PromptId must be greater than 0"
+	}
+
+	if command.FallbackPromptId != nil && *command.FallbackPromptId < 1 {
+		vErr.Errors["fallbackPromptId"] = "FallbackPromptId must be greater than 0"
 	}
 
 	for index, email := range command.EmailWhiteList {

@@ -75,7 +75,12 @@ func TestShouldTestUpdateGroupSettingsWithVariousCommands(t *testing.T) {
 		GroupId: 1,
 	})
 	db.Create(&models.User{})
+
+	db.Create(&models.Prompt{})
+	db.Create(&models.Prompt{})
+
 	id := uint(1)
+	badId := uint(0)
 
 	tests := map[string]struct {
 		input  commands.UpdateGroupSettingsCommand
@@ -118,6 +123,18 @@ func TestShouldTestUpdateGroupSettingsWithVariousCommands(t *testing.T) {
 				EmailIntegrationEnabled: true,
 			},
 		},
+		"fallback prompt id without main id": {
+			expect: http.StatusBadRequest,
+			input: commands.UpdateGroupSettingsCommand{
+				FallbackPromptId: &id,
+			},
+		},
+		"invalid prompt id": {
+			expect: http.StatusBadRequest,
+			input: commands.UpdateGroupSettingsCommand{
+				PromptId: &badId,
+			},
+		},
 		"valid command": {
 			expect: http.StatusOK,
 			input: commands.UpdateGroupSettingsCommand{
@@ -125,6 +142,8 @@ func TestShouldTestUpdateGroupSettingsWithVariousCommands(t *testing.T) {
 				SystemEmailId:               &id,
 				EmailDefaultReceiptPaidById: &id,
 				EmailDefaultReceiptStatus:   models.DRAFT,
+				PromptId:                    &id,
+				FallbackPromptId:            &id,
 			},
 		},
 	}

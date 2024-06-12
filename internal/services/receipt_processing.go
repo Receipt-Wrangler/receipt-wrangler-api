@@ -16,19 +16,42 @@ type ReceiptProcessingService struct {
 	BaseService
 	ReceiptProcessingSettings         models.ReceiptProcessingSettings
 	FallbackReceiptProcessingSettings models.ReceiptProcessingSettings
+	Group                             models.Group
 }
 
-func NewSystemReceiptProcessingService(tx *gorm.DB) (ReceiptProcessingService, error) {
+func NewSystemReceiptProcessingService(tx *gorm.DB, groupId string) (ReceiptProcessingService, error) {
 	systemSettingsRepository := repositories.NewSystemSettingsRepository(tx)
 	systemReceiptProcessingSettings, err := systemSettingsRepository.GetSystemReceiptProcessingSettings()
+	group := models.Group{}
 	if err != nil {
 		return ReceiptProcessingService{}, err
+	}
+
+	if len(groupId) > 0 {
+		groupRepository := repositories.NewGroupRepository(tx)
+		groupToUse, err := groupRepository.GetGroupById(groupId, false)
+		if err != nil {
+			return ReceiptProcessingService{}, err
+		}
+
+		group = groupToUse
+
+		if groupToUse.GroupSettings.PromptId != nil && *groupToUse.GroupSettings.PromptId > 0 {
+			systemReceiptProcessingSettings.ReceiptProcessingSettings.PromptId = *groupToUse.GroupSettings.PromptId
+		}
+
+		if groupToUse.GroupSettings.FallbackPromptId != nil &&
+			*groupToUse.GroupSettings.FallbackPromptId > 0 &&
+			systemReceiptProcessingSettings.FallbackReceiptProcessingSettings.ID != 0 {
+			systemReceiptProcessingSettings.FallbackReceiptProcessingSettings.PromptId = *groupToUse.GroupSettings.FallbackPromptId
+		}
 	}
 
 	return ReceiptProcessingService{
 		BaseService:                       BaseService{TX: tx},
 		ReceiptProcessingSettings:         systemReceiptProcessingSettings.ReceiptProcessingSettings,
 		FallbackReceiptProcessingSettings: systemReceiptProcessingSettings.FallbackReceiptProcessingSettings,
+		Group:                             group,
 	}, nil
 
 }

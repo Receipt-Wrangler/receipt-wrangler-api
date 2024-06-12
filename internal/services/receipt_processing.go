@@ -80,19 +80,37 @@ func NewReceiptProcessingService(tx *gorm.DB, receiptProcessingSettingsId string
 	return service, nil
 }
 
-func (service ReceiptProcessingService) ReadReceiptImage(imagePath string) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
+func (service ReceiptProcessingService) ReadReceiptImage(
+	imagePath string,
+) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
 	var receipt commands.UpsertReceiptCommand
 	metadata := commands.ReceiptProcessingMetadata{}
 
-	receipt, rawResponse, systemTaskCommand, ocrSystemTaskCommand, err := service.processImage(imagePath, service.ReceiptProcessingSettings)
+	receipt, rawResponse, prompt, systemTaskCommand, ocrSystemTaskCommand, err := service.processImage(
+		imagePath,
+		service.ReceiptProcessingSettings,
+	)
+
+	metadata.Prompt = prompt
+	metadata.PromptId = service.ReceiptProcessingSettings.PromptId
 	if err != nil {
 		metadata.ReceiptProcessingSettingsIdRan = service.ReceiptProcessingSettings.ID
 		metadata.DidReceiptProcessingSettingsSucceed = false
 		metadata.RawResponse = err.Error()
 
 		if service.FallbackReceiptProcessingSettings.ID > 0 {
-			fallbackReceipt, fallbackRawResponse, fallbackSystemTaskCommand, fallbackOcrSystemTaskCommand, fallbackErr := service.processImage(imagePath, service.FallbackReceiptProcessingSettings)
+			fallbackReceipt,
+				fallbackRawResponse,
+				fallbackPrompt,
+				fallbackSystemTaskCommand,
+				fallbackOcrSystemTaskCommand,
+				fallbackErr := service.processImage(
+				imagePath,
+				service.FallbackReceiptProcessingSettings,
+			)
 			metadata.FallbackReceiptProcessingSettingsIdRan = service.FallbackReceiptProcessingSettings.ID
+			metadata.FallbackPrompt = fallbackPrompt
+			metadata.FallbackPromptId = service.FallbackReceiptProcessingSettings.PromptId
 			receipt = fallbackReceipt
 			err = fallbackErr
 
@@ -118,19 +136,22 @@ func (service ReceiptProcessingService) ReadReceiptImage(imagePath string) (comm
 	return receipt, metadata, err
 }
 
-func (service ReceiptProcessingService) processImage(imagePath string, receiptProcessingSettings models.ReceiptProcessingSettings) (commands.UpsertReceiptCommand, string, commands.UpsertSystemTaskCommand, commands.UpsertSystemTaskCommand, error) {
+func (service ReceiptProcessingService) processImage(
+	imagePath string,
+	receiptProcessingSettings models.ReceiptProcessingSettings,
+) (commands.UpsertReceiptCommand, string, string, commands.UpsertSystemTaskCommand, commands.UpsertSystemTaskCommand, error) {
 	aiMessages := []structs.AiClientMessage{}
 	receipt := commands.UpsertReceiptCommand{}
 
 	ocrService := NewOcrService(service.TX, receiptProcessingSettings)
 	ocrText, ocrSystemTaskCommand, err := ocrService.ReadImage(imagePath)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, "", commands.UpsertSystemTaskCommand{}, ocrSystemTaskCommand, err
+		return commands.UpsertReceiptCommand{}, "", "", commands.UpsertSystemTaskCommand{}, ocrSystemTaskCommand, err
 	}
 
 	prompt, err := service.buildPrompt(receiptProcessingSettings, ocrText)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, "", commands.UpsertSystemTaskCommand{}, ocrSystemTaskCommand, err
+		return commands.UpsertReceiptCommand{}, "", "", commands.UpsertSystemTaskCommand{}, ocrSystemTaskCommand, err
 	}
 
 	aiMessages = append(aiMessages, structs.AiClientMessage{
@@ -144,18 +165,21 @@ func (service ReceiptProcessingService) processImage(imagePath string, receiptPr
 
 	response, chatCompletionSystemTaskCommand, err := aiClient.CreateChatCompletion(aiMessages, true)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, response, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, err
+		return commands.UpsertReceiptCommand{}, response, prompt, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, err
 	}
 
 	err = json.Unmarshal([]byte(response), &receipt)
 	if err != nil {
-		return commands.UpsertReceiptCommand{}, response, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, err
+		return commands.UpsertReceiptCommand{}, response, prompt, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, err
 	}
 
-	return receipt, response, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, nil
+	return receipt, response, prompt, chatCompletionSystemTaskCommand, ocrSystemTaskCommand, nil
 }
 
-func (service ReceiptProcessingService) buildPrompt(receiptProcessingSettings models.ReceiptProcessingSettings, ocrText string) (string, error) {
+func (service ReceiptProcessingService) buildPrompt(
+	receiptProcessingSettings models.ReceiptProcessingSettings,
+	ocrText string,
+) (string, error) {
 	promptRepository := repositories.NewPromptRepository(service.TX)
 
 	stringPromptId := simpleutils.UintToString(receiptProcessingSettings.PromptId)

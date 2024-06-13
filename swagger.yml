@@ -3167,9 +3167,13 @@ components:
         emailDefaultReceiptPaidById:
           type: integer
           description: User foreign key
+        prompt:
+          $ref: "#/components/schemas/Prompt"
         promptId:
           type: integer
           description: Prompt foreign key
+        fallbackPrompt:
+          $ref: "#/components/schemas/Prompt"
         fallbackPromptId:
           type: integer
           description: Fallback prompt foreign key

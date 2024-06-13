@@ -64,10 +64,6 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 		vErr.Errors["emailDefaultReceiptPaidById"] = "Default receipt paid by is required when email integration is enabled"
 	}
 
-	if command.FallbackPromptId != nil && command.PromptId == nil {
-		vErr.Errors["promptId"] = "Prompt is required when fallback prompt is set"
-	}
-
 	if command.PromptId != nil && *command.PromptId < 1 {
 		vErr.Errors["promptId"] = "PromptId must be greater than 0"
 	}

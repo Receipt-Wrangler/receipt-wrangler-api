@@ -124,7 +124,7 @@ func TestShouldTestUpdateGroupSettingsWithVariousCommands(t *testing.T) {
 			},
 		},
 		"fallback prompt id without main id": {
-			expect: http.StatusBadRequest,
+			expect: http.StatusOK,
 			input: commands.UpdateGroupSettingsCommand{
 				FallbackPromptId: &id,
 			},

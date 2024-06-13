@@ -7,10 +7,8 @@ type ReceiptProcessingMetadata struct {
 	DidFallbackReceiptProcessingSettingsSucceed bool
 	RawResponse                                 string
 	FallbackRawResponse                         string
-	Prompt                                      string
-	PromptId                                    uint
-	FallbackPrompt                              string
-	FallbackPromptId                            uint
+	PromptSystemTaskCommand                     UpsertSystemTaskCommand
+	FallbackPromptSystemTaskCommand             UpsertSystemTaskCommand
 	OcrSystemTaskCommand                        UpsertSystemTaskCommand
 	ChatCompletionSystemTaskCommand             UpsertSystemTaskCommand
 	FallbackOcrSystemTaskCommand                UpsertSystemTaskCommand

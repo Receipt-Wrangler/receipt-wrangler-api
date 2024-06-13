@@ -130,6 +130,17 @@ func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.
 		systemTasks = append(systemTasks, ocrSystemTask)
 	}
 
+	// TODO: create tasks for prompt,
+	if !isFallback && len(metadata.PromptSystemTaskCommand.Type) > 0 {
+		metadata.PromptSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		promptSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.PromptSystemTaskCommand)
+		if err != nil {
+			return []models.SystemTask{}, err
+		}
+
+		systemTasks = append(systemTasks, promptSystemTask)
+	}
+
 	if !isFallback && len(metadata.ChatCompletionSystemTaskCommand.Type) > 0 {
 		metadata.ChatCompletionSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
 		chatCompletionSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.ChatCompletionSystemTaskCommand)
@@ -148,6 +159,16 @@ func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.
 		}
 
 		systemTasks = append(systemTasks, fallbackOcrSystemTask)
+	}
+
+	if isFallback && len(metadata.FallbackPromptSystemTaskCommand.Type) > 0 {
+		metadata.FallbackPromptSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		fallbackPromptSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.FallbackPromptSystemTaskCommand)
+		if err != nil {
+			return []models.SystemTask{}, err
+		}
+
+		systemTasks = append(systemTasks, fallbackPromptSystemTask)
 	}
 
 	if isFallback && len(metadata.FallbackChatCompletionSystemTaskCommand.Type) > 0 {

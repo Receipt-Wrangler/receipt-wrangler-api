@@ -103,8 +103,10 @@ func QuickScan(
 	receiptRepository := repositories.NewReceiptRepository(nil)
 	receiptImageRepository := repositories.NewReceiptImageRepository(nil)
 
+	groupIdString := simpleutils.UintToString(groupId)
+
 	now := time.Now()
-	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand)
+	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand, groupIdString)
 	finishedAt := time.Now()
 
 	quickScanSystemTasks, taskErr := systemTaskService.CreateSystemTasksFromMetadata(

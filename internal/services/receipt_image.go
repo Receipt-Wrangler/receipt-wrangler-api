@@ -15,7 +15,15 @@ import (
 func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
 	var result commands.UpsertReceiptCommand
 	var pathToReadFrom string
-	systemReceiptProcessingService, err := NewSystemReceiptProcessingService(nil)
+
+	receipt, err := GetReceiptByReceiptImageId(receiptImageId)
+	if err != nil {
+		return result, commands.ReceiptProcessingMetadata{}, err
+	}
+
+	groupIdString := simpleutils.UintToString(receipt.GroupId)
+
+	systemReceiptProcessingService, err := NewSystemReceiptProcessingService(nil, groupIdString)
 	if err != nil {
 		return result, commands.ReceiptProcessingMetadata{}, err
 	}
@@ -62,8 +70,8 @@ func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, com
 	return systemReceiptProcessingService.ReadReceiptImage(pathToReadFrom)
 }
 
-func ReadReceiptImageFromFileOnly(path string) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
-	receiptProcessingService, err := NewSystemReceiptProcessingService(nil)
+func ReadReceiptImageFromFileOnly(path string, groupId string) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
+	receiptProcessingService, err := NewSystemReceiptProcessingService(nil, groupId)
 	if err != nil {
 		return commands.UpsertReceiptCommand{}, commands.ReceiptProcessingMetadata{}, err
 	}
@@ -71,9 +79,9 @@ func ReadReceiptImageFromFileOnly(path string) (commands.UpsertReceiptCommand, c
 	return receiptProcessingService.ReadReceiptImage(path)
 }
 
-func MagicFillFromImage(command commands.MagicFillCommand) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
+func MagicFillFromImage(command commands.MagicFillCommand, groupId string) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
 	fileRepository := repositories.NewFileRepository(nil)
-	receiptProcessingService, err := NewSystemReceiptProcessingService(nil)
+	receiptProcessingService, err := NewSystemReceiptProcessingService(nil, groupId)
 	if err != nil {
 		return commands.UpsertReceiptCommand{}, commands.ReceiptProcessingMetadata{}, err
 	}
@@ -128,6 +136,27 @@ func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData,
 	}
 
 	return fileDataResults, nil
+}
+
+func GetReceiptFromReceiptImageId(receiptImageId string) (models.Receipt, error) {
+	db := repositories.GetDB()
+	var receipt models.Receipt
+	var fileData models.FileData
+
+	err := db.Model(models.FileData{}).Where("id = ?", receiptImageId).Select("receipt_id").First(&fileData).Error
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	receiptIdString := simpleutils.UintToString(fileData.ReceiptId)
+
+	receiptRepository := repositories.NewReceiptRepository(nil)
+	receipt, err = receiptRepository.GetReceiptById(receiptIdString)
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	return receipt, nil
 }
 
 func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrExport, error) {

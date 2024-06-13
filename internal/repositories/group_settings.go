@@ -63,6 +63,8 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 	groupSettings.EmailDefaultReceiptPaidById = command.EmailDefaultReceiptPaidById
 	groupSettings.SubjectLineRegexes = command.SubjectLineRegexes
 	groupSettings.EmailWhiteList = command.EmailWhiteList
+	groupSettings.PromptId = command.PromptId
+	groupSettings.FallbackPromptId = command.FallbackPromptId
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 

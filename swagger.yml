@@ -7,7 +7,7 @@ info:
   license:
     name: GPLV3
     url: https://www.gnu.org/licenses/gpl-3.0.en.html
-  version: 0.0.1
+  version: 5.0.0
 servers:
   - url: /api
 security:
@@ -2221,11 +2221,13 @@ components:
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
         - "RECEIPT_UPLOADED"
+        - "PROMPT_GENERATED"
     AssociatedEntityType:
       type: string
       enum:
         - "SYSTEM_EMAIL"
         - "RECEIPT_PROCESSING_SETTINGS"
+        - "PROMPT"
     AssociatedGroup:
       type: string
       enum:
@@ -3165,6 +3167,16 @@ components:
         emailDefaultReceiptPaidById:
           type: integer
           description: User foreign key
+        prompt:
+          $ref: "#/components/schemas/Prompt"
+        promptId:
+          type: integer
+          description: Prompt foreign key
+        fallbackPrompt:
+          $ref: "#/components/schemas/Prompt"
+        fallbackPromptId:
+          type: integer
+          description: Fallback prompt foreign key
         createdAt:
           type: string
         createdBy:
@@ -3248,6 +3260,12 @@ components:
         emailDefaultReceiptPaidById:
           type: integer
           description: User foreign key
+        promptId:
+          type: integer
+          description: Prompt foreign key
+        fallbackPromptId:
+          type: integer
+          description: Fallback prompt foreign key
     ReceiptFileUploadCommand:
       type: object
       required:

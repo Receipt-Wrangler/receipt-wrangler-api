@@ -12,6 +12,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -182,10 +183,6 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 				return err
 			}
 
-			start := time.Now()
-			baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath)
-			end := time.Now()
-
 			if err != nil {
 				return err
 			}
@@ -202,6 +199,16 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 
 				if groupSettingsToUse.ID == 0 {
 					return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
+				}
+
+				groupIdString := simpleutils.UintToString(groupSettingsToUse.GroupId)
+
+				start := time.Now()
+				baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath, groupIdString)
+				end := time.Now()
+
+				if err != nil {
+					return err
 				}
 
 				command := baseCommand

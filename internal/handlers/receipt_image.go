@@ -269,7 +269,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 				}
 
 				startTimer = time.Now()
-				command, metadata, err := services.MagicFillFromImage(magicFillCommand)
+				command, metadata, err := services.MagicFillFromImage(magicFillCommand, "")
 				endTimer = time.Now()
 
 				_, taskErr := systemTaskService.CreateSystemTasksFromMetadata(

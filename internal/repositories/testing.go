@@ -14,6 +14,9 @@ func SetUpTestEnv() {
 	os.Args = append(os.Args, "-env=test")
 	logging.InitLog()
 	config.SetConfigs()
+
+	basePath := config.GetBasePath() + "/logs/imap-client.log"
+	os.Create(basePath)
 }
 
 func TruncateTable(db *gorm.DB, tableName string) error {

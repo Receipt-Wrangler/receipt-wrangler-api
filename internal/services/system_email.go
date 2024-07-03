@@ -12,6 +12,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
+	"regexp"
 	"time"
 )
 
@@ -81,7 +82,21 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 	// Note: We ignore error from cmd.Run to capture the output in the system task, so resulting HTTP status code is always 200
 	err = cmd.Run()
 	if err != nil {
-		systemTaskCommand.ResultDescription = err.Error()
+		imapLogPath := basePath + "/logs/imap-client.log"
+		errorLine, err := utils.ReadLastFileLine(imapLogPath)
+		if err != nil {
+			return models.SystemTask{}, err
+		}
+
+		re := regexp.MustCompile(`\{[^}]*\}(.*)`)
+		matches := re.FindStringSubmatch(errorLine)
+		formattedLogLine := errorLine
+
+		if len(matches) > 1 {
+			formattedLogLine = matches[1]
+		}
+
+		systemTaskCommand.ResultDescription = formattedLogLine
 	} else {
 		systemTaskCommand.Status = models.SYSTEM_TASK_SUCCEEDED
 		systemTaskCommand.ResultDescription = "Connection successful"

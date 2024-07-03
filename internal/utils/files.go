@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bufio"
 	"errors"
 	"os"
 )
@@ -47,4 +48,26 @@ func MakeDirectory(dir string) error {
 	}
 
 	return nil
+}
+
+func ReadLastFileLine(filePath string) (string, error) {
+	readFile, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	fileScanner := bufio.NewScanner(readFile)
+	fileScanner.Split(bufio.ScanLines)
+	var fileLines []string
+
+	for fileScanner.Scan() {
+		fileLines = append(fileLines, fileScanner.Text())
+	}
+
+	err = readFile.Close()
+	if err != nil {
+		return "", err
+	}
+
+	return fileLines[len(fileLines)-1], nil
 }

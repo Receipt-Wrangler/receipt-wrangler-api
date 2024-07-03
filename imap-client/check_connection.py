@@ -14,12 +14,12 @@ def read_system_email():
 
 
 if __name__ == '__main__':
+    init_logger()
     credentials = read_system_email()
     client = ImapClient(credentials["host"], credentials["port"], credentials["username"], credentials["password"], [],
                         [])
 
     try:
-        init_logger()
         client.connect()
         exit(0)
     except Exception as e:

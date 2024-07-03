@@ -1,18 +1,10 @@
 import json
 import logging
-import os
 import sys
 
 from imap_client import ImapClient
+from imap_log import init_logger
 from utils import valid_subject, valid_from_email
-
-base_path = os.environ.get("BASE_PATH", "")
-
-
-def init_logger():
-    path = os.path.join(base_path, "logs", "imap-client.log")
-    logging.basicConfig(filename=path, level=logging.INFO,
-                        format='%(asctime)s %(levelname)s {%(pathname)s:%(lineno)d} %(message)s')
 
 
 def read_group_settings():

@@ -84,6 +84,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 	if err != nil {
 		imapLogPath := basePath + "/logs/imap-client.log"
 		errorLine, err := utils.ReadLastFileLine(imapLogPath)
+
 		if err != nil {
 			return models.SystemTask{}, err
 		}

@@ -69,5 +69,9 @@ func ReadLastFileLine(filePath string) (string, error) {
 		return "", err
 	}
 
+	if len(fileLines) == 0 {
+		return "", nil
+	}
+
 	return fileLines[len(fileLines)-1], nil
 }

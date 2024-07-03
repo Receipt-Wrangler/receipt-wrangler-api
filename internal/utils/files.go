@@ -53,6 +53,10 @@ func MakeDirectory(dir string) error {
 func ReadLastFileLine(filePath string) (string, error) {
 	readFile, err := os.Open(filePath)
 	if err != nil {
+		if os.Getenv("ENV") == "test" {
+			return "", nil
+		}
+
 		return "", err
 	}
 

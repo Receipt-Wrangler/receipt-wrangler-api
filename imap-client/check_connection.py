@@ -1,7 +1,9 @@
 import json
+import logging
 import sys
 
 from imap_client import ImapClient
+from imap_log import init_logger
 
 
 def read_system_email():
@@ -17,8 +19,10 @@ if __name__ == '__main__':
                         [])
 
     try:
+        init_logger()
         client.connect()
         exit(0)
     except Exception as e:
+        logging.error(e)
         print(e)
         exit(1)

@@ -192,7 +192,7 @@ func (repository BaseRepository) ConvertHeicToJpg(bytes []byte) ([]byte, error) 
 		return nil, err
 	}
 
-	return mw.GetImageBlob(), nil
+	return mw.GetImageBlob()
 }
 
 func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {

@@ -237,6 +237,5 @@ func (service OcrService) prepareImage(path string) ([]byte, error) {
 		}
 	}
 
-	bytes := mw.GetImageBlob()
-	return bytes, nil
+	return mw.GetImageBlob()
 }

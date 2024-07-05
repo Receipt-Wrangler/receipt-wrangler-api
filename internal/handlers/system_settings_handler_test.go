@@ -151,6 +151,7 @@ func TestShouldValidateUpsertSystemSettingsCommand(t *testing.T) {
 		"valid command": {
 			input: commands.UpsertSystemSettingsCommand{
 				EmailPollingInterval:                1,
+				CurrencyDisplay:                     "something else",
 				EnableLocalSignUp:                   true,
 				ReceiptProcessingSettingsId:         &id,
 				FallbackReceiptProcessingSettingsId: &id2,

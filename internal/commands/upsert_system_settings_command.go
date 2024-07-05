@@ -8,12 +8,13 @@ import (
 )
 
 type UpsertSystemSettingsCommand struct {
-	EnableLocalSignUp                   bool  `json:"enableLocalSignUp"`
-	DebugOcr                            bool  `json:"debugOcr"`
-	NumWorkers                          int   `json:"numWorkers"`
-	EmailPollingInterval                int   `json:"emailPollingInterval"`
-	ReceiptProcessingSettingsId         *uint `json:"receiptProcessingSettingsId"`
-	FallbackReceiptProcessingSettingsId *uint `json:"fallbackReceiptProcessingSettingsId"`
+	EnableLocalSignUp                   bool   `json:"enableLocalSignUp"`
+	DebugOcr                            bool   `json:"debugOcr"`
+	CurrencyDisplay                     string `json:"currencyDisplay"`
+	NumWorkers                          int    `json:"numWorkers"`
+	EmailPollingInterval                int    `json:"emailPollingInterval"`
+	ReceiptProcessingSettingsId         *uint  `json:"receiptProcessingSettingsId"`
+	FallbackReceiptProcessingSettingsId *uint  `json:"fallbackReceiptProcessingSettingsId"`
 }
 
 func (command *UpsertSystemSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

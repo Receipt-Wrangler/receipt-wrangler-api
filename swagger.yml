@@ -3349,6 +3349,7 @@ components:
         - featureConfig
         - categories
         - tags
+        - currencyDisplay
       properties:
         claims:
           $ref: "#/components/schemas/Claims"
@@ -3382,6 +3383,9 @@ components:
         refreshToken:
           type: string
           description: Refresh token
+        currencyDisplay:
+          type: string
+          description: Currency display
     TokenPair:
       type: object
       required:
@@ -3597,6 +3601,10 @@ components:
               type: boolean
               description: Whether local sign up is enabled
               default: false
+            currencyDisplay:
+              type: string
+              description: Currency display
+              default: "$"
             debugOcr:
               type: boolean
               description: Debug OCR
@@ -3621,6 +3629,9 @@ components:
         enableLocalSignUp:
           type: boolean
           description: Whether local sign up is enabled
+        currencyDisplay:
+          type: string
+          description: Currency display
         debugOcr:
           type: boolean
         numWorkers:

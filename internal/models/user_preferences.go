@@ -17,13 +17,13 @@ type UserPrefernces struct {
 	QuickScanDefaultStatus   ReceiptStatus `json:"quickScanDefaultStatus"`
 }
 
-func (userPrefernces *UserPrefernces) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
+func (userPreferences *UserPrefernces) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
 	bytes, err := utils.GetBodyData(w, r)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(bytes, &userPrefernces)
+	err = json.Unmarshal(bytes, &userPreferences)
 	if err != nil {
 		return err
 	}

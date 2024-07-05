@@ -3597,6 +3597,10 @@ components:
               type: boolean
               description: Whether local sign up is enabled
               default: false
+            currencyDisplay:
+              type: string
+              description: Currency display
+              default: "$"
             debugOcr:
               type: boolean
               description: Debug OCR
@@ -3621,6 +3625,9 @@ components:
         enableLocalSignUp:
           type: boolean
           description: Whether local sign up is enabled
+        currencyDisplay:
+          type: string
+          description: Currency display
         debugOcr:
           type: boolean
         numWorkers:

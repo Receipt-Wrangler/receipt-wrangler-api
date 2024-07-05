@@ -3349,6 +3349,7 @@ components:
         - featureConfig
         - categories
         - tags
+        - currencyDisplay
       properties:
         claims:
           $ref: "#/components/schemas/Claims"
@@ -3382,6 +3383,9 @@ components:
         refreshToken:
           type: string
           description: Refresh token
+        currencyDisplay:
+          type: string
+          description: Currency display
     TokenPair:
       type: object
       required:

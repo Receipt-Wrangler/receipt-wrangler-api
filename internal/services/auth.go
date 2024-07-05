@@ -151,8 +151,14 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	userPreferenceRepository := repositories.NewUserPreferencesRepository(nil)
 	categoryRepository := repositories.NewCategoryRepository(nil)
 	systemSettingsService := NewSystemSettingsService(nil)
+	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
 	tagRepository := repositories.NewTagsRepository(nil)
 	stringUserId := simpleutils.UintToString(userId)
+
+	systemSettings, err := systemSettingsRepository.GetSystemSettings()
+	if err != nil {
+		return appData, err
+	}
 
 	groups, err := groupService.GetGroupsForUser(stringUserId)
 	if err != nil {
@@ -190,6 +196,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.FeatureConfig = featureConfig
 	appData.Categories = categories
 	appData.Tags = tags
+	appData.CurrencyDisplay = systemSettings.CurrencyDisplay
 
 	if r != nil {
 		claims := structs.GetJWT(r)

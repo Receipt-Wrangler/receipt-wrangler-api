@@ -1009,6 +1009,34 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /receiptImage/{receiptImageId}/download:
+    get:
+      tags:
+        - ReceiptImage
+      summary: Download receipt image
+      description: This will download a receipt image by id, [SYSTEM USER]
+      operationId: downloadReceiptImageById
+      parameters:
+        - in: path
+          name: receiptImageId
+          schema:
+            type: integer
+          required: true
+          description: Id of receipt image to download
+      responses:
+        200:
+          description: The receipt image
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /search/:
     get:
       tags:

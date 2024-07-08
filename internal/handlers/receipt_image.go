@@ -161,6 +161,44 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 	HandleRequest(handler)
 }
 
+func DownloadReceiptImage(w http.ResponseWriter, r *http.Request) {
+	db := repositories.GetDB()
+	errorMessage := "Error retrieving image."
+	var fileData models.FileData
+	id := chi.URLParam(r, "id")
+
+	err := db.Model(models.FileData{}).Where("id = ?", id).First(&fileData).Error
+	if err != nil {
+		utils.WriteCustomErrorResponse(w, errorMessage, http.StatusInternalServerError)
+		return
+	}
+	stringReceiptId := simpleutils.UintToString(fileData.ReceiptId)
+
+	handler := structs.Handler{
+		ErrorMessage: "Error downloading image.",
+		ReceiptId:    stringReceiptId,
+		Writer:       w,
+		Request:      r,
+		ResponseType: "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			fileRepository := repositories.NewFileRepository(nil)
+
+			path, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.Header().Set("Content-Disposition", "attachment; filename="+fileData.Name)
+
+			http.ServeFile(w, r, path)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
 func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 	db := repositories.GetDB()
 	errorMessage := "Error deleting image."

@@ -450,7 +450,7 @@ func GetOcrTextForGroup(w http.ResponseWriter, r *http.Request) {
 
 			w.Header().Set("Content-Disposition", "attachment; filename="+zipFilename)
 
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
 			return 0, nil

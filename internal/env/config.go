@@ -10,7 +10,6 @@ import (
 	"strings"
 )
 
-var config structs.Config
 var basePath string
 var env string
 

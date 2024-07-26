@@ -334,12 +334,18 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
-			_, err = receiptRepository.UpdateReceipt(receiptId, command)
+			updatedReceipt, err := receiptRepository.UpdateReceipt(receiptId, command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := json.Marshal(updatedReceipt)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
 			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
 			return 0, nil
 		},
 	}

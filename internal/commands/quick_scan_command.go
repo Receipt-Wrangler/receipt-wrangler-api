@@ -74,7 +74,7 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 
 	for _, status := range formStatuses {
 		var formattedStatus models.ReceiptStatus
-		err = formattedStatus.Scan(status)
+		err = formattedStatus.Scan(strings.TrimSpace(status))
 		if err != nil {
 			return err
 		}

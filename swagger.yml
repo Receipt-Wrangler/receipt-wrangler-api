@@ -673,7 +673,11 @@ paths:
       operationId: createReceipt
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The created receipts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -776,7 +780,11 @@ paths:
       operationId: updateReceipt
       responses:
         200:
-          $ref: "#/components/responses/Ok"
+          description: The updated receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
         500:
           $ref: "#/components/responses/Internal"
       security:

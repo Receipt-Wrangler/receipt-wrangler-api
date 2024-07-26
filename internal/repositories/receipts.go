@@ -128,7 +128,12 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		return models.Receipt{}, err
 	}
 
-	return updatedReceipt, nil
+	fullyLoadedReceipt, err := repository.GetFullyLoadedReceiptById(id)
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	return fullyLoadedReceipt, nil
 }
 
 func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.Receipt) error {

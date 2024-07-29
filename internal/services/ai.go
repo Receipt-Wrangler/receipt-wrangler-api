@@ -261,8 +261,6 @@ func (service *AiService) OllamaChatCompletion(messages []structs.AiClientMessag
 		return "", "", err
 	}
 
-	fmt.Println(responseObject)
-
 	if len(responseObject.Message.Content) >= 0 {
 		result = responseObject.Message.Content
 	}

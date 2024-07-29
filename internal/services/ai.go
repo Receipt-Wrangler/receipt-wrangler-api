@@ -217,12 +217,11 @@ func (service *AiService) OpenAiCustomChatCompletion(messages []structs.AiClient
 }
 
 func (service *AiService) OllamaChatCompletion(messages []structs.AiClientMessage) (string, string, error) {
-	prompt := messages[0].Content
 
 	result := ""
 	body := map[string]interface{}{
 		"model":       service.ReceiptProcessingSettings.Model,
-		"prompt":      prompt,
+		"messages":    messages,
 		"temperature": 0,
 		"stream":      false,
 	}
@@ -262,8 +261,8 @@ func (service *AiService) OllamaChatCompletion(messages []structs.AiClientMessag
 		return "", "", err
 	}
 
-	if len(responseObject.Response) >= 0 {
-		result = responseObject.Response
+	if len(responseObject.Message.Content) >= 0 {
+		result = responseObject.Message.Content
 	}
 
 	responseBytes, err := json.Marshal(responseObject)

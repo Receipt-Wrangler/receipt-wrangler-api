@@ -235,9 +235,8 @@ func (service *AiService) OllamaChatCompletion(messages []structs.AiClientMessag
 	}
 
 	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
-	url := fmt.Sprintf("%s/api/generate", service.ReceiptProcessingSettings.Url)
 
-	request, err := http.NewRequest(http.MethodPost, url, bodyBytesBuffer)
+	request, err := http.NewRequest(http.MethodPost, service.ReceiptProcessingSettings.Url, bodyBytesBuffer)
 	if err != nil {
 		return "", "", err
 	}

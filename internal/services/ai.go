@@ -8,9 +8,9 @@ import (
 	"github.com/google/generative-ai-go/genai"
 	"github.com/sashabaranov/go-openai"
 	"google.golang.org/api/option"
+	"gopkg.in/gographics/imagick.v2/imagick"
 	"io"
 	"net/http"
-	"os"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	config "receipt-wrangler/api/internal/env"
@@ -233,10 +233,22 @@ func (service *AiService) OllamaVisionChatCompletion(options structs.AiChatCompl
 		message = options.Messages[0].Content
 	}
 
-	fileBytes, err := os.ReadFile(options.ImagePath)
+	mw := imagick.NewMagickWand()
+	err := mw.ReadImage(options.ImagePath)
 	if err != nil {
 		return "", "", err
 	}
+
+	err = mw.SetResolution(672, 672)
+	if err != nil {
+		return "", "", err
+	}
+
+	fileBytes, err := mw.GetImageBlob()
+	if err != nil {
+		return "", "", err
+	}
+
 	b64Image := utils.Base64EncodeBytes(fileBytes)
 
 	body := map[string]interface{}{

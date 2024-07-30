@@ -133,7 +133,7 @@ func (service ReceiptProcessingService) processImage(
 ) (commands.ReceiptProcessingResult, error) {
 
 	if receiptProcessingSettings.IsVisionModel {
-
+		return service.processImageViaVision(imagePath, receiptProcessingSettings)
 	}
 
 	return service.processImageViaOcr(imagePath, receiptProcessingSettings)

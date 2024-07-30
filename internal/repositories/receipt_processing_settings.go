@@ -65,14 +65,15 @@ func (repository ReceiptProcessingSettingsRepository) CreateReceiptProcessingSet
 	}
 
 	settings := models.ReceiptProcessingSettings{
-		Name:        command.Name,
-		Description: command.Description,
-		AiType:      command.AiType,
-		Url:         command.Url,
-		Key:         encryptedKey,
-		Model:       command.Model,
-		OcrEngine:   command.OcrEngine,
-		PromptId:    command.PromptId,
+		Name:          command.Name,
+		Description:   command.Description,
+		AiType:        command.AiType,
+		Url:           command.Url,
+		Key:           encryptedKey,
+		Model:         command.Model,
+		IsVisionModel: command.IsVisionModel,
+		OcrEngine:     command.OcrEngine,
+		PromptId:      command.PromptId,
 	}
 
 	err := db.Create(&settings).Error
@@ -100,13 +101,14 @@ func (repository ReceiptProcessingSettingsRepository) UpdateReceiptProcessingSet
 	updateStatement := db.Model(&models.ReceiptProcessingSettings{}).Where("id = ?", id)
 
 	settings := models.ReceiptProcessingSettings{
-		Name:        command.Name,
-		Description: command.Description,
-		AiType:      command.AiType,
-		Url:         command.Url,
-		Model:       command.Model,
-		OcrEngine:   command.OcrEngine,
-		PromptId:    command.PromptId,
+		Name:          command.Name,
+		Description:   command.Description,
+		AiType:        command.AiType,
+		Url:           command.Url,
+		Model:         command.Model,
+		IsVisionModel: command.IsVisionModel,
+		OcrEngine:     command.OcrEngine,
+		PromptId:      command.PromptId,
 	}
 
 	if updateKey {

@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"gopkg.in/gographics/imagick.v2/imagick"
 	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
@@ -132,65 +133,36 @@ func (service ReceiptProcessingService) processImage(
 	receiptProcessingSettings models.ReceiptProcessingSettings,
 ) (commands.ReceiptProcessingResult, error) {
 
-	if receiptProcessingSettings.IsVisionModel {
-		return service.processImageViaVision(imagePath, receiptProcessingSettings)
-	}
-
-	return service.processImageViaOcr(imagePath, receiptProcessingSettings)
-}
-
-func (service ReceiptProcessingService) processImageViaVision(
-	imagePath string,
-	receiptProcessingSettings models.ReceiptProcessingSettings,
-) (commands.ReceiptProcessingResult, error) {
-
-	result := commands.ReceiptProcessingResult{}
-	prompt, promptSystemTask, err := service.buildPrompt(receiptProcessingSettings, "")
-	if err != nil {
-		return result, err
-	}
-	result.PromptSystemTaskCommand = promptSystemTask
-
-	aiMessages := []structs.AiClientMessage{{
-		Content: prompt,
-	}}
-
-	aiClient := AiService{
-		ReceiptProcessingSettings: receiptProcessingSettings,
-	}
-
-	response, chatCompletionSystemTask, err := aiClient.CreateChatCompletion(structs.AiChatCompletionOptions{
-		Messages:   aiMessages,
-		ImagePath:  imagePath,
-		DecryptKey: true,
-	})
-	result.ChatCompletionSystemTaskCommand = chatCompletionSystemTask
-	result.RawResponse = response
-	if err != nil {
-		return result, err
-	}
-
-	err = json.Unmarshal([]byte(response), &result.Receipt)
-	if err != nil {
-		return result, err
-	}
-
-	return result, nil
-}
-
-func (service ReceiptProcessingService) processImageViaOcr(
-	imagePath string,
-	receiptProcessingSettings models.ReceiptProcessingSettings,
-) (commands.ReceiptProcessingResult, error) {
 	aiMessages := []structs.AiClientMessage{}
 	receipt := commands.UpsertReceiptCommand{}
 	result := commands.ReceiptProcessingResult{}
+	ocrText := ""
+	base64Image := ""
 
-	ocrService := NewOcrService(service.TX, receiptProcessingSettings)
-	ocrText, ocrSystemTaskCommand, err := ocrService.ReadImage(imagePath)
-	result.OcrSystemTaskCommand = ocrSystemTaskCommand
-	if err != nil {
-		return result, err
+	if receiptProcessingSettings.IsVisionModel {
+		mw := imagick.NewMagickWand()
+		err := mw.ReadImage(imagePath)
+		if err != nil {
+			return result, err
+		}
+
+		mw.SetResolution(672, 672)
+
+		fileBytes, err := mw.GetImageBlob()
+		if err != nil {
+			return result, err
+		}
+
+		base64Image = utils.Base64EncodeBytes(fileBytes)
+	} else {
+		ocrService := NewOcrService(service.TX, receiptProcessingSettings)
+		resultText, ocrSystemTaskCommand, err := ocrService.ReadImage(imagePath)
+		result.OcrSystemTaskCommand = ocrSystemTaskCommand
+		if err != nil {
+			return result, err
+		}
+
+		ocrText = resultText
 	}
 
 	prompt, promptSystemTask, err := service.buildPrompt(receiptProcessingSettings, ocrText)
@@ -199,10 +171,15 @@ func (service ReceiptProcessingService) processImageViaOcr(
 		return result, err
 	}
 
-	aiMessages = append(aiMessages, structs.AiClientMessage{
+	message := structs.AiClientMessage{
 		Role:    "user",
 		Content: prompt,
-	})
+	}
+	if len(base64Image) > 0 {
+		message.Images = []string{base64Image}
+	}
+
+	aiMessages = append(aiMessages, message)
 
 	aiClient := AiService{
 		ReceiptProcessingSettings: receiptProcessingSettings,

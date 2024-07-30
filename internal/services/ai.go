@@ -8,7 +8,6 @@ import (
 	"github.com/google/generative-ai-go/genai"
 	"github.com/sashabaranov/go-openai"
 	"google.golang.org/api/option"
-	"gopkg.in/gographics/imagick.v2/imagick"
 	"io"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
@@ -219,95 +218,6 @@ func (service *AiService) OpenAiCustomChatCompletion(options structs.AiChatCompl
 }
 
 func (service *AiService) OllamaChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
-	if service.ReceiptProcessingSettings.IsVisionModel {
-		return service.OllamaVisionChatCompletion(options)
-	}
-
-	return service.OllamaTextChatCompletion(options)
-}
-
-func (service *AiService) OllamaVisionChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
-	result := ""
-	message := ""
-	if options.Messages != nil && len(options.Messages) >= 0 {
-		message = options.Messages[0].Content
-	}
-
-	mw := imagick.NewMagickWand()
-	err := mw.ReadImage(options.ImagePath)
-	if err != nil {
-		return "", "", err
-	}
-
-	err = mw.SetResolution(672, 672)
-	if err != nil {
-		return "", "", err
-	}
-
-	fileBytes, err := mw.GetImageBlob()
-	if err != nil {
-		return "", "", err
-	}
-
-	b64Image := utils.Base64EncodeBytes(fileBytes)
-
-	body := map[string]interface{}{
-		"model":       service.ReceiptProcessingSettings.Model,
-		"prompt":      message,
-		"temperature": 0,
-		"stream":      false,
-		"images":      []string{b64Image},
-	}
-	httpClient := http.Client{}
-	httpClient.Timeout = constants.AI_HTTP_TIMEOUT
-
-	// TODO: break out the http request building process to shared func
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return "", "", err
-	}
-
-	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
-
-	request, err := http.NewRequest(http.MethodPost, service.ReceiptProcessingSettings.Url, bodyBytesBuffer)
-	if err != nil {
-		return "", "", err
-	}
-
-	request.Header.Set("Content-Type", "application/json")
-	request.Close = true
-
-	response, err := httpClient.Do(request)
-	if err != nil {
-		responseBytes, _ := json.Marshal(response)
-		return "", string(responseBytes), err
-	}
-
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		return "", "", err
-	}
-	defer response.Body.Close()
-
-	var responseObject structs.OllamaVisionResponse
-	err = json.Unmarshal(responseBody, &responseObject)
-	if err != nil {
-		return "", "", err
-	}
-
-	if len(responseObject.Response) >= 0 {
-		result = responseObject.Response
-	}
-
-	responseBytes, err := json.Marshal(responseObject)
-	if err != nil {
-		return "", "", err
-	}
-
-	return result, string(responseBytes), nil
-}
-
-func (service *AiService) OllamaTextChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
 	result := ""
 	body := map[string]interface{}{
 		"model":       service.ReceiptProcessingSettings.Model,
@@ -353,6 +263,7 @@ func (service *AiService) OllamaTextChatCompletion(options structs.AiChatComplet
 
 	if len(responseObject.Message.Content) >= 0 {
 		result = responseObject.Message.Content
+		result = utils.RemoveJsonFormat(result)
 	}
 
 	responseBytes, err := json.Marshal(responseObject)

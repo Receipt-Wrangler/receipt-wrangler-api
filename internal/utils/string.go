@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/base64"
 	"math/rand"
+	"strings"
 )
 
 func GetRandomString(length int) (string, error) {
@@ -13,4 +14,12 @@ func GetRandomString(length int) (string, error) {
 	}
 
 	return base64.URLEncoding.EncodeToString(bytes), nil
+}
+
+func RemoveJsonFormat(input string) string {
+	result := input
+	result = strings.ReplaceAll(result, "```json", "")
+	result = strings.ReplaceAll(result, "```", "")
+
+	return result
 }

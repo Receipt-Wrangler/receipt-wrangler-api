@@ -8,15 +8,16 @@ import (
 
 type ReceiptProcessingSettings struct {
 	BaseModel
-	Name        string       `gorm:"not null; uniqueIndex" json:"name"`
-	Description string       `json:"description"`
-	AiType      AiClientType `json:"aiType"`
-	Url         string       `json:"url"`
-	Key         string       `json:"-"`
-	Model       string       `json:"model"`
-	OcrEngine   OcrEngine    `json:"ocrEngine"`
-	Prompt      Prompt       `json:"prompt"`
-	PromptId    uint         `json:"promptId"`
+	Name          string       `gorm:"not null; uniqueIndex" json:"name"`
+	Description   string       `json:"description"`
+	AiType        AiClientType `json:"aiType"`
+	Url           string       `json:"url"`
+	Key           string       `json:"-"`
+	Model         string       `json:"model"`
+	OcrEngine     OcrEngine    `json:"ocrEngine"`
+	Prompt        Prompt       `json:"prompt"`
+	PromptId      uint         `json:"promptId"`
+	IsVisionModel bool         `json:"isVisionModel"`
 }
 
 func (ReceiptProcessingSettings *ReceiptProcessingSettings) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

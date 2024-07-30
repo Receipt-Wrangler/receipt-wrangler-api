@@ -131,6 +131,25 @@ func (service ReceiptProcessingService) processImage(
 	imagePath string,
 	receiptProcessingSettings models.ReceiptProcessingSettings,
 ) (commands.ReceiptProcessingResult, error) {
+
+	if receiptProcessingSettings.IsVisionModel {
+
+	}
+
+	return service.processImageViaOcr(imagePath, receiptProcessingSettings)
+}
+
+func (service ReceiptProcessingService) processImageViaVision(
+	imagePath string,
+	receiptProcessingSettings models.ReceiptProcessingSettings,
+) (commands.ReceiptProcessingResult, error) {
+
+}
+
+func (service ReceiptProcessingService) processImageViaOcr(
+	imagePath string,
+	receiptProcessingSettings models.ReceiptProcessingSettings,
+) (commands.ReceiptProcessingResult, error) {
 	aiMessages := []structs.AiClientMessage{}
 	receipt := commands.UpsertReceiptCommand{}
 	result := commands.ReceiptProcessingResult{}
@@ -157,7 +176,10 @@ func (service ReceiptProcessingService) processImage(
 		ReceiptProcessingSettings: receiptProcessingSettings,
 	}
 
-	response, chatCompletionSystemTaskCommand, err := aiClient.CreateChatCompletion(aiMessages, true)
+	response, chatCompletionSystemTaskCommand, err := aiClient.CreateChatCompletion(structs.AiChatCompletionOptions{
+		Messages:   aiMessages,
+		DecryptKey: true,
+	})
 	result.ChatCompletionSystemTaskCommand = chatCompletionSystemTaskCommand
 	result.RawResponse = response
 	if err != nil {

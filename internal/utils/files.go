@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bufio"
+	"encoding/base64"
 	"errors"
 	"os"
 )
@@ -78,4 +79,8 @@ func ReadLastFileLine(filePath string) (string, error) {
 	}
 
 	return fileLines[len(fileLines)-1], nil
+}
+
+func Base64EncodeBytes(data []byte) string {
+	return base64.StdEncoding.EncodeToString(data)
 }

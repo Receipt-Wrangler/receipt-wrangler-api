@@ -10,7 +10,9 @@ import (
 	"google.golang.org/api/option"
 	"io"
 	"net/http"
+	"os"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/constants"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -167,7 +169,7 @@ func (service *AiService) OpenAiCustomChatCompletion(options structs.AiChatCompl
 		"stream":      false,
 	}
 	httpClient := http.Client{}
-	httpClient.Timeout = 10 * time.Minute
+	httpClient.Timeout = constants.AI_HTTP_TIMEOUT
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -217,7 +219,83 @@ func (service *AiService) OpenAiCustomChatCompletion(options structs.AiChatCompl
 }
 
 func (service *AiService) OllamaChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
+	if service.ReceiptProcessingSettings.IsVisionModel {
+		return service.OllamaVisionChatCompletion(options)
+	}
 
+	return service.OllamaTextChatCompletion(options)
+}
+
+func (service *AiService) OllamaVisionChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
+	result := ""
+	message := ""
+	if options.Messages != nil && len(options.Messages) >= 0 {
+		message = options.Messages[0].Content
+	}
+
+	fileBytes, err := os.ReadFile(options.ImagePath)
+	if err != nil {
+		return "", "", err
+	}
+	b64Image := utils.Base64EncodeBytes(fileBytes)
+
+	body := map[string]interface{}{
+		"model":       service.ReceiptProcessingSettings.Model,
+		"prompt":      message,
+		"temperature": 0,
+		"stream":      false,
+		"images":      []string{b64Image},
+	}
+	httpClient := http.Client{}
+	httpClient.Timeout = constants.AI_HTTP_TIMEOUT
+
+	// TODO: break out the http request building process to shared func
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return "", "", err
+	}
+
+	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
+
+	request, err := http.NewRequest(http.MethodPost, service.ReceiptProcessingSettings.Url, bodyBytesBuffer)
+	if err != nil {
+		return "", "", err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Close = true
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		responseBytes, _ := json.Marshal(response)
+		return "", string(responseBytes), err
+	}
+
+	responseBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		return "", "", err
+	}
+	defer response.Body.Close()
+
+	var responseObject structs.OllamaVisionResponse
+	err = json.Unmarshal(responseBody, &responseObject)
+	if err != nil {
+		return "", "", err
+	}
+
+	if len(responseObject.Response) >= 0 {
+		result = responseObject.Response
+	}
+
+	responseBytes, err := json.Marshal(responseObject)
+	if err != nil {
+		return "", "", err
+	}
+
+	return result, string(responseBytes), nil
+}
+
+func (service *AiService) OllamaTextChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
 	result := ""
 	body := map[string]interface{}{
 		"model":       service.ReceiptProcessingSettings.Model,
@@ -226,7 +304,7 @@ func (service *AiService) OllamaChatCompletion(options structs.AiChatCompletionO
 		"stream":      false,
 	}
 	httpClient := http.Client{}
-	httpClient.Timeout = 10 * time.Minute
+	httpClient.Timeout = constants.AI_HTTP_TIMEOUT
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -255,7 +333,7 @@ func (service *AiService) OllamaChatCompletion(options structs.AiChatCompletionO
 	}
 	defer response.Body.Close()
 
-	var responseObject structs.OllamaResponse
+	var responseObject structs.OllamaTextResponse
 	err = json.Unmarshal(responseBody, &responseObject)
 	if err != nil {
 		return "", "", err

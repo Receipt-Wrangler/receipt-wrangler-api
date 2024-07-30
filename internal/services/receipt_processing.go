@@ -144,6 +144,38 @@ func (service ReceiptProcessingService) processImageViaVision(
 	receiptProcessingSettings models.ReceiptProcessingSettings,
 ) (commands.ReceiptProcessingResult, error) {
 
+	result := commands.ReceiptProcessingResult{}
+	prompt, promptSystemTask, err := service.buildPrompt(receiptProcessingSettings, "")
+	if err != nil {
+		return result, err
+	}
+	result.PromptSystemTaskCommand = promptSystemTask
+
+	aiMessages := []structs.AiClientMessage{{
+		Content: prompt,
+	}}
+
+	aiClient := AiService{
+		ReceiptProcessingSettings: receiptProcessingSettings,
+	}
+
+	response, chatCompletionSystemTask, err := aiClient.CreateChatCompletion(structs.AiChatCompletionOptions{
+		Messages:   aiMessages,
+		ImagePath:  imagePath,
+		DecryptKey: true,
+	})
+	result.ChatCompletionSystemTaskCommand = chatCompletionSystemTask
+	result.RawResponse = response
+	if err != nil {
+		return result, err
+	}
+
+	err = json.Unmarshal([]byte(response), &result.Receipt)
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
 }
 
 func (service ReceiptProcessingService) processImageViaOcr(

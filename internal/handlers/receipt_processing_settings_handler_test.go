@@ -173,6 +173,18 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 			},
 			expect: http.StatusOK,
 		},
+		"invalid openAi, unsupported vision": {
+			input: commands.UpsertReceiptProcessingSettingsCommand{
+				Name:          "OpenAi",
+				Description:   "description",
+				AiType:        models.OPEN_AI,
+				IsVisionModel: true,
+				OcrEngine:     models.TESSERACT,
+				Key:           "key",
+				PromptId:      1,
+			},
+			expect: http.StatusBadRequest,
+		},
 		"valid openAi settings": {
 			input: commands.UpsertReceiptProcessingSettingsCommand{
 				Name:        "OpenAi",
@@ -181,6 +193,19 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 				OcrEngine:   models.TESSERACT,
 				Key:         "key",
 				PromptId:    1,
+			},
+			expect: http.StatusOK,
+		},
+		"valid ollama settings": {
+			input: commands.UpsertReceiptProcessingSettingsCommand{
+				Name:          "Ollama",
+				Description:   "description",
+				AiType:        models.OLLAMA,
+				Model:         "llama3",
+				IsVisionModel: true,
+				OcrEngine:     models.EASY_OCR,
+				Url:           "http://localhost:8080/v1/chat/completions",
+				PromptId:      1,
 			},
 			expect: http.StatusOK,
 		},

@@ -55,7 +55,7 @@ func (service OcrService) ReadImage(path string) (string, commands.UpsertSystemT
 		return "", systemTaskCommand, err
 	}
 
-	if service.ReceiptProcessingSettings.OcrEngine == models.TESSERACT_NEW {
+	if service.ReceiptProcessingSettings.OcrEngine != nil && *service.ReceiptProcessingSettings.OcrEngine == models.TESSERACT_NEW {
 		text, err = service.ReadImageWithTesseract(imageBytes)
 		if err != nil {
 			systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
@@ -64,7 +64,7 @@ func (service OcrService) ReadImage(path string) (string, commands.UpsertSystemT
 		}
 	}
 
-	if service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
+	if service.ReceiptProcessingSettings.OcrEngine != nil && *service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
 		text, err = service.ReadImageWithEasyOcr(imageBytes)
 		if err != nil {
 			systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
@@ -230,7 +230,8 @@ func (service OcrService) prepareImage(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	if service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
+	if service.ReceiptProcessingSettings.OcrEngine != nil &&
+		*service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
 		err = mw.ScaleImage(mw.GetImageWidth()/2, mw.GetImageHeight()/2)
 		if err != nil {
 			return nil, err

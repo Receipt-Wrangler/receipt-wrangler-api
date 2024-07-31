@@ -44,7 +44,7 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 		return vErrs
 	}
 
-	if len(command.OcrEngine) == 0 {
+	if !command.IsVisionModel && len(command.OcrEngine) == 0 {
 		errors["ocrEngine"] = "ocrEngine is required"
 		return vErrs
 	}

@@ -72,7 +72,7 @@ func (repository ReceiptProcessingSettingsRepository) CreateReceiptProcessingSet
 		Key:           encryptedKey,
 		Model:         command.Model,
 		IsVisionModel: command.IsVisionModel,
-		OcrEngine:     command.OcrEngine,
+		OcrEngine:     &command.OcrEngine,
 		PromptId:      command.PromptId,
 	}
 
@@ -112,7 +112,7 @@ func (repository ReceiptProcessingSettingsRepository) UpdateReceiptProcessingSet
 	settings.Url = command.Url
 	settings.Model = command.Model
 	settings.IsVisionModel = command.IsVisionModel
-	settings.OcrEngine = command.OcrEngine
+	settings.OcrEngine = &command.OcrEngine
 	settings.PromptId = command.PromptId
 
 	if updateKey {

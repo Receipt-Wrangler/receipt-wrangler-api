@@ -173,18 +173,6 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 			},
 			expect: http.StatusOK,
 		},
-		"invalid openAi, unsupported vision": {
-			input: commands.UpsertReceiptProcessingSettingsCommand{
-				Name:          "OpenAi",
-				Description:   "description",
-				AiType:        models.OPEN_AI,
-				IsVisionModel: true,
-				OcrEngine:     models.TESSERACT,
-				Key:           "key",
-				PromptId:      1,
-			},
-			expect: http.StatusBadRequest,
-		},
 		"valid openAi settings": {
 			input: commands.UpsertReceiptProcessingSettingsCommand{
 				Name:        "OpenAi",

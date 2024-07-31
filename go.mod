@@ -12,7 +12,7 @@ require (
 	github.com/jinzhu/copier v0.4.0
 	github.com/otiai10/gosseract/v2 v2.4.1
 	github.com/rs/cors v1.11.0
-	github.com/sashabaranov/go-openai v1.26.2
+	github.com/sashabaranov/go-openai v1.27.1
 	github.com/shopspring/decimal v1.4.0
 	golang.org/x/crypto v0.24.0
 	google.golang.org/api v0.187.0

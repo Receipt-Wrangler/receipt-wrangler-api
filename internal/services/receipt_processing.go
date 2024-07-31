@@ -150,7 +150,7 @@ func (service ReceiptProcessingService) processImage(
 			base64Image = ollamaImage
 		}
 
-		if receiptProcessingSettings.AiType == models.OPEN_AI {
+		if receiptProcessingSettings.AiType == models.OPEN_AI_NEW {
 			openAiImage, err := service.getOpenAiBase64Image(imagePath)
 			if err != nil {
 				return result, err

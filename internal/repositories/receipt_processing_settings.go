@@ -98,18 +98,22 @@ func (repository ReceiptProcessingSettingsRepository) GetReceiptProcessingSettin
 
 func (repository ReceiptProcessingSettingsRepository) UpdateReceiptProcessingSettingsById(id string, updateKey bool, command commands.UpsertReceiptProcessingSettingsCommand) (models.ReceiptProcessingSettings, error) {
 	db := repository.GetDB()
-	updateStatement := db.Model(&models.ReceiptProcessingSettings{}).Where("id = ?", id)
+	updateStatement := db.Model(&models.ReceiptProcessingSettings{}).Where("id = ?", id).Select("*")
+	var settings models.ReceiptProcessingSettings
 
-	settings := models.ReceiptProcessingSettings{
-		Name:          command.Name,
-		Description:   command.Description,
-		AiType:        command.AiType,
-		Url:           command.Url,
-		Model:         command.Model,
-		IsVisionModel: command.IsVisionModel,
-		OcrEngine:     command.OcrEngine,
-		PromptId:      command.PromptId,
+	err := db.Model(&models.ReceiptProcessingSettings{}).Where("id = ?", id).First(&settings).Error
+	if err != nil {
+		return models.ReceiptProcessingSettings{}, err
 	}
+
+	settings.Name = command.Name
+	settings.Description = command.Description
+	settings.AiType = command.AiType
+	settings.Url = command.Url
+	settings.Model = command.Model
+	settings.IsVisionModel = command.IsVisionModel
+	settings.OcrEngine = command.OcrEngine
+	settings.PromptId = command.PromptId
 
 	if updateKey {
 		key, err := utils.EncryptAndEncodeToBase64(config.GetEncryptionKey(), command.Key)
@@ -122,7 +126,7 @@ func (repository ReceiptProcessingSettingsRepository) UpdateReceiptProcessingSet
 		updateStatement = updateStatement.Omit("key")
 	}
 
-	err := updateStatement.Updates(&settings).Error
+	err = updateStatement.Updates(&settings).Error
 	if err != nil {
 		return models.ReceiptProcessingSettings{}, err
 	}

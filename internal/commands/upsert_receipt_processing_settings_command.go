@@ -58,7 +58,7 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 		return vErrs
 	}
 
-	if command.AiType == models.OPEN_AI || command.AiType == models.GEMINI {
+	if command.AiType == models.OPEN_AI_NEW || command.AiType == models.GEMINI_NEW {
 		if command.Key == "" {
 			errors["key"] = "key is required"
 		}
@@ -67,13 +67,15 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 			errors["url"] = "url is not required"
 		}
 
-		if command.IsVisionModel == true {
-			errors["isVisionModel"] = "vision is not supported for this AI type"
+		if command.AiType == models.GEMINI_NEW {
+			if command.IsVisionModel == true {
+				errors["isVisionModel"] = "vision is not supported for this AI type"
+			}
 		}
 	}
 
-	if command.AiType == models.OPEN_AI_CUSTOM || command.AiType == models.OLLAMA {
-		if command.AiType == models.OPEN_AI_CUSTOM && command.IsVisionModel == true {
+	if command.AiType == models.OPEN_AI_CUSTOM_NEW || command.AiType == models.OLLAMA {
+		if command.AiType == models.OPEN_AI_CUSTOM_NEW && command.IsVisionModel == true {
 			errors["isVisionModel"] = "vision is not supported for this AI type"
 		}
 

@@ -85,17 +85,52 @@ func (service *AiService) OpenAiChatCompletion(options structs.AiChatCompletionO
 	client := openai.NewClient(key)
 
 	openAiMessages := make([]openai.ChatCompletionMessage, len(options.Messages))
-	for index, message := range options.Messages {
-		openAiMessages[index] = openai.ChatCompletionMessage{
-			Role:    message.Role,
-			Content: message.Content,
+
+	if len(options.Messages) > 0 && len(options.Messages[0].Images) > 0 {
+		for i, message := range options.Messages {
+			chatParts := make([]openai.ChatMessagePart, 1+len(message.Images))
+
+			chatParts[0] = openai.ChatMessagePart{
+				Type: openai.ChatMessagePartTypeText,
+				Text: message.Content,
+			}
+			for j, image := range message.Images {
+				imageUrl := openai.ChatMessageImageURL{
+					URL:    image,
+					Detail: openai.ImageURLDetailAuto,
+				}
+
+				imagePart := openai.ChatMessagePart{
+					Type:     openai.ChatMessagePartTypeImageURL,
+					ImageURL: &imageUrl,
+				}
+
+				chatParts[j+1] = imagePart
+			}
+
+			openAiMessages[i] = openai.ChatCompletionMessage{
+				Role:         message.Role,
+				MultiContent: chatParts,
+			}
 		}
+	} else if len(options.Messages) > 0 {
+		for index, message := range options.Messages {
+			openAiMessages[index] = openai.ChatCompletionMessage{
+				Role:    message.Role,
+				Content: message.Content,
+			}
+		}
+	}
+
+	model := service.ReceiptProcessingSettings.Model
+	if len(model) == 0 {
+		model = openai.GPT3Dot5Turbo
 	}
 
 	resp, err := client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model:       openai.GPT3Dot5Turbo,
+			Model:       model,
 			Messages:    openAiMessages,
 			N:           1,
 			Temperature: 0,

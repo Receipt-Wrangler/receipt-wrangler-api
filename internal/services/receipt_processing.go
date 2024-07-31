@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"gopkg.in/gographics/imagick.v2/imagick"
 	"gorm.io/gorm"
+	"os"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -140,18 +141,24 @@ func (service ReceiptProcessingService) processImage(
 	base64Image := ""
 
 	if receiptProcessingSettings.IsVisionModel {
-		mw := imagick.NewMagickWand()
-		err := mw.ReadImage(imagePath)
-		if err != nil {
-			return result, err
+		if receiptProcessingSettings.AiType == models.OLLAMA {
+			ollamaImage, err := service.getOllamaBase64Image(imagePath)
+			if err != nil {
+				return result, err
+			}
+
+			base64Image = ollamaImage
 		}
 
-		fileBytes, err := mw.GetImageBlob()
-		if err != nil {
-			return result, err
+		if receiptProcessingSettings.AiType == models.OPEN_AI_NEW {
+			openAiImage, err := service.getOpenAiBase64Image(imagePath)
+			if err != nil {
+				return result, err
+			}
+
+			base64Image = openAiImage
 		}
 
-		base64Image = utils.Base64EncodeBytes(fileBytes)
 	} else {
 		ocrService := NewOcrService(service.TX, receiptProcessingSettings)
 		resultText, ocrSystemTaskCommand, err := ocrService.ReadImage(imagePath)
@@ -200,6 +207,36 @@ func (service ReceiptProcessingService) processImage(
 
 	result.Receipt = receipt
 	return result, nil
+}
+
+func (service ReceiptProcessingService) getOllamaBase64Image(imagePath string) (string, error) {
+	mw := imagick.NewMagickWand()
+	err := mw.ReadImage(imagePath)
+	if err != nil {
+		return "", err
+	}
+
+	fileBytes, err := mw.GetImageBlob()
+	if err != nil {
+		return "", err
+	}
+
+	return utils.Base64EncodeBytes(fileBytes), nil
+}
+
+func (service ReceiptProcessingService) getOpenAiBase64Image(imagePath string) (string, error) {
+	fileRepository := repositories.NewFileRepository(service.TX)
+	fileBytes, err := os.ReadFile(imagePath)
+	if err != nil {
+		return "", err
+	}
+
+	uri, err := fileRepository.BuildEncodedImageString(fileBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return uri, nil
 }
 
 func (service ReceiptProcessingService) buildPrompt(

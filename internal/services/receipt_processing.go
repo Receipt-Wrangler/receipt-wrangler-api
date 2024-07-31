@@ -146,8 +146,6 @@ func (service ReceiptProcessingService) processImage(
 			return result, err
 		}
 
-		mw.SetResolution(672, 672)
-
 		fileBytes, err := mw.GetImageBlob()
 		if err != nil {
 			return result, err

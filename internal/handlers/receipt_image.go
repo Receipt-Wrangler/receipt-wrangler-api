@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/base64"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"os"
@@ -122,7 +121,6 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var receipt models.Receipt
 			var bytes []byte
-			var fileType string
 			result := models.FileDataView{}
 
 			err = db.Model(models.Receipt{}).Where("id = ?", fileData.ReceiptId).Select("id").Find(&receipt).Error
@@ -136,12 +134,10 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			fileType, err = fileRepository.GetFileType(bytes)
+			imageData, err := fileRepository.BuildEncodedImageString(bytes)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-
-			imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
 
 			result = models.FileDataView{}.FromFileData(fileData)
 			result.EncodedImage = imageData
@@ -152,7 +148,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			w.WriteHeader(200)
-			w.Write([]byte(resultBytes))
+			w.Write(resultBytes)
 
 			return 0, nil
 		},

@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"gopkg.in/gographics/imagick.v2/imagick"
 	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
@@ -131,15 +132,35 @@ func (service ReceiptProcessingService) processImage(
 	imagePath string,
 	receiptProcessingSettings models.ReceiptProcessingSettings,
 ) (commands.ReceiptProcessingResult, error) {
+
 	aiMessages := []structs.AiClientMessage{}
 	receipt := commands.UpsertReceiptCommand{}
 	result := commands.ReceiptProcessingResult{}
+	ocrText := ""
+	base64Image := ""
 
-	ocrService := NewOcrService(service.TX, receiptProcessingSettings)
-	ocrText, ocrSystemTaskCommand, err := ocrService.ReadImage(imagePath)
-	result.OcrSystemTaskCommand = ocrSystemTaskCommand
-	if err != nil {
-		return result, err
+	if receiptProcessingSettings.IsVisionModel {
+		mw := imagick.NewMagickWand()
+		err := mw.ReadImage(imagePath)
+		if err != nil {
+			return result, err
+		}
+
+		fileBytes, err := mw.GetImageBlob()
+		if err != nil {
+			return result, err
+		}
+
+		base64Image = utils.Base64EncodeBytes(fileBytes)
+	} else {
+		ocrService := NewOcrService(service.TX, receiptProcessingSettings)
+		resultText, ocrSystemTaskCommand, err := ocrService.ReadImage(imagePath)
+		result.OcrSystemTaskCommand = ocrSystemTaskCommand
+		if err != nil {
+			return result, err
+		}
+
+		ocrText = resultText
 	}
 
 	prompt, promptSystemTask, err := service.buildPrompt(receiptProcessingSettings, ocrText)
@@ -148,16 +169,24 @@ func (service ReceiptProcessingService) processImage(
 		return result, err
 	}
 
-	aiMessages = append(aiMessages, structs.AiClientMessage{
+	message := structs.AiClientMessage{
 		Role:    "user",
 		Content: prompt,
-	})
+	}
+	if len(base64Image) > 0 {
+		message.Images = []string{base64Image}
+	}
+
+	aiMessages = append(aiMessages, message)
 
 	aiClient := AiService{
 		ReceiptProcessingSettings: receiptProcessingSettings,
 	}
 
-	response, chatCompletionSystemTaskCommand, err := aiClient.CreateChatCompletion(aiMessages, true)
+	response, chatCompletionSystemTaskCommand, err := aiClient.CreateChatCompletion(structs.AiChatCompletionOptions{
+		Messages:   aiMessages,
+		DecryptKey: true,
+	})
 	result.ChatCompletionSystemTaskCommand = chatCompletionSystemTaskCommand
 	result.RawResponse = response
 	if err != nil {

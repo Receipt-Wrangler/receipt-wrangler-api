@@ -3759,6 +3759,9 @@ components:
             model:
               type: string
               description: LLM model
+            isVisionModel:
+              type: boolean
+              description: Is vision model
             ocrEngine:
               $ref: "#/components/schemas/OcrEngine"
             prompt:
@@ -3792,6 +3795,9 @@ components:
         model:
           type: string
           description: LLM model
+        isVisionModel:
+          type: boolean
+          description: Is vision model
         ocrEngine:
           $ref: "#/components/schemas/OcrEngine"
         promptId:

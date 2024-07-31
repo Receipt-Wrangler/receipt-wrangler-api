@@ -2,7 +2,7 @@ package structs
 
 import "time"
 
-type OllamaResponse struct {
+type OllamaTextResponse struct {
 	Model     string    `json:"model"`
 	CreatedAt time.Time `json:"created_at"`
 	Message   struct {

@@ -173,6 +173,18 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 			},
 			expect: http.StatusOK,
 		},
+		"invalid openAi, unsupported vision": {
+			input: commands.UpsertReceiptProcessingSettingsCommand{
+				Name:          "OpenAi",
+				Description:   "description",
+				AiType:        models.OPEN_AI,
+				IsVisionModel: true,
+				OcrEngine:     models.TESSERACT,
+				Key:           "key",
+				PromptId:      1,
+			},
+			expect: http.StatusBadRequest,
+		},
 		"valid openAi settings": {
 			input: commands.UpsertReceiptProcessingSettingsCommand{
 				Name:        "OpenAi",
@@ -181,6 +193,19 @@ func TestShouldTestValidAndInvalidCreateReceiptProcessingSettingCommands(t *test
 				OcrEngine:   models.TESSERACT,
 				Key:         "key",
 				PromptId:    1,
+			},
+			expect: http.StatusOK,
+		},
+		"valid ollama settings": {
+			input: commands.UpsertReceiptProcessingSettingsCommand{
+				Name:          "Ollama",
+				Description:   "description",
+				AiType:        models.OLLAMA,
+				Model:         "llama3",
+				IsVisionModel: true,
+				OcrEngine:     models.EASY_OCR,
+				Url:           "http://localhost:8080/v1/chat/completions",
+				PromptId:      1,
 			},
 			expect: http.StatusOK,
 		},
@@ -328,7 +353,19 @@ func TestShouldNotUpdateReceiptProcessingSettingsByIdDueToBadId(t *testing.T) {
 }
 
 func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *testing.T) {
+	defer tearDownReceiptProcessingSettings()
+
 	os.Setenv("ENCRYPTION_KEY", "test")
+	db := repositories.GetDB()
+	db.Create(&models.Prompt{
+		Name: "prompt",
+	})
+	db.Create(&models.ReceiptProcessingSettings{
+		BaseModel: models.BaseModel{
+			ID: 1,
+		},
+		PromptId: 1,
+	})
 
 	tests := map[string]struct {
 		input  commands.UpsertReceiptProcessingSettingsCommand
@@ -360,6 +397,30 @@ func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *test
 				PromptId:    1,
 			},
 			expect: http.StatusBadRequest,
+		},
+		"valid ollama vision": {
+			input: commands.UpsertReceiptProcessingSettingsCommand{
+				Name:          "name",
+				Description:   "description",
+				AiType:        models.OLLAMA,
+				Model:         "llava",
+				Url:           "http://localhost:8080/v1/chat/completions",
+				IsVisionModel: true,
+				PromptId:      1,
+			},
+			expect: http.StatusOK,
+		},
+		"valid ollama": {
+			input: commands.UpsertReceiptProcessingSettingsCommand{
+				Name:        "name",
+				Description: "description",
+				AiType:      models.OLLAMA,
+				OcrEngine:   models.EASY_OCR,
+				Model:       "llama3",
+				Url:         "http://localhost:8080/v1/chat/completions",
+				PromptId:    1,
+			},
+			expect: http.StatusOK,
 		},
 		"valid gemini settings": {
 			input: commands.UpsertReceiptProcessingSettingsCommand{
@@ -398,13 +459,15 @@ func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *test
 	}
 
 	for name, test := range tests {
-		db := repositories.GetDB()
-		db.Create(&models.Prompt{})
-
 		bytes, _ := json.Marshal(test.input)
 		reader := strings.NewReader(string(bytes))
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/api", reader)
+
+		chiContext := chi.NewRouteContext()
+		chiContext.URLParams.Add("id", "1")
+		routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+		r = r.WithContext(routeContext)
 
 		newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.ADMIN}})
 		r = r.WithContext(newContext)
@@ -414,8 +477,6 @@ func TestShouldTestValidAndInvalidUpdateReceiptProcessingSettingCommands(t *test
 		if w.Result().StatusCode != test.expect {
 			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("%s expected: %d", name, test.expect))
 		}
-
-		tearDownReceiptProcessingSettings()
 	}
 }
 
@@ -512,13 +573,15 @@ func TestShouldNotCheckReceiptProcessingSettingsConnectivityWithBadRequest(t *te
 
 	repositories.CreateTestUser()
 
+	ocrEngine := models.TESSERACT
+
 	db := repositories.GetDB()
 	db.Create(&models.Prompt{})
 	db.Create(&models.ReceiptProcessingSettings{
 		Name:        "Gemini",
 		Description: "description",
 		AiType:      models.GEMINI,
-		OcrEngine:   models.TESSERACT,
+		OcrEngine:   &ocrEngine,
 		Key:         key,
 		PromptId:    1,
 	})

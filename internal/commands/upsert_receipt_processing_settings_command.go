@@ -9,14 +9,15 @@ import (
 )
 
 type UpsertReceiptProcessingSettingsCommand struct {
-	Name        string              `json:"name"`
-	Description string              `json:"description"`
-	AiType      models.AiClientType `json:"aiType"`
-	Url         string              `json:"url"`
-	Key         string              `json:"key"`
-	Model       string              `json:"model"`
-	OcrEngine   models.OcrEngine    `json:"ocrEngine"`
-	PromptId    uint                `json:"promptId"`
+	Name          string              `json:"name"`
+	Description   string              `json:"description"`
+	AiType        models.AiClientType `json:"aiType"`
+	Url           string              `json:"url"`
+	Key           string              `json:"key"`
+	Model         string              `json:"model"`
+	IsVisionModel bool                `json:"isVisionModel"`
+	OcrEngine     models.OcrEngine    `json:"ocrEngine"`
+	PromptId      uint                `json:"promptId"`
 }
 
 func (command *UpsertReceiptProcessingSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -43,7 +44,7 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 		return vErrs
 	}
 
-	if len(command.OcrEngine) == 0 {
+	if !command.IsVisionModel && len(command.OcrEngine) == 0 {
 		errors["ocrEngine"] = "ocrEngine is required"
 		return vErrs
 	}
@@ -65,9 +66,17 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 		if command.Url != "" {
 			errors["url"] = "url is not required"
 		}
+
+		if command.IsVisionModel == true {
+			errors["isVisionModel"] = "vision is not supported for this AI type"
+		}
 	}
 
 	if command.AiType == models.OPEN_AI_CUSTOM || command.AiType == models.OLLAMA {
+		if command.AiType == models.OPEN_AI_CUSTOM && command.IsVisionModel == true {
+			errors["isVisionModel"] = "vision is not supported for this AI type"
+		}
+
 		if len(command.Url) == 0 {
 			errors["url"] = "url is required"
 		}
@@ -83,6 +92,7 @@ func (command *UpsertReceiptProcessingSettingsCommand) IsEmpty() bool {
 		command.Url == "" &&
 		command.Key == "" &&
 		command.Model == "" &&
+		command.IsVisionModel == false &&
 		command.OcrEngine == "" &&
 		command.PromptId == 0
 }

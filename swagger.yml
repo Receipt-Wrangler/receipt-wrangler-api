@@ -3166,6 +3166,10 @@ components:
               $ref: "#/components/schemas/ReceiptStatus"
               description: Default quick scan status
               default: "OPEN"
+            showLargeImagePreviews:
+              type: boolean
+              description: Whether to show large image previews
+              default: false
     GroupSettings:
       type: object
       required:

@@ -58,17 +58,29 @@ func (repository UserPreferncesRepository) CreateUserPreferences(userPreferences
 
 func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, userPreferences models.UserPrefernces) (models.UserPrefernces, error) {
 	db := repository.GetDB()
+	var userPreferencesToUpdate models.UserPrefernces
 
-	update := models.UserPrefernces{QuickScanDefaultGroupId: userPreferences.QuickScanDefaultGroupId,
-		QuickScanDefaultPaidById: userPreferences.QuickScanDefaultPaidById,
-		QuickScanDefaultStatus:   userPreferences.QuickScanDefaultStatus}
-
-	err := db.Model(models.UserPrefernces{}).Select("quick_scan_default_group_id", "quick_scan_default_paid_by_id", "quick_scan_default_status").Where("id = ?", userId).Updates(&update).Error
+	err := db.Model(models.UserPrefernces{}).Where("user_id = ?", userId).First(&userPreferencesToUpdate).Error
 	if err != nil {
 		return models.UserPrefernces{}, err
 	}
 
-	return userPreferences, nil
+	userPreferencesToUpdate.ShowLargeImagePreviews = userPreferences.ShowLargeImagePreviews
+	userPreferencesToUpdate.QuickScanDefaultGroupId = userPreferences.QuickScanDefaultGroupId
+	userPreferencesToUpdate.QuickScanDefaultPaidById = userPreferences.QuickScanDefaultPaidById
+	userPreferencesToUpdate.QuickScanDefaultStatus = userPreferences.QuickScanDefaultStatus
+
+	err = db.
+		Model(models.UserPrefernces{}).
+		Select("*").
+		Where("id = ?", userPreferencesToUpdate.ID).
+		Updates(&userPreferencesToUpdate).Error
+
+	if err != nil {
+		return models.UserPrefernces{}, err
+	}
+
+	return userPreferencesToUpdate, nil
 }
 
 func (repository UserPreferncesRepository) DeleteUserPreferences(userId uint) error {

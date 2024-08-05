@@ -130,7 +130,6 @@ func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.
 		systemTasks = append(systemTasks, ocrSystemTask)
 	}
 
-	// TODO: create tasks for prompt,
 	if !isFallback && len(metadata.PromptSystemTaskCommand.Type) > 0 {
 		metadata.PromptSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
 		promptSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.PromptSystemTaskCommand)
@@ -230,6 +229,47 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 		EndedAt:                &uploadFinished,
 		ResultDescription:      resultDescription,
 		AssociatedSystemTaskId: &systemTaskId,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (service SystemTaskService) AssociateSystemTasksToReceipt(
+	createdReceiptId uint,
+	parentProcessingSystemTaskId uint,
+	uploadStart time.Time,
+	uploadEnd time.Time,
+) error {
+	db := service.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		systemTaskRepository := repositories.NewSystemTaskRepository(tx)
+
+		associateTasksToReceipt, txErr := systemTaskRepository.CreateSystemTask(
+			commands.UpsertSystemTaskCommand{
+				Type:                 models.ASSOCIATE_TASKS_TO_RECEIPT,
+				Status:               models.SYSTEM_TASK_SUCCEEDED,
+				AssociatedEntityType: models.RECEIPT,
+				AssociatedEntityId:   createdReceiptId,
+				StartedAt:            uploadStart,
+				EndedAt:              &uploadEnd,
+			},
+		)
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Model(models.SystemTask{}).
+			Where("id = ?", parentProcessingSystemTaskId).
+			Update("associated_system_task_id", associateTasksToReceipt.ID).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		return nil
 	})
 	if err != nil {
 		return err

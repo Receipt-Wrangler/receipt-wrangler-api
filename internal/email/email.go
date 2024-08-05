@@ -236,18 +236,18 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						return err
 					}
 
-					systemTaskCommand := commands.UpsertSystemTaskCommand{
-						Type:                 models.EMAIL_READ,
-						Status:               models.SYSTEM_TASK_SUCCEEDED,
-						AssociatedEntityType: models.SYSTEM_EMAIL,
-						AssociatedEntityId:   groupSettingsToUse.SystemEmail.ID,
-						StartedAt:            emailProcessStart,
-						EndedAt:              &emailProcessEnd,
-						RanByUserId:          nil,
-						ResultDescription:    string(metadataBytes),
-					}
-
-					createdSystemTask, err := systemTaskRepository.CreateSystemTask(systemTaskCommand)
+					emailReadSystemTask, err := systemTaskRepository.CreateSystemTask(
+						commands.UpsertSystemTaskCommand{
+							Type:                 models.EMAIL_READ,
+							Status:               models.SYSTEM_TASK_SUCCEEDED,
+							AssociatedEntityType: models.SYSTEM_EMAIL,
+							AssociatedEntityId:   groupSettingsToUse.SystemEmail.ID,
+							StartedAt:            emailProcessStart,
+							EndedAt:              &emailProcessEnd,
+							RanByUserId:          nil,
+							ResultDescription:    string(metadataBytes),
+						},
+					)
 					if err != nil {
 						return err
 					}
@@ -259,10 +259,11 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						models.EMAIL_UPLOAD,
 						nil,
 						func(command commands.UpsertSystemTaskCommand) *uint {
-							return &createdSystemTask.ID
+							return &emailReadSystemTask.ID
 						},
 					)
 
+					createReceiptStart := time.Now()
 					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
 					taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 						err,
@@ -277,6 +278,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 						tx.Commit()
 						return err
 					}
+					createReceiptEnd := time.Now()
 
 					fileData := models.FileData{
 						ReceiptId: createdReceipt.ID,
@@ -287,6 +289,17 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 
 					_, err = receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 					if err != nil {
+						return err
+					}
+
+					err = systemTaskService.AssociateSystemTasksToReceipt(
+						createdReceipt.ID,
+						emailReadSystemTask.ID,
+						createReceiptStart,
+						createReceiptEnd,
+					)
+					if err != nil {
+						tx.Commit()
 						return err
 					}
 

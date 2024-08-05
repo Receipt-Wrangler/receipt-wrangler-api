@@ -44,6 +44,7 @@ func (self SystemTaskStatus) Value() (driver.Value, error) {
 type SystemTaskType string
 
 const (
+	ASSOCIATE_TASKS_TO_RECEIPT                     SystemTaskType = "ASSOCIATE_TASKS_TO_RECEIPT"
 	RECEIPT_UPLOADED                               SystemTaskType = "RECEIPT_UPLOADED"
 	OCR_PROCESSING                                 SystemTaskType = "OCR_PROCESSING"
 	CHAT_COMPLETION                                SystemTaskType = "CHAT_COMPLETION"
@@ -71,6 +72,7 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 		self != CHAT_COMPLETION &&
 		self != OCR_PROCESSING &&
 		self != RECEIPT_UPLOADED &&
+		self != ASSOCIATE_TASKS_TO_RECEIPT &&
 		self != PROMPT_GENERATED {
 		return nil, errors.New("invalid SystemTaskType")
 	}
@@ -80,6 +82,7 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 type AssociatedEntityType string
 
 const (
+	RECEIPT                     AssociatedEntityType = "RECEIPT"
 	SYSTEM_EMAIL                AssociatedEntityType = "SYSTEM_EMAIL"
 	PROMPT                      AssociatedEntityType = "PROMPT"
 	RECEIPT_PROCESSING_SETTINGS AssociatedEntityType = "RECEIPT_PROCESSING_SETTINGS"
@@ -93,6 +96,7 @@ func (self *AssociatedEntityType) Scan(value string) error {
 func (self AssociatedEntityType) Value() (driver.Value, error) {
 	if self != SYSTEM_EMAIL &&
 		self != RECEIPT_PROCESSING_SETTINGS &&
+		self != RECEIPT &&
 		self != PROMPT {
 		return nil, errors.New("invalid AssociatedEntityType")
 	}

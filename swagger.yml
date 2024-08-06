@@ -2248,11 +2248,13 @@ components:
     SystemTaskType:
       type: string
       enum:
+        - "META_ASSOCIATE_TASKS_TO_RECEIPT"
         - "OCR_PROCESSING"
         - "CHAT_COMPLETION"
         - "MAGIC_FILL"
         - "QUICK_SCAN"
         - "EMAIL_READ"
+        - "META_COMBINE_QUICK_SCAN"
         - "EMAIL_UPLOAD"
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
@@ -2261,6 +2263,8 @@ components:
     AssociatedEntityType:
       type: string
       enum:
+        - "NOOP_ENTITY_TYPE"
+        - "RECEIPT"
         - "SYSTEM_EMAIL"
         - "RECEIPT_PROCESSING_SETTINGS"
         - "PROMPT"

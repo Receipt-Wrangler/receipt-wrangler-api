@@ -34,7 +34,7 @@ func (command *UpsertReceiptProcessingSettingsCommand) LoadDataFromRequest(w htt
 	return nil
 }
 
-func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.ValidatorError {
+func (command *UpsertReceiptProcessingSettingsCommand) Validate(updateKey bool) structs.ValidatorError {
 	vErrs := structs.ValidatorError{}
 	errors := map[string]string{}
 	vErrs.Errors = errors
@@ -59,7 +59,7 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate() structs.Valida
 	}
 
 	if command.AiType == models.OPEN_AI_NEW || command.AiType == models.GEMINI_NEW {
-		if command.Key == "" {
+		if command.Key == "" && updateKey {
 			errors["key"] = "key is required"
 		}
 

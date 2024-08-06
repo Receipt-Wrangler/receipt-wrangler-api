@@ -77,7 +77,7 @@ func CreateReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			vErr := command.Validate()
+			vErr := command.Validate(false)
 			if len(vErr.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
 				return 0, nil
@@ -153,7 +153,7 @@ func UpdateReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request)
 				return http.StatusInternalServerError, err
 			}
 
-			vErr := command.Validate()
+			vErr := command.Validate(updateKey)
 			if len(vErr.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusBadRequest)
 				return 0, nil

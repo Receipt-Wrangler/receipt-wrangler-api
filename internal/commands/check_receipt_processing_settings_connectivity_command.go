@@ -40,7 +40,7 @@ func (command *CheckReceiptProcessingSettingsCommand) Validate() structs.Validat
 	}
 
 	if !settingsEmpty {
-		settingsErrors := command.UpsertReceiptProcessingSettingsCommand.Validate()
+		settingsErrors := command.UpsertReceiptProcessingSettingsCommand.Validate(false)
 		for k, v := range settingsErrors.Errors {
 			vErrs.Errors[k] = v
 		}

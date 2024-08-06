@@ -134,7 +134,7 @@ func (service ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.Ai
 		OcrEngine: ocrEngine,
 		PromptId:  prompt.ID,
 	}
-	vErrs := command.Validate()
+	vErrs := command.Validate(false)
 	if len(vErrs.Errors) > 0 {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "Unable to import invalid AI settings: ", vErrs.Errors)
 		return models.ReceiptProcessingSettings{},

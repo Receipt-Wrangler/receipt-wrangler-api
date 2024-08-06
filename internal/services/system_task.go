@@ -51,7 +51,12 @@ func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(met
 	)
 }
 
-func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands.ReceiptProcessingMetadata, startDate time.Time, endDate time.Time, taskType models.SystemTaskType, userId *uint, parentAssociatedSystemTaskId func(command commands.UpsertSystemTaskCommand) *uint) (structs.ReceiptProcessingSystemTasks, error) {
+func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands.ReceiptProcessingMetadata,
+	startDate time.Time,
+	endDate time.Time,
+	taskType models.SystemTaskType,
+	userId *uint,
+	parentAssociatedSystemTaskId func(command commands.UpsertSystemTaskCommand) *uint) (structs.ReceiptProcessingSystemTasks, error) {
 	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	result := structs.ReceiptProcessingSystemTasks{}
 
@@ -195,7 +200,7 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 	createdReceipt models.Receipt,
 	quickScanSystemTasks structs.ReceiptProcessingSystemTasks,
 	uploadStart time.Time,
-) error {
+) (models.SystemTask, error) {
 	systemTaskRepository := repositories.NewSystemTaskRepository(service.GetDB())
 	receiptProcessingSettingsId := quickScanSystemTasks.SystemTask.AssociatedEntityId
 	systemTaskId := quickScanSystemTasks.SystemTask.ID
@@ -210,7 +215,7 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 
 	receiptBytes, err := json.Marshal(createdReceipt)
 	if err != nil {
-		return err
+		return models.SystemTask{}, err
 	}
 
 	resultDescription = string(receiptBytes)
@@ -220,7 +225,7 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 		resultDescription = createReceiptError.Error()
 	}
 
-	_, err = systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
+	systemTask, err := systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
 		Type:                   models.RECEIPT_UPLOADED,
 		Status:                 status,
 		AssociatedEntityType:   models.RECEIPT_PROCESSING_SETTINGS,
@@ -231,10 +236,10 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 		AssociatedSystemTaskId: &systemTaskId,
 	})
 	if err != nil {
-		return err
+		return models.SystemTask{}, err
 	}
 
-	return nil
+	return systemTask, nil
 }
 
 func (service SystemTaskService) AssociateSystemTasksToReceipt(
@@ -249,15 +254,11 @@ func (service SystemTaskService) AssociateSystemTasksToReceipt(
 		systemTaskRepository := repositories.NewSystemTaskRepository(tx)
 
 		associateTasksToReceipt, txErr := systemTaskRepository.CreateSystemTask(
-			commands.UpsertSystemTaskCommand{
-				Type:                 models.ASSOCIATE_TASKS_TO_RECEIPT,
-				Status:               models.SYSTEM_TASK_SUCCEEDED,
-				AssociatedEntityType: models.RECEIPT,
-				AssociatedEntityId:   createdReceiptId,
-				StartedAt:            uploadStart,
-				EndedAt:              &uploadEnd,
-			},
-		)
+			service.BuildAssociateSystemTasksToReceiptTask(
+				createdReceiptId,
+				uploadStart,
+				uploadEnd,
+			))
 		if txErr != nil {
 			return txErr
 		}
@@ -276,4 +277,19 @@ func (service SystemTaskService) AssociateSystemTasksToReceipt(
 	}
 
 	return nil
+}
+
+func (service SystemTaskService) BuildAssociateSystemTasksToReceiptTask(
+	createdReceiptId uint,
+	uploadStart time.Time,
+	uploadEnd time.Time,
+) commands.UpsertSystemTaskCommand {
+	return commands.UpsertSystemTaskCommand{
+		Type:                 models.META_ASSOCIATE_TASKS_TO_RECEIPT,
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		AssociatedEntityType: models.RECEIPT,
+		AssociatedEntityId:   createdReceiptId,
+		StartedAt:            uploadStart,
+		EndedAt:              &uploadEnd,
+	}
 }

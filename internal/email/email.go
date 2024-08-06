@@ -265,7 +265,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 
 					createReceiptStart := time.Now()
 					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
-					taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
+					_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 						err,
 						createdReceipt,
 						processingSystemTasks,

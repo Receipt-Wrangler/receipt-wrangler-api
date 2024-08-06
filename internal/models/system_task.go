@@ -44,7 +44,8 @@ func (self SystemTaskStatus) Value() (driver.Value, error) {
 type SystemTaskType string
 
 const (
-	ASSOCIATE_TASKS_TO_RECEIPT                     SystemTaskType = "ASSOCIATE_TASKS_TO_RECEIPT"
+	META_COMBINE_QUICK_SCAN                        SystemTaskType = "META_COMBINE_QUICK_SCAN"
+	META_ASSOCIATE_TASKS_TO_RECEIPT                SystemTaskType = "META_ASSOCIATE_TASKS_TO_RECEIPT"
 	RECEIPT_UPLOADED                               SystemTaskType = "RECEIPT_UPLOADED"
 	OCR_PROCESSING                                 SystemTaskType = "OCR_PROCESSING"
 	CHAT_COMPLETION                                SystemTaskType = "CHAT_COMPLETION"
@@ -72,7 +73,8 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 		self != CHAT_COMPLETION &&
 		self != OCR_PROCESSING &&
 		self != RECEIPT_UPLOADED &&
-		self != ASSOCIATE_TASKS_TO_RECEIPT &&
+		self != META_COMBINE_QUICK_SCAN &&
+		self != META_ASSOCIATE_TASKS_TO_RECEIPT &&
 		self != PROMPT_GENERATED {
 		return nil, errors.New("invalid SystemTaskType")
 	}
@@ -86,6 +88,7 @@ const (
 	SYSTEM_EMAIL                AssociatedEntityType = "SYSTEM_EMAIL"
 	PROMPT                      AssociatedEntityType = "PROMPT"
 	RECEIPT_PROCESSING_SETTINGS AssociatedEntityType = "RECEIPT_PROCESSING_SETTINGS"
+	NOOP_ENTITY_TYPE            AssociatedEntityType = "NOOP_ENTITY_TYPE"
 )
 
 func (self *AssociatedEntityType) Scan(value string) error {
@@ -95,6 +98,7 @@ func (self *AssociatedEntityType) Scan(value string) error {
 
 func (self AssociatedEntityType) Value() (driver.Value, error) {
 	if self != SYSTEM_EMAIL &&
+		self != NOOP_ENTITY_TYPE &&
 		self != RECEIPT_PROCESSING_SETTINGS &&
 		self != RECEIPT &&
 		self != PROMPT {

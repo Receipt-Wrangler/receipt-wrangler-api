@@ -2661,7 +2661,6 @@ components:
           type: string
           description: Date resolved
         status:
-          type: string
           $ref: "#/components/schemas/ReceiptStatus"
         tags:
           type: array
@@ -3062,6 +3061,7 @@ components:
         - type
         - groupId
         - date
+        - createdAt
       type: object
       properties:
         id:
@@ -3073,6 +3073,14 @@ components:
         groupId:
           type: integer
         date:
+          type: string
+        amount:
+          type: string
+        receiptStatus:
+          $ref: "#/components/schemas/ReceiptStatus"
+        paidByUserId:
+          type: integer
+        createdAt:
           type: string
     PagedData:
       required:

@@ -41,11 +41,15 @@ func Search(w http.ResponseWriter, r *http.Request) {
 
 				for _, receipt := range receipts {
 					results = append(results, structs.SearchResult{
-						ID:      receipt.ID,
-						GroupID: receipt.GroupId,
-						Name:    receipt.Name,
-						Date:    receipt.Date,
-						Type:    "Receipt",
+						ID:            receipt.ID,
+						GroupID:       receipt.GroupId,
+						Name:          receipt.Name,
+						Date:          receipt.Date,
+						Type:          "Receipt",
+						Amount:        receipt.Amount,
+						ReceiptStatus: receipt.Status,
+						PaidByUserId:  receipt.PaidByUserID,
+						CreatedAt:     receipt.CreatedAt,
 					})
 				}
 

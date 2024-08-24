@@ -54,18 +54,18 @@ func DeleteUser(userId string) error {
 				if txErr != nil {
 					return txErr
 				} else {
-					groupIdsToNotDelete = append(groupIdsToNotDelete, group.ID)
 				}
+			} else {
+				groupIdsToNotDelete = append(groupIdsToNotDelete, group.ID)
 			}
 		}
 
 		// Remove other group members
 		for i := 0; i < len(groupIdsToNotDelete); i++ {
-			txErr = tx.Where("user_id = ? AND group_id = ?", userId, groupIdsToNotDelete[i]).Delete(&models.GroupMember{}).Error
+			txErr = tx.Delete(&models.GroupMember{}, "user_id = ? AND group_id = ?", userId, groupIdsToNotDelete[i]).Error
 			if txErr != nil {
 				return txErr
 			}
-
 		}
 
 		// Remove user's notifications

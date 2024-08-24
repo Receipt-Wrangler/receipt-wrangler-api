@@ -58,6 +58,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error creating user.",
 		Writer:       w,
 		Request:      r,
+		UserRole:     models.ADMIN,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
@@ -96,6 +97,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error updating user.",
 		Writer:       w,
 		Request:      r,
+		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			id := chi.URLParam(r, "id")
@@ -280,6 +282,7 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error resetting password.",
 		Writer:       w,
 		Request:      r,
+		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			id := chi.URLParam(r, "id")
@@ -309,6 +312,7 @@ func ConvertDummyUserToNormalUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error converting user.",
 		Writer:       w,
 		Request:      r,
+		UserRole:     models.ADMIN,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var dbUser models.User
@@ -352,6 +356,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error Deleting User.",
 		Writer:       w,
 		Request:      r,
+		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			token := structs.GetJWT(r)

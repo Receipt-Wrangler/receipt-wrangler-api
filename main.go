@@ -9,7 +9,6 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
-	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/services"
@@ -151,7 +150,7 @@ func initRoutes() *chi.Mux {
 
 	// Migration router
 	migrationRouter := chi.NewRouter()
-	migrationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT, middleware.ValidateRole(models.ADMIN))
+	migrationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
 	rootRouter.Mount("/api/migrate", migrationRouter)
 
 	// Search router

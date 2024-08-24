@@ -1,4 +1,4 @@
-openapi: 3.0.1
+openapi: 3.1.0
 info:
   title: Receipt Wrangler API.
   termsOfService:
@@ -1621,7 +1621,11 @@ paths:
               $ref: "#/components/schemas/CheckEmailConnectivityCommand"
       responses:
         200:
-          $ref: "#/components/schemas/SystemTask"
+          description: The system email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemTask"
         500:
           $ref: "#/components/responses/Internal"
         400:
@@ -2188,6 +2192,7 @@ components:
         - "NEEDS_ATTENTION"
         - "RESOLVED"
         - "DRAFT"
+        - ""
     ItemStatus:
       type: string
       enum:
@@ -3034,9 +3039,6 @@ components:
         createdAt:
           $ref: "#/components/schemas/PagedRequestField"
     PagedRequestField:
-      required:
-        - value
-        - operation
       type: object
       properties:
         operation:
@@ -3091,7 +3093,7 @@ components:
         data:
           type: array
           items:
-            oneOf:
+            anyOf:
               - $ref: "#/components/schemas/Receipt"
               - $ref: "#/components/schemas/Category"
               - $ref: "#/components/schemas/Tag"
@@ -3469,7 +3471,7 @@ components:
           type: string
           $ref: "#/components/schemas/UserRole"
           description: User's role
-          default: "USER"
+          default: USER
         displayName:
           type: string
           description: Display name
@@ -3616,7 +3618,7 @@ components:
               type: string
               description: IMAP host
             port:
-              type: integer
+              type: string
               description: IMAP port
             username:
               type: string
@@ -3636,7 +3638,7 @@ components:
           type: string
           description: IMAP host
         port:
-          type: integer
+          type: string
           description: IMAP port
         username:
           type: string

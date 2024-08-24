@@ -15,6 +15,7 @@ import (
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jinzhu/copier"
@@ -547,6 +548,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			newReceipt := models.Receipt{}
+			userId := structs.GetJWT(r).UserId
 
 			receiptId := chi.URLParam(r, "id")
 			receiptRepository := repositories.NewReceiptRepository(nil)
@@ -563,6 +565,9 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			newReceipt.ImageFiles = make([]models.FileData, 0)
 			newReceipt.ReceiptItems = make([]models.Item, 0)
 			newReceipt.Comments = make([]models.Comment, 0)
+			newReceipt.CreatedAt = time.Now()
+			newReceipt.UpdatedAt = time.Now()
+			newReceipt.CreatedBy = &userId
 
 			// Remove fks from any related data
 			for _, fileData := range receipt.ImageFiles {

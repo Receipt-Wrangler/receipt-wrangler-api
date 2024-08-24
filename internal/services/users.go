@@ -21,6 +21,7 @@ func DeleteUser(userId string) error {
 		notificationsRepository := repositories.NewNotificationRepository(tx)
 		userPreferncesRepository := repositories.NewUserPreferencesRepository(tx)
 		groupService := NewGroupService(tx)
+		receiptService := NewReceiptService(tx)
 
 		// Remove receipts that the user paid
 		txErr := tx.Model(models.Receipt{}).Where("paid_by_user_id = ?", userId).Select("id").Find(&receipts).Error
@@ -29,7 +30,7 @@ func DeleteUser(userId string) error {
 		}
 
 		for i := 0; i < len(receipts); i++ {
-			txErr = DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
+			txErr = receiptService.DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
 			if txErr != nil {
 				return txErr
 			}

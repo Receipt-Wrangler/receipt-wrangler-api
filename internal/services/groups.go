@@ -78,6 +78,8 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
+		receiptService := NewReceiptService(tx)
+
 		txErr := tx.Model(models.Receipt{}).Where("group_id = ?", groupId).Find(&receipts).Error
 		if txErr != nil {
 			return txErr
@@ -85,7 +87,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 
 		// Delete receipts in group
 		for i := 0; i < len(receipts); i++ {
-			txErr = DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
+			txErr = receiptService.DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
 			if txErr != nil {
 				return txErr
 			}

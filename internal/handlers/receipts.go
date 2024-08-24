@@ -222,6 +222,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 			semaphore := make(chan int, systemSettings.NumWorkers)
 			results := make(chan models.Receipt, len(quickScanCommand.Files))
 			createdReceipts := make([]models.Receipt, 0)
+			receiptService := services.NewReceiptService(nil)
 
 			token := structs.GetJWT(r)
 			for i := 0; i < len(quickScanCommand.Files); i++ {
@@ -230,7 +231,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 					defer wg.Done()
 					semaphore <- index
 
-					createdReceipt, err := services.QuickScan(
+					createdReceipt, err := receiptService.QuickScan(
 						token,
 						quickScanCommand.Files[index],
 						quickScanCommand.FileHeaders[index],
@@ -518,8 +519,9 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
+			receiptService := services.NewReceiptService(nil)
 
-			err := services.DeleteReceipt(id)
+			err := receiptService.DeleteReceipt(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -14,8 +14,20 @@ import (
 	"time"
 )
 
-func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
-	db := repositories.GetDB()
+type ReceiptService struct {
+	BaseService
+}
+
+func NewReceiptService(tx *gorm.DB) ReceiptService {
+	service := ReceiptService{BaseService: BaseService{
+		DB: repositories.GetDB(),
+		TX: tx,
+	}}
+	return service
+}
+
+func (service ReceiptService) GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
+	db := service.GetDB()
 	var fileData models.FileData
 
 	err := db.Model(models.FileData{}).Where("id = ?", receiptImageId).Select("receipt_id").First(&fileData).Error
@@ -23,7 +35,7 @@ func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
 		return models.Receipt{}, err
 	}
 
-	receiptRepository := repositories.NewReceiptRepository(nil)
+	receiptRepository := repositories.NewReceiptRepository(service.TX)
 	receipt, err := receiptRepository.GetReceiptById(strconv.FormatUint(uint64(fileData.ReceiptId), 10))
 	if err != nil {
 		return models.Receipt{}, err
@@ -32,8 +44,8 @@ func GetReceiptByReceiptImageId(receiptImageId string) (models.Receipt, error) {
 	return receipt, nil
 }
 
-func DeleteReceipt(id string) error {
-	db := repositories.GetDB()
+func (service ReceiptService) DeleteReceipt(id string) error {
+	db := service.GetDB()
 	var receipt models.Receipt
 
 	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload("ImageFiles").Find(&receipt).Error
@@ -43,7 +55,7 @@ func DeleteReceipt(id string) error {
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		var imagesToDelete []string
-		fileRepository := repositories.NewFileRepository(nil)
+		fileRepository := repositories.NewFileRepository(tx)
 		fileRepository.SetTransaction(tx)
 
 		for _, f := range receipt.ImageFiles {
@@ -69,7 +81,7 @@ func DeleteReceipt(id string) error {
 	return nil
 }
 
-func QuickScan(
+func (service ReceiptService) QuickScan(
 	token *structs.Claims,
 	file multipart.File,
 	fileHeader *multipart.FileHeader,
@@ -78,11 +90,11 @@ func QuickScan(
 	status models.ReceiptStatus,
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
-	systemTaskService := NewSystemTaskService(nil)
-	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+	systemTaskService := NewSystemTaskService(service.TX)
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	var createdReceipt models.Receipt
 
-	fileRepository := repositories.NewFileRepository(nil)
+	fileRepository := repositories.NewFileRepository(service.TX)
 
 	fileBytes := make([]byte, fileHeader.Size)
 	_, err := file.Read(fileBytes)
@@ -101,8 +113,8 @@ func QuickScan(
 		Filename:  fileHeader.Filename,
 	}
 
-	receiptRepository := repositories.NewReceiptRepository(nil)
-	receiptImageRepository := repositories.NewReceiptImageRepository(nil)
+	receiptRepository := repositories.NewReceiptRepository(service.TX)
+	receiptImageRepository := repositories.NewReceiptImageRepository(service.TX)
 
 	groupIdString := simpleutils.UintToString(groupId)
 

@@ -15,8 +15,9 @@ import (
 func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, commands.ReceiptProcessingMetadata, error) {
 	var result commands.UpsertReceiptCommand
 	var pathToReadFrom string
+	receiptService := NewReceiptService(nil)
 
-	receipt, err := GetReceiptByReceiptImageId(receiptImageId)
+	receipt, err := receiptService.GetReceiptByReceiptImageId(receiptImageId)
 	if err != nil {
 		return result, commands.ReceiptProcessingMetadata{}, err
 	}

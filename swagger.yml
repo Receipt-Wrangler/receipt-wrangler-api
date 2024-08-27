@@ -2217,6 +2217,7 @@ components:
         - EQUALS
         - GREATER_THAN
         - LESS_THAN
+        - ""
     UserRole:
       type: string
       enum:

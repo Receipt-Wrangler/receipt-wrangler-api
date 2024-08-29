@@ -3041,22 +3041,7 @@ components:
           $ref: "#/components/schemas/PagedRequestField"
     PagedRequestField:
       type: object
-      properties:
-        operation:
-          type: string
-          $ref: "#/components/schemas/FilterOperation"
-          description: Filter operation
-        value:
-          oneOf:
-            - type: string
-            - type: integer
-            - type: array
-              items:
-                type: string
-            - type: array
-              items:
-                type: integer
-          description: Field value
+      description: "Contains two keys: operation of type FilterOperation and value which can a different type depending on the field."
     SearchResult:
       required:
         - id

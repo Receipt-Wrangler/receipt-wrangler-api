@@ -117,7 +117,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		ReceiptId:    stringReceiptId,
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var receipt models.Receipt
 			var bytes []byte
@@ -147,7 +147,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			w.Write(resultBytes)
 
 			return 0, nil

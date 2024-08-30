@@ -7,7 +7,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/utils"
 	"strings"
 )
 
@@ -36,12 +35,6 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 
 	if err != nil {
 		return err
-	}
-
-	if utils.IsMobileApp(r) {
-		formPaidByUserIds = command.SerializeIdsForMobile(form["paidByUserIds"][0])
-		formGroupIds = command.SerializeIdsForMobile(form["groupIds"][0])
-		formStatuses = command.SerializeIdsForMobile(form["statuses"][0])
 	}
 
 	for _, fileHeader := range r.MultipartForm.File["files"] {
@@ -141,12 +134,4 @@ func (command *QuickScanCommand) LoadDataFromRequestAndValidate(w http.ResponseW
 	}
 
 	return structs.ValidatorError{}, nil
-}
-
-// SerializeIdsForMobile
-// The generated mobile client sends the data as "[1,2,3]", which needs to be converted to []string
-// This is not ideal, but it is currently better than fighting with the generated code on the mobile side.
-func (command QuickScanCommand) SerializeIdsForMobile(data string) []string {
-	trimmedStr := strings.Trim(data, "[]")
-	return strings.Split(trimmedStr, ",")
 }

@@ -321,6 +321,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ReceiptId:    receiptId,
 		GroupRole:    models.EDITOR,
+		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			command := commands.UpsertReceiptCommand{}

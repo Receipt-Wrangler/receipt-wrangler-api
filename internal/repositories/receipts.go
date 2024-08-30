@@ -372,7 +372,6 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 	}
 
 	// Status
-
 	if pagedRequest.Filter.Status.Value != nil {
 		status := pagedRequest.Filter.Status.Value.([]interface{})
 		if len(status) > 0 {

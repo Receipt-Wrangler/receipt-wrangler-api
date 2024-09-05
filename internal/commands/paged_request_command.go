@@ -96,6 +96,27 @@ func (command *ReceiptPagedRequestCommand) LoadDataFromRequest(w http.ResponseWr
 	if err != nil {
 		return err
 	}
+
+	if command.Filter.Amount.Value == nil || command.Filter.Amount.Value == "" {
+		command.Filter.Amount.Value = float64(0)
+	}
+
+	if command.Filter.PaidBy.Value == nil || command.Filter.PaidBy.Value == "" {
+		command.Filter.PaidBy.Value = 0
+	}
+
+	if command.Filter.Categories.Value == nil || command.Filter.Categories.Value == "" {
+		command.Filter.Categories.Value = make([]interface{}, 0)
+	}
+
+	if command.Filter.Tags.Value == nil || command.Filter.Tags.Value == "" {
+		command.Filter.Tags.Value = make([]interface{}, 0)
+	}
+
+	if command.Filter.Status.Value == nil || command.Filter.Status.Value == "" {
+		command.Filter.Status.Value = make([]interface{}, 0)
+	}
+
 	return nil
 }
 

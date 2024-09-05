@@ -3083,6 +3083,12 @@ components:
               - $ref: "#/components/schemas/Receipt"
               - $ref: "#/components/schemas/Category"
               - $ref: "#/components/schemas/Tag"
+              - $ref: "#/components/schemas/Prompt"
+              - $ref: "#/components/schemas/Group"
+              - $ref: "#/components/schemas/TagView"
+              - $ref: "#/components/schemas/SystemTask"
+              - $ref: "#/components/schemas/ReceiptProcessingSettings"
+              - $ref: "#/components/schemas/SystemEmail"
         totalCount:
           type: integer
     FeatureConfig:

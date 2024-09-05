@@ -61,7 +61,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
 			return 0, nil

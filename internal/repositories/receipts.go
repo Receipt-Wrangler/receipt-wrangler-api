@@ -317,7 +317,6 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 
 func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.ReceiptPagedRequestCommand) (*gorm.DB, error) {
 	query := db.Model(models.Receipt{})
-
 	// Name
 	if pagedRequest.Filter.Name.Value != nil {
 		name := pagedRequest.Filter.Name.Value.(string)
@@ -365,10 +364,18 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 
 	// Amount
 	if pagedRequest.Filter.Amount.Value != nil {
-		amount := pagedRequest.Filter.Amount.Value.(float64)
-		if amount > 0 {
-			query = repository.buildFilterQuery(query, amount, pagedRequest.Filter.Amount.Operation, "amount", false)
+		var amount interface{}
+		if pagedRequest.Filter.Amount.Operation == commands.BETWEEN {
+			amount = pagedRequest.Filter.Amount.Value.([]interface{})
+		} else {
+			amount = pagedRequest.Filter.Amount.Value.(float64)
 		}
+		query = repository.buildFilterQuery(
+			query,
+			amount,
+			pagedRequest.Filter.Amount.Operation,
+			"amount", pagedRequest.Filter.Amount.Operation == commands.BETWEEN,
+		)
 	}
 
 	// Status
@@ -420,6 +427,15 @@ func (repository ReceiptRepository) buildFilterQuery(runningQuery *gorm.DB, valu
 
 	if operation == commands.LESS_THAN && !isArray {
 		return runningQuery.Where(fmt.Sprintf("%v < ?", fieldName), value)
+	}
+
+	if operation == commands.BETWEEN {
+		arrayValue := value.([]interface{})
+		if len(arrayValue) != 2 {
+			return runningQuery
+		}
+
+		return runningQuery.Where(fmt.Sprintf("%v >= ? AND %v <= ?", fieldName, fieldName), arrayValue[0], arrayValue[1])
 	}
 
 	return runningQuery

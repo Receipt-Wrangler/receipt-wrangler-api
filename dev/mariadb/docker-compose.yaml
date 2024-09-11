@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  db:
+    image: library/mariadb:10
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_USER: wrangler
+      MYSQL_PASSWORD: 123456
+      MYSQL_DATABASE: wrangler
+

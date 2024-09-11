@@ -393,25 +393,46 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 
 	// Resolved Date
 	if pagedRequest.Filter.ResolvedDate.Value != nil {
-		resolvedDate := pagedRequest.Filter.ResolvedDate.Value.(string)
-		if len(resolvedDate) > 0 {
-			query = repository.buildFilterQuery(query, resolvedDate, pagedRequest.Filter.ResolvedDate.Operation, "resolved_date", false)
+		var resolvedDate interface{}
+		isBetweenOperation := pagedRequest.Filter.ResolvedDate.Operation == commands.BETWEEN
+		if isBetweenOperation {
+			resolvedDate = pagedRequest.Filter.ResolvedDate.Value.(interface{})
+		} else {
+			resolvedDate = pagedRequest.Filter.ResolvedDate.Value.(string)
 		}
+
+		query = repository.buildFilterQuery(
+			query,
+			resolvedDate,
+			pagedRequest.Filter.ResolvedDate.Operation,
+			"resolved_date",
+			isBetweenOperation,
+		)
 	}
 
 	// Added At
 	if pagedRequest.Filter.CreatedAt.Value != nil {
-		addedAt := pagedRequest.Filter.CreatedAt.Value.(string)
-		if len(addedAt) > 0 {
-			query = repository.buildFilterQuery(query, addedAt, pagedRequest.Filter.CreatedAt.Operation, "created_at", false)
+		var addedAt interface{}
+		isBetweenOperation := pagedRequest.Filter.CreatedAt.Operation == commands.BETWEEN
+		if isBetweenOperation {
+			addedAt = pagedRequest.Filter.CreatedAt.Value.([]interface{})
+		} else {
+			addedAt = pagedRequest.Filter.CreatedAt.Value.(string)
 		}
+
+		query = repository.buildFilterQuery(
+			query,
+			addedAt,
+			pagedRequest.Filter.CreatedAt.Operation,
+			"created_at",
+			isBetweenOperation,
+		)
 	}
 
 	return query, nil
 }
 
 func (repository ReceiptRepository) buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation commands.FilterOperation, fieldName string, isArray bool) *gorm.DB {
-
 	if operation == commands.EQUALS && !isArray {
 		return runningQuery.Where(fmt.Sprintf("%v = ?", fieldName), value)
 	}

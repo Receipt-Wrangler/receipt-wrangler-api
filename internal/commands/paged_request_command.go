@@ -144,6 +144,7 @@ const (
 	EQUALS       FilterOperation = "EQUALS"
 	GREATER_THAN FilterOperation = "GREATER_THAN"
 	LESS_THAN    FilterOperation = "LESS_THAN"
+	BETWEEN      FilterOperation = "BETWEEN"
 )
 
 func (self *FilterOperation) Scan(value string) error {

@@ -1,20 +1,19 @@
 package models
 
 import (
-	"time"
-
 	"github.com/shopspring/decimal"
+	"time"
 )
 
 type Receipt struct {
 	BaseModel
 	Name         string          `gorm:"not null" json:"name"`
-	Amount       decimal.Decimal `gorm:"not null" json:"amount" sql:"type:decimal(20,3);"`
+	Amount       decimal.Decimal `gorm:"type:decimal(10,2);not null" json:"amount"`
 	Date         time.Time       `gorm:"not null" json:"date"`
 	ResolvedDate *time.Time      `json:"resolvedDate"`
 	PaidByUserID uint            `json:"paidByUserId"`
 	PaidByUser   User            `json:"-"`
-	Status       ReceiptStatus   `gorm:"default:'OPEN'; not null" json:"status"`
+	Status       ReceiptStatus   `gorm:"default:'OPEN';not null" json:"status"`
 	GroupId      uint            `gorm:"not null" json:"groupId"`
 	Group        Group           `json:"-"`
 	Categories   []Category      `gorm:"many2many:receipt_categories" json:"categories"`

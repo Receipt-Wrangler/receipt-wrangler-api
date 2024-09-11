@@ -327,10 +327,15 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 
 	// Date
 	if pagedRequest.Filter.Date.Value != nil {
-		date := pagedRequest.Filter.Date.Value.(string)
-		if len(date) > 0 {
-			query = repository.buildFilterQuery(query, date, pagedRequest.Filter.Date.Operation, "date", false)
+		var date interface{}
+		isBetweenOperation := pagedRequest.Filter.Date.Operation == commands.BETWEEN
+		if isBetweenOperation {
+			date = pagedRequest.Filter.Date.Value.([]interface{})
+		} else {
+			date = pagedRequest.Filter.Date.Value.(string)
 		}
+
+		query = repository.buildFilterQuery(query, date, pagedRequest.Filter.Date.Operation, "date", isBetweenOperation)
 	}
 
 	// Paid By

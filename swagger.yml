@@ -3189,7 +3189,7 @@ components:
             - id
             - userId
           properties:
-            userPreferencesId:
+            userPreferncesId:
               type: integer
               description: User preferences id
             url:

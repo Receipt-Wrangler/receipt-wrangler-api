@@ -2,8 +2,8 @@ package models
 
 type UserShortcut struct {
 	BaseModel
-	UserPreferences   Receipt `json:"-"`
-	UserPreferencesId uint    `json:"userPreferencesId"`
-	Url               string  `json:"url"`
-	Icon              string  `json:"icon"`
+	UserPrefernces   UserPrefernces `json:"-"`
+	UserPreferncesId uint           `json:"userPreferncesId"`
+	Url              string         `json:"url"`
+	Icon             string         `json:"icon"`
 }

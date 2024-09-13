@@ -3176,7 +3176,28 @@ components:
             showLargeImagePreviews:
               type: boolean
               description: Whether to show large image previews
-              default: false
+              default:
+            userShortcuts:
+              type: array
+              items:
+                $ref: "#/components/schemas/UserShortcut"
+    UserShortcut:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - id
+            - userId
+          properties:
+            userPreferencesId:
+              type: integer
+              description: User preferences id
+            url:
+              type: string
+              description: Destination of the shortcut
+            icon:
+              type: icon
+              description: Icon of shortcut
     GroupSettings:
       type: object
       required:

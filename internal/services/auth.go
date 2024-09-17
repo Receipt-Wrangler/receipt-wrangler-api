@@ -197,6 +197,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.Categories = categories
 	appData.Tags = tags
 	appData.CurrencyDisplay = systemSettings.CurrencyDisplay
+	appData.Icons = constants.Icons
 
 	if r != nil {
 		claims := structs.GetJWT(r)

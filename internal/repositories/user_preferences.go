@@ -26,7 +26,8 @@ func (repository UserPreferncesRepository) GetUserPreferencesOrCreate(userId uin
 	err := db.
 		Model(models.UserPrefernces{}).
 		Where("user_id = ?", userId).
-		Find(&userPreferences).Preload(clause.Associations).
+		Find(&userPreferences).
+		Preload(clause.Associations).
 		Error
 	if err != nil {
 		return models.UserPrefernces{}, err
@@ -74,17 +75,15 @@ func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, us
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		err = db.
-			Model(models.UserPrefernces{}).
+			Model(&userPreferencesToUpdate).
 			Select("*").
-			Where("id = ?", userPreferencesToUpdate.ID).
 			Updates(&userPreferencesToUpdate).Error
 		if err != nil {
 			return err
 		}
 
 		err = db.
-			Model(models.UserPrefernces{}).
-			Where("id = ?", userPreferencesToUpdate.ID).
+			Model(&userPreferencesToUpdate).
 			Association("UserShortcuts").
 			Replace(&userPreferencesToUpdate.UserShortcuts)
 		if err != nil {

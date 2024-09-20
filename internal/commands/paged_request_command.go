@@ -102,7 +102,7 @@ func (command *ReceiptPagedRequestCommand) LoadDataFromRequest(w http.ResponseWr
 	}
 
 	if command.Filter.PaidBy.Value == nil || command.Filter.PaidBy.Value == "" {
-		command.Filter.PaidBy.Value = 0
+		command.Filter.PaidBy.Value = make([]interface{}, 0)
 	}
 
 	if command.Filter.Categories.Value == nil || command.Filter.Categories.Value == "" {

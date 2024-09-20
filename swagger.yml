@@ -3188,10 +3188,14 @@ components:
           required:
             - id
             - userId
+            - name
           properties:
             userPreferncesId:
               type: integer
               description: User preferences id
+            name:
+              type: string
+              description: Name of the shortcut
             url:
               type: string
               description: Destination of the shortcut

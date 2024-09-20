@@ -26,8 +26,8 @@ func (repository UserPreferncesRepository) GetUserPreferencesOrCreate(userId uin
 	err := db.
 		Model(models.UserPrefernces{}).
 		Where("user_id = ?", userId).
-		Find(&userPreferences).
 		Preload(clause.Associations).
+		Find(&userPreferences).
 		Error
 	if err != nil {
 		return models.UserPrefernces{}, err

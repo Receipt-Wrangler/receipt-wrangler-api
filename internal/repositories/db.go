@@ -95,6 +95,7 @@ func MakeMigrations() error {
 		&models.GroupMember{},
 		&models.Comment{},
 		&models.Notification{},
+		&models.UserShortcut{},
 		&models.UserPrefernces{},
 		&models.SubjectLineRegex{},
 		&models.GroupSettingsWhiteListEmail{},

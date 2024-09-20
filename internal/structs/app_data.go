@@ -12,4 +12,5 @@ type AppData struct {
 	UserPreferences models.UserPrefernces `json:"userPreferences"`
 	Users           []UserView            `json:"users"`
 	FeatureConfig   FeatureConfig         `json:"featureConfig"`
+	Icons           []Icon                `json:"icons"`
 }

@@ -3176,7 +3176,32 @@ components:
             showLargeImagePreviews:
               type: boolean
               description: Whether to show large image previews
-              default: false
+              default:
+            userShortcuts:
+              type: array
+              items:
+                $ref: "#/components/schemas/UserShortcut"
+    UserShortcut:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - id
+            - userId
+            - name
+          properties:
+            userPreferncesId:
+              type: integer
+              description: User preferences id
+            name:
+              type: string
+              description: Name of the shortcut
+            url:
+              type: string
+              description: Destination of the shortcut
+            icon:
+              type: string
+              description: Icon of shortcut
     GroupSettings:
       type: object
       required:
@@ -3397,6 +3422,7 @@ components:
         - categories
         - tags
         - currencyDisplay
+        - icons
       properties:
         claims:
           $ref: "#/components/schemas/Claims"
@@ -3433,6 +3459,11 @@ components:
         currencyDisplay:
           type: string
           description: Currency display
+        icons:
+          type: array
+          description: Icons in the system
+          items:
+            $ref: "#/components/schemas/Icon"
     TokenPair:
       type: object
       required:
@@ -3883,3 +3914,15 @@ components:
           type: string
           format: binary
           description: Files to quick scan
+    Icon:
+      type: object
+      required:
+        - value
+        - displayValue
+      properties:
+        value:
+          type: string
+          description: Icon value
+        displayValue:
+          type: string
+          description: Icon display value

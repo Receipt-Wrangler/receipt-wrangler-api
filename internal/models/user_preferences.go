@@ -8,14 +8,15 @@ import (
 
 type UserPrefernces struct {
 	BaseModel
-	UserId                   uint          `gorm:"not null; uniqueIndex" json:"userId"`
-	User                     *User         `json:"-"`
-	ShowLargeImagePreviews   bool          `json:"showLargeImagePreviews"`
-	QuickScanDefaultGroupId  *uint         `json:"quickScanDefaultGroupId"`
-	QuickScanDefaultGroup    *Group        `json:"-"`
-	QuickScanDefaultPaidById *uint         `json:"quickScanDefaultPaidById"`
-	QuickScanDefaultPaidBy   *User         `json:"-"`
-	QuickScanDefaultStatus   ReceiptStatus `json:"quickScanDefaultStatus"`
+	UserId                   uint           `gorm:"not null; uniqueIndex" json:"userId"`
+	User                     *User          `json:"-"`
+	ShowLargeImagePreviews   bool           `json:"showLargeImagePreviews"`
+	QuickScanDefaultGroupId  *uint          `json:"quickScanDefaultGroupId"`
+	QuickScanDefaultGroup    *Group         `json:"-"`
+	QuickScanDefaultPaidById *uint          `json:"quickScanDefaultPaidById"`
+	QuickScanDefaultPaidBy   *User          `json:"-"`
+	QuickScanDefaultStatus   ReceiptStatus  `json:"quickScanDefaultStatus"`
+	UserShortcuts            []UserShortcut `json:"userShortcuts"`
 }
 
 func (userPreferences *UserPrefernces) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

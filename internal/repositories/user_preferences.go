@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/models"
 
 	"gorm.io/gorm"
@@ -22,16 +23,17 @@ func (repository UserPreferncesRepository) GetUserPreferencesOrCreate(userId uin
 	db := repository.GetDB()
 	var userPreferences models.UserPrefernces
 
-	err := db.Model(models.UserPrefernces{}).Where("user_id = ?", userId).Find(&userPreferences).Error
+	err := db.
+		Model(models.UserPrefernces{}).
+		Where("user_id = ?", userId).
+		Preload(clause.Associations).
+		Find(&userPreferences).
+		Error
 	if err != nil {
 		return models.UserPrefernces{}, err
 	}
 
 	if userPreferences.ID == 0 {
-		if err != nil {
-			return models.UserPrefernces{}, err
-		}
-
 		userPreferencesToCreate := models.UserPrefernces{
 			UserId: userId,
 		}
@@ -53,7 +55,7 @@ func (repository UserPreferncesRepository) CreateUserPreferences(userPreferences
 		return models.UserPrefernces{}, err
 	}
 
-	return userPreferences, nil
+	return repository.GetUserPreferencesOrCreate(userPreferences.UserId)
 }
 
 func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, userPreferences models.UserPrefernces) (models.UserPrefernces, error) {
@@ -69,12 +71,27 @@ func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, us
 	userPreferencesToUpdate.QuickScanDefaultGroupId = userPreferences.QuickScanDefaultGroupId
 	userPreferencesToUpdate.QuickScanDefaultPaidById = userPreferences.QuickScanDefaultPaidById
 	userPreferencesToUpdate.QuickScanDefaultStatus = userPreferences.QuickScanDefaultStatus
+	userPreferencesToUpdate.UserShortcuts = userPreferences.UserShortcuts
 
-	err = db.
-		Model(models.UserPrefernces{}).
-		Select("*").
-		Where("id = ?", userPreferencesToUpdate.ID).
-		Updates(&userPreferencesToUpdate).Error
+	err = db.Transaction(func(tx *gorm.DB) error {
+		err = db.
+			Model(&userPreferencesToUpdate).
+			Select("*").
+			Updates(&userPreferencesToUpdate).Error
+		if err != nil {
+			return err
+		}
+
+		err = db.
+			Model(&userPreferencesToUpdate).
+			Association("UserShortcuts").
+			Replace(&userPreferencesToUpdate.UserShortcuts)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 
 	if err != nil {
 		return models.UserPrefernces{}, err
@@ -86,7 +103,31 @@ func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, us
 func (repository UserPreferncesRepository) DeleteUserPreferences(userId uint) error {
 	db := repository.GetDB()
 
-	err := db.Model(models.UserPrefernces{}).Delete("user_id = ?", userId).Error
+	var userPreferencesId uint
+
+	err := db.
+		Model(models.UserPrefernces{}).
+		Where("user_id = ?", userId).
+		Select("id").
+		First(&userPreferencesId).Error
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		txErr := tx.
+			Model(models.UserShortcut{}).
+			Where("user_preferences_id = ?", userPreferencesId).
+			Delete(&models.UserShortcut{}).
+			Error
+		if txErr != nil {
+			return txErr
+		}
+
+		err = db.Model(models.UserPrefernces{}).Delete("user_id = ?", userId).Error
+		if err != nil {
+			return txErr
+		}
+
+		return nil
+	})
 	if err != nil {
 		return err
 	}

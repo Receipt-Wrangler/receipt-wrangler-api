@@ -117,6 +117,18 @@ func (command *ReceiptPagedRequestCommand) LoadDataFromRequest(w http.ResponseWr
 		command.Filter.Status.Value = make([]interface{}, 0)
 	}
 
+	if command.Filter.CreatedAt.Value == nil {
+		command.Filter.CreatedAt.Value = ""
+	}
+
+	if command.Filter.Date.Value == nil {
+		command.Filter.Date.Value = ""
+	}
+
+	if command.Filter.ResolvedDate.Value == nil {
+		command.Filter.ResolvedDate.Value = ""
+	}
+
 	return nil
 }
 
@@ -140,11 +152,12 @@ type PagedRequestField struct {
 type FilterOperation string
 
 const (
-	CONTAINS     FilterOperation = "CONTAINS"
-	EQUALS       FilterOperation = "EQUALS"
-	GREATER_THAN FilterOperation = "GREATER_THAN"
-	LESS_THAN    FilterOperation = "LESS_THAN"
-	BETWEEN      FilterOperation = "BETWEEN"
+	CONTAINS             FilterOperation = "CONTAINS"
+	EQUALS               FilterOperation = "EQUALS"
+	GREATER_THAN         FilterOperation = "GREATER_THAN"
+	LESS_THAN            FilterOperation = "LESS_THAN"
+	BETWEEN              FilterOperation = "BETWEEN"
+	WITHIN_CURRENT_MONTH FilterOperation = "WITHIN_CURRENT_MONTH"
 )
 
 func (self *FilterOperation) Scan(value string) error {

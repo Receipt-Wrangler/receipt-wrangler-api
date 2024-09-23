@@ -2218,6 +2218,7 @@ components:
         - GREATER_THAN
         - LESS_THAN
         - BETWEEN
+        - WITHIN_CURRENT_MONTH
         - ""
     UserRole:
       type: string

@@ -464,6 +464,14 @@ func (repository ReceiptRepository) buildFilterQuery(runningQuery *gorm.DB, valu
 		return runningQuery.Where(fmt.Sprintf("%v >= ? AND %v <= ?", fieldName, fieldName), arrayValue[0], arrayValue[1])
 	}
 
+	if operation == commands.WITHIN_CURRENT_MONTH {
+		now := time.Now()
+		beginningOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		endOfToday := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
+
+		return runningQuery.Where(fmt.Sprintf("%v >= ? AND %v <= ?", fieldName, fieldName), beginningOfMonth, endOfToday)
+	}
+
 	return runningQuery
 }
 

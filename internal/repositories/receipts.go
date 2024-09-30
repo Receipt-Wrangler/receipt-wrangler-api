@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -70,23 +71,70 @@ func (repository ReceiptRepository) BeforeUpdateReceipt(currentReceipt models.Re
 	return nil
 }
 
-func (repository ReceiptRepository) UpdateReceipt(id string, command commands.UpsertReceiptCommand) (models.Receipt, error) {
-	db := repository.GetDB()
-	var currentReceipt models.Receipt
+func createFailedUpdateSystemTask(command commands.UpsertSystemTaskCommand, err error) {
+	endedAt := time.Now()
+	command.EndedAt = &endedAt
+	command.Status = models.SYSTEM_TASK_FAILED
+	command.ResultDescription = err.Error()
 
-	updatedReceipt, err := command.ToReceipt()
+	repository := NewSystemTaskRepository(nil)
+	repository.CreateSystemTask(command)
+}
+
+func getReceiptString(receipt models.Receipt) (string, error) {
+	bytes, err := json.Marshal(receipt)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
+func (repository ReceiptRepository) UpdateReceipt(id string, command commands.UpsertReceiptCommand, userId uint) (models.Receipt, error) {
+	db := repository.GetDB()
+
+	systemTaskResultDescription := map[string]interface{}{}
+	var endedAt time.Time
+	stringId, err := simpleutils.StringToUint(id)
 	if err != nil {
 		return models.Receipt{}, err
 	}
+	var currentReceipt models.Receipt
+	var ranByUserId = userId
 
-	err = db.Table("receipts").Where("id = ?", id).Preload("ImageFiles").Find(&currentReceipt).Error
+	systemTask := commands.UpsertSystemTaskCommand{
+		Type:                 models.RECEIPT_UPDATED,
+		AssociatedEntityType: models.RECEIPT,
+		AssociatedEntityId:   stringId,
+		StartedAt:            time.Now(),
+		EndedAt:              &endedAt,
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		RanByUserId:          &ranByUserId,
+		//RanByUserId: 1,
+	}
+
+	updatedReceipt, err := command.ToReceipt()
 	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
+
+	err = db.Table("receipts").Where("id = ?", id).Preload(clause.Associations).Find(&currentReceipt).Error
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
 	}
 
 	// NOTE: ID and field used for afterReceiptUpdated
 	updatedReceipt.ID = currentReceipt.ID
 	updatedReceipt.ResolvedDate = currentReceipt.ResolvedDate
+	before, err := getReceiptString(currentReceipt)
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
+
+	systemTaskResultDescription["before"] = before
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
@@ -125,11 +173,37 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		return nil
 	})
 	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
 	}
 
 	fullyLoadedReceipt, err := repository.GetFullyLoadedReceiptById(id)
 	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
+
+	after, err := getReceiptString(fullyLoadedReceipt)
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
+
+	systemTaskResultDescription["after"] = after
+	endedAt = time.Now()
+	systemTask.EndedAt = &endedAt
+
+	resultDescriptionBytes, err := json.Marshal(systemTaskResultDescription)
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
+	systemTask.ResultDescription = string(resultDescriptionBytes)
+
+	systemTaskRepository := NewSystemTaskRepository(nil)
+	_, err = systemTaskRepository.CreateSystemTask(systemTask)
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
 	}
 

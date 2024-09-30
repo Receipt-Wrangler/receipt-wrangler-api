@@ -56,6 +56,7 @@ const (
 	SYSTEM_EMAIL_CONNECTIVITY_CHECK                SystemTaskType = "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
 	RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK SystemTaskType = "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
 	PROMPT_GENERATED                               SystemTaskType = "PROMPT_GENERATED"
+	RECEIPT_UPDATED                                SystemTaskType = "RECEIPT_UPDATED"
 )
 
 func (self *SystemTaskType) Scan(value string) error {
@@ -75,7 +76,8 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 		self != RECEIPT_UPLOADED &&
 		self != META_COMBINE_QUICK_SCAN &&
 		self != META_ASSOCIATE_TASKS_TO_RECEIPT &&
-		self != PROMPT_GENERATED {
+		self != PROMPT_GENERATED &&
+		self != RECEIPT_UPDATED {
 		return nil, errors.New("invalid SystemTaskType")
 	}
 	return string(self), nil

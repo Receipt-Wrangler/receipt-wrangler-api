@@ -337,7 +337,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
-			updatedReceipt, err := receiptRepository.UpdateReceipt(receiptId, command)
+			updatedReceipt, err := receiptRepository.UpdateReceipt(receiptId, command, token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

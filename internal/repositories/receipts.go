@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -80,6 +81,15 @@ func createFailedUpdateSystemTask(command commands.UpsertSystemTaskCommand, err 
 	repository.CreateSystemTask(command)
 }
 
+func getReceiptString(receipt models.Receipt) (string, error) {
+	bytes, err := json.Marshal(receipt)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
 func (repository ReceiptRepository) UpdateReceipt(id string, command commands.UpsertReceiptCommand, userId uint) (models.Receipt, error) {
 	db := repository.GetDB()
 
@@ -119,8 +129,13 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 	// NOTE: ID and field used for afterReceiptUpdated
 	updatedReceipt.ID = currentReceipt.ID
 	updatedReceipt.ResolvedDate = currentReceipt.ResolvedDate
+	before, err := getReceiptString(currentReceipt)
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
 
-	systemTaskResultDescription["before"] = fmt.Sprintf("%v", currentReceipt)
+	systemTaskResultDescription["before"] = before
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
@@ -169,9 +184,22 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		return models.Receipt{}, err
 	}
 
-	systemTaskResultDescription["after"] = fmt.Sprintf("%v", fullyLoadedReceipt)
+	after, err := getReceiptString(fullyLoadedReceipt)
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
+
+	systemTaskResultDescription["after"] = after
 	endedAt = time.Now()
 	systemTask.EndedAt = &endedAt
+
+	resultDescriptionBytes, err := json.Marshal(systemTaskResultDescription)
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
+	systemTask.ResultDescription = string(resultDescriptionBytes)
 
 	systemTaskRepository := NewSystemTaskRepository(nil)
 	_, err = systemTaskRepository.CreateSystemTask(systemTask)

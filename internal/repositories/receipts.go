@@ -93,7 +93,6 @@ func getReceiptString(receipt models.Receipt) (string, error) {
 func (repository ReceiptRepository) UpdateReceipt(id string, command commands.UpsertReceiptCommand, userId uint) (models.Receipt, error) {
 	db := repository.GetDB()
 
-	// TODO: populate data
 	systemTaskResultDescription := map[string]interface{}{}
 	var endedAt time.Time
 	stringId, err := simpleutils.StringToUint(id)

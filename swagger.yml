@@ -3684,6 +3684,17 @@ components:
               type: string
               description: Currency display
               default: "$"
+            currencyLocale:
+              type: string
+              description: Currency locale
+              default: "en-US"
+            currencyCode:
+              type: string
+              description: Currency code
+              default: "USD"
+            showCurrencySymbol:
+              type: boolean
+              description: Show currency symbol
             debugOcr:
               type: boolean
               description: Debug OCR
@@ -3711,6 +3722,15 @@ components:
         currencyDisplay:
           type: string
           description: Currency display
+        currencyLocale:
+          type: string
+          description: Currency locale
+        currencyCode:
+          type: string
+          description: Currency code
+        showCurrencySymbol:
+          type: boolean
+          description: Show currency symbol
         debugOcr:
           type: boolean
         numWorkers:

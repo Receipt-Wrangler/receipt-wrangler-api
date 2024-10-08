@@ -2145,6 +2145,26 @@ paths:
           $ref: "#/components/responses/Internal"
         403:
           $ref: "#/components/responses/Forbidden"
+  /systemSettings/supportedLocales:
+    get:
+      tags:
+        - SystemSettings
+      summary: Get supported locales
+      description: This will get supported locales
+      operationId: getSupportedLocales
+      responses:
+        200:
+          description: The supported locales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /import/importConfigJson:
     post:
       tags:

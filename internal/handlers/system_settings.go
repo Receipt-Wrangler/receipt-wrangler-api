@@ -40,6 +40,30 @@ func GetSystemSettings(w http.ResponseWriter, r *http.Request) {
 	HandleRequest(handler)
 }
 
+func GetSupportedLocales(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting supported locales",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			supportedLocales := constants.SupportedLocales
+
+			responseBytes, err := utils.MarshalResponseData(supportedLocales)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(responseBytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
 func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error updating system settings",

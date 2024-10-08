@@ -3443,6 +3443,9 @@ components:
         - categories
         - tags
         - currencyDisplay
+        - currencyLocale
+        - currencyCode
+        - showCurrencySymbol
         - icons
       properties:
         claims:
@@ -3480,6 +3483,15 @@ components:
         currencyDisplay:
           type: string
           description: Currency display
+        currencyLocale:
+          type: string
+          description: Currency locale
+        currencyCode:
+          type: string
+          description: Currency code
+        showCurrencySymbol:
+          type: boolean
+          description: Whether to show currency symbol
         icons:
           type: array
           description: Icons in the system
@@ -3735,6 +3747,10 @@ components:
               description: Fallback receipt processing settings foreign key
     UpsertSystemSettingsCommand:
       type: object
+      required:
+        - currencyCode
+        - currencyDisplay
+        - currencyLocale
       properties:
         enableLocalSignUp:
           type: boolean

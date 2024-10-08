@@ -173,6 +173,7 @@ func DownloadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error downloading image.",
 		ReceiptId:    stringReceiptId,
+		GroupRole:    models.VIEWER,
 		Writer:       w,
 		Request:      r,
 		ResponseType: "",

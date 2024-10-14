@@ -3,21 +3,22 @@ package commands
 import (
 	"encoding/json"
 	"net/http"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
 
 type UpsertSystemSettingsCommand struct {
-	EnableLocalSignUp                   bool   `json:"enableLocalSignUp"`
-	DebugOcr                            bool   `json:"debugOcr"`
-	CurrencyDisplay                     string `json:"currencyDisplay"`
-	CurrencyThousandthsSeparator        string `json:"currencyThousandthsSeparator"`
-	CurrencyDecimalSeparator            string `json:"currencyDecimalSeparator"`
-	CurrencySymbolPosition              string `json:"currencySymbolPosition"`
-	NumWorkers                          int    `json:"numWorkers"`
-	EmailPollingInterval                int    `json:"emailPollingInterval"`
-	ReceiptProcessingSettingsId         *uint  `json:"receiptProcessingSettingsId"`
-	FallbackReceiptProcessingSettingsId *uint  `json:"fallbackReceiptProcessingSettingsId"`
+	EnableLocalSignUp                   bool                          `json:"enableLocalSignUp"`
+	DebugOcr                            bool                          `json:"debugOcr"`
+	CurrencyDisplay                     string                        `json:"currencyDisplay"`
+	CurrencyThousandthsSeparator        models.CurrencySeparator      `json:"currencyThousandthsSeparator"`
+	CurrencyDecimalSeparator            models.CurrencySeparator      `json:"currencyDecimalSeparator"`
+	CurrencySymbolPosition              models.CurrencySymbolPosition `json:"currencySymbolPosition"`
+	NumWorkers                          int                           `json:"numWorkers"`
+	EmailPollingInterval                int                           `json:"emailPollingInterval"`
+	ReceiptProcessingSettingsId         *uint                         `json:"receiptProcessingSettingsId"`
+	FallbackReceiptProcessingSettingsId *uint                         `json:"fallbackReceiptProcessingSettingsId"`
 }
 
 func (command *UpsertSystemSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

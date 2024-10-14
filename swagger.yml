@@ -2285,6 +2285,16 @@ components:
       type: string
       enum:
         - "IMPORT_CONFIG"
+    CurrencySeparator:
+      type: string
+      enum:
+        - ","
+        - "."
+    CurrencySymbolPosition:
+      type: string
+      enum:
+        - "START"
+        - "END"
     BaseModel:
       type: object
       required:
@@ -3696,26 +3706,12 @@ components:
               type: string
               description: Currency display
               default: "$"
-            currencyLocale:
-              type: string
-              description: Currency locale
-              default: "en-US"
-            currencyCode:
-              type: string
-              description: Currency code
-              default: "USD"
-            showCurrencySymbol:
-              type: boolean
-              description: Show currency symbol
             currencyThousandthsSeparator:
-              type: string
-              description: Currency thousandths separator
+              $ref: "#/components/schemas/CurrencySeparator"
             currencyDecimalSeparator:
-              type: string
-              description: Currency decimal separator
+              $ref: "#/components/schemas/CurrencySeparator"
             currencySymbolPosition:
-              type: string
-              description: Currency symbol position
+              $ref: "#/components/schemas/CurrencySymbolPosition"
             debugOcr:
               type: boolean
               description: Debug OCR
@@ -3743,24 +3739,12 @@ components:
         currencyDisplay:
           type: string
           description: Currency display
-        currencyLocale:
-          type: string
-          description: Currency locale
-        currencyCode:
-          type: string
-          description: Currency code
-        showCurrencySymbol:
-          type: boolean
-          description: Show currency symbol
         currencyThousandthsSeparator:
-          type: string
-          description: Currency thousandths separator
+          $ref: "#/components/schemas/CurrencySeparator"
         currencyDecimalSeparator:
-          type: string
-          description: Currency decimal separator
+          $ref: "#/components/schemas/CurrencySeparator"
         currencySymbolPosition:
-          type: string
-          description: Currency symbol position
+          $ref: "#/components/schemas/CurrencySymbolPosition"
         debugOcr:
           type: boolean
         numWorkers:

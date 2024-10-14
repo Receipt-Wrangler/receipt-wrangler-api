@@ -11,6 +11,9 @@ type UpsertSystemSettingsCommand struct {
 	EnableLocalSignUp                   bool   `json:"enableLocalSignUp"`
 	DebugOcr                            bool   `json:"debugOcr"`
 	CurrencyDisplay                     string `json:"currencyDisplay"`
+	CurrencyThousandthsSeparator        string `json:"currencyThousandthsSeparator"`
+	CurrencyDecimalSeparator            string `json:"currencyDecimalSeparator"`
+	CurrencySymbolPosition              string `json:"currencySymbolPosition"`
 	NumWorkers                          int    `json:"numWorkers"`
 	EmailPollingInterval                int    `json:"emailPollingInterval"`
 	ReceiptProcessingSettingsId         *uint  `json:"receiptProcessingSettingsId"`

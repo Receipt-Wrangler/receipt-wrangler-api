@@ -197,9 +197,9 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.Categories = categories
 	appData.Tags = tags
 	appData.CurrencyDisplay = systemSettings.CurrencyDisplay
-	appData.CurrencyLocale = systemSettings.CurrencyLocale
-	appData.CurrencyCode = systemSettings.CurrencyCode
-	appData.ShowCurrencySymbol = systemSettings.ShowCurrencySymbol
+	appData.CurrencyThousandthsSeparator = systemSettings.CurrencyThousandthsSeparator
+	appData.CurrencyDecimalSeparator = systemSettings.CurrencyDecimalSeparator
+	appData.CurrencySymbolPosition = systemSettings.CurrencySymbolPosition
 	appData.Icons = constants.Icons
 
 	if r != nil {

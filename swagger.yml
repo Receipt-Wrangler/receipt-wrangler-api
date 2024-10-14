@@ -2145,26 +2145,6 @@ paths:
           $ref: "#/components/responses/Internal"
         403:
           $ref: "#/components/responses/Forbidden"
-  /systemSettings/supportedLocales:
-    get:
-      tags:
-        - SystemSettings
-      summary: Get supported locales
-      description: This will get supported locales
-      operationId: getSupportedLocales
-      responses:
-        200:
-          description: The supported locales
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
-        500:
-          $ref: "#/components/responses/Internal"
-        403:
-          $ref: "#/components/responses/Forbidden"
   /import/importConfigJson:
     post:
       tags:
@@ -3483,15 +3463,15 @@ components:
         currencyDisplay:
           type: string
           description: Currency display
-        currencyLocale:
+        currencyThousandthsSeparator:
           type: string
-          description: Currency locale
-        currencyCode:
+          description: Currency thousandths separator
+        currencyDecimalSeparator:
           type: string
-          description: Currency code
-        showCurrencySymbol:
-          type: boolean
-          description: Whether to show currency symbol
+          description: Currency decimal separator
+        currencySymbolPosition:
+          type: string
+          description: Currency symbol position
         icons:
           type: array
           description: Icons in the system
@@ -3727,6 +3707,15 @@ components:
             showCurrencySymbol:
               type: boolean
               description: Show currency symbol
+            currencyThousandthsSeparator:
+              type: string
+              description: Currency thousandths separator
+            currencyDecimalSeparator:
+              type: string
+              description: Currency decimal separator
+            currencySymbolPosition:
+              type: string
+              description: Currency symbol position
             debugOcr:
               type: boolean
               description: Debug OCR
@@ -3747,10 +3736,6 @@ components:
               description: Fallback receipt processing settings foreign key
     UpsertSystemSettingsCommand:
       type: object
-      required:
-        - currencyCode
-        - currencyDisplay
-        - currencyLocale
       properties:
         enableLocalSignUp:
           type: boolean
@@ -3767,6 +3752,15 @@ components:
         showCurrencySymbol:
           type: boolean
           description: Show currency symbol
+        currencyThousandthsSeparator:
+          type: string
+          description: Currency thousandths separator
+        currencyDecimalSeparator:
+          type: string
+          description: Currency decimal separator
+        currencySymbolPosition:
+          type: string
+          description: Currency symbol position
         debugOcr:
           type: boolean
         numWorkers:

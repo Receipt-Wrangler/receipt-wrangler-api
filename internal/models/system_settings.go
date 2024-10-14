@@ -6,10 +6,10 @@ type SystemSettings struct {
 	DebugOcr                            bool                      `json:"debugOcr" gorm:"default:false"`
 	NumWorkers                          int                       `json:"numWorkers"`
 	EmailPollingInterval                int                       `json:"emailPollingInterval" gorm:"default:1800"`
-	CurrencyLocale                      string                    `json:"currencyLocale" gorm:"default:en-US"`
-	CurrencyCode                        string                    `json:"currencyCode" gorm:"default:USD"`
-	ShowCurrencySymbol                  bool                      `json:"showCurrencySymbol"`
 	CurrencyDisplay                     string                    `json:"currencyDisplay" gorm:"default:$"`
+	CurrencyThousandthsSeparator        string                    `json:"currencyThousandthsSeparator"`
+	CurrencyDecimalSeparator            string                    `json:"currencyDecimalSeparator"`
+	CurrencySymbolPosition              string                    `json:"currencySymbolPosition"`
 	ReceiptProcessingSettings           ReceiptProcessingSettings `json:"-"`
 	ReceiptProcessingSettingsId         *uint                     `json:"receiptProcessingSettingsId"`
 	FallbackReceiptProcessingSettings   ReceiptProcessingSettings `json:"-"`

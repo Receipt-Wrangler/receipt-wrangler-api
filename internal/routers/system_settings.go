@@ -12,7 +12,6 @@ func BuildSystemSettingsRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi
 
 	systemSettingsRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 	systemSettingsRouter.Get("/", handlers.GetSystemSettings)
-	systemSettingsRouter.Get("/supportedLocales", handlers.GetSupportedLocales)
 	systemSettingsRouter.Put("/", handlers.UpdateSystemSettings)
 
 	return systemSettingsRouter

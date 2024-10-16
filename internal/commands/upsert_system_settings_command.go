@@ -68,5 +68,17 @@ func (command *UpsertSystemSettingsCommand) Validate() structs.ValidatorError {
 		errorMap["fallbackReceiptProcessingSettingsId"] = "Fallback receipt processing settings ID cannot be the same as receipt processing settings ID"
 	}
 
+	if len(command.CurrencySymbolPosition) == 0 {
+		errorMap["currencySymbolPosition"] = "Currency symbol position is required"
+	}
+
+	if len(command.CurrencyThousandthsSeparator) == 0 {
+		errorMap["currencyThousandthsSeparator"] = "Currency thousandths separator is required"
+	}
+
+	if len(command.CurrencyDecimalSeparator) == 0 {
+		errorMap["currencyDecimalSeparator"] = "Currency decimal separator is required"
+	}
+
 	return vErr
 }

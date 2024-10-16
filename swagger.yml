@@ -3705,10 +3705,13 @@ components:
               default: "$"
             currencyThousandthsSeparator:
               $ref: "#/components/schemas/CurrencySeparator"
+              default: ","
             currencyDecimalSeparator:
               $ref: "#/components/schemas/CurrencySeparator"
+              default: "."
             currencySymbolPosition:
               $ref: "#/components/schemas/CurrencySymbolPosition"
+              default: "START"
             currencyHideDecimalPlaces:
               type: boolean
               description: Whether to hide decimal places
@@ -3733,6 +3736,11 @@ components:
               description: Fallback receipt processing settings foreign key
     UpsertSystemSettingsCommand:
       type: object
+      required:
+        - currencyThousandthsSeparator
+        - currencyDecimalSeparator
+        - currencyHideDecimalPlaces
+        - currencySymbolPosition
       properties:
         enableLocalSignUp:
           type: boolean

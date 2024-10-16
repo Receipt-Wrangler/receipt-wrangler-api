@@ -3433,9 +3433,6 @@ components:
         - categories
         - tags
         - currencyDisplay
-        - currencyLocale
-        - currencyCode
-        - showCurrencySymbol
         - icons
       properties:
         claims:
@@ -3474,14 +3471,14 @@ components:
           type: string
           description: Currency display
         currencyThousandthsSeparator:
-          type: string
-          description: Currency thousandths separator
+          $ref: "#/components/schemas/CurrencySeparator"
         currencyDecimalSeparator:
-          type: string
-          description: Currency decimal separator
+          $ref: "#/components/schemas/CurrencySeparator"
         currencySymbolPosition:
-          type: string
-          description: Currency symbol position
+          $ref: "#/components/schemas/CurrencySymbolPosition"
+        currencyHideDecimalPlaces:
+          type: boolean
+          description: Whether to hide decimal places
         icons:
           type: array
           description: Icons in the system
@@ -3712,6 +3709,10 @@ components:
               $ref: "#/components/schemas/CurrencySeparator"
             currencySymbolPosition:
               $ref: "#/components/schemas/CurrencySymbolPosition"
+            currencyHideDecimalPlaces:
+              type: boolean
+              description: Whether to hide decimal places
+              default: false
             debugOcr:
               type: boolean
               description: Debug OCR
@@ -3745,6 +3746,9 @@ components:
           $ref: "#/components/schemas/CurrencySeparator"
         currencySymbolPosition:
           $ref: "#/components/schemas/CurrencySymbolPosition"
+        currencyHideDecimalPlaces:
+          type: boolean
+          description: Whether to hide decimal places
         debugOcr:
           type: boolean
         numWorkers:

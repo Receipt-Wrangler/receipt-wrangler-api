@@ -15,6 +15,7 @@ type UpsertSystemSettingsCommand struct {
 	CurrencyThousandthsSeparator        models.CurrencySeparator      `json:"currencyThousandthsSeparator"`
 	CurrencyDecimalSeparator            models.CurrencySeparator      `json:"currencyDecimalSeparator"`
 	CurrencySymbolPosition              models.CurrencySymbolPosition `json:"currencySymbolPosition"`
+	CurrencyHideDecimalPlaces           bool                          `json:"currencyHideDecimalPlaces"`
 	NumWorkers                          int                           `json:"numWorkers"`
 	EmailPollingInterval                int                           `json:"emailPollingInterval"`
 	ReceiptProcessingSettingsId         *uint                         `json:"receiptProcessingSettingsId"`

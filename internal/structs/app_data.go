@@ -10,6 +10,7 @@ type AppData struct {
 	CurrencyThousandthsSeparator models.CurrencySeparator      `json:"currencyThousandthsSeparator"`
 	CurrencyDecimalSeparator     models.CurrencySeparator      `json:"currencyDecimalSeparator"`
 	CurrencySymbolPosition       models.CurrencySymbolPosition `json:"currencySymbolPosition"`
+	CurrencyHideDecimalPlaces    bool                          `json:"currencyHideDecimalPlaces"`
 	Categories                   []models.Category             `json:"categories"`
 	Tags                         []models.Tag                  `json:"tags"`
 	UserPreferences              models.UserPrefernces         `json:"userPreferences"`

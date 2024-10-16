@@ -76,6 +76,7 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 	existingSettings.CurrencyThousandthsSeparator = command.CurrencyThousandthsSeparator
 	existingSettings.CurrencyDecimalSeparator = command.CurrencyDecimalSeparator
 	existingSettings.CurrencySymbolPosition = command.CurrencySymbolPosition
+	existingSettings.CurrencyHideDecimalPlaces = command.CurrencyHideDecimalPlaces
 	existingSettings.EmailPollingInterval = command.EmailPollingInterval
 	existingSettings.ReceiptProcessingSettingsId = command.ReceiptProcessingSettingsId
 	existingSettings.FallbackReceiptProcessingSettingsId = command.FallbackReceiptProcessingSettingsId

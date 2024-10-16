@@ -10,6 +10,7 @@ type SystemSettings struct {
 	CurrencyThousandthsSeparator        CurrencySeparator         `json:"currencyThousandthsSeparator"`
 	CurrencyDecimalSeparator            CurrencySeparator         `json:"currencyDecimalSeparator"`
 	CurrencySymbolPosition              CurrencySymbolPosition    `json:"currencySymbolPosition"`
+	CurrencyHideDecimalPlaces           bool                      `json:"currencyHideDecimalPlaces"`
 	ReceiptProcessingSettings           ReceiptProcessingSettings `json:"-"`
 	ReceiptProcessingSettingsId         *uint                     `json:"receiptProcessingSettingsId"`
 	FallbackReceiptProcessingSettings   ReceiptProcessingSettings `json:"-"`

@@ -3,18 +3,23 @@ package commands
 import (
 	"encoding/json"
 	"net/http"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
 
 type UpsertSystemSettingsCommand struct {
-	EnableLocalSignUp                   bool   `json:"enableLocalSignUp"`
-	DebugOcr                            bool   `json:"debugOcr"`
-	CurrencyDisplay                     string `json:"currencyDisplay"`
-	NumWorkers                          int    `json:"numWorkers"`
-	EmailPollingInterval                int    `json:"emailPollingInterval"`
-	ReceiptProcessingSettingsId         *uint  `json:"receiptProcessingSettingsId"`
-	FallbackReceiptProcessingSettingsId *uint  `json:"fallbackReceiptProcessingSettingsId"`
+	EnableLocalSignUp                   bool                          `json:"enableLocalSignUp"`
+	DebugOcr                            bool                          `json:"debugOcr"`
+	CurrencyDisplay                     string                        `json:"currencyDisplay"`
+	CurrencyThousandthsSeparator        models.CurrencySeparator      `json:"currencyThousandthsSeparator"`
+	CurrencyDecimalSeparator            models.CurrencySeparator      `json:"currencyDecimalSeparator"`
+	CurrencySymbolPosition              models.CurrencySymbolPosition `json:"currencySymbolPosition"`
+	CurrencyHideDecimalPlaces           bool                          `json:"currencyHideDecimalPlaces"`
+	NumWorkers                          int                           `json:"numWorkers"`
+	EmailPollingInterval                int                           `json:"emailPollingInterval"`
+	ReceiptProcessingSettingsId         *uint                         `json:"receiptProcessingSettingsId"`
+	FallbackReceiptProcessingSettingsId *uint                         `json:"fallbackReceiptProcessingSettingsId"`
 }
 
 func (command *UpsertSystemSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -61,6 +66,18 @@ func (command *UpsertSystemSettingsCommand) Validate() structs.ValidatorError {
 		*command.ReceiptProcessingSettingsId ==
 			*command.FallbackReceiptProcessingSettingsId {
 		errorMap["fallbackReceiptProcessingSettingsId"] = "Fallback receipt processing settings ID cannot be the same as receipt processing settings ID"
+	}
+
+	if len(command.CurrencySymbolPosition) == 0 {
+		errorMap["currencySymbolPosition"] = "Currency symbol position is required"
+	}
+
+	if len(command.CurrencyThousandthsSeparator) == 0 {
+		errorMap["currencyThousandthsSeparator"] = "Currency thousandths separator is required"
+	}
+
+	if len(command.CurrencyDecimalSeparator) == 0 {
+		errorMap["currencyDecimalSeparator"] = "Currency decimal separator is required"
 	}
 
 	return vErr

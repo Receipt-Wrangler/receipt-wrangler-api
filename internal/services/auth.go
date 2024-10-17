@@ -197,6 +197,10 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.Categories = categories
 	appData.Tags = tags
 	appData.CurrencyDisplay = systemSettings.CurrencyDisplay
+	appData.CurrencyThousandthsSeparator = systemSettings.CurrencyThousandthsSeparator
+	appData.CurrencyDecimalSeparator = systemSettings.CurrencyDecimalSeparator
+	appData.CurrencySymbolPosition = systemSettings.CurrencySymbolPosition
+	appData.CurrencyHideDecimalPlaces = systemSettings.CurrencyHideDecimalPlaces
 	appData.Icons = constants.Icons
 
 	if r != nil {

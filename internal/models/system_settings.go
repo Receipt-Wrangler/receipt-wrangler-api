@@ -4,9 +4,13 @@ type SystemSettings struct {
 	BaseModel
 	EnableLocalSignUp                   bool                      `json:"enableLocalSignUp" gorm:"default:false"`
 	DebugOcr                            bool                      `json:"debugOcr" gorm:"default:false"`
-	CurrencyDisplay                     string                    `json:"currencyDisplay" gorm:"default:$"`
 	NumWorkers                          int                       `json:"numWorkers"`
 	EmailPollingInterval                int                       `json:"emailPollingInterval" gorm:"default:1800"`
+	CurrencyDisplay                     string                    `json:"currencyDisplay" gorm:"default:$"`
+	CurrencyThousandthsSeparator        CurrencySeparator         `json:"currencyThousandthsSeparator" gorm:"default:,"`
+	CurrencyDecimalSeparator            CurrencySeparator         `json:"currencyDecimalSeparator" gorm:"default:."`
+	CurrencySymbolPosition              CurrencySymbolPosition    `json:"currencySymbolPosition" gorm:"default:START"`
+	CurrencyHideDecimalPlaces           bool                      `json:"currencyHideDecimalPlaces" gorm:"default:false"`
 	ReceiptProcessingSettings           ReceiptProcessingSettings `json:"-"`
 	ReceiptProcessingSettingsId         *uint                     `json:"receiptProcessingSettingsId"`
 	FallbackReceiptProcessingSettings   ReceiptProcessingSettings `json:"-"`

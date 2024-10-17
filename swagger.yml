@@ -2285,6 +2285,16 @@ components:
       type: string
       enum:
         - "IMPORT_CONFIG"
+    CurrencySeparator:
+      type: string
+      enum:
+        - ","
+        - "."
+    CurrencySymbolPosition:
+      type: string
+      enum:
+        - "START"
+        - "END"
     BaseModel:
       type: object
       required:
@@ -3460,6 +3470,15 @@ components:
         currencyDisplay:
           type: string
           description: Currency display
+        currencyThousandthsSeparator:
+          $ref: "#/components/schemas/CurrencySeparator"
+        currencyDecimalSeparator:
+          $ref: "#/components/schemas/CurrencySeparator"
+        currencySymbolPosition:
+          $ref: "#/components/schemas/CurrencySymbolPosition"
+        currencyHideDecimalPlaces:
+          type: boolean
+          description: Whether to hide decimal places
         icons:
           type: array
           description: Icons in the system
@@ -3684,6 +3703,19 @@ components:
               type: string
               description: Currency display
               default: "$"
+            currencyThousandthsSeparator:
+              $ref: "#/components/schemas/CurrencySeparator"
+              default: ","
+            currencyDecimalSeparator:
+              $ref: "#/components/schemas/CurrencySeparator"
+              default: "."
+            currencySymbolPosition:
+              $ref: "#/components/schemas/CurrencySymbolPosition"
+              default: "START"
+            currencyHideDecimalPlaces:
+              type: boolean
+              description: Whether to hide decimal places
+              default: false
             debugOcr:
               type: boolean
               description: Debug OCR
@@ -3704,6 +3736,11 @@ components:
               description: Fallback receipt processing settings foreign key
     UpsertSystemSettingsCommand:
       type: object
+      required:
+        - currencyThousandthsSeparator
+        - currencyDecimalSeparator
+        - currencyHideDecimalPlaces
+        - currencySymbolPosition
       properties:
         enableLocalSignUp:
           type: boolean
@@ -3711,6 +3748,15 @@ components:
         currencyDisplay:
           type: string
           description: Currency display
+        currencyThousandthsSeparator:
+          $ref: "#/components/schemas/CurrencySeparator"
+        currencyDecimalSeparator:
+          $ref: "#/components/schemas/CurrencySeparator"
+        currencySymbolPosition:
+          $ref: "#/components/schemas/CurrencySymbolPosition"
+        currencyHideDecimalPlaces:
+          type: boolean
+          description: Whether to hide decimal places
         debugOcr:
           type: boolean
         numWorkers:

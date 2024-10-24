@@ -3705,13 +3705,10 @@ components:
               default: "$"
             currencyThousandthsSeparator:
               $ref: "#/components/schemas/CurrencySeparator"
-              default: ","
             currencyDecimalSeparator:
               $ref: "#/components/schemas/CurrencySeparator"
-              default: "."
             currencySymbolPosition:
               $ref: "#/components/schemas/CurrencySymbolPosition"
-              default: "START"
             currencyHideDecimalPlaces:
               type: boolean
               description: Whether to hide decimal places

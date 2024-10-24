@@ -73,7 +73,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:latest
       - name: Get today's date
-        run: echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+        run: echo "TODAY_DATE=$(date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v3.0.0
         with:

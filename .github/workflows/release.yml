@@ -71,3 +71,16 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/receipt-wrangler-api:${{ github.ref_name }}
+      - name: Get today's date
+        run: echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3.0.0
+        with:
+          token: ${{ secrets.PAT }}
+          repository: Receipt-Wrangler/receipt-wrangler-monolith
+          event-type: published
+          client-payload: |
+            {
+              "version": "${{ github.ref_name }}",
+              "build-date": "${{ env.TODAY_DATE }}"
+            }

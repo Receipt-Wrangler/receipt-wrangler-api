@@ -4,6 +4,7 @@ import "receipt-wrangler/api/internal/models"
 
 type AppData struct {
 	TokenPair
+	About                        About                         `json:"about"`
 	Claims                       Claims                        `json:"claims"`
 	Groups                       []models.Group                `json:"groups"`
 	CurrencyDisplay              string                        `json:"currencyDisplay"`

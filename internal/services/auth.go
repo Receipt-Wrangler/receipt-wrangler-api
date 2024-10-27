@@ -146,6 +146,8 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 
 func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData := structs.AppData{}
+
+	aboutRepository := repositories.NewAboutRepository(nil)
 	groupService := NewGroupService(nil)
 	userRepository := repositories.NewUserRepository(nil)
 	userPreferenceRepository := repositories.NewUserPreferencesRepository(nil)
@@ -190,6 +192,12 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 		return appData, err
 	}
 
+	about, err := aboutRepository.GetAboutData()
+	if err != nil {
+		return appData, err
+	}
+
+	appData.About = about
 	appData.Groups = groups
 	appData.Users = users
 	appData.UserPreferences = userPreferences

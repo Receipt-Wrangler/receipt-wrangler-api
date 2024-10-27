@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var commentRepository CommentRepository
+var commentRepository AboutRepository
 
 func setupCommentTest() {
 	CreateTestGroupWithUsers()

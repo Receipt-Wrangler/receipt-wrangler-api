@@ -193,10 +193,6 @@ func initRoutes() *chi.Mux {
 	importRouter := routers.BuildImportRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/import", importRouter)
 
-	// About router
-	aboutRouter := routers.BuildAboutRouter(tokenValidatorMiddleware)
-	rootRouter.Mount("/api/about", aboutRouter)
-
 	return rootRouter
 }
 

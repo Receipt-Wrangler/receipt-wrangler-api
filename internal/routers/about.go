@@ -13,7 +13,7 @@ func BuildAboutRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 
 	categoryRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 
-	categoryRouter.Get("/", handlers.GetAllCategories)
+	categoryRouter.Get("/", handlers.GetAboutData)
 
 	return categoryRouter
 }

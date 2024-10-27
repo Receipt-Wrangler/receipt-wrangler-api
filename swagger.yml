@@ -2168,6 +2168,24 @@ paths:
           $ref: "#/components/responses/BadRequest"
         403:
           $ref: "#/components/responses/Forbidden"
+  /about:
+    get:
+      tags:
+        - About
+      summary: Get about data
+      description: This will get about information about the server
+      operationId: getAbout
+      responses:
+        200:
+          description: The about information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/About"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
 components:
   securitySchemes:
     bearerAuth:
@@ -3970,3 +3988,15 @@ components:
         displayValue:
           type: string
           description: Icon display value
+    About:
+      type: object
+      required:
+        - buildDate
+        - version
+      properties:
+        buildDate:
+          type: string
+          description: Build date
+        version:
+          type: string
+          description: Version

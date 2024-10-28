@@ -32,7 +32,7 @@ jobs:
       - name: Test imap client
         run: python3 -m unittest discover -s ./imap-client
 
-  build:
+  dispatch:
     needs: test
     runs-on: ubuntu-latest
     steps:

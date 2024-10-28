@@ -3425,6 +3425,7 @@ components:
     AppData:
       type: object
       required:
+        - about
         - claims
         - groups
         - users
@@ -3435,6 +3436,8 @@ components:
         - currencyDisplay
         - icons
       properties:
+        about:
+          $ref: "#/components/schemas/About"
         claims:
           $ref: "#/components/schemas/Claims"
         groups:
@@ -3970,3 +3973,15 @@ components:
         displayValue:
           type: string
           description: Icon display value
+    About:
+      type: object
+      required:
+        - buildDate
+        - version
+      properties:
+        buildDate:
+          type: string
+          description: Build date
+        version:
+          type: string
+          description: Version

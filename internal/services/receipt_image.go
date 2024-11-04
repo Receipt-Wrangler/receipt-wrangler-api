@@ -107,7 +107,7 @@ func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData,
 	groupService := NewGroupService(nil)
 	groupIds := make([]uint, 0)
 
-	group, err := groupRepository.GetGroupById(groupId, false)
+	group, err := groupRepository.GetGroupById(groupId, false, true)
 	if err != nil {
 		return nil, err
 	}

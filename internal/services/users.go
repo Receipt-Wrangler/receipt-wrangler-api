@@ -93,7 +93,7 @@ func DeleteUser(userId string) error {
 		}
 
 		// Remove user
-		txErr = tx.Where("id = ?", userId).Delete(&models.User{}).Error
+		txErr = tx.Model(models.User{}).Delete("id = ?", userId).Error
 		if txErr != nil {
 			return txErr
 		}

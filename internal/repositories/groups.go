@@ -154,7 +154,7 @@ func (repository GroupRepository) UpdateGroup(group models.Group, groupId string
 		return models.Group{}, err
 	}
 
-	returnGroup, err := repository.GetGroupById(groupId, true)
+	returnGroup, err := repository.GetGroupById(groupId, true, true)
 	if err != nil {
 		return models.Group{}, err
 	}
@@ -162,7 +162,7 @@ func (repository GroupRepository) UpdateGroup(group models.Group, groupId string
 	return returnGroup, nil
 }
 
-func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bool) (models.Group, error) {
+func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bool, createMissingGroupSettings bool) (models.Group, error) {
 	db := repository.GetDB()
 	var group models.Group
 
@@ -184,7 +184,7 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 		return models.Group{}, err
 	}
 
-	if group.GroupSettings.ID == 0 {
+	if group.GroupSettings.ID == 0 && createMissingGroupSettings {
 		groupSettingsRepository := NewGroupSettingsRepository(db)
 
 		groupSettings := models.GroupSettings{

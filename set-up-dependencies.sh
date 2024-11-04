@@ -1,13 +1,8 @@
-# Add python dependencies
-apt-get update
-apt-get install python3.9 -y
-apt-get install python3.9-distutils  -y
-
 # Install pip
-wget https://bootstrap.pypa.io/get-pip.py
-python3 get-pip.py
-rm get-pip.py
+apt-get update
+apt-get install python3-pip -y
 
+# Install requirements
 pip3 install -r ./imap-client/requirements.txt
 
 # Install pytorch cpu

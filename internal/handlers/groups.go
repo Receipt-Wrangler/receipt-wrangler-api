@@ -138,7 +138,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
-			groups, err := groupRepository.GetGroupById(id, true)
+			groups, err := groupRepository.GetGroupById(id, true, true)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

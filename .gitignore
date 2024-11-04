@@ -10,4 +10,5 @@
 ./sqlite/*
 ./imap-client/__pycache__
 api
+./dev/mariadb/data
 ./dev/mariadb/data/*

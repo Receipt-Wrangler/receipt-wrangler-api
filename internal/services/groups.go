@@ -72,7 +72,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		}
 	}
 
-	group, err := groupRepository.GetGroupById(groupId, false)
+	group, err := groupRepository.GetGroupById(groupId, false, false)
 	if err != nil {
 		return err
 	}
@@ -103,9 +103,11 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		tx.Model(models.UserPrefernces{}).Where("quick_scan_default_group_id = ?", groupId).Update("quick_scan_default_group_id", nil)
 
 		// Delete Group Settings
-		txErr = tx.Model(&group.GroupSettings).Select(clause.Associations).Delete(&group.GroupSettings).Error
-		if txErr != nil {
-			return txErr
+		if group.GroupSettings.GroupId > 0 {
+			txErr = tx.Model(&group.GroupSettings).Select(clause.Associations).Delete(&group.GroupSettings).Error
+			if txErr != nil {
+				return txErr
+			}
 		}
 
 		// Delete group

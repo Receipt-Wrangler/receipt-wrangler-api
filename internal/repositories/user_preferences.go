@@ -103,26 +103,30 @@ func (repository UserPreferncesRepository) UpdateUserPreferences(userId uint, us
 func (repository UserPreferncesRepository) DeleteUserPreferences(userId uint) error {
 	db := repository.GetDB()
 
-	var userPreferencesId uint
+	var userPreferences models.UserPrefernces
 
 	err := db.
 		Model(models.UserPrefernces{}).
 		Where("user_id = ?", userId).
-		Select("id").
-		First(&userPreferencesId).Error
+		First(&userPreferences).Error
+	if err != nil {
+		return err
+	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		txErr := tx.
 			Model(models.UserShortcut{}).
-			Where("user_preferences_id = ?", userPreferencesId).
-			Delete(&models.UserShortcut{}).
-			Error
+			Where("user_prefernces_id = ?", userPreferences.ID).
+			Delete(&models.UserShortcut{}).Error
 		if txErr != nil {
 			return txErr
 		}
 
-		err = db.Model(models.UserPrefernces{}).Delete("user_id = ?", userId).Error
-		if err != nil {
+		txErr = tx.
+			Model(models.UserPrefernces{}).
+			Where("user_id = ?", userId).
+			Delete(&userPreferences).Error
+		if txErr != nil {
 			return txErr
 		}
 

@@ -130,7 +130,7 @@ func (service OcrService) ReadImageWithEasyOcr(preparedImageBytes []byte) (strin
 
 	var textBuffer bytes.Buffer
 	var text string
-	cmd := exec.Command("easyocr", "-l", "en", "-f", tempPath, "--detail", "0", "--gpu", "0")
+	cmd := exec.Command("easyocr", "-l", "en", "-f", tempPath, "--detail", "0", "--gpu", "0", "--verbose", "0")
 	cmd.Stdout = &textBuffer
 
 	err = cmd.Run()

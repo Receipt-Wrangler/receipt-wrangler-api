@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 	"image"
 	"image/jpeg"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -132,6 +133,7 @@ func (service OcrService) ReadImageWithEasyOcr(preparedImageBytes []byte) (strin
 	var text string
 	cmd := exec.Command("easyocr", "-l", "en", "-f", tempPath, "--detail", "0", "--gpu", "0", "--verbose", "0")
 	cmd.Stdout = &textBuffer
+	cmd.Stderr = io.Discard
 
 	err = cmd.Run()
 	if err != nil {

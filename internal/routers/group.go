@@ -15,7 +15,7 @@ func BuildGroupRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	groupRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 	groupRouter.Get("/", handlers.GetGroupsForUser)
 	groupRouter.Get("/{groupId}", handlers.GetGroupById)
-	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{})).Post("/", handlers.CreateGroup)
+	groupRouter.Post("/", handlers.CreateGroup)
 	groupRouter.With(middleware.SetGeneralBodyData("group", models.Group{})).Put("/{groupId}", handlers.UpdateGroup)
 	groupRouter.Put("/{groupId}/groupSettings", handlers.UpdateGroupSettings)
 	groupRouter.With(middleware.CanDeleteGroup).Delete("/{groupId}", handlers.DeleteGroup)

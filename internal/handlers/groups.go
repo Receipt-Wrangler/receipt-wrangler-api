@@ -165,12 +165,24 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpsertGroupCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErrs := command.Validate()
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return 0, nil
+			}
+
 			token := structs.GetJWT(r)
 			group := r.Context().Value("group").(models.Group)
 			group.IsAllGroup = false
 
 			groupRepository := repositories.NewGroupRepository(nil)
-			group, err := groupRepository.CreateGroup(group, token.UserId)
+			group, err = groupRepository.CreateGroup(group, token.UserId)
 
 			if err != nil {
 				return http.StatusInternalServerError, err

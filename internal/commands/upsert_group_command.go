@@ -9,9 +9,11 @@ import (
 )
 
 type UpsertGroupCommand struct {
-	Name         string               `gorm:"not null" json:"name"`
-	GroupMembers []models.GroupMember `json:"groupMembers"`
-	Status       models.GroupStatus   `gorm:"default:'ACTIVE'; not null" json:"status"`
+	Name           string                     `gorm:"not null" json:"name"`
+	GroupMembers   []UpsertGroupMemberCommand `json:"groupMembers"`
+	Status         models.GroupStatus         `gorm:"default:'ACTIVE'; not null" json:"status"`
+	IsAllGroup     bool                       `json:"isAllGroup" gorm:"default:false"`
+	IsDefaultGroup bool                       `json:"isDefault"`
 }
 
 func (command *UpsertGroupCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -28,7 +30,7 @@ func (command *UpsertGroupCommand) LoadDataFromRequest(w http.ResponseWriter, r 
 	return nil
 }
 
-func (command *UpsertGroupCommand) Validate() structs.ValidatorError {
+func (command *UpsertGroupCommand) Validate(isCreate bool) structs.ValidatorError {
 	vErr := structs.ValidatorError{}
 	errorMap := make(map[string]string)
 
@@ -40,8 +42,10 @@ func (command *UpsertGroupCommand) Validate() structs.ValidatorError {
 		errorMap["status"] = "Status is required"
 	}
 
-	if len(command.GroupMembers) == 0 {
-		errorMap["groupMembers"] = "Group Members are required"
+	if !isCreate {
+		if len(command.GroupMembers) == 0 {
+			errorMap["groupMembers"] = "Group Members are required"
+		}
 	}
 
 	vErr.Errors = errorMap

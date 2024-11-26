@@ -171,18 +171,17 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			vErrs := command.Validate()
+			vErrs := command.Validate(true)
 			if len(vErrs.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
 				return 0, nil
 			}
 
 			token := structs.GetJWT(r)
-			group := r.Context().Value("group").(models.Group)
-			group.IsAllGroup = false
 
+			command.IsAllGroup = false
 			groupRepository := repositories.NewGroupRepository(nil)
-			group, err = groupRepository.CreateGroup(group, token.UserId)
+			group, err := groupRepository.CreateGroup(command, token.UserId)
 
 			if err != nil {
 				return http.StatusInternalServerError, err

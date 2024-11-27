@@ -144,7 +144,7 @@ func (repository GroupRepository) CreateGroup(command commands.UpsertGroupComman
 	return returnGroup, nil
 }
 
-func (repository GroupRepository) UpdateGroup(group models.Group, groupId string) (models.Group, error) {
+func (repository GroupRepository) UpdateGroup(command commands.UpsertGroupCommand, groupId string) (models.Group, error) {
 	// TODO: move hooks from model to repository func
 	db := repository.GetDB()
 
@@ -153,15 +153,29 @@ func (repository GroupRepository) UpdateGroup(group models.Group, groupId string
 		return models.Group{}, err
 	}
 
-	group.ID = uint(u64Id)
+	groupToUpdate := models.Group{
+		Name:   command.Name,
+		Status: command.Status,
+	}
+	groupToUpdate.ID = uint(u64Id)
+
+	for i := 0; i < len(command.GroupMembers); i++ {
+		groupMemberCommand := command.GroupMembers[i]
+		groupMember := models.GroupMember{
+			UserID:    groupMemberCommand.UserID,
+			GroupID:   groupMemberCommand.GroupID,
+			GroupRole: groupMemberCommand.GroupRole,
+		}
+		groupToUpdate.GroupMembers = append(groupToUpdate.GroupMembers, groupMember)
+	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&group).Omit("ID", "is_all_group").Updates(&group).Error
+		txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&groupToUpdate).Omit("ID", "is_all_group").Updates(&groupToUpdate).Error
 		if err != nil {
 			return txErr
 		}
 
-		txErr = tx.Model(&group).Association("GroupMembers").Unscoped().Replace(group.GroupMembers)
+		txErr = tx.Model(&groupToUpdate).Association("GroupMembers").Unscoped().Replace(groupToUpdate.GroupMembers)
 		if txErr != nil {
 			return txErr
 		}

@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"testing"
@@ -19,7 +20,7 @@ func teardownGroupTest() {
 }
 
 func TestShouldCreateGroupSuccessfully(t *testing.T) {
-	groupToCreate := models.Group{Name: "test"}
+	groupToCreate := commands.UpsertGroupCommand{Name: "test"}
 	setUpGroupTest()
 	groupRepository := setupGroupRepository()
 	createdGroup, err := groupRepository.CreateGroup(groupToCreate, 1)
@@ -98,7 +99,7 @@ func TestShouldReturnErrorIfGroupDoesNotExist(t *testing.T) {
 func TestShouldUpdateGroup(t *testing.T) {
 	defer teardownGroupTest()
 	CreateTestGroup()
-	updateGroup := models.Group{Name: "new name", Status: models.GROUP_ARCHIVED}
+	updateGroup := commands.UpsertGroupCommand{Name: "new name", Status: models.GROUP_ARCHIVED}
 	groupRepository := setupGroupRepository()
 	updatedGroup, err := groupRepository.UpdateGroup(updateGroup, "1")
 

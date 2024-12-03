@@ -2,12 +2,12 @@ package services
 
 import (
 	"errors"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+	"os"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
-
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type GroupService struct {
@@ -112,6 +112,17 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 
 		// Delete group
 		txErr = tx.Model(&group.GroupSettings).Select(clause.Associations).Delete(&group).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		// Remove group's directory
+		groupPath, txErr := simpleutils.BuildGroupPathString(simpleutils.UintToString(group.ID), group.Name)
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = os.Remove(groupPath)
 		if txErr != nil {
 			return txErr
 		}

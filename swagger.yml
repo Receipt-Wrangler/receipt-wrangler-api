@@ -358,7 +358,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Group"
+              $ref: "#/components/schemas/UpsertGroupCommand"
       operationId: createGroup
       responses:
         200:
@@ -2503,7 +2503,30 @@ components:
         updatedAt:
           type: string
       description: Group in the system
-      x-go-package: receipt-wrangler/api/internal/models
+    UpsertGroupCommand:
+      required:
+        - name
+        - status
+        - groupMembers
+      type: object
+      properties:
+        groupMembers:
+          type: array
+          description: Members of the group
+          items:
+            $ref: "#/components/schemas/UpsertGroupMemberCommand"
+        isDefault:
+          type: boolean
+          description: Is default group (not used yet)
+        name:
+          type: string
+          description: Name of the group
+        isAllGroup:
+          type: boolean
+          description: Is all group for user
+        status:
+          type: string
+          $ref: "#/components/schemas/GroupStatus"
     GroupMember:
       required:
         - groupId
@@ -2529,7 +2552,24 @@ components:
           format: uint64
           x-go-name: UserID
       description: Group member
-      x-go-package: receipt-wrangler/api/internal/models
+    UpsertGroupMemberCommand:
+      required:
+        - groupId
+        - groupRole
+        - userId
+      type: object
+      properties:
+        groupId:
+          type: integer
+          description: Group compound primary key
+          format: uint64
+        groupRole:
+          type: string
+          $ref: "#/components/schemas/GroupRole"
+        userId:
+          type: integer
+          description: User compound primary key
+          format: uint64
     Item:
       required:
         - amount

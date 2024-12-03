@@ -62,13 +62,12 @@ func (repository UserRepository) CreateUser(userData commands.SignUpCommand) (mo
 			return err
 		}
 
-		group := models.Group{
+		groupCommand := commands.UpsertGroupCommand{
 			Name:           "My Receipts",
 			IsDefaultGroup: true,
-			GroupSettings:  models.GroupSettings{},
 		}
 
-		_, err := groupRepository.CreateGroup(group, user.ID)
+		_, err := groupRepository.CreateGroup(groupCommand, user.ID)
 		if err != nil {
 			repository.ClearTransaction()
 			return err

@@ -165,12 +165,23 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
-			group := r.Context().Value("group").(models.Group)
-			group.IsAllGroup = false
+			command := commands.UpsertGroupCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
+			vErrs := command.Validate(true)
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			token := structs.GetJWT(r)
+
+			command.IsAllGroup = false
 			groupRepository := repositories.NewGroupRepository(nil)
-			group, err := groupRepository.CreateGroup(group, token.UserId)
+			group, err := groupRepository.CreateGroup(command, token.UserId)
 
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -202,6 +213,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 	HandleRequest(handler)
 }
 
+// TODO: move hooks, and update swagger to take command
 func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
 		ErrorMessage: "Error updating group.",
@@ -211,7 +223,17 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.OWNER,
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			group := r.Context().Value("group").(models.Group)
+			command := commands.UpsertGroupCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErrs := command.Validate(true)
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return 0, nil
+			}
 			groupId := chi.URLParam(r, "groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
@@ -228,7 +250,7 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, errors.New("cannot update all group")
 			}
 
-			updatedGroup, err := groupRepository.UpdateGroup(group, groupId)
+			updatedGroup, err := groupRepository.UpdateGroup(command, groupId)
 
 			if err != nil {
 				return http.StatusInternalServerError, err

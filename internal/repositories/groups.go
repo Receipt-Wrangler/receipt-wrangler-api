@@ -77,14 +77,31 @@ func (repository GroupRepository) isValidColumn(orderBy string) bool {
 		orderBy == "updated_at"
 }
 
-func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (models.Group, error) {
+func (repository GroupRepository) CreateGroup(command commands.UpsertGroupCommand, userId uint) (models.Group, error) {
+	// TODO: move hooks on delete to repository func
 	db := repository.GetDB()
 	var returnGroup models.Group
+	var groupToCreate models.Group
+
+	groupToCreate.Name = command.Name
+	groupToCreate.Status = command.Status
+	groupToCreate.IsAllGroup = command.IsAllGroup
+	for i := 0; i < len(command.GroupMembers); i++ {
+		groupMemberCommand := command.GroupMembers[i]
+		groupMember := models.GroupMember{
+			UserID:    groupMemberCommand.UserID,
+			GroupID:   groupMemberCommand.GroupID,
+			GroupRole: groupMemberCommand.GroupRole,
+		}
+
+		groupToCreate.GroupMembers = append(groupToCreate.GroupMembers, groupMember)
+	}
+
 	err := db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
 		groupSettingsRepository := NewGroupSettingsRepository(tx)
 
-		txErr := tx.Model(&group).Create(&group).Error
+		txErr := tx.Model(&groupToCreate).Create(&groupToCreate).Error
 		if txErr != nil {
 			repository.ClearTransaction()
 			return txErr
@@ -92,7 +109,7 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 
 		groupMember := models.GroupMember{
 			UserID:    userId,
-			GroupID:   group.ID,
+			GroupID:   groupToCreate.ID,
 			GroupRole: models.OWNER,
 		}
 
@@ -103,7 +120,7 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 		}
 
 		groupSettings := models.GroupSettings{
-			GroupId: group.ID,
+			GroupId: groupToCreate.ID,
 		}
 
 		_, txErr = groupSettingsRepository.CreateGroupSettings(groupSettings)
@@ -119,7 +136,7 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 		return models.Group{}, err
 	}
 
-	err = repository.GetDB().Model(models.Group{}).Where("id = ?", group.ID).Preload("GroupMembers").Find(&returnGroup).Error
+	err = repository.GetDB().Model(models.Group{}).Where("id = ?", groupToCreate.ID).Preload("GroupMembers").Find(&returnGroup).Error
 	if err != nil {
 		return models.Group{}, err
 	}
@@ -127,7 +144,8 @@ func (repository GroupRepository) CreateGroup(group models.Group, userId uint) (
 	return returnGroup, nil
 }
 
-func (repository GroupRepository) UpdateGroup(group models.Group, groupId string) (models.Group, error) {
+func (repository GroupRepository) UpdateGroup(command commands.UpsertGroupCommand, groupId string) (models.Group, error) {
+	// TODO: move hooks from model to repository func
 	db := repository.GetDB()
 
 	u64Id, err := simpleutils.StringToUint64(groupId)
@@ -135,15 +153,29 @@ func (repository GroupRepository) UpdateGroup(group models.Group, groupId string
 		return models.Group{}, err
 	}
 
-	group.ID = uint(u64Id)
+	groupToUpdate := models.Group{
+		Name:   command.Name,
+		Status: command.Status,
+	}
+	groupToUpdate.ID = uint(u64Id)
+
+	for i := 0; i < len(command.GroupMembers); i++ {
+		groupMemberCommand := command.GroupMembers[i]
+		groupMember := models.GroupMember{
+			UserID:    groupMemberCommand.UserID,
+			GroupID:   groupMemberCommand.GroupID,
+			GroupRole: groupMemberCommand.GroupRole,
+		}
+		groupToUpdate.GroupMembers = append(groupToUpdate.GroupMembers, groupMember)
+	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&group).Omit("ID", "is_all_group").Updates(&group).Error
+		txErr := tx.Session(&gorm.Session{FullSaveAssociations: true}).Model(&groupToUpdate).Omit("ID", "is_all_group").Updates(&groupToUpdate).Error
 		if err != nil {
 			return txErr
 		}
 
-		txErr = tx.Model(&group).Association("GroupMembers").Unscoped().Replace(group.GroupMembers)
+		txErr = tx.Model(&groupToUpdate).Association("GroupMembers").Unscoped().Replace(groupToUpdate.GroupMembers)
 		if txErr != nil {
 			return txErr
 		}
@@ -201,7 +233,7 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 }
 
 func (repository GroupRepository) CreateAllGroup(userId uint) (models.Group, error) {
-	group := models.Group{
+	group := commands.UpsertGroupCommand{
 		Name:       "All",
 		IsAllGroup: true,
 	}

@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"os"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
@@ -124,7 +125,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 
 		txErr = os.Remove(groupPath)
 		if txErr != nil {
-			return txErr
+			logging.LogStd(logging.LOG_LEVEL_INFO, txErr.Error())
 		}
 
 		return nil

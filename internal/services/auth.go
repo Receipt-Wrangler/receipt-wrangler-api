@@ -52,6 +52,13 @@ func LoginUser(loginAttempt commands.LoginCommand) (models.User, error) {
 		return models.User{}, err
 	}
 
+	userRepository := repositories.NewUserRepository(nil)
+	lastLoginDate, err := userRepository.UpdateUserLastLoginDate(dbUser.ID)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	dbUser.LastLoginDate = lastLoginDate
 	return dbUser, nil
 }
 

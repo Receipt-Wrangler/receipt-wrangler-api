@@ -5,6 +5,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -124,4 +125,15 @@ func (repository UserRepository) GetAllUserViews() ([]structs.UserView, error) {
 	}
 
 	return users, nil
+}
+
+func (repository UserRepository) UpdateUserLastLoginDate(userId uint) (time.Time, error) {
+	now := time.Now()
+	err := repository.GetDB().Model(models.User{}).Where("id = ?", userId).Update("last_login_date", now).Error
+
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return now, nil
 }

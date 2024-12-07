@@ -38,28 +38,37 @@ func InitTokenValidator() (*validator.Validator, error) {
 	return jwtValidator, err
 }
 
-func LoginUser(loginAttempt commands.LoginCommand) (models.User, error) {
+func LoginUser(loginAttempt commands.LoginCommand) (models.User, bool, error) {
 	db := repositories.GetDB()
+	firstAdminToLogin := false
 	var dbUser models.User
 
 	err := db.Model(models.User{}).Where("username = ?", loginAttempt.Username).First(&dbUser).Error
 	if err != nil {
-		return models.User{}, err
+		return models.User{}, false, err
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(loginAttempt.Password))
 	if err != nil {
-		return models.User{}, err
+		return models.User{}, false, err
 	}
 
 	userRepository := repositories.NewUserRepository(nil)
+
+	if dbUser.UserRole == models.ADMIN {
+		firstAdminToLogin, err = userRepository.IsFirstAdminToLogin()
+		if err != nil {
+			return models.User{}, false, err
+		}
+	}
+
 	lastLoginDate, err := userRepository.UpdateUserLastLoginDate(dbUser.ID)
 	if err != nil {
-		return models.User{}, err
+		return models.User{}, false, err
 	}
 
 	dbUser.LastLoginDate = lastLoginDate
-	return dbUser, nil
+	return dbUser, firstAdminToLogin, nil
 }
 
 func BuildTokenCookies(jwt string, refreshToken string) (http.Cookie, http.Cookie) {

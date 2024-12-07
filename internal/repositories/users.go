@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
@@ -136,4 +137,23 @@ func (repository UserRepository) UpdateUserLastLoginDate(userId uint) (time.Time
 	}
 
 	return now, nil
+}
+
+func (repository UserRepository) IsFirstAdminToLogin() (bool, error) {
+	foundUser := models.User{}
+
+	err := repository.
+		GetDB().
+		Limit(1).
+		Select("id").
+		Model(models.User{}).
+		Where("user_role = ? AND last_login_date IS NOT NULL", models.ADMIN).
+		Find(&foundUser).
+		Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return foundUser.ID == 0, nil
 }

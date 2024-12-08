@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
@@ -21,9 +22,17 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			userData := r.Context().Value("user").(commands.LoginCommand)
 			var dbUser models.User
 
-			dbUser, err := services.LoginUser(userData)
+			dbUser, firstAdminToLogin, err := services.LoginUser(userData)
 			if err != nil {
 				return http.StatusInternalServerError, err
+			}
+
+			if firstAdminToLogin {
+				promptService := services.NewPromptService(nil)
+				_, err = promptService.CreateDefaultPrompt()
+				if err != nil {
+					logging.LogStd(logging.LOG_LEVEL_INFO, err)
+				}
 			}
 
 			if dbUser.IsDummyUser {

@@ -2881,7 +2881,6 @@ components:
           description: User's username used to login
         createdAt:
           type: string
-
         createdBy:
           type: integer
           format: uint64
@@ -2901,12 +2900,13 @@ components:
           x-go-name: IsDummyUser
         updatedAt:
           type: string
-
           x-go-name: UpdatedAt
         userRole:
           type: string
           $ref: "#/components/schemas/UserRole"
           description: User's role
+        lastLoginDate:
+          type: string
       description: User in the system
       x-go-package: receipt-wrangler/api/internal/models
     UserView:

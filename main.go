@@ -54,14 +54,6 @@ func main() {
 	imagick.Initialize()
 	defer imagick.Terminate()
 
-	if config.GetDeployEnv() != "test" {
-		userRepository := repositories.NewUserRepository(nil)
-		err = userRepository.CreateUserIfNoneExist()
-	}
-	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
-	}
-
 	err = tryStartEmailPolling()
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())

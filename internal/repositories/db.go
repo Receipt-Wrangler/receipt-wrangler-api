@@ -129,6 +129,14 @@ func InitDB() error {
 		}
 	}
 
+	if config.GetDeployEnv() != "test" {
+		userRepository := NewUserRepository(nil)
+		err := userRepository.CreateUserIfNoneExist()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

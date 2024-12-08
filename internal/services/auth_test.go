@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -143,5 +144,67 @@ func TestGenerateRefreshTokenCorrectly(t *testing.T) {
 
 	if err != nil {
 		utils.PrintTestError(t, err, nil)
+	}
+}
+
+func TestShouldLogInUserCorrectly(t *testing.T) {
+	defer repositories.TruncateTestDb()
+	expectedDisplayname := "Another displayname"
+	expectedUsername := "Another username"
+	password := "Password"
+
+	userRepository := repositories.NewUserRepository(nil)
+
+	_, err := userRepository.CreateUser(commands.SignUpCommand{
+		Username:    expectedUsername,
+		Password:    password,
+		DisplayName: expectedDisplayname,
+	})
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+	}
+
+	user, firstAdminToLogin, err := LoginUser(commands.LoginCommand{
+		Username: expectedUsername,
+		Password: password,
+	})
+
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+	}
+
+	if firstAdminToLogin != true {
+		utils.PrintTestError(t, firstAdminToLogin, true)
+	}
+
+	if user.LastLoginDate == nil {
+		utils.PrintTestError(t, user.LastLoginDate, nil)
+	}
+}
+
+func TestShouldNotLogUserInWithWrongPassword(t *testing.T) {
+	defer repositories.TruncateTestDb()
+	expectedDisplayname := "Another displayname"
+	expectedUsername := "Another username"
+	password := "Password"
+
+	userRepository := repositories.NewUserRepository(nil)
+
+	_, err := userRepository.CreateUser(commands.SignUpCommand{
+		Username:    expectedUsername,
+		Password:    password,
+		DisplayName: expectedDisplayname,
+	})
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+	}
+
+	_, _, err = LoginUser(commands.LoginCommand{
+		Username: expectedUsername,
+		Password: "wrong password",
+	})
+
+	if err == nil {
+		utils.PrintTestError(t, err, "login error")
 	}
 }

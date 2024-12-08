@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"fmt"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"

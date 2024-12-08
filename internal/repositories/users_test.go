@@ -69,6 +69,51 @@ func TestShouldReturnErrorWhenCreatingUserWithDuplicateUsername(t *testing.T) {
 	}
 }
 
+func TestShouldBeFirstAdminToLogin(t *testing.T) {
+	defer TruncateTestDb()
+	userToCreate := commands.SignUpCommand{
+		Username:    "test",
+		DisplayName: "test",
+		Password:    "a really secure password",
+	}
+	userRepository := NewUserRepository(nil)
+	createdUser, err := userRepository.CreateUser(userToCreate)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	validateUser(t, createdUser, userToCreate, models.ADMIN, 1)
+
+	firstAdminToLogin, err := userRepository.IsFirstAdminToLogin()
+
+	if firstAdminToLogin != true {
+		utils.PrintTestError(t, firstAdminToLogin, true)
+	}
+}
+
+func TestShouldNotBeFirstAdminToLogin(t *testing.T) {
+	defer TruncateTestDb()
+	userToCreate := commands.SignUpCommand{
+		Username:    "test",
+		DisplayName: "test",
+		Password:    "a really secure password",
+	}
+	userRepository := NewUserRepository(nil)
+	createdUser, err := userRepository.CreateUser(userToCreate)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	validateUser(t, createdUser, userToCreate, models.ADMIN, 1)
+
+	userRepository.UpdateUserLastLoginDate(1)
+
+	firstAdminToLogin, err := userRepository.IsFirstAdminToLogin()
+	if firstAdminToLogin != false {
+		utils.PrintTestError(t, firstAdminToLogin, false)
+	}
+}
+
 func validateUser(t *testing.T, createdUser models.User, userToCreate commands.SignUpCommand, role models.UserRole, id uint) {
 	if createdUser.ID != id {
 		utils.PrintTestError(t, createdUser.ID, id)

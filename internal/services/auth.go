@@ -67,7 +67,7 @@ func LoginUser(loginAttempt commands.LoginCommand) (models.User, bool, error) {
 		return models.User{}, false, err
 	}
 
-	dbUser.LastLoginDate = lastLoginDate
+	dbUser.LastLoginDate = &lastLoginDate
 	return dbUser, firstAdminToLogin, nil
 }
 

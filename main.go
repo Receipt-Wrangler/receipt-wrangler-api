@@ -52,9 +52,15 @@ func main() {
 
 	err = repositories.ConnectToRedis()
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("redis connection error: "+err.Error()))
 	}
 	defer repositories.GetAsynqRedisClient().Close()
+
+	worker, err := services.StartAsynqWorker()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq worker error: "+err.Error()))
+	}
+	defer worker.Shutdown()
 
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing Imagick...")
 	imagick.Initialize()
@@ -79,6 +85,7 @@ func serve(router *chi.Mux) {
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Initialize completed")
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Listening on port 8081")
 	logging.LogStd(logging.LOG_LEVEL_FATAL, srv.ListenAndServe())
+	
 }
 
 func initRoutes() *chi.Mux {

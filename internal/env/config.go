@@ -59,6 +59,15 @@ func GetRedisConfig() (structs.RedisConfig, error) {
 	}, nil
 }
 
+func BuildRedisConnectionString() (string, error) {
+	redisConfig, err := GetRedisConfig()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s:%d", redisConfig.Host, redisConfig.Port), nil
+}
+
 func GetBasePath() string {
 	envBase := os.Getenv("BASE_PATH")
 	if len(envBase) == 0 {

@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"fmt"
 	"github.com/hibiken/asynq"
 	config "receipt-wrangler/api/internal/env"
 )
@@ -13,12 +12,10 @@ func GetAsynqRedisClient() *asynq.Client {
 }
 
 func ConnectToRedis() error {
-	redisConfig, err := config.GetRedisConfig()
+	connectionString, err := config.BuildRedisConnectionString()
 	if err != nil {
 		return err
 	}
-
-	connectionString := fmt.Sprintf("%s:%d", redisConfig.Host, redisConfig.Port)
 
 	client = asynq.NewClient(asynq.RedisClientOpt{
 		Addr: connectionString,

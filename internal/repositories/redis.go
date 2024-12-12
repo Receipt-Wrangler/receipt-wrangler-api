@@ -18,7 +18,7 @@ func ConnectToRedis() error {
 		return err
 	}
 
-	connectionString := fmt.Sprintln("%s:%d", redisConfig.Host, redisConfig.Port)
+	connectionString := fmt.Sprintf("%s:%d", redisConfig.Host, redisConfig.Port)
 
 	client = asynq.NewClient(asynq.RedisClientOpt{
 		Addr: connectionString,

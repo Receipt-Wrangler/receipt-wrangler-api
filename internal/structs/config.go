@@ -33,6 +33,11 @@ type DatabaseConfig struct {
 	Filename string `json:"filename"`
 }
 
+type RedisConfig struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
 type DebugConfig struct {
 	DebugOcr bool `json:"debugOcr"`
 }

@@ -50,6 +50,12 @@ func main() {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
+	err = repositories.ConnectToRedis()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+	}
+	defer repositories.GetAsynqRedisClient().Close()
+
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing Imagick...")
 	imagick.Initialize()
 	defer imagick.Terminate()

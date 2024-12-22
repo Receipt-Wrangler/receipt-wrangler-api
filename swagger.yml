@@ -2607,6 +2607,16 @@ components:
         status:
           type: string
           $ref: "#/components/schemas/ItemStatus"
+        categories:
+          type: array
+          description: Categories associated to the item
+          items:
+            $ref: "#/components/schemas/Category"
+        tags:
+          $ref: "#/components/schemas/Tag"
+          description: Tags associated to the item
+          items:
+            $ref: "#/components/schemas/Tag"
         updatedAt:
           type: string
       description: Itemized item on a receipt
@@ -3681,6 +3691,18 @@ components:
           description: Receipt foreign key
         status:
           $ref: "#/components/schemas/ItemStatus"
+        categories:
+          properties:
+          type: array
+          description: Categories associated to item
+          items:
+            $ref: "#/components/schemas/UpsertCategoryCommand"
+        tags:
+          properties:
+          type: array
+          description: Tags associated to item
+          items:
+            $ref: "#/components/schemas/UpsertTagCommand"
     UpsertCommentCommand:
       type: object
       required:

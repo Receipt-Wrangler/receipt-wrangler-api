@@ -110,7 +110,6 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		EndedAt:              &endedAt,
 		Status:               models.SYSTEM_TASK_SUCCEEDED,
 		RanByUserId:          &ranByUserId,
-		//RanByUserId: 1,
 	}
 
 	updatedReceipt, err := command.ToReceipt()

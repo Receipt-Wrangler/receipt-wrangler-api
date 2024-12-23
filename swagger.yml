@@ -2613,7 +2613,7 @@ components:
           items:
             $ref: "#/components/schemas/Category"
         tags:
-          $ref: "#/components/schemas/Tag"
+          type: array
           description: Tags associated to the item
           items:
             $ref: "#/components/schemas/Tag"
@@ -3692,13 +3692,11 @@ components:
         status:
           $ref: "#/components/schemas/ItemStatus"
         categories:
-          properties:
           type: array
           description: Categories associated to item
           items:
             $ref: "#/components/schemas/UpsertCategoryCommand"
         tags:
-          properties:
           type: array
           description: Tags associated to item
           items:

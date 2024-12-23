@@ -48,7 +48,7 @@ func (service ReceiptService) DeleteReceipt(id string) error {
 	db := service.GetDB()
 	var receipt models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload("ImageFiles").Find(&receipt).Error
+	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload("ImageFiles").Preload("ReceiptItems.Categories").Preload("ReceiptItems.Tags").Find(&receipt).Error
 	if err != nil {
 		return err
 	}

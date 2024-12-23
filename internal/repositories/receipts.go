@@ -596,7 +596,13 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 	db := repository.GetDB()
 	var receipt models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Preload("ReceiptItems.Categories").Find(&receipt).Error
+	err := db.Model(models.Receipt{}).
+		Where("id = ?", id).
+		Preload(clause.Associations).
+		Preload("ReceiptItems.Categories").
+		Preload("ReceiptItems.Tags").
+		Find(&receipt).
+		Error
 	if err != nil {
 		return models.Receipt{}, err
 	}

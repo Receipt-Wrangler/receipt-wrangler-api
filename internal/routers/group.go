@@ -16,6 +16,7 @@ func BuildGroupRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	groupRouter.Post("/", handlers.CreateGroup)
 	groupRouter.Put("/{groupId}", handlers.UpdateGroup)
 	groupRouter.Put("/{groupId}/groupSettings", handlers.UpdateGroupSettings)
+	groupRouter.Put("/{groupId}/groupReceiptSettings", handlers.UpdateGroupSettings)
 	groupRouter.With(middleware.CanDeleteGroup).Delete("/{groupId}", handlers.DeleteGroup)
 	groupRouter.Post("/{groupId}/pollGroupEmail", handlers.PollGroupEmail)
 	groupRouter.Post("/getPagedGroups", handlers.GetPagedGroups)

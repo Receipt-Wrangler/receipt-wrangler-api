@@ -73,7 +73,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		}
 	}
 
-	group, err := groupRepository.GetGroupById(groupId, false, false)
+	group, err := groupRepository.GetGroupById(groupId, false, false, false)
 	if err != nil {
 		return err
 	}
@@ -106,6 +106,14 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		// Delete Group Settings
 		if group.GroupSettings.GroupId > 0 {
 			txErr = tx.Model(&group.GroupSettings).Select(clause.Associations).Delete(&group.GroupSettings).Error
+			if txErr != nil {
+				return txErr
+			}
+		}
+
+		// Delete Group Receipt Settings
+		if group.GroupReceiptSettings.GroupId > 0 {
+			txErr = tx.Model(&group.GroupReceiptSettings).Select(clause.Associations).Delete(&group.GroupReceiptSettings).Error
 			if txErr != nil {
 				return txErr
 			}

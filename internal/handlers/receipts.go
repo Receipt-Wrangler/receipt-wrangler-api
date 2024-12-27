@@ -292,7 +292,13 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 			var receipt models.Receipt
 			id := chi.URLParam(r, "id")
 
-			err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Preload("Comments.Replies").Find(&receipt).Error
+			err := db.Model(models.Receipt{}).
+				Where("id = ?", id).
+				Preload(clause.Associations).
+				Preload("Comments.Replies").
+				Preload("ReceiptItems.Categories").
+				Preload("ReceiptItems.Tags").
+				Find(&receipt).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -47,8 +47,9 @@ func (service ReceiptService) GetReceiptByReceiptImageId(receiptImageId string) 
 func (service ReceiptService) DeleteReceipt(id string) error {
 	db := service.GetDB()
 	var receipt models.Receipt
+	receiptRepository := repositories.NewReceiptRepository(service.TX)
 
-	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload("ImageFiles").Find(&receipt).Error
+	receipt, err := receiptRepository.GetFullyLoadedReceiptById(id)
 	if err != nil {
 		return err
 	}
@@ -61,6 +62,18 @@ func (service ReceiptService) DeleteReceipt(id string) error {
 		for _, f := range receipt.ImageFiles {
 			path, _ := fileRepository.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
 			imagesToDelete = append(imagesToDelete, path)
+		}
+
+		for _, r := range receipt.ReceiptItems {
+			err = tx.Model(&r).Association("Categories").Clear()
+			if err != nil {
+				return err
+			}
+
+			err = tx.Model(&r).Association("Tags").Clear()
+			if err != nil {
+				return err
+			}
 		}
 
 		err = tx.Select(clause.Associations).Delete(&receipt).Error

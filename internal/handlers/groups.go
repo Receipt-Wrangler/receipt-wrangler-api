@@ -138,7 +138,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
-			groups, err := groupRepository.GetGroupById(id, true, true)
+			groups, err := groupRepository.GetGroupById(id, true, true, true)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -302,6 +302,44 @@ func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 			}
 
 			w.WriteHeader(200)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func UpdateGroupReceiptSettings(w http.ResponseWriter, r *http.Request) {
+	groupId := chi.URLParam(r, "groupId")
+
+	handler := structs.Handler{
+		ErrorMessage: "Error updating group receipt settings",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.APPLICATION_JSON,
+		GroupId:      groupId,
+		GroupRole:    models.OWNER,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpdateGroupReceiptSettingsCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			groupReceiptSettingsRepository := repositories.NewGroupReceiptSettingsRepository(nil)
+			updatedGroupReceiptSettings, err := groupReceiptSettingsRepository.UpdateGroupReceiptSettings(groupId, command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			bytes, err := utils.MarshalResponseData(updatedGroupReceiptSettings)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
 			return 0, nil

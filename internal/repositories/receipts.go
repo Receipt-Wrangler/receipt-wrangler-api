@@ -110,7 +110,6 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		EndedAt:              &endedAt,
 		Status:               models.SYSTEM_TASK_SUCCEEDED,
 		RanByUserId:          &ranByUserId,
-		//RanByUserId: 1,
 	}
 
 	updatedReceipt, err := command.ToReceipt()
@@ -164,6 +163,18 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 			return txErr
 		}
 
+		for _, item := range updatedReceipt.ReceiptItems {
+			txErr = tx.Model(&item).Association("Categories").Replace(&item.Categories)
+			if txErr != nil {
+				return txErr
+			}
+
+			txErr = tx.Model(&item).Association("Tags").Replace(&item.Tags)
+			if txErr != nil {
+				return txErr
+			}
+		}
+
 		err = repository.AfterReceiptUpdated(&updatedReceipt)
 		if err != nil {
 			return err
@@ -210,9 +221,19 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 	return fullyLoadedReceipt, nil
 }
 
+// TODO: Delete categories/tags here associated with items before deleting the items mkay
 func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.Receipt) error {
 	db := repository.GetDB()
-	err := db.Where("receipt_id IS NULL").Delete(&models.Item{}).Error
+
+	err := db.Table("item_categories").Where("item_id IN (?)",
+		db.Table("items").Select("id").Where("receipt_id IS NULL"),
+	).Delete(&struct{}{}).Error
+
+	err = db.Table("item_tags").Where("item_id IN (?)",
+		db.Table("items").Select("id").Where("receipt_id IS NULL"),
+	).Delete(&struct{}{}).Error
+
+	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Debug().Error
 	if err != nil {
 		return err
 	}
@@ -575,7 +596,13 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 	db := repository.GetDB()
 	var receipt models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Find(&receipt).Error
+	err := db.Model(models.Receipt{}).
+		Where("id = ?", id).
+		Preload(clause.Associations).
+		Preload("ReceiptItems.Categories").
+		Preload("ReceiptItems.Tags").
+		Find(&receipt).
+		Error
 	if err != nil {
 		return models.Receipt{}, err
 	}

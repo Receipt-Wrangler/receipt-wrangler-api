@@ -148,7 +148,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 func (service GroupService) ValidateGroupRole(role models.GroupRole, groupId string, userId string) error {
 	groupMap := models.BuildGroupMap()
 
-	groupMemberRepository := repositories.NewGroupMemberRepository(service.GetDB())
+	groupMemberRepository := repositories.NewGroupMemberRepository(service.TX)
 	groupMember, err := groupMemberRepository.GetGroupMemberByUserIdAndGroupId(userId, groupId)
 	if err != nil {
 		return err

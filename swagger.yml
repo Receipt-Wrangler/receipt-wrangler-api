@@ -2505,6 +2505,7 @@ components:
         - id
         - groupMembers
         - isAllGroup
+        - groupReceiptSettings
       type: object
       properties:
         createdAt:
@@ -2514,6 +2515,8 @@ components:
           format: uint64
         groupSettings:
           $ref: "#/components/schemas/GroupSettings"
+        groupReceiptSettings:
+          $ref: "#/components/schemas/GroupReceiptSettings"
         groupMembers:
           type: array
           description: Members of the group

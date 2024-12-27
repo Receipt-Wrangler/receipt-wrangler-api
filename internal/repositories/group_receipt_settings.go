@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 )
@@ -41,7 +42,7 @@ func (repository GroupReceiptSettingsRepository) UpdateGroupReceiptSettings(
 
 	var groupReceiptSettings models.GroupReceiptSettings
 
-	err := db.Model(&groupReceiptSettings).Where("group_id = ?", groupId).First(&groupReceiptSettings).Error
+	err := db.Model(&groupReceiptSettings).Where("group_id = ?", groupId).Preload(clause.Associations).First(&groupReceiptSettings).Error
 	if err != nil {
 		return models.GroupReceiptSettings{}, err
 	}

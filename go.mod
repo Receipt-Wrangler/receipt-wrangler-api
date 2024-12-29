@@ -7,7 +7,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.6
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-chi/chi/v5 v5.1.0
-	github.com/golang-jwt/jwt/v4 v4.5.0
+	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/google/generative-ai-go v0.16.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/otiai10/gosseract/v2 v2.4.1

@@ -7,7 +7,8 @@
 /temp/*
 ./api
 ./coverage.out
-./sqlite/*
+sqlite/*
+.idea/*
 ./imap-client/__pycache__
 api
 ./dev/mariadb/data

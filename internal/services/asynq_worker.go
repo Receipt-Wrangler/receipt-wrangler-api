@@ -1,19 +1,21 @@
 package services
 
 import (
-	config "receipt-wrangler/api/internal/env"
-	"receipt-wrangler/api/internal/tasks"
-
 	"github.com/hibiken/asynq"
+	config "receipt-wrangler/api/internal/env"
+	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/tasks"
 )
 
-func StartAsynqWorker() (*asynq.Server, error) {
+var server *asynq.Server
+
+func StartEmbeddedAsynqServer() error {
 	connectionString, err := config.BuildRedisConnectionString()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	srv := asynq.NewServer(
+	server = asynq.NewServer(
 		asynq.RedisClientOpt{Addr: connectionString},
 		asynq.Config{
 			// Specify how many concurrent workers to use
@@ -31,10 +33,16 @@ func StartAsynqWorker() (*asynq.Server, error) {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(tasks.TypeEmailDelivery, tasks.HandleEmailDeliveryTask)
 
-	err = srv.Run(mux)
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		err = server.Run(mux)
+		if err != nil {
+			logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+		}
+	}()
 
-	return srv, nil
+	return nil
+}
+
+func ShutDownEmbeddedAsynqServer() {
+	server.Shutdown()
 }

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"golang.org/x/net/context"
 	"net/http"
 	"os"
+	"os/signal"
 	"receipt-wrangler/api/internal/corspolicy"
 	"receipt-wrangler/api/internal/email"
 	config "receipt-wrangler/api/internal/env"
@@ -12,6 +15,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/services"
+	"syscall"
 	"time"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
@@ -56,11 +60,11 @@ func main() {
 	}
 	defer repositories.GetAsynqRedisClient().Close()
 
-	worker, err := services.StartAsynqWorker()
+	err = services.StartEmbeddedAsynqServer()
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq worker error: "+err.Error()))
 	}
-	defer worker.Shutdown()
+	defer services.ShutDownEmbeddedAsynqServer()
 
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing Imagick...")
 	imagick.Initialize()
@@ -71,11 +75,25 @@ func main() {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
 	router := initRoutes()
-	serve(router)
+	httpServer := startHttpServer(router)
+
+	<-stop
+
+	services.ShutDownEmbeddedAsynqServer()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = httpServer.Shutdown(ctx)
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+	}
 }
 
-func serve(router *chi.Mux) {
+func startHttpServer(router *chi.Mux) *http.Server {
 	srv := &http.Server{
 		Handler:      router,
 		Addr:         "0.0.0.0:8081",
@@ -84,8 +102,15 @@ func serve(router *chi.Mux) {
 	}
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Initialize completed")
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Listening on port 8081")
-	logging.LogStd(logging.LOG_LEVEL_FATAL, srv.ListenAndServe())
-	
+
+	go func() {
+		err := srv.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+		}
+	}()
+
+	return srv
 }
 
 func initRoutes() *chi.Mux {

@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/hibiken/asynq"
 	"golang.org/x/net/context"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/tasks"
 	"syscall"
 	"time"
 
@@ -58,7 +60,7 @@ func main() {
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("redis connection error: "+err.Error()))
 	}
-	defer repositories.GetAsynqRedisClient().Close()
+	defer repositories.ShutdownAsynqClient()
 
 	err = services.StartEmbeddedAsynqServer()
 	if err != nil {
@@ -80,6 +82,15 @@ func main() {
 
 	router := initRoutes()
 	httpServer := startHttpServer(router)
+
+	// Might be able to use taskInfo instead of generating our own
+	asynqTask := asynq.NewTask(tasks.TypeTest, []byte("hello world"), nil)
+	taskInfo, err := repositories.GetAsynqClient().Enqueue(asynqTask)
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+	}
+
+	fmt.Println(taskInfo)
 
 	<-stop
 

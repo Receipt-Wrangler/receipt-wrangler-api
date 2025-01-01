@@ -18,9 +18,7 @@ func StartEmbeddedAsynqServer() error {
 	server = asynq.NewServer(
 		asynq.RedisClientOpt{Addr: connectionString},
 		asynq.Config{
-			// Specify how many concurrent workers to use
 			Concurrency: 10,
-			// Optionally specify multiple queues with different priority.
 			Queues: map[string]int{
 				"critical": 6,
 				"default":  3,
@@ -29,9 +27,8 @@ func StartEmbeddedAsynqServer() error {
 		},
 	)
 
-	// mux maps a type to a handler
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeEmailDelivery, tasks.HandleEmailDeliveryTask)
+	mux.HandleFunc(tasks.TypeTest, tasks.HandleTestTask)
 
 	go func() {
 		err = server.Run(mux)

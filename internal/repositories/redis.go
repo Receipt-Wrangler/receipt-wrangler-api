@@ -7,7 +7,7 @@ import (
 
 var client *asynq.Client
 
-func GetAsynqRedisClient() *asynq.Client {
+func GetAsynqClient() *asynq.Client {
 	return client
 }
 
@@ -26,4 +26,8 @@ func ConnectToRedis() error {
 	}
 
 	return nil
+}
+
+func ShutdownAsynqClient() error {
+	return client.Close()
 }

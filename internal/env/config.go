@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/logging"
@@ -44,6 +45,27 @@ func GetDatabaseConfig() (structs.DatabaseConfig, error) {
 		Engine:   os.Getenv("DB_ENGINE"),
 		Filename: os.Getenv("DB_FILENAME"),
 	}, nil
+}
+
+func GetRedisConfig() (structs.RedisConfig, error) {
+	port, err := simpleutils.StringToInt(os.Getenv("REDIS_PORT"))
+	if err != nil {
+		return structs.RedisConfig{}, fmt.Errorf("invalid REDIS_PORT environment variable: " + err.Error())
+	}
+
+	return structs.RedisConfig{
+		Host: os.Getenv("REDIS_HOST"),
+		Port: port,
+	}, nil
+}
+
+func BuildRedisConnectionString() (string, error) {
+	redisConfig, err := GetRedisConfig()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s:%d", redisConfig.Host, redisConfig.Port), nil
 }
 
 func GetBasePath() string {

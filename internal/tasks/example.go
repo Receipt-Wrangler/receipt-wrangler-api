@@ -8,16 +8,13 @@ import (
 )
 
 const (
-	TypeTest = "email:deliver"
+	TypeTest  = "email:deliver"
+	QuickScan = "receipt:quick_scan"
 )
 
 type EmailDeliveryPayload struct {
 	UserID     int
 	TemplateID string
-}
-
-type ImageResizePayload struct {
-	SourceURL string
 }
 
 func HandleTestTask(ctx context.Context, t *asynq.Task) error {

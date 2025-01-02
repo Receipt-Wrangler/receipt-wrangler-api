@@ -88,6 +88,7 @@ func (service ReceiptService) QuickScan(
 	paidByUserId uint,
 	groupId uint,
 	status models.ReceiptStatus,
+	asynqTaskId string,
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
 	systemTaskService := NewSystemTaskService(service.TX)
@@ -127,6 +128,7 @@ func (service ReceiptService) QuickScan(
 		Status:               models.SYSTEM_TASK_SUCCEEDED,
 		AssociatedEntityType: models.NOOP_ENTITY_TYPE,
 		AssociatedEntityId:   0,
+		AsynqTaskId:          asynqTaskId,
 	})
 	if err != nil {
 		return models.Receipt{}, err

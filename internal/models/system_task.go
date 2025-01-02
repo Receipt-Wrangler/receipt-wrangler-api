@@ -20,6 +20,7 @@ type SystemTask struct {
 	AssociatedSystemTask   *SystemTask          `json:"associatedSystemTask"`
 	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
 	ChildSystemTasks       []*SystemTask        `gorm:"foreignKey:AssociatedSystemTaskId" json:"childSystemTasks"`
+	AsynqTaskId            string               `json:"asynqTaskId"`
 }
 
 type SystemTaskStatus string

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hibiken/asynq"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -13,8 +14,8 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/tasks"
 	"receipt-wrangler/api/internal/utils"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -212,63 +213,31 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, errors.New("validation error")
 			}
 
-			systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
-			systemSettings, err := systemSettingsRepository.GetSystemSettings()
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			var wg sync.WaitGroup
-
-			semaphore := make(chan int, systemSettings.NumWorkers)
-			results := make(chan models.Receipt, len(quickScanCommand.Files))
-			createdReceipts := make([]models.Receipt, 0)
-			receiptService := services.NewReceiptService(nil)
-
 			token := structs.GetJWT(r)
 			for i := 0; i < len(quickScanCommand.Files); i++ {
-				wg.Add(1)
-				go func(index int) {
-					defer wg.Done()
-					semaphore <- index
+				payload := services.QuickScanTaskPayload{
+					Token:        token,
+					File:         quickScanCommand.Files[i],
+					FileHeader:   quickScanCommand.FileHeaders[i],
+					PaidByUserId: quickScanCommand.PaidByUserIds[i],
+					GroupId:      quickScanCommand.GroupIds[i],
+					Status:       quickScanCommand.Statuses[i],
+				}
 
-					createdReceipt, err := receiptService.QuickScan(
-						token,
-						quickScanCommand.Files[index],
-						quickScanCommand.FileHeaders[index],
-						quickScanCommand.PaidByUserIds[index],
-						quickScanCommand.GroupIds[index],
-						quickScanCommand.Statuses[index],
-					)
-					results <- createdReceipt
-					if err != nil {
-						results <- models.Receipt{}
-					}
+				payloadBytes, err := json.Marshal(payload)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 
-					<-semaphore
-				}(i)
-			}
+				task := asynq.NewTask(tasks.QuickScan, payloadBytes)
 
-			go func() {
-				wg.Wait()
-				close(results)
-			}()
-
-			for r := range results {
-				createdReceipts = append(createdReceipts, r)
-			}
-
-			bytes, err := utils.MarshalResponseData(createdReceipts)
-			if err != nil {
-				return http.StatusInternalServerError, err
+				_, err = tasks.EnqueueTask(task)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 			}
 
 			w.WriteHeader(http.StatusOK)
-
-			_, err = w.Write(bytes)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
 
 			return 0, nil
 		},

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hibiken/asynq"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -13,8 +14,8 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/tasks"
 	"receipt-wrangler/api/internal/utils"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -212,63 +213,45 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, errors.New("validation error")
 			}
 
-			systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
-			systemSettings, err := systemSettingsRepository.GetSystemSettings()
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			var wg sync.WaitGroup
-
-			semaphore := make(chan int, systemSettings.NumWorkers)
-			results := make(chan models.Receipt, len(quickScanCommand.Files))
-			createdReceipts := make([]models.Receipt, 0)
-			receiptService := services.NewReceiptService(nil)
+			fileRepository := repositories.NewFileRepository(nil)
 
 			token := structs.GetJWT(r)
 			for i := 0; i < len(quickScanCommand.Files); i++ {
-				wg.Add(1)
-				go func(index int) {
-					defer wg.Done()
-					semaphore <- index
+				fileBytes := make([]byte, quickScanCommand.FileHeaders[i].Size)
 
-					createdReceipt, err := receiptService.QuickScan(
-						token,
-						quickScanCommand.Files[index],
-						quickScanCommand.FileHeaders[index],
-						quickScanCommand.PaidByUserIds[index],
-						quickScanCommand.GroupIds[index],
-						quickScanCommand.Statuses[index],
-					)
-					results <- createdReceipt
-					if err != nil {
-						results <- models.Receipt{}
-					}
+				_, err := quickScanCommand.Files[i].Read(fileBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 
-					<-semaphore
-				}(i)
-			}
+				tempPath, err := fileRepository.WriteTempFile(fileBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 
-			go func() {
-				wg.Wait()
-				close(results)
-			}()
+				payload := services.QuickScanTaskPayload{
+					Token:            token,
+					PaidByUserId:     quickScanCommand.PaidByUserIds[i],
+					GroupId:          quickScanCommand.GroupIds[i],
+					Status:           quickScanCommand.Statuses[i],
+					TempPath:         tempPath,
+					OriginalFileName: quickScanCommand.FileHeaders[i].Filename,
+				}
 
-			for r := range results {
-				createdReceipts = append(createdReceipts, r)
-			}
+				payloadBytes, err := json.Marshal(payload)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 
-			bytes, err := utils.MarshalResponseData(createdReceipts)
-			if err != nil {
-				return http.StatusInternalServerError, err
+				task := asynq.NewTask(tasks.QuickScan, payloadBytes)
+
+				_, err = tasks.EnqueueTask(task)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
 			}
 
 			w.WriteHeader(http.StatusOK)
-
-			_, err = w.Write(bytes)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
 
 			return 0, nil
 		},

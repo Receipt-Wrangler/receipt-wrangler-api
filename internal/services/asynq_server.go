@@ -27,8 +27,7 @@ func StartEmbeddedAsynqServer() error {
 		},
 	)
 
-	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeTest, tasks.HandleTestTask)
+	mux := BuildMux()
 
 	go func() {
 		err = server.Run(mux)
@@ -38,6 +37,13 @@ func StartEmbeddedAsynqServer() error {
 	}()
 
 	return nil
+}
+
+func BuildMux() *asynq.ServeMux {
+	mux := asynq.NewServeMux()
+	mux.HandleFunc(tasks.TypeTest, tasks.HandleTestTask)
+	mux.HandleFunc(tasks.QuickScan, HandleQuickScanTask)
+	return mux
 }
 
 func ShutDownEmbeddedAsynqServer() {

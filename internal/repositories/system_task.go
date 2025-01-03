@@ -76,6 +76,7 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 		ResultDescription:      command.ResultDescription,
 		RanByUserId:            command.RanByUserId,
 		AssociatedSystemTaskId: command.AssociatedSystemTaskId,
+		AsynqTaskId:            command.AsynqTaskId,
 	}
 
 	err := db.Create(&systemTask).Error

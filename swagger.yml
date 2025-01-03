@@ -698,13 +698,7 @@ paths:
       operationId: quickScanReceipt
       responses:
         200:
-          description: The created receipts
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Receipt"
+          $ref: "#/components/responses/Ok"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -3856,6 +3850,8 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/SystemTask"
+            asynqTaskId:
+              type: string
     GetSystemTaskCommand:
       allOf:
         - $ref: "#/components/schemas/PagedRequestCommand"

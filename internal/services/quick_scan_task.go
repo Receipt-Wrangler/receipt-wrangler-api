@@ -5,19 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hibiken/asynq"
-	"mime/multipart"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 )
 
 type QuickScanTaskPayload struct {
-	Token        *structs.Claims
-	File         multipart.File
-	FileHeader   *multipart.FileHeader
-	PaidByUserId uint
-	GroupId      uint
-	Status       models.ReceiptStatus
+	Token            *structs.Claims
+	PaidByUserId     uint
+	GroupId          uint
+	Status           models.ReceiptStatus
+	TempPath         string
+	OriginalFileName string
 }
 
 func HandleQuickScanTask(context context.Context, task *asynq.Task) error {
@@ -39,11 +38,11 @@ func HandleQuickScanTask(context context.Context, task *asynq.Task) error {
 	receiptService := NewReceiptService(nil)
 	_, err = receiptService.QuickScan(
 		payload.Token,
-		payload.File,
-		payload.FileHeader,
 		payload.PaidByUserId,
 		payload.GroupId,
 		payload.Status,
+		payload.TempPath,
+		payload.OriginalFileName,
 		taskId,
 	)
 	if err != nil {

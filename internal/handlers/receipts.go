@@ -213,15 +213,29 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, errors.New("validation error")
 			}
 
+			fileRepository := repositories.NewFileRepository(nil)
+
 			token := structs.GetJWT(r)
 			for i := 0; i < len(quickScanCommand.Files); i++ {
+				fileBytes := make([]byte, quickScanCommand.FileHeaders[i].Size)
+
+				_, err := quickScanCommand.Files[i].Read(fileBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
+				tempPath, err := fileRepository.WriteTempFile(fileBytes)
+				if err != nil {
+					return http.StatusInternalServerError, err
+				}
+
 				payload := services.QuickScanTaskPayload{
-					Token:        token,
-					File:         quickScanCommand.Files[i],
-					FileHeader:   quickScanCommand.FileHeaders[i],
-					PaidByUserId: quickScanCommand.PaidByUserIds[i],
-					GroupId:      quickScanCommand.GroupIds[i],
-					Status:       quickScanCommand.Statuses[i],
+					Token:            token,
+					PaidByUserId:     quickScanCommand.PaidByUserIds[i],
+					GroupId:          quickScanCommand.GroupIds[i],
+					Status:           quickScanCommand.Statuses[i],
+					TempPath:         tempPath,
+					OriginalFileName: quickScanCommand.FileHeaders[i].Filename,
 				}
 
 				payloadBytes, err := json.Marshal(payload)

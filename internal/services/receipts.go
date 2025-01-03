@@ -3,13 +3,13 @@ package services
 import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"mime/multipart"
 	"os"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 	"strconv"
 	"time"
 )
@@ -83,11 +83,11 @@ func (service ReceiptService) DeleteReceipt(id string) error {
 
 func (service ReceiptService) QuickScan(
 	token *structs.Claims,
-	file multipart.File,
-	fileHeader *multipart.FileHeader,
 	paidByUserId uint,
 	groupId uint,
 	status models.ReceiptStatus,
+	tempPath string,
+	originalFileName string,
 	asynqTaskId string,
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
@@ -96,13 +96,15 @@ func (service ReceiptService) QuickScan(
 	var createdReceipt models.Receipt
 
 	fileRepository := repositories.NewFileRepository(service.TX)
-
-	fileBytes := make([]byte, fileHeader.Size)
-	_, err := file.Read(fileBytes)
+	fileBytes, err := utils.ReadFile(tempPath)
 	if err != nil {
 		return models.Receipt{}, err
 	}
-	defer file.Close()
+
+	fileInfo, err := os.Stat(tempPath)
+	if err != nil {
+		return models.Receipt{}, err
+	}
 
 	validatedFileType, err := fileRepository.ValidateFileType(fileBytes)
 	if err != nil {
@@ -111,7 +113,7 @@ func (service ReceiptService) QuickScan(
 
 	magicFillCommand := commands.MagicFillCommand{
 		ImageData: fileBytes,
-		Filename:  fileHeader.Filename,
+		Filename:  originalFileName,
 	}
 
 	receiptRepository := repositories.NewReceiptRepository(service.TX)
@@ -184,8 +186,8 @@ func (service ReceiptService) QuickScan(
 		}
 
 		fileData := models.FileData{
-			Name:      fileHeader.Filename,
-			Size:      uint(fileHeader.Size),
+			Name:      originalFileName,
+			Size:      uint(fileInfo.Size()),
 			ReceiptId: createdReceipt.ID,
 			FileType:  validatedFileType,
 		}
@@ -210,5 +212,6 @@ func (service ReceiptService) QuickScan(
 		return models.Receipt{}, err
 	}
 
+	os.Remove(tempPath)
 	return createdReceipt, nil
 }

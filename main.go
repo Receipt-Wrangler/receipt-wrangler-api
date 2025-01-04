@@ -66,6 +66,12 @@ func main() {
 	}
 	defer services.ShutDownEmbeddedAsynqServer()
 
+	err = services.StartEmbeddedAsynqScheduler()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq server error: "+err.Error()))
+	}
+	defer services.ShutDownEmbeddedAsynqScheduler()
+
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing Imagick...")
 	imagick.Initialize()
 	defer imagick.Terminate()
@@ -84,6 +90,8 @@ func main() {
 	<-stop
 
 	services.ShutDownEmbeddedAsynqServer()
+	services.ShutDownEmbeddedAsynqScheduler()
+	repositories.ShutdownAsynqClient()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

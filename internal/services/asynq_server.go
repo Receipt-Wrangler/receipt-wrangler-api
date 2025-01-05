@@ -41,8 +41,8 @@ func StartEmbeddedAsynqServer() error {
 
 func BuildMux() *asynq.ServeMux {
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeTest, tasks.HandleTestTask)
 	mux.HandleFunc(tasks.QuickScan, HandleQuickScanTask)
+	mux.HandleFunc(tasks.EmailPoll, HandleEmailPollTask)
 	return mux
 }
 

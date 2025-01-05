@@ -88,3 +88,16 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 
 	return existingSettings, nil
 }
+
+func (repository SystemSettingsRepository) UpdateAsynqEmailPollingId(newId string) (models.SystemSettings, error) {
+	db := repository.GetDB()
+
+	var existingSettings models.SystemSettings
+
+	err := db.Model(&models.SystemSettings{}).First(&existingSettings).Update("asynq_email_polling_id", newId).Error
+	if err != nil {
+		return models.SystemSettings{}, err
+	}
+
+	return existingSettings, nil
+}

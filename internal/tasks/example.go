@@ -7,11 +7,6 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-const (
-	TypeTest  = "email:deliver"
-	QuickScan = "receipt:quick_scan"
-)
-
 type EmailDeliveryPayload struct {
 	UserID     int
 	TemplateID string

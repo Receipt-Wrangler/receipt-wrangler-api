@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/hibiken/asynq"
 	"os"
 	"os/exec"
 	"receipt-wrangler/api/internal/commands"
@@ -14,55 +15,46 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/tasks"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
 	"gorm.io/gorm"
 )
 
-var ticker *time.Ticker
-
 func StartEmailPolling() error {
-	if ticker != nil {
-		ticker.Stop()
-	}
-
-	err := PollEmails()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func PollEmails() error {
 	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
 	systemSettings, err := systemSettingsRepository.GetSystemSettings()
 	if err != nil {
 		return err
 	}
 
-	ticker = time.NewTicker(time.Duration(systemSettings.EmailPollingInterval) * time.Second)
-	done := make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case <-ticker.C:
-				err := CallClient(true, nil)
-				if err != nil {
-					logging.LogStd(logging.LOG_LEVEL_ERROR, "Error polling emails")
-					logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-				}
-			}
+	if systemSettings.AsynqEmailPollingId != "" {
+		err = services.UnregisterTask(systemSettings.AsynqEmailPollingId)
+		if err != nil {
+			return err
 		}
-	}()
+	}
+
+	task := asynq.NewTask(tasks.EmailPoll, nil)
+	entryId, err := services.RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), task)
+	if err != nil {
+		return err
+	}
+
+	_, err = systemSettingsRepository.UpdateAsynqEmailPollingId(entryId)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
+func GetPollTimeString(pollingInterval int) string {
+	return fmt.Sprintf("every %ds", pollingInterval)
+}
+
+// TODO: modify this func to kick off tasks to process receipts
 func CallClient(pollAllGroups bool, groupIds []string) error {
 	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
 	var groupSettings []models.GroupSettings

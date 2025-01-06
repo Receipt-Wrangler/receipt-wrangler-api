@@ -243,9 +243,9 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				task := asynq.NewTask(wranglerasynq.asynqservers.QuickScan, payloadBytes)
+				task := asynq.NewTask(wranglerasynq.QuickScan, payloadBytes)
 
-				_, err = wranglerasynq.asynqservers.EnqueueTask(task)
+				_, err = wranglerasynq.EnqueueTask(task)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

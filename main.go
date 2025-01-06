@@ -11,7 +11,6 @@ import (
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
-	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/wranglerasynq"
 	"syscall"
 	"time"
@@ -86,8 +85,8 @@ func main() {
 
 	<-stop
 
-	services.ShutDownEmbeddedAsynqServer()
-	services.ShutDownEmbeddedAsynqScheduler()
+	wranglerasynq.ShutDownEmbeddedAsynqServer()
+	wranglerasynq.ShutDownEmbeddedAsynqScheduler()
 	repositories.ShutdownAsynqClient()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

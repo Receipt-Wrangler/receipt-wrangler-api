@@ -72,9 +72,19 @@ func main() {
 	imagick.Initialize()
 	defer imagick.Terminate()
 
-	// err = tryStartEmailPolling() TODO: move
+	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
+	systemSettings, err := systemSettingsRepository.GetSystemSettings()
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+	}
+
+	if systemSettings.AsynqEmailPollingId == "" &&
+		systemSettings.EmailPollingInterval > 0 &&
+		systemSettings.ReceiptProcessingSettingsId != nil {
+		err = wranglerasynq.StartEmailPolling()
+		if err != nil {
+			logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+		}
 	}
 
 	stop := make(chan os.Signal, 1)
@@ -95,6 +105,7 @@ func main() {
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
+	// TODO: clean up leftover files
 }
 
 func startHttpServer(router *chi.Mux) *http.Server {

@@ -94,7 +94,10 @@ func (repository SystemSettingsRepository) UpdateAsynqEmailPollingId(newId strin
 
 	var existingSettings models.SystemSettings
 
-	err := db.Model(&models.SystemSettings{}).First(&existingSettings).Update("asynq_email_polling_id", newId).Error
+	err := db.Model(&models.SystemSettings{}).
+		Where("id = ?", 1).
+		Update("asynq_email_polling_id", newId).
+		Error
 	if err != nil {
 		return models.SystemSettings{}, err
 	}

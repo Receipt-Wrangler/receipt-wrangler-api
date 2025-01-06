@@ -44,7 +44,7 @@ func StartEmailPolling() error {
 }
 
 func GetPollTimeString(pollingInterval int) string {
-	return fmt.Sprintf("every %ds", pollingInterval)
+	return fmt.Sprintf("@every %ds", pollingInterval)
 }
 
 func CallClient(pollAllGroups bool, groupIds []string) error {

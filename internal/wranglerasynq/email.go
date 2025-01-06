@@ -7,18 +7,12 @@ import (
 	"github.com/hibiken/asynq"
 	"os"
 	"os/exec"
-	"receipt-wrangler/api/internal/commands"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
-	"time"
-
-	"gorm.io/gorm"
 )
 
 func StartEmailPolling() error {
@@ -53,7 +47,6 @@ func GetPollTimeString(pollingInterval int) string {
 	return fmt.Sprintf("every %ds", pollingInterval)
 }
 
-// TODO: modify this func to kick off tasks to process receipts
 func CallClient(pollAllGroups bool, groupIds []string) error {
 	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
 	var groupSettings []models.GroupSettings
@@ -135,7 +128,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Emails metadata captured: ", result)
 
 	// TOOD: kick off processing task for one email by iterating over metadata
-	err = processEmails(result, groupSettings)
+	err = enqueueEmailProcessTasks(result, groupSettings)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
@@ -144,12 +137,9 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	return nil
 }
 
-func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.GroupSettings) error {
+func enqueueEmailProcessTasks(metadataList []structs.EmailMetadata, groupSettings []models.GroupSettings) error {
 	basePath := config.GetBasePath() + "/temp"
-	db := repositories.GetDB()
 	fileRepository := repositories.NewCategoryRepository(nil)
-	systemTaskService := services.NewSystemTaskService(db)
-	emailProcessStart := time.Now()
 
 	for _, metadata := range metadataList {
 
@@ -175,132 +165,24 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 				return err
 			}
 
-			if err != nil {
-				return err
-			}
-
-			// Handle client call needs to stop here, and kick off a task for each groupSettingsId
-			// TODO: for each group, kick off a task to process the receipt
-			// TODO: need to come up with a payload
-			// TODO:
 			for _, groupSettingsId := range metadata.GroupSettingsIds {
-				groupSettingsToUse := models.GroupSettings{}
-
-				for _, groupSetting := range groupSettings {
-					if groupSetting.ID == groupSettingsId {
-						groupSettingsToUse = groupSetting
-						break
-					}
+				payload := EmailProcessTaskPayload{
+					GroupSettingsId: groupSettingsId,
+					ImageForOcrPath: imageForOcrPath,
+					TempFilePath:    tempFilePath,
+					Metadata:        metadata,
+					Attachment:      attachment,
 				}
-
-				if groupSettingsToUse.ID == 0 {
-					return fmt.Errorf("could not find group settings with id %d", groupSettingsId)
-				}
-
-				groupIdString := simpleutils.UintToString(groupSettingsToUse.GroupId)
-
-				start := time.Now()
-				baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(imageForOcrPath, groupIdString)
-				end := time.Now()
-
+				payloadBytes, err := json.Marshal(payload)
 				if err != nil {
 					return err
 				}
 
-				command := baseCommand
-				command.GroupId = groupSettingsToUse.GroupId
-
-				if len(command.Status) == 0 {
-					command.Status = groupSettingsToUse.EmailDefaultReceiptStatus
+				task := asynq.NewTask(EmailProcess, payloadBytes)
+				_, err = EnqueueTask(task)
+				if err != nil {
+					return err
 				}
-
-				if command.PaidByUserID == 0 {
-					command.PaidByUserID = *groupSettingsToUse.EmailDefaultReceiptPaidById
-				}
-
-				command.CreatedByString = "Email Integration"
-
-				err = db.Transaction(func(tx *gorm.DB) error {
-					receiptRepository := repositories.NewReceiptRepository(tx)
-					receiptImageRepository := repositories.NewReceiptImageRepository(tx)
-					systemTaskRepository := repositories.NewSystemTaskRepository(tx)
-					systemTaskService.SetTransaction(tx)
-					emailProcessEnd := time.Now()
-
-					metadataBytes, err := json.Marshal(metadata)
-					if err != nil {
-						return err
-					}
-
-					emailReadSystemTask, err := systemTaskRepository.CreateSystemTask(
-						commands.UpsertSystemTaskCommand{
-							Type:                 models.EMAIL_READ,
-							Status:               models.SYSTEM_TASK_SUCCEEDED,
-							AssociatedEntityType: models.SYSTEM_EMAIL,
-							AssociatedEntityId:   groupSettingsToUse.SystemEmail.ID,
-							StartedAt:            emailProcessStart,
-							EndedAt:              &emailProcessEnd,
-							RanByUserId:          nil,
-							ResultDescription:    string(metadataBytes),
-						},
-					)
-					if err != nil {
-						return err
-					}
-
-					processingSystemTasks, err := systemTaskService.CreateSystemTasksFromMetadata(
-						processingMetadata,
-						start,
-						end,
-						models.EMAIL_UPLOAD,
-						nil,
-						func(command commands.UpsertSystemTaskCommand) *uint {
-							return &emailReadSystemTask.ID
-						},
-					)
-
-					createReceiptStart := time.Now()
-					createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
-					_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
-						err,
-						createdReceipt,
-						processingSystemTasks,
-						time.Now(),
-					)
-					if taskErr != nil {
-						return taskErr
-					}
-					if err != nil {
-						tx.Commit()
-						return err
-					}
-					createReceiptEnd := time.Now()
-
-					fileData := models.FileData{
-						ReceiptId: createdReceipt.ID,
-						Name:      attachment.Filename,
-						FileType:  attachment.FileType,
-						Size:      attachment.Size,
-					}
-
-					_, err = receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
-					if err != nil {
-						return err
-					}
-
-					err = systemTaskService.AssociateSystemTasksToReceipt(
-						createdReceipt.ID,
-						emailReadSystemTask.ID,
-						createReceiptStart,
-						createReceiptEnd,
-					)
-					if err != nil {
-						tx.Commit()
-						return err
-					}
-
-					return nil
-				})
 			}
 		}
 	}

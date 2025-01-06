@@ -6,6 +6,6 @@ import (
 )
 
 func HandleEmailPollTask(context context.Context, task *asynq.Task) error {
-	return nil
-	// email.CallClient(true)
+	groupIds := make([]string, 0)
+	return CallClient(true, groupIds)
 }

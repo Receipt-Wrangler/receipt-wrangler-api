@@ -179,6 +179,7 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 				return err
 			}
 
+			// Handle client call needs to stop here, and kick off a task for each groupSettingsId
 			// TODO: for each group, kick off a task to process the receipt
 			// TODO: need to come up with a payload
 			// TODO:

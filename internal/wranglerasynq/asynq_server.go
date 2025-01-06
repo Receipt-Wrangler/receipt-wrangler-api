@@ -42,6 +42,8 @@ func BuildMux() *asynq.ServeMux {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(QuickScan, HandleQuickScanTask)
 	mux.HandleFunc(EmailPoll, HandleEmailPollTask)
+	mux.HandleFunc(EmailProcess, HandleEmailProcessTask)
+
 	return mux
 }
 

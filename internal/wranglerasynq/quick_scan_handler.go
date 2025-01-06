@@ -3,9 +3,7 @@ package wranglerasynq
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/hibiken/asynq"
-	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
@@ -21,19 +19,16 @@ type QuickScanTaskPayload struct {
 }
 
 func HandleQuickScanTask(context context.Context, task *asynq.Task) error {
-	taskId, ok := asynq.GetTaskID(context)
-	if ok == false {
-		errMessage := "taskId not found"
-		logging.LogStd(logging.LOG_LEVEL_ERROR, errMessage)
-		return fmt.Errorf(errMessage)
+	taskId, err := GetTaskIdFromContext(context)
+	if err != nil {
+		return HandleError(err)
 	}
 
 	var payload QuickScanTaskPayload
 
-	err := json.Unmarshal(task.Payload(), &payload)
+	err = json.Unmarshal(task.Payload(), &payload)
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-		return err
+		return HandleError(err)
 	}
 
 	receiptService := services.NewReceiptService(nil)
@@ -47,8 +42,7 @@ func HandleQuickScanTask(context context.Context, task *asynq.Task) error {
 		taskId,
 	)
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-		return err
+		return HandleError(err)
 	}
 
 	return nil

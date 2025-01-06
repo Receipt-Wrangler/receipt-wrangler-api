@@ -19,9 +19,10 @@ func StartEmbeddedAsynqServer() error {
 		asynq.Config{
 			Concurrency: 10,
 			Queues: map[string]int{
-				"critical": 6,
-				"default":  3,
-				"low":      1,
+				string(QuickScanQueue):                4,
+				string(EmailReceiptProcessingQueue):   3,
+				string(EmailPollingQueue):             2,
+				string(EmailReceiptImageCleanupQueue): 1,
 			},
 		},
 	)
@@ -43,6 +44,7 @@ func BuildMux() *asynq.ServeMux {
 	mux.HandleFunc(QuickScan, HandleQuickScanTask)
 	mux.HandleFunc(EmailPoll, HandleEmailPollTask)
 	mux.HandleFunc(EmailProcess, HandleEmailProcessTask)
+	mux.HandleFunc(EmailProcessImageCleanUp, HandleEmailProcessImageCleanUpTask)
 
 	return mux
 }

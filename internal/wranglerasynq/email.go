@@ -30,7 +30,7 @@ func StartEmailPolling() error {
 	}
 
 	task := asynq.NewTask(EmailPoll, nil)
-	entryId, err := RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), task)
+	entryId, err := RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), task, EmailPollingQueue)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Emails metadata captured: ", result)
 
 	// TOOD: kick off processing task for one email by iterating over metadata
-	err = enqueueEmailProcessTasks(result, groupSettings)
+	err = enqueueEmailProcessTasks(result)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return err
@@ -137,18 +137,14 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	return nil
 }
 
-func enqueueEmailProcessTasks(metadataList []structs.EmailMetadata, groupSettings []models.GroupSettings) error {
-	basePath := config.GetBasePath() + "/temp"
+func enqueueEmailProcessTasks(metadataList []structs.EmailMetadata) error {
 	fileRepository := repositories.NewCategoryRepository(nil)
 
 	for _, metadata := range metadataList {
 
 		for _, attachment := range metadata.Attachments {
-			tempFilePath := basePath + "/" + attachment.Filename
-			defer os.Remove(tempFilePath)
-
-			imageForOcrPath := basePath + "/" + "image-" + attachment.Filename
-			defer os.Remove(imageForOcrPath)
+			tempFilePath := buildTempEmailFilePath(attachment.Filename)
+			imageForOcrPath := buildTempEmailOcrFilePath(attachment.Filename)
 
 			fileBytes, err := utils.ReadFile(tempFilePath)
 			if err != nil {
@@ -179,7 +175,7 @@ func enqueueEmailProcessTasks(metadataList []structs.EmailMetadata, groupSetting
 				}
 
 				task := asynq.NewTask(EmailProcess, payloadBytes)
-				_, err = EnqueueTask(task)
+				_, err = EnqueueTask(task, EmailReceiptProcessingQueue)
 				if err != nil {
 					return err
 				}
@@ -188,4 +184,14 @@ func enqueueEmailProcessTasks(metadataList []structs.EmailMetadata, groupSetting
 	}
 
 	return nil
+}
+
+func buildTempEmailFilePath(attachmentFileName string) string {
+	fileRepository := repositories.NewFileRepository(nil)
+	return fileRepository.GetTempDirectoryPath() + "/" + attachmentFileName
+}
+
+func buildTempEmailOcrFilePath(attachmentFileName string) string {
+	fileRepository := repositories.NewFileRepository(nil)
+	return fileRepository.GetTempDirectoryPath() + "/" + "image-" + attachmentFileName
 }

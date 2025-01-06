@@ -1,4 +1,4 @@
-package services
+package wranglerasynq
 
 import (
 	"context"
@@ -7,10 +7,11 @@ import (
 	"github.com/hibiken/asynq"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 )
 
-type EmailPollPayload struct {
+type QuickScanTaskPayload struct {
 	Token            *structs.Claims
 	PaidByUserId     uint
 	GroupId          uint
@@ -19,7 +20,7 @@ type EmailPollPayload struct {
 	OriginalFileName string
 }
 
-func HandleEmailPollTask(context context.Context, task *asynq.Task) error {
+func HandleQuickScanTask(context context.Context, task *asynq.Task) error {
 	taskId, ok := asynq.GetTaskID(context)
 	if ok == false {
 		errMessage := "taskId not found"
@@ -35,7 +36,7 @@ func HandleEmailPollTask(context context.Context, task *asynq.Task) error {
 		return err
 	}
 
-	receiptService := NewReceiptService(nil)
+	receiptService := services.NewReceiptService(nil)
 	_, err = receiptService.QuickScan(
 		payload.Token,
 		payload.PaidByUserId,

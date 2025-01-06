@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
-	"receipt-wrangler/api/internal/email"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -372,7 +371,7 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			err = email.CallClient(false, groupIdsToPoll)
+			err = services.CallClient(false, groupIdsToPoll)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

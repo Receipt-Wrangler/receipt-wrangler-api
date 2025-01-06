@@ -1,4 +1,4 @@
-package email
+package wranglerasynq
 
 import (
 	"bytes"
@@ -15,7 +15,6 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/tasks"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -30,14 +29,14 @@ func StartEmailPolling() error {
 	}
 
 	if systemSettings.AsynqEmailPollingId != "" {
-		err = services.UnregisterTask(systemSettings.AsynqEmailPollingId)
+		err = UnregisterTask(systemSettings.AsynqEmailPollingId)
 		if err != nil {
 			return err
 		}
 	}
 
-	task := asynq.NewTask(tasks.EmailPoll, nil)
-	entryId, err := services.RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), task)
+	task := asynq.NewTask(EmailPoll, nil)
+	entryId, err := RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), task)
 	if err != nil {
 		return err
 	}
@@ -135,6 +134,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Emails metadata captured: ", result)
 
+	// TOOD: kick off processing task for one email by iterating over metadata
 	err = processEmails(result, groupSettings)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
@@ -179,6 +179,9 @@ func processEmails(metadataList []structs.EmailMetadata, groupSettings []models.
 				return err
 			}
 
+			// TODO: for each group, kick off a task to process the receipt
+			// TODO: need to come up with a payload
+			// TODO:
 			for _, groupSettingsId := range metadata.GroupSettingsIds {
 				groupSettingsToUse := models.GroupSettings{}
 

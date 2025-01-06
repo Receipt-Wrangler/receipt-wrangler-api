@@ -7,12 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"receipt-wrangler/api/internal/email"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/services"
+	"receipt-wrangler/api/internal/wranglerasynq"
 	"syscall"
 	"time"
 
@@ -57,23 +57,23 @@ func main() {
 	}
 	defer repositories.ShutdownAsynqClient()
 
-	err = services.StartEmbeddedAsynqServer()
+	err = wranglerasynq.StartEmbeddedAsynqServer()
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq worker error: "+err.Error()))
 	}
-	defer services.ShutDownEmbeddedAsynqServer()
+	defer wranglerasynq.ShutDownEmbeddedAsynqServer()
 
-	err = services.StartEmbeddedAsynqScheduler()
+	err = wranglerasynq.StartEmbeddedAsynqScheduler()
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq server error: "+err.Error()))
 	}
-	defer services.ShutDownEmbeddedAsynqScheduler()
+	defer wranglerasynq.ShutDownEmbeddedAsynqScheduler()
 
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Initializing Imagick...")
 	imagick.Initialize()
 	defer imagick.Terminate()
 
-	err = tryStartEmailPolling()
+	// err = tryStartEmailPolling() TODO: move
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
@@ -116,27 +116,4 @@ func startHttpServer(router *chi.Mux) *http.Server {
 	}()
 
 	return srv
-}
-
-func tryStartEmailPolling() error {
-	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
-	systemSettings, err := systemSettingsRepository.GetSystemSettings()
-	if err != nil {
-		return err
-	}
-
-	systemSettingsService := services.NewSystemSettingsService(nil)
-	featureConfig, err := systemSettingsService.GetFeatureConfig()
-	if err != nil {
-		return err
-	}
-
-	if systemSettings.EmailPollingInterval > 0 && featureConfig.AiPoweredReceipts {
-		err = email.StartEmailPolling()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

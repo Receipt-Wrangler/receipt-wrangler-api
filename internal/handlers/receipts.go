@@ -14,8 +14,8 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/tasks"
 	"receipt-wrangler/api/internal/utils"
+	"receipt-wrangler/api/internal/wranglerasynq"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -229,7 +229,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				payload := services.QuickScanTaskPayload{
+				payload := wranglerasynq.QuickScanTaskPayload{
 					Token:            token,
 					PaidByUserId:     quickScanCommand.PaidByUserIds[i],
 					GroupId:          quickScanCommand.GroupIds[i],
@@ -243,9 +243,9 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				task := asynq.NewTask(tasks.QuickScan, payloadBytes)
+				task := asynq.NewTask(wranglerasynq.asynqservers.QuickScan, payloadBytes)
 
-				_, err = services.EnqueueTask(task)
+				_, err = wranglerasynq.asynqservers.EnqueueTask(task)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

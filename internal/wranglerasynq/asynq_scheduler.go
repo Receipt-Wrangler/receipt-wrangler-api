@@ -1,4 +1,4 @@
-package services
+package wranglerasynq
 
 import (
 	"github.com/hibiken/asynq"

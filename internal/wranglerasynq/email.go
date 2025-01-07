@@ -22,15 +22,29 @@ func StartEmailPolling() error {
 		return err
 	}
 
-	if systemSettings.AsynqEmailPollingId != "" {
-		err = UnregisterTask(systemSettings.AsynqEmailPollingId)
-		if err != nil {
-			return err
-		}
+	inspector, err := GetAsynqInspector()
+	if err != nil {
+		return err
 	}
 
-	task := asynq.NewTask(EmailPoll, nil)
-	entryId, err := RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), task, EmailPollingQueue)
+	_, err = inspector.DeleteAllScheduledTasks(string(EmailPollingQueue))
+	if err != nil {
+		return err
+	}
+
+	_, err = inspector.DeleteAllScheduledTasks(string(EmailReceiptImageCleanupQueue))
+	if err != nil {
+		return err
+	}
+
+	pollTask := asynq.NewTask(EmailPoll, nil)
+	entryId, err := RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), pollTask, EmailPollingQueue)
+	if err != nil {
+		return err
+	}
+
+	cleanUpTask := asynq.NewTask(EmailProcessImageCleanUp, nil)
+	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval*2), cleanUpTask, EmailReceiptImageCleanupQueue)
 	if err != nil {
 		return err
 	}

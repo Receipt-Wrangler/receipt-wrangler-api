@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/hibiken/asynq"
 	"os"
-	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 )
 
@@ -34,11 +33,12 @@ func HandleEmailProcessImageCleanUpTask(context context.Context, task *asynq.Tas
 }
 
 func getTaskInfo() ([]*asynq.TaskInfo, error) {
-	opts, err := config.GetAsynqRedisClientConnectionOptions()
+	inspector, err := GetAsynqInspector()
 	if err != nil {
 		return nil, err
 	}
-	inspector := asynq.NewInspector(opts)
+	defer inspector.Close()
+
 	return inspector.ListScheduledTasks(string(EmailReceiptProcessingQueue))
 }
 

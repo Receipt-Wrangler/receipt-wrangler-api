@@ -19,10 +19,6 @@ func EnqueueTask(task *asynq.Task, queue QueueName) (*asynq.TaskInfo, error) {
 	return client.Enqueue(task, asynq.MaxRetry(3), asynq.Queue(string(queue)))
 }
 
-func RegisterTask(cronspec string, task *asynq.Task, queue QueueName) (string, error) {
-	return scheduler.Register(cronspec, task, asynq.MaxRetry(3), asynq.Queue(string(queue)))
-}
-
-func UnregisterTask(taskId string) error {
-	return scheduler.Unregister(taskId)
+func RegisterTask(cronspec string, task *asynq.Task, queue QueueName, maxRetry int) (string, error) {
+	return scheduler.Register(cronspec, task, asynq.MaxRetry(maxRetry), asynq.Queue(string(queue)))
 }

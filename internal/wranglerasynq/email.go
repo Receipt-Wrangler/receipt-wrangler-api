@@ -38,13 +38,13 @@ func StartEmailPolling() error {
 	}
 
 	pollTask := asynq.NewTask(EmailPoll, nil)
-	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), pollTask, EmailPollingQueue)
+	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), pollTask, EmailPollingQueue, 0)
 	if err != nil {
 		return err
 	}
 
 	cleanUpTask := asynq.NewTask(EmailProcessImageCleanUp, nil)
-	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval*2), cleanUpTask, EmailReceiptImageCleanupQueue)
+	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval*2), cleanUpTask, EmailReceiptImageCleanupQueue, 0)
 	if err != nil {
 		return err
 	}
@@ -74,6 +74,11 @@ func CallClient(pollAllGroups bool, groupIds []string) error {
 			return err
 		}
 		groupSettings = someGroupSettings
+	}
+
+	if len(groupSettings) == 0 {
+		logging.LogStd(logging.LOG_LEVEL_INFO, "No group settings enabled for email polling")
+		return nil
 	}
 
 	err := pollEmailForGroupSettings(groupSettings)
@@ -135,8 +140,6 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 	}
 
 	logging.LogStd(logging.LOG_LEVEL_INFO, "Emails metadata captured: ", result)
-
-	// TOOD: kick off processing task for one email by iterating over metadata
 	err = enqueueEmailProcessTasks(result)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())

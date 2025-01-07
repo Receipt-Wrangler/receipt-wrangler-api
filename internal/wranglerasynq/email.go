@@ -24,32 +24,27 @@ func StartEmailPolling() error {
 
 	inspector, err := GetAsynqInspector()
 	if err != nil {
-		return err
+		return nil
 	}
 
 	_, err = inspector.DeleteAllScheduledTasks(string(EmailPollingQueue))
 	if err != nil {
-		return err
+		logging.LogStd(logging.LOG_LEVEL_INFO, err.Error())
 	}
 
 	_, err = inspector.DeleteAllScheduledTasks(string(EmailReceiptImageCleanupQueue))
 	if err != nil {
-		return err
+		logging.LogStd(logging.LOG_LEVEL_INFO, err.Error())
 	}
 
 	pollTask := asynq.NewTask(EmailPoll, nil)
-	entryId, err := RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), pollTask, EmailPollingQueue)
+	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), pollTask, EmailPollingQueue)
 	if err != nil {
 		return err
 	}
 
 	cleanUpTask := asynq.NewTask(EmailProcessImageCleanUp, nil)
 	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval*2), cleanUpTask, EmailReceiptImageCleanupQueue)
-	if err != nil {
-		return err
-	}
-
-	_, err = systemSettingsRepository.UpdateAsynqEmailPollingId(entryId)
 	if err != nil {
 		return err
 	}

@@ -78,8 +78,7 @@ func main() {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
 
-	if systemSettings.AsynqEmailPollingId == "" &&
-		systemSettings.EmailPollingInterval > 0 &&
+	if systemSettings.EmailPollingInterval > 0 &&
 		systemSettings.ReceiptProcessingSettingsId != nil {
 		err = wranglerasynq.StartEmailPolling()
 		if err != nil {

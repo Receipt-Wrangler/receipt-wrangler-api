@@ -15,5 +15,4 @@ type SystemSettings struct {
 	ReceiptProcessingSettingsId         *uint                     `json:"receiptProcessingSettingsId"`
 	FallbackReceiptProcessingSettings   ReceiptProcessingSettings `json:"-"`
 	FallbackReceiptProcessingSettingsId *uint                     `json:"fallbackReceiptProcessingSettingsId"`
-	AsynqEmailPollingId                 string                    `json:"-"`
 }

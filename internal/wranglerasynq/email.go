@@ -44,7 +44,7 @@ func StartEmailPolling() error {
 	}
 
 	cleanUpTask := asynq.NewTask(EmailProcessImageCleanUp, nil)
-	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval*2), cleanUpTask, EmailReceiptImageCleanupQueue, 0)
+	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval/2), cleanUpTask, EmailReceiptImageCleanupQueue, 0)
 	if err != nil {
 		return err
 	}

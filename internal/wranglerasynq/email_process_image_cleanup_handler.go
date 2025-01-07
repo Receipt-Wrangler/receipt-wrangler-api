@@ -6,6 +6,7 @@ import (
 	"github.com/hibiken/asynq"
 	"os"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/utils"
 )
 
 type attachmentMapKey struct {
@@ -39,7 +40,28 @@ func getTaskInfo() ([]*asynq.TaskInfo, error) {
 	}
 	defer inspector.Close()
 
-	return inspector.ListScheduledTasks(string(EmailReceiptProcessingQueue))
+	queueName := string(EmailReceiptProcessingQueue)
+	var allTasks []*asynq.TaskInfo
+
+	// The functions have additional optional parameters, so we need to wrap them
+	statusFuncs := []func(string, ...asynq.ListOption) ([]*asynq.TaskInfo, error){
+		inspector.ListScheduledTasks,
+		inspector.ListPendingTasks,
+		inspector.ListActiveTasks,
+		inspector.ListRetryTasks,
+		inspector.ListArchivedTasks,
+		inspector.ListCompletedTasks,
+	}
+
+	for _, getStatus := range statusFuncs {
+		tasks, err := getStatus(queueName)
+		if err != nil {
+			return nil, err
+		}
+		allTasks = append(allTasks, tasks...)
+	}
+
+	return allTasks, nil
 }
 
 func buildAttachmentMap(taskInfos []*asynq.TaskInfo) (map[attachmentMapKey][]*asynq.TaskInfo, error) {
@@ -66,21 +88,25 @@ func cleanupImages(attachmentMap map[attachmentMapKey][]*asynq.TaskInfo) error {
 	for imageForOcrPath, tasksForImage := range attachmentMap {
 		allTasksCompleted := true
 		for _, task := range tasksForImage {
-			if task.State != asynq.TaskStateCompleted {
+			if task.State != asynq.TaskStateCompleted && task.State != asynq.TaskStateArchived {
 				allTasksCompleted = false
 				break
 			}
 		}
 
 		if allTasksCompleted {
-			err := os.Remove(imageForOcrPath.ImageForOcrPath)
-			if err != nil {
-				logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+			if utils.FileExists(imageForOcrPath.ImageForOcrPath) {
+				err := os.Remove(imageForOcrPath.ImageForOcrPath)
+				if err != nil {
+					logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+				}
 			}
 
-			err = os.Remove(imageForOcrPath.OriginalFilePath)
-			if err != nil {
-				logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+			if utils.FileExists(imageForOcrPath.OriginalFilePath) {
+				err := os.Remove(imageForOcrPath.OriginalFilePath)
+				if err != nil {
+					logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+				}
 			}
 		}
 	}

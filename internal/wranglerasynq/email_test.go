@@ -32,18 +32,19 @@ func initEmailProcessHandlerTest() {
 }
 
 func TestEnqueueEmailProcessTasksShouldEnqueueTasks(t *testing.T) {
+	// Setup and teardown
 	defer teardownEmailProcessHandlerTest()
+	initEmailProcessHandlerTest()
 	fileRepository := repositories.NewFileRepository(nil)
 
-	initEmailProcessHandlerTest()
-	groupSettingIds := []uint{1, 2}
+	// Test data setup
 	attachments := []structs.Attachment{
-		structs.Attachment{
+		{
 			Filename: "test.jpg",
 			FileType: "image/jpeg",
 			Size:     0,
 		},
-		structs.Attachment{
+		{
 			Filename: "test2.jpg",
 			FileType: "image/jpeg",
 			Size:     0,
@@ -57,51 +58,55 @@ func TestEnqueueEmailProcessTasksShouldEnqueueTasks(t *testing.T) {
 		FromName:         "Test Man",
 		FromEmail:        "test@test.com",
 		Attachments:      attachments,
-		GroupSettingsIds: groupSettingIds,
+		GroupSettingsIds: []uint{1, 2},
 	}
 
+	// Create temporary files for testing
 	for _, attachment := range attachments {
 		testJpgBytes, err := fileRepository.GetTestJpgBytes()
 		if err != nil {
-			utils.PrintTestError(t, err, nil)
+			t.Fatalf("Failed to get test jpg bytes: %v", err)
 		}
 
 		filePath := buildTempEmailFilePath(attachment.Filename)
 		err = utils.WriteFile(filePath, testJpgBytes)
 		if err != nil {
-			utils.PrintTestError(t, err, nil)
+			t.Fatalf("Failed to write test file: %v", err)
 		}
 
+		// Clean up files after test
 		defer os.Remove(filePath)
 		defer os.Remove(buildTempEmailOcrFilePath(attachment.Filename))
 	}
 
-	metadataList := []structs.EmailMetadata{metadata}
-
-	err := enqueueEmailProcessTasks(metadataList)
+	// Enqueue tasks
+	err := enqueueEmailProcessTasks([]structs.EmailMetadata{metadata})
 	if err != nil {
-		utils.PrintTestError(t, err, nil)
+		t.Fatalf("Failed to enqueue tasks: %v", err)
 	}
 
+	// Verify tasks were created correctly
 	inspector, err := GetAsynqInspector()
 	if err != nil {
-		utils.PrintTestError(t, err, nil)
+		t.Fatalf("Failed to get inspector: %v", err)
 	}
 
 	taskInfos, err := inspector.ListPendingTasks(string(EmailReceiptProcessingQueue))
 	if err != nil {
-		utils.PrintTestError(t, err, nil)
+		t.Fatalf("Failed to list pending tasks: %v", err)
 	}
 
+	// Check number of tasks
 	if len(taskInfos) != 4 {
-		utils.PrintTestError(t, len(taskInfos), 4)
+		t.Errorf("Expected 4 tasks, got %d", len(taskInfos))
 	}
 
+	// Verify each task's payload
 	for index, taskInfo := range taskInfos {
 		var payload EmailProcessTaskPayload
 		err := json.Unmarshal(taskInfo.Payload, &payload)
 		if err != nil {
-			utils.PrintTestError(t, err, nil)
+			t.Fatalf("Failed to unmarshal payload: %v", err)
 		}
 
 		expectedAttachment := attachments[index/2]
@@ -113,9 +118,9 @@ func TestEnqueueEmailProcessTasksShouldEnqueueTasks(t *testing.T) {
 			Attachment:      expectedAttachment,
 		}
 
-		isEqual := reflect.DeepEqual(payload, expectedPayload)
-		if !isEqual {
-			utils.PrintTestError(t, payload, expectedPayload)
+		if !reflect.DeepEqual(payload, expectedPayload) {
+			t.Errorf("Task %d payload mismatch:\nexpected: %+v\ngot: %+v",
+				index, expectedPayload, payload)
 		}
 	}
 }

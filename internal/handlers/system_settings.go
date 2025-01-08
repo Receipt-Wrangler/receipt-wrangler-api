@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -72,7 +73,7 @@ func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if previousSystemSettings.EmailPollingInterval != updatedSystemSettings.EmailPollingInterval &&
-				updatedSystemSettings.EmailPollingInterval > 0 {
+				updatedSystemSettings.EmailPollingInterval > 0 && config.GetDeployEnv() != "test" {
 				err = wranglerasynq.StartEmailPolling()
 				if err != nil {
 					return http.StatusInternalServerError, err

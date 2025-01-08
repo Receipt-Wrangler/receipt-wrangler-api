@@ -20,6 +20,7 @@ import (
 )
 
 func main() {
+	// TODO: Add concurrency, Add clean up interval, maybe add queue priority? add TTLs
 	err := logging.InitLog()
 	if err != nil {
 		fmt.Println("Failed to initialize log")

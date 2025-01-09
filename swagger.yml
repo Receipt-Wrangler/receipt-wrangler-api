@@ -3768,6 +3768,21 @@ components:
             fallbackReceiptProcessingSettingsId:
               type: integer
               description: Fallback receipt processing settings foreign key
+            asynqConcurrency:
+              type: integer
+              description: Concurrency for asynq worker
+            asynqQuickScanPriority:
+              type: integer
+              description: Priority for Quick Scan processing
+            asynqEmailReceiptProcessingPriority:
+              type: integer
+              description: Priority for Email Receipt Processing
+            asynqEmailPollingPriority:
+              type: integer
+              description: Priority for email polling
+            asynqEmailReceiptImageCleanupPriority:
+              type: integer
+              description: Priority for email receipt image clean up
     UpsertSystemSettingsCommand:
       type: object
       required:
@@ -3775,6 +3790,11 @@ components:
         - currencyDecimalSeparator
         - currencyHideDecimalPlaces
         - currencySymbolPosition
+        - asynqConcurrency
+        - asynqEmailPollingPriority
+        - asynqEmailReceiptImageCleanupPriority
+        - asynqEmailReceiptProcessingPriority
+        - asynqQuickScanPriority
       properties:
         enableLocalSignUp:
           type: boolean
@@ -3806,6 +3826,21 @@ components:
         fallbackReceiptProcessingSettingsId:
           type: integer
           description: Fallback receipt processing settings foreign key
+        asynqConcurrency:
+          type: integer
+          description: Concurrency for asynq worker
+        asynqQuickScanPriority:
+          type: integer
+          description: Priority for Quick Scan processing
+        asynqEmailReceiptProcessingPriority:
+          type: integer
+          description: Priority for Email Receipt Processing
+        asynqEmailPollingPriority:
+          type: integer
+          description: Priority for email polling
+        asynqEmailReceiptImageCleanupPriority:
+          type: integer
+          description: Priority for email receipt image clean up
     CheckEmailConnectivityCommand:
       type: object
       properties:

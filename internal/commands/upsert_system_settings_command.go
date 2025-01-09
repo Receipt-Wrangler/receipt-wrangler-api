@@ -9,17 +9,22 @@ import (
 )
 
 type UpsertSystemSettingsCommand struct {
-	EnableLocalSignUp                   bool                          `json:"enableLocalSignUp"`
-	DebugOcr                            bool                          `json:"debugOcr"`
-	CurrencyDisplay                     string                        `json:"currencyDisplay"`
-	CurrencyThousandthsSeparator        models.CurrencySeparator      `json:"currencyThousandthsSeparator"`
-	CurrencyDecimalSeparator            models.CurrencySeparator      `json:"currencyDecimalSeparator"`
-	CurrencySymbolPosition              models.CurrencySymbolPosition `json:"currencySymbolPosition"`
-	CurrencyHideDecimalPlaces           bool                          `json:"currencyHideDecimalPlaces"`
-	NumWorkers                          int                           `json:"numWorkers"`
-	EmailPollingInterval                int                           `json:"emailPollingInterval"`
-	ReceiptProcessingSettingsId         *uint                         `json:"receiptProcessingSettingsId"`
-	FallbackReceiptProcessingSettingsId *uint                         `json:"fallbackReceiptProcessingSettingsId"`
+	EnableLocalSignUp                     bool                          `json:"enableLocalSignUp"`
+	DebugOcr                              bool                          `json:"debugOcr"`
+	CurrencyDisplay                       string                        `json:"currencyDisplay"`
+	CurrencyThousandthsSeparator          models.CurrencySeparator      `json:"currencyThousandthsSeparator"`
+	CurrencyDecimalSeparator              models.CurrencySeparator      `json:"currencyDecimalSeparator"`
+	CurrencySymbolPosition                models.CurrencySymbolPosition `json:"currencySymbolPosition"`
+	CurrencyHideDecimalPlaces             bool                          `json:"currencyHideDecimalPlaces"`
+	NumWorkers                            int                           `json:"numWorkers"`
+	EmailPollingInterval                  int                           `json:"emailPollingInterval"`
+	ReceiptProcessingSettingsId           *uint                         `json:"receiptProcessingSettingsId"`
+	FallbackReceiptProcessingSettingsId   *uint                         `json:"fallbackReceiptProcessingSettingsId"`
+	AsynqConcurrency                      int                           `json:"asynqConcurrency"`
+	AsynqQuickScanPriority                int                           `json:"asynqQuickScanPriority"`
+	AsynqEmailReceiptProcessingPriority   int                           `json:"asynqEmailReceiptProcessingPriority"`
+	AsynqEmailPollingPriority             int                           `json:"asynqEmailPollingPriority"`
+	AsynqEmailReceiptImageCleanupPriority int                           `json:"asynqEmailReceiptImageCleanupPriority"`
 }
 
 func (command *UpsertSystemSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -78,6 +83,10 @@ func (command *UpsertSystemSettingsCommand) Validate() structs.ValidatorError {
 
 	if len(command.CurrencyDecimalSeparator) == 0 {
 		errorMap["currencyDecimalSeparator"] = "Currency decimal separator is required"
+	}
+
+	if command.AsynqConcurrency < 0 {
+		errorMap["asynqConcurrency"] = "Asynq concurrency must be greater than or equal to 0"
 	}
 
 	return vErr

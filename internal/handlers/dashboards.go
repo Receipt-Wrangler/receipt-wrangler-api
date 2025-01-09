@@ -22,7 +22,7 @@ func CreateDashboard(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      command.GroupId,
 		GroupRole:    models.VIEWER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -65,7 +65,7 @@ func GetDashboardsForUser(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      groupId,
 		GroupRole:    models.VIEWER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			dashboardRepository := repositories.NewDashboardRepository(nil)
 			token := structs.GetJWT(r)
@@ -117,7 +117,7 @@ func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      stringGroupId,
 		GroupRole:    models.VIEWER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 
@@ -179,7 +179,7 @@ func DeleteDashboard(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      stringDashboardId,
 		GroupRole:    models.VIEWER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 

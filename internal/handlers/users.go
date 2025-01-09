@@ -29,7 +29,7 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving users.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userRepository := repositories.NewUserRepository(nil)
 			users, err := userRepository.GetAllUserViews()
@@ -58,7 +58,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			var UserView structs.UserView
@@ -125,7 +125,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error calculating amount owed.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		ReceiptIds:   receiptIds,
 		GroupId:      groupId,
 		GroupRole:    models.VIEWER,
@@ -249,7 +249,7 @@ func GetUsernameCount(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting username count.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.TEXT_PLAIN,
+		ResponseType: constants.TextPlain,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			username := chi.URLParam(r, "username")
@@ -312,7 +312,7 @@ func ConvertDummyUserToNormalUser(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var dbUser models.User
 			db := repositories.GetDB()
@@ -381,7 +381,7 @@ func GetClaimsForLoggedInUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting claims",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			services.PrepareAccessTokenClaims(*token)
@@ -406,7 +406,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error updating user profile",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			db := repositories.GetDB()
@@ -435,7 +435,7 @@ func GetAppData(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting app data",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			appData, err := services.GetAppData(token.UserId, r)

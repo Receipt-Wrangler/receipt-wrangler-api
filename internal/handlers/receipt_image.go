@@ -19,7 +19,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	errMessage := "Error uploading image."
 	fileRepository := repositories.NewFileRepository(nil)
 
-	err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
+	err := r.ParseMultipartForm(constants.MultipartFormMaxSize)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
@@ -43,7 +43,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: errMessage,
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		ReceiptId:    r.Form.Get("receiptId"),
 		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -116,7 +116,7 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		ReceiptId:    stringReceiptId,
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var receipt models.Receipt
 			var bytes []byte
@@ -243,7 +243,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error performing magic fill.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			receiptImageId := r.URL.Query().Get("receiptImageId")
 			receiptCommand := commands.UpsertReceiptCommand{}
@@ -280,7 +280,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 
 				receiptCommand = command
 			} else {
-				err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
+				err := r.ParseMultipartForm(constants.MultipartFormMaxSize)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -344,7 +344,7 @@ func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error converting image.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			fileRepository := repositories.NewFileRepository(nil)
 			result := make(map[string]string)

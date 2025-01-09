@@ -51,7 +51,7 @@ func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, com
 	}
 
 	// TODO: make generic
-	if receiptImage.FileType == constants.APPLICATION_PDF {
+	if receiptImage.FileType == constants.ApplicationPdf {
 		bytes, err := fileRepository.ConvertPdfToJpg(receiptImageBytes)
 		if err != nil {
 			return commands.UpsertReceiptCommand{}, commands.ReceiptProcessingMetadata{}, err

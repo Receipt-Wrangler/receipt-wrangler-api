@@ -14,7 +14,7 @@ func GetUserPreferences(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving user prefernces",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userPreferencesRepository := repositories.NewUserPreferencesRepository(nil)
 			token := structs.GetJWT(r)
@@ -44,7 +44,7 @@ func UpdateUserPreferences(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error updating user prefernces",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userPreferences := models.UserPrefernces{}
 			userPreferences.LoadDataFromRequest(w, r)

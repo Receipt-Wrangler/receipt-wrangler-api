@@ -14,7 +14,7 @@ func Search(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error searching",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			searchTerm := r.URL.Query().Get("searchTerm")
 

@@ -104,12 +104,12 @@ func (repository BaseRepository) GetBytesFromImageBytes(imageData []byte) ([]byt
 		return nil, err
 	}
 
-	if validatedType == constants.APPLICATION_PDF {
+	if validatedType == constants.ApplicationPdf {
 		bytes, err = repository.ConvertPdfToJpg(imageData)
 		if err != nil {
 			return nil, err
 		}
-	} else if validatedType == constants.IMAGE_HEIC {
+	} else if validatedType == constants.ImageHeic {
 		bytes, err = repository.ConvertHeicToJpg(imageData)
 		if err != nil {
 			return nil, err
@@ -127,7 +127,7 @@ func (repository BaseRepository) IsImage(imageData []byte) (bool, error) {
 		return false, err
 	}
 
-	isImage, err := regexp.Match(constants.ANY_IMAGE, []byte(validatedFileType))
+	isImage, err := regexp.Match(constants.AnyImage, []byte(validatedFileType))
 	if err != nil {
 		return false, err
 	}
@@ -141,7 +141,7 @@ func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
 		return false, err
 	}
 
-	isPdf, err := regexp.Match(constants.APPLICATION_PDF, []byte(validatedFileType))
+	isPdf, err := regexp.Match(constants.ApplicationPdf, []byte(validatedFileType))
 	if err != nil {
 		return false, err
 	}
@@ -151,7 +151,7 @@ func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
 
 func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) {
 	fileType := mimetype.Detect(bytes).String()
-	acceptedFileTypes := []string{constants.ANY_IMAGE, constants.APPLICATION_PDF}
+	acceptedFileTypes := []string{constants.AnyImage, constants.ApplicationPdf}
 
 	for _, acceptedFileType := range acceptedFileTypes {
 		matched, _ := regexp.Match(acceptedFileType, []byte(fileType))
@@ -166,7 +166,7 @@ func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) 
 
 func (repository BaseRepository) ValidateJsonFileType(bytes []byte) (string, error) {
 	fileType := mimetype.Detect(bytes).String()
-	acceptedFileTypes := []string{constants.APPLICATION_JSON}
+	acceptedFileTypes := []string{constants.ApplicationJson}
 
 	for _, acceptedFileType := range acceptedFileTypes {
 		matched, _ := regexp.Match(acceptedFileType, []byte(fileType))

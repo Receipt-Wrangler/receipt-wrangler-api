@@ -25,7 +25,7 @@ func NewPromptService(tx *gorm.DB) PromptService {
 func (service PromptService) CreateDefaultPrompt() (models.Prompt, error) {
 	db := service.GetDB()
 	var defaultPromptCount int64
-	db.Model(models.Prompt{}).Where("name = ?", constants.DEFAULT_PROMPT_NAME).Count(&defaultPromptCount)
+	db.Model(models.Prompt{}).Where("name = ?", constants.DefaultPromptName).Count(&defaultPromptCount)
 
 	defaultPrompt := fmt.Sprintf(`
 Find the receipt's name, total cost, and date. Format the found data as:
@@ -67,7 +67,7 @@ Receipt text: @ocrText
 
 	promptRepository := repositories.NewPromptRepository(service.TX)
 	command := commands.UpsertPromptCommand{
-		Name:        constants.DEFAULT_PROMPT_NAME,
+		Name:        constants.DefaultPromptName,
 		Description: "Default prompt used for previous versions of Receipt Wrangler.",
 		Prompt:      defaultPrompt,
 	}

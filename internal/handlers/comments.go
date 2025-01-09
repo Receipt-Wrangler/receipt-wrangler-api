@@ -37,7 +37,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ReceiptId:    receiptString,
 		GroupRole:    models.VIEWER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			commentRepository := repositories.NewCommentRepository(nil)
 

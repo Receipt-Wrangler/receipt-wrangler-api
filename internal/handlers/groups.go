@@ -24,7 +24,7 @@ func GetPagedGroups(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving groups.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.PagedGroupRequestCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -76,7 +76,7 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving groups.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			groupService := services.NewGroupService(nil)
@@ -132,7 +132,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 		GroupId:      chi.URLParam(r, "groupId"),
 		GroupRole:    models.VIEWER,
 		OrUserRole:   models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "groupId")
 
@@ -162,7 +162,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error creating group",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpsertGroupCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -220,7 +220,7 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      chi.URLParam(r, "groupId"),
 		GroupRole:    models.OWNER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpsertGroupCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -276,7 +276,7 @@ func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error updating group settings",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpdateGroupSettingsCommand{}
@@ -433,7 +433,7 @@ func GetOcrTextForGroup(w http.ResponseWriter, r *http.Request) {
 		GroupId:      groupId,
 		GroupRole:    models.OWNER,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_ZIP,
+		ResponseType: constants.ApplicationZip,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			zipFilename := "results.zip"

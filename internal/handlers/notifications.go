@@ -16,7 +16,7 @@ func GetNotificationsForUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting notifications",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			notificationRepository := repositories.NewNotificationRepository(nil)
@@ -46,7 +46,7 @@ func GetNotificationCountForUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting notificationCount",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			notificationRepository := repositories.NewNotificationRepository(nil)

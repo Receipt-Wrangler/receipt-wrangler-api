@@ -18,7 +18,7 @@ func GetAllCategories(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving categories",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			categoriesRepository := repositories.NewCategoryRepository(nil)
 			categories, err := categoriesRepository.GetAllCategories("*")
@@ -46,7 +46,7 @@ func CreateCategory(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error creating category",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			category := models.Category{}
 			err := category.LoadDataFromRequest(w, r)
@@ -80,7 +80,7 @@ func GetPagedCategories(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving categories",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			pagedData := structs.PagedData{}
 			pagedRequestCommand := commands.PagedRequestCommand{}
@@ -124,7 +124,7 @@ func UpdateCategory(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "categoryId")
 			uintId, err := utils.StringToUint(id)
@@ -167,7 +167,7 @@ func DeleteCategory(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "categoryId")
 
@@ -192,7 +192,7 @@ func GetCategoryNameCount(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.TEXT_PLAIN,
+		ResponseType: constants.TextPlain,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			categoryRepository := repositories.NewCategoryRepository(nil)
 			categoryName := chi.URLParam(r, "categoryName")

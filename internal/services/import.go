@@ -64,13 +64,13 @@ func (service ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.Ai
 	var prompt models.Prompt
 	var defaultPromptCount int64
 
-	err := tx.Model(models.Prompt{}).Where("name = ?", constants.DEFAULT_PROMPT_NAME).Count(&defaultPromptCount).Error
+	err := tx.Model(models.Prompt{}).Where("name = ?", constants.DefaultPromptName).Count(&defaultPromptCount).Error
 	if err != nil {
 		return models.ReceiptProcessingSettings{}, err
 	}
 
 	if defaultPromptCount > 0 {
-		err := tx.Model(models.Prompt{}).Where("name = ?", constants.DEFAULT_PROMPT_NAME).First(&prompt).Error
+		err := tx.Model(models.Prompt{}).Where("name = ?", constants.DefaultPromptName).First(&prompt).Error
 		if err != nil {
 			return models.ReceiptProcessingSettings{}, err
 		}

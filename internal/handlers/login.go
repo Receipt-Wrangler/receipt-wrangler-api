@@ -17,7 +17,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Invalid credentials.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userData := r.Context().Value("user").(commands.LoginCommand)
 			var dbUser models.User

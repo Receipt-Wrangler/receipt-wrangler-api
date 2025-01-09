@@ -19,7 +19,7 @@ type QuickScanCommand struct {
 }
 
 func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
-	err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
+	err := r.ParseMultipartForm(constants.MultipartFormMaxSize)
 
 	var form = r.Form
 

@@ -15,7 +15,7 @@ var env string
 
 func GetSecretKey() string {
 	if len(os.Getenv(string(constants.SecretKey))) == 0 && env != "test" {
-		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_SECRET_KEY_ERROR)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EmptySecretKeyError)
 	}
 
 	return os.Getenv(string(constants.SecretKey))
@@ -57,7 +57,7 @@ func GetBasePath() string {
 
 func GetEncryptionKey() string {
 	if len(os.Getenv(string(constants.EncryptionKey))) == 0 && env != "test" {
-		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_ENCRYPTION_KEY_ERROR)
+		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EmptyEncryptionKeyError)
 	}
 
 	return os.Getenv(string(constants.EncryptionKey))

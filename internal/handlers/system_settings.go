@@ -18,7 +18,7 @@ func GetSystemSettings(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
 			systemSettings, err := systemSettingsRepository.GetSystemSettings()
@@ -47,7 +47,7 @@ func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
 			command := commands.UpsertSystemSettingsCommand{}

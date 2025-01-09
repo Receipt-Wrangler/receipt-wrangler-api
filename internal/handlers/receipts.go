@@ -368,7 +368,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, errors.New("Status required")
 			}
 
-			if !utils.Contains(repositories.ReceiptStatuses(), bulkCommand.Status) {
+			if !utils.Contains(models.ReceiptStatuses(), bulkCommand.Status) {
 				return http.StatusBadRequest, errors.New("Invalid status")
 			}
 

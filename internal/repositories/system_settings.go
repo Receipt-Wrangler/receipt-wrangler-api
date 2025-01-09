@@ -81,10 +81,6 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 	existingSettings.ReceiptProcessingSettingsId = command.ReceiptProcessingSettingsId
 	existingSettings.FallbackReceiptProcessingSettingsId = command.FallbackReceiptProcessingSettingsId
 	existingSettings.AsynqConcurrency = command.AsynqConcurrency
-	existingSettings.AsynqQuickScanPriority = command.AsynqQuickScanPriority
-	existingSettings.AsynqEmailReceiptProcessingPriority = command.AsynqEmailReceiptProcessingPriority
-	existingSettings.AsynqEmailPollingPriority = command.AsynqEmailPollingPriority
-	existingSettings.AsynqEmailReceiptImageCleanupPriority = command.AsynqEmailReceiptImageCleanupPriority
 
 	err := db.Model(&models.SystemSettings{}).Select("*").Where("id = ?", existingSettings.ID).Updates(&existingSettings).Error
 	if err != nil {

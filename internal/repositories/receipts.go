@@ -43,18 +43,18 @@ func (repository ReceiptRepository) BeforeUpdateReceipt(currentReceipt models.Re
 			return err
 		}
 
-		oldGroupPath, err := simpleutils.BuildGroupPathString(utils.UintToString(oldGroup.ID), oldGroup.Name)
+		oldGroupPath, err := utils.BuildGroupPathString(utils.UintToString(oldGroup.ID), oldGroup.Name)
 		if err != nil {
 			return err
 		}
 
-		newGroupPath, err := simpleutils.BuildGroupPathString(utils.UintToString(newGroup.ID), newGroup.Name)
+		newGroupPath, err := utils.BuildGroupPathString(utils.UintToString(newGroup.ID), newGroup.Name)
 		if err != nil {
 			return err
 		}
 
 		for _, fileData := range currentReceipt.ImageFiles {
-			filename := simpleutils.BuildFileName(utils.UintToString(currentReceipt.ID), utils.UintToString(fileData.ID), fileData.Name)
+			filename := utils.BuildFileName(utils.UintToString(currentReceipt.ID), utils.UintToString(fileData.ID), fileData.Name)
 
 			oldFilePath := filepath.Join(oldGroupPath, filename)
 			newFilePathPath := filepath.Join(newGroupPath, filename)

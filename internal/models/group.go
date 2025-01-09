@@ -30,12 +30,12 @@ func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {
 			oldGroupId := utils.UintToString(dbGroup.ID)
 			newGroupId := utils.UintToString(groupToUpdate.ID)
 
-			oldGroupPath, err := simpleutils.BuildGroupPathString(oldGroupId, dbGroup.Name)
+			oldGroupPath, err := utils.BuildGroupPathString(oldGroupId, dbGroup.Name)
 			if err != nil {
 				return err
 			}
 
-			newGroupPath, err := simpleutils.BuildGroupPathString(newGroupId, groupToUpdate.Name)
+			newGroupPath, err := utils.BuildGroupPathString(newGroupId, groupToUpdate.Name)
 			if err != nil {
 				return err
 			}
@@ -49,7 +49,7 @@ func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {
 
 func (deletedGroup *Group) AfterDelete(tx *gorm.DB) (err error) {
 	if deletedGroup.ID > 0 {
-		dataPath, err := simpleutils.BuildGroupPathString(utils.UintToString(deletedGroup.ID), deletedGroup.Name)
+		dataPath, err := utils.BuildGroupPathString(utils.UintToString(deletedGroup.ID), deletedGroup.Name)
 		if err != nil {
 			return err
 		}

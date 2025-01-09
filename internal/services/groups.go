@@ -118,7 +118,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		}
 
 		// Remove group's directory
-		groupPath, txErr := simpleutils.BuildGroupPathString(utils.UintToString(group.ID), group.Name)
+		groupPath, txErr := utils.BuildGroupPathString(utils.UintToString(group.ID), group.Name)
 		if txErr != nil {
 			return txErr
 		}

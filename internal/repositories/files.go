@@ -46,7 +46,7 @@ func (repository BaseRepository) BuildFilePath(receiptId string, receiptImageId 
 		return "", err
 	}
 
-	fileName := simpleutils.BuildFileName(receiptId, receiptImageId, receiptImageFileName)
+	fileName := utils.BuildFileName(receiptId, receiptImageId, receiptImageFileName)
 	path := filepath.Join(groupPath, fileName)
 
 	return path, nil
@@ -69,7 +69,7 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 	}
 
 	strGroupId := utils.UintToString(groupId)
-	groupPath, err := simpleutils.BuildGroupPathString(strGroupId, groupNameToUse)
+	groupPath, err := utils.BuildGroupPathString(strGroupId, groupNameToUse)
 	if err != nil {
 		return "", err
 	}

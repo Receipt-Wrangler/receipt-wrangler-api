@@ -224,7 +224,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.CurrencyDecimalSeparator = systemSettings.CurrencyDecimalSeparator
 	appData.CurrencySymbolPosition = systemSettings.CurrencySymbolPosition
 	appData.CurrencyHideDecimalPlaces = systemSettings.CurrencyHideDecimalPlaces
-	appData.Icons = constants.Icons
+	appData.Icons = structs.Icons
 
 	if r != nil {
 		claims := structs.GetJWT(r)

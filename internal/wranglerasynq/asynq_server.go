@@ -9,13 +9,13 @@ import (
 var server *asynq.Server
 
 func StartEmbeddedAsynqServer() error {
-	connectionString, err := config.BuildRedisConnectionString()
+	opts, err := config.GetAsynqRedisClientConnectionOptions()
 	if err != nil {
 		return err
 	}
 
 	server = asynq.NewServer(
-		asynq.RedisClientOpt{Addr: connectionString},
+		opts,
 		asynq.Config{
 			Concurrency: 10,
 			Queues: map[string]int{

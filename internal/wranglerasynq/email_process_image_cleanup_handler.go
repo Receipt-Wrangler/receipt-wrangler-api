@@ -6,6 +6,7 @@ import (
 	"github.com/hibiken/asynq"
 	"os"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 )
 
@@ -40,7 +41,7 @@ func getTaskInfo() ([]*asynq.TaskInfo, error) {
 	}
 	defer inspector.Close()
 
-	queueName := string(EmailReceiptProcessingQueue)
+	queueName := string(models.EmailReceiptProcessingQueue)
 	var allTasks []*asynq.TaskInfo
 
 	// The functions have additional optional parameters, so we need to wrap them

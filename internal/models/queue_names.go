@@ -1,4 +1,4 @@
-package wranglerasynq
+package models
 
 type QueueName string
 

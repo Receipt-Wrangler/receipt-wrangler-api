@@ -4,6 +4,7 @@ import (
 	"github.com/hibiken/asynq"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/models"
 )
 
 var server *asynq.Server
@@ -19,10 +20,10 @@ func StartEmbeddedAsynqServer() error {
 		asynq.Config{
 			Concurrency: 10,
 			Queues: map[string]int{
-				string(QuickScanQueue):                4,
-				string(EmailReceiptProcessingQueue):   3,
-				string(EmailPollingQueue):             2,
-				string(EmailReceiptImageCleanupQueue): 1,
+				string(models.QuickScanQueue):                4,
+				string(models.EmailReceiptProcessingQueue):   3,
+				string(models.EmailPollingQueue):             2,
+				string(models.EmailReceiptImageCleanupQueue): 1,
 			},
 		},
 	)

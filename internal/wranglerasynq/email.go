@@ -27,24 +27,24 @@ func StartEmailPolling() error {
 		return nil
 	}
 
-	_, err = inspector.DeleteAllScheduledTasks(string(EmailPollingQueue))
+	_, err = inspector.DeleteAllScheduledTasks(string(models.EmailPollingQueue))
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_INFO, err.Error())
 	}
 
-	_, err = inspector.DeleteAllScheduledTasks(string(EmailReceiptImageCleanupQueue))
+	_, err = inspector.DeleteAllScheduledTasks(string(models.EmailReceiptImageCleanupQueue))
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_INFO, err.Error())
 	}
 
 	pollTask := asynq.NewTask(EmailPoll, nil)
-	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), pollTask, EmailPollingQueue, 0)
+	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), pollTask, models.EmailPollingQueue, 0)
 	if err != nil {
 		return err
 	}
 
 	cleanUpTask := asynq.NewTask(EmailProcessImageCleanUp, nil)
-	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval*2), cleanUpTask, EmailReceiptImageCleanupQueue, 0)
+	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval*2), cleanUpTask, models.EmailReceiptImageCleanupQueue, 0)
 	if err != nil {
 		return err
 	}
@@ -187,7 +187,7 @@ func enqueueEmailProcessTasks(metadataList []structs.EmailMetadata) error {
 				}
 
 				task := asynq.NewTask(EmailProcess, payloadBytes)
-				_, err = EnqueueTask(task, EmailReceiptProcessingQueue)
+				_, err = EnqueueTask(task, models.EmailReceiptProcessingQueue)
 				if err != nil {
 					return err
 				}

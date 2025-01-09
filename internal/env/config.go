@@ -14,16 +14,16 @@ var basePath string
 var env string
 
 func GetSecretKey() string {
-	if len(os.Getenv("SECRET_KEY")) == 0 && env != "test" {
+	if len(os.Getenv(string(constants.SecretKey))) == 0 && env != "test" {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_SECRET_KEY_ERROR)
 	}
 
-	return os.Getenv("SECRET_KEY")
+	return os.Getenv(string(constants.SecretKey))
 }
 
 func GetDatabaseConfig() (structs.DatabaseConfig, error) {
-	dbEngine := os.Getenv("DB_ENGINE")
-	port := os.Getenv("DB_PORT")
+	dbEngine := os.Getenv(string(constants.DbEngine))
+	port := os.Getenv(string(constants.DbPort))
 	portToUse := 0
 
 	if dbEngine == "postgresql" || dbEngine == "mariadb" || dbEngine == "mysql" {
@@ -36,18 +36,18 @@ func GetDatabaseConfig() (structs.DatabaseConfig, error) {
 	}
 
 	return structs.DatabaseConfig{
-		User:     os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		Name:     os.Getenv("DB_NAME"),
-		Host:     os.Getenv("DB_HOST"),
+		User:     os.Getenv(string(constants.DbUser)),
+		Password: os.Getenv(string(constants.DbPassword)),
+		Name:     os.Getenv(string(constants.DbName)),
+		Host:     os.Getenv(string(constants.DbHost)),
 		Port:     portToUse,
-		Engine:   os.Getenv("DB_ENGINE"),
-		Filename: os.Getenv("DB_FILENAME"),
+		Engine:   os.Getenv(string(constants.DbEngine)),
+		Filename: os.Getenv(string(constants.DbFileName)),
 	}, nil
 }
 
 func GetBasePath() string {
-	envBase := os.Getenv("BASE_PATH")
+	envBase := os.Getenv(string(constants.BasePath))
 	if len(envBase) == 0 {
 		return basePath
 	}
@@ -56,11 +56,11 @@ func GetBasePath() string {
 }
 
 func GetEncryptionKey() string {
-	if len(os.Getenv("ENCRYPTION_KEY")) == 0 && env != "test" {
+	if len(os.Getenv(string(constants.EncryptionKey))) == 0 && env != "test" {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, constants.EMPTY_ENCRYPTION_KEY_ERROR)
 	}
 
-	return os.Getenv("ENCRYPTION_KEY")
+	return os.Getenv(string(constants.EncryptionKey))
 }
 
 func CheckRequiredEnvironmentVariables() {
@@ -84,7 +84,7 @@ func setEnv() {
 	flag.Parse()
 
 	env = *envFlag
-	os.Setenv("ENV", env)
+	os.Setenv(string(constants.Env), env)
 }
 
 func setBasePath() {

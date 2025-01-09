@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hibiken/asynq"
 	"os"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 )
@@ -18,13 +19,13 @@ func GetAsynqRedisClientConnectionOptions() (asynq.RedisClientOpt, error) {
 }
 
 func GetRedisConfig() (structs.RedisConfig, error) {
-	port, err := simpleutils.StringToInt(os.Getenv("REDIS_PORT"))
+	port, err := simpleutils.StringToInt(os.Getenv(string(constants.RedisPort)))
 	if err != nil {
 		return structs.RedisConfig{}, fmt.Errorf("invalid REDIS_PORT environment variable: " + err.Error())
 	}
 
 	return structs.RedisConfig{
-		Host: os.Getenv("REDIS_HOST"),
+		Host: os.Getenv(string(constants.RedisHost)),
 		Port: port,
 	}, nil
 }

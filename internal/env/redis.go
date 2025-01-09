@@ -10,12 +10,22 @@ import (
 )
 
 func GetAsynqRedisClientConnectionOptions() (asynq.RedisClientOpt, error) {
-	connectionString, err := BuildRedisConnectionString()
+	connectionString, err := buildRedisAddressString()
 	if err != nil {
 		return asynq.RedisClientOpt{}, err
 	}
 
-	return asynq.RedisClientOpt{Addr: connectionString}, nil
+	redisConfig, err := GetRedisConfig()
+	if err != nil {
+		return asynq.RedisClientOpt{}, err
+	}
+
+	return asynq.RedisClientOpt{
+			Addr:     connectionString,
+			Username: redisConfig.Username,
+			Password: redisConfig.Password,
+		},
+		nil
 }
 
 func GetRedisConfig() (structs.RedisConfig, error) {
@@ -24,13 +34,18 @@ func GetRedisConfig() (structs.RedisConfig, error) {
 		return structs.RedisConfig{}, fmt.Errorf("invalid REDIS_PORT environment variable: " + err.Error())
 	}
 
+	username := os.Getenv(string(constants.RedisUser))
+	password := os.Getenv(string(constants.RedisPassword))
+
 	return structs.RedisConfig{
-		Host: os.Getenv(string(constants.RedisHost)),
-		Port: port,
+		Host:     os.Getenv(string(constants.RedisHost)),
+		Port:     port,
+		Username: username,
+		Password: password,
 	}, nil
 }
 
-func BuildRedisConnectionString() (string, error) {
+func buildRedisAddressString() (string, error) {
 	redisConfig, err := GetRedisConfig()
 	if err != nil {
 		return "", err

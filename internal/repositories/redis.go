@@ -12,14 +12,12 @@ func GetAsynqClient() *asynq.Client {
 }
 
 func ConnectToRedis() error {
-	connectionString, err := config.BuildRedisConnectionString()
+	opts, err := config.GetAsynqRedisClientConnectionOptions()
 	if err != nil {
 		return err
 	}
 
-	client = asynq.NewClient(asynq.RedisClientOpt{
-		Addr: connectionString,
-	})
+	client = asynq.NewClient(opts)
 	err = client.Ping()
 	if err != nil {
 		return err

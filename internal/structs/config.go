@@ -34,8 +34,10 @@ type DatabaseConfig struct {
 }
 
 type RedisConfig struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type DebugConfig struct {

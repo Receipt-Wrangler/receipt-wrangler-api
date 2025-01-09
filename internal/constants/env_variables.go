@@ -14,6 +14,8 @@ const (
 	DbEngine      EnvironmentVariable = "DB_ENGINE"
 	RedisHost     EnvironmentVariable = "REDIS_HOST"
 	RedisPort     EnvironmentVariable = "REDIS_PORT"
+	RedisUser     EnvironmentVariable = "REDIS_USER"
+	RedisPassword EnvironmentVariable = "REDIS_PASSWORD"
 	BasePath      EnvironmentVariable = "BASE_PATH"
 	Env           EnvironmentVariable = "ENV"
 )

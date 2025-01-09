@@ -97,9 +97,12 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 	return systemTask, nil
 }
 
-func (repository SystemTaskRepository) DeleteSystemTaskByAssociatedEntityId(associatedEntityId string) error {
+func (repository SystemTaskRepository) DeleteSystemTaskByAssociatedEntityId(
+	associatedEntityId string,
+	emailType models.AssociatedEntityType,
+) error {
 	db := repository.GetDB()
-	err := db.Where("associated_entity_id = ?", associatedEntityId).Delete(&models.SystemTask{}).Error
+	err := db.Where("associated_entity_id = ? and associated_entity_type = ?", associatedEntityId, emailType).Delete(&models.SystemTask{}).Error
 	if err != nil {
 		return err
 	}

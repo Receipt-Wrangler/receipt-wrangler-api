@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 )
 
 var logger *log.Logger
@@ -40,20 +42,20 @@ func GetLogger() *log.Logger {
 }
 
 func LogStd(level LogLevel, v ...any) {
+	_, file, line, _ := runtime.Caller(1)
+	lineInfo := fmt.Sprintf("[%s:%d]", filepath.Base(file), line)
 	levelString := fmt.Sprintf("%s: ", level)
-	v = append([]any{levelString}, v...)
+	v = append([]any{lineInfo, levelString}, v...)
 
 	if level == LOG_LEVEL_FATAL {
 		logger.Println(v...)
 		stdLogger.Println(v...)
 		os.Exit(1)
 	}
-
 	if level == LOG_LEVEL_ERROR {
 		logger.Println(v...)
 		stdLogger.Println(v...)
 	}
-
 	if level == LOG_LEVEL_INFO {
 		logger.Println(v...)
 		stdLogger.Println(v...)

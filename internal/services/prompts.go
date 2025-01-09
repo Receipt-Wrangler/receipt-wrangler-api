@@ -49,13 +49,14 @@ Choose up to 2 categories from the given list based on the receipt's items and s
 }
 
 Emphasize the relationship between the category and the receipt, and use the description of the category to fine tune the results. Do not return categories that have an empty name or do not exist.
+If there are no categories to chose from, then please make categories an empty array.
+Likewise, if there are not tags to choose from, then make tags an empty array.
 
-
-Categories: @categories
+Categories to chose from: @categories
 
 Follow the same process as described for categories for tags.
 
-Tags: @tags
+Tags to chose from: @tags
 
 Receipt text: @ocrText
 `)

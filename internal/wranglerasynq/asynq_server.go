@@ -1,10 +1,9 @@
-package services
+package wranglerasynq
 
 import (
 	"github.com/hibiken/asynq"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
-	"receipt-wrangler/api/internal/tasks"
 )
 
 var server *asynq.Server
@@ -20,9 +19,10 @@ func StartEmbeddedAsynqServer() error {
 		asynq.Config{
 			Concurrency: 10,
 			Queues: map[string]int{
-				"critical": 6,
-				"default":  3,
-				"low":      1,
+				string(QuickScanQueue):                4,
+				string(EmailReceiptProcessingQueue):   3,
+				string(EmailPollingQueue):             2,
+				string(EmailReceiptImageCleanupQueue): 1,
 			},
 		},
 	)
@@ -41,8 +41,11 @@ func StartEmbeddedAsynqServer() error {
 
 func BuildMux() *asynq.ServeMux {
 	mux := asynq.NewServeMux()
-	mux.HandleFunc(tasks.TypeTest, tasks.HandleTestTask)
-	mux.HandleFunc(tasks.QuickScan, HandleQuickScanTask)
+	mux.HandleFunc(QuickScan, HandleQuickScanTask)
+	mux.HandleFunc(EmailPoll, HandleEmailPollTask)
+	mux.HandleFunc(EmailProcess, HandleEmailProcessTask)
+	mux.HandleFunc(EmailProcessImageCleanUp, HandleEmailProcessImageCleanUpTask)
+
 	return mux
 }
 

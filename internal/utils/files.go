@@ -26,6 +26,11 @@ func ReadFile(path string) ([]byte, error) {
 	return bytes, nil
 }
 
+func FileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
+}
+
 func DirectoryExists(dir string, createIfNotExist bool) error {
 	_, err := os.Stat(dir)
 	if errors.Is(err, os.ErrNotExist) && createIfNotExist {

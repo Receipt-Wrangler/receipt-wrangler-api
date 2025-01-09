@@ -382,3 +382,9 @@ func (repository BaseRepository) CreateZipFromTempFiles(zipFilename string, file
 func (repository BaseRepository) GetTempDirectoryPath() string {
 	return config.GetBasePath() + "/temp"
 }
+
+func (repository BaseRepository) GetTestJpgBytes() ([]byte, error) {
+	path := config.GetBasePath() + "/testing/test.jpg"
+
+	return utils.ReadFile(path)
+}

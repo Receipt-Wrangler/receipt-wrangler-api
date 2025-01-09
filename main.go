@@ -20,7 +20,7 @@ import (
 )
 
 func main() {
-	// TODO: Add concurrency, Add clean up interval, maybe add queue priority? add TTLs
+	// TODO: Add concurrency, Add clean up interval, maybe add queue priority? add TTLs add Redis pass support
 	err := logging.InitLog()
 	if err != nil {
 		fmt.Println("Failed to initialize log")
@@ -105,7 +105,6 @@ func main() {
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 	}
-	// TODO: clean up leftover files
 }
 
 func startHttpServer(router *chi.Mux) *http.Server {

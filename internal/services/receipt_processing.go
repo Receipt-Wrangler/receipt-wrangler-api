@@ -8,7 +8,6 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -253,7 +252,7 @@ func (service ReceiptProcessingService) buildPrompt(
 
 	promptRepository := repositories.NewPromptRepository(service.TX)
 
-	stringPromptId := simpleutils.UintToString(receiptProcessingSettings.PromptId)
+	stringPromptId := utils.UintToString(receiptProcessingSettings.PromptId)
 
 	prompt, err := promptRepository.GetPromptById(stringPromptId)
 	if err != nil {
@@ -301,7 +300,7 @@ func (service ReceiptProcessingService) buildTemplateVariableMap(ocrText string)
 		return result, err
 	}
 
-	currentYearString := simpleutils.UintToString(uint(time.Now().Year()))
+	currentYearString := utils.UintToString(uint(time.Now().Year()))
 
 	result[structs.CATEGORIES] = categoriesString
 	result[structs.TAGS] = tagsString

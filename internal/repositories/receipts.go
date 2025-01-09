@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -44,18 +43,18 @@ func (repository ReceiptRepository) BeforeUpdateReceipt(currentReceipt models.Re
 			return err
 		}
 
-		oldGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(oldGroup.ID), oldGroup.Name)
+		oldGroupPath, err := simpleutils.BuildGroupPathString(utils.UintToString(oldGroup.ID), oldGroup.Name)
 		if err != nil {
 			return err
 		}
 
-		newGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(newGroup.ID), newGroup.Name)
+		newGroupPath, err := simpleutils.BuildGroupPathString(utils.UintToString(newGroup.ID), newGroup.Name)
 		if err != nil {
 			return err
 		}
 
 		for _, fileData := range currentReceipt.ImageFiles {
-			filename := simpleutils.BuildFileName(simpleutils.UintToString(currentReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+			filename := simpleutils.BuildFileName(utils.UintToString(currentReceipt.ID), utils.UintToString(fileData.ID), fileData.Name)
 
 			oldFilePath := filepath.Join(oldGroupPath, filename)
 			newFilePathPath := filepath.Join(newGroupPath, filename)
@@ -95,7 +94,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 
 	systemTaskResultDescription := map[string]interface{}{}
 	var endedAt time.Time
-	stringId, err := simpleutils.StringToUint(id)
+	stringId, err := utils.StringToUint(id)
 	if err != nil {
 		return models.Receipt{}, err
 	}
@@ -337,7 +336,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	var receipts []models.Receipt
 	var count int64
 
-	uintGroupId, err := simpleutils.StringToUint(groupId)
+	uintGroupId, err := utils.StringToUint(groupId)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -356,7 +355,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	// Filter receipts by group
 	if isAllGroup {
 		groupMemberRepository := NewGroupMemberRepository(nil)
-		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(userId))
+		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(utils.UintToString(userId))
 		if err != nil {
 			return nil, 0, err
 		}

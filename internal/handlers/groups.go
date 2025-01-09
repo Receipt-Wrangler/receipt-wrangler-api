@@ -11,7 +11,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"receipt-wrangler/api/internal/wranglerasynq"
@@ -40,7 +39,7 @@ func GetPagedGroups(w http.ResponseWriter, r *http.Request) {
 			}
 
 			token := structs.GetJWT(r)
-			userIdString := simpleutils.UintToString(token.UserId)
+			userIdString := utils.UintToString(token.UserId)
 			groupRepository := repositories.NewGroupRepository(nil)
 
 			groups, count, err := groupRepository.GetPagedGroups(command, userIdString)
@@ -82,7 +81,7 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 			token := structs.GetJWT(r)
 			groupService := services.NewGroupService(nil)
 
-			groups, err := groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+			groups, err := groupService.GetGroupsForUser(utils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -104,7 +103,7 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				groups, err = groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				groups, err = groupService.GetGroupsForUser(utils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -237,7 +236,7 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 			groupId := chi.URLParam(r, "groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
-			uintGroupId, err := simpleutils.StringToUint(groupId)
+			uintGroupId, err := utils.StringToUint(groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -327,7 +326,7 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 
 			groupIdsToPoll := []string{}
 
-			uintGroupId, err := simpleutils.StringToUint(groupId)
+			uintGroupId, err := utils.StringToUint(groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -341,14 +340,14 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 				disabledEmailIntegrationCnt := 0
 				groupService := services.NewGroupService(nil)
 
-				groups, err := groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				groups, err := groupService.GetGroupsForUser(utils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
 				for _, group := range groups {
 					if group.GroupSettings.EmailIntegrationEnabled {
-						groupIdsToPoll = append(groupIdsToPoll, simpleutils.UintToString(group.ID))
+						groupIdsToPoll = append(groupIdsToPoll, utils.UintToString(group.ID))
 					} else {
 						disabledEmailIntegrationCnt += 1
 					}
@@ -368,7 +367,7 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 					if !groupSetting.EmailIntegrationEnabled {
 						return http.StatusBadRequest, errors.New("email integration is not enabled for this group")
 					}
-					groupIdsToPoll = append(groupIdsToPoll, simpleutils.UintToString(groupSetting.GroupId))
+					groupIdsToPoll = append(groupIdsToPoll, utils.UintToString(groupSetting.GroupId))
 				}
 			}
 
@@ -397,7 +396,7 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "groupId")
 			groupService := services.NewGroupService(nil)
 
-			uintGroupId, err := simpleutils.StringToUint(id)
+			uintGroupId, err := utils.StringToUint(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -439,7 +438,7 @@ func GetOcrTextForGroup(w http.ResponseWriter, r *http.Request) {
 			token := structs.GetJWT(r)
 			zipFilename := "results.zip"
 
-			ocrResults, err := services.ReadAllReceiptImagesForGroup(groupId, simpleutils.UintToString(token.UserId))
+			ocrResults, err := services.ReadAllReceiptImagesForGroup(groupId, utils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -8,7 +8,6 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -171,7 +170,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	systemSettingsService := NewSystemSettingsService(nil)
 	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
 	tagRepository := repositories.NewTagsRepository(nil)
-	stringUserId := simpleutils.UintToString(userId)
+	stringUserId := utils.UintToString(userId)
 
 	systemSettings, err := systemSettingsRepository.GetSystemSettings()
 	if err != nil {

@@ -9,8 +9,8 @@ import (
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 	"strconv"
 )
 
@@ -204,7 +204,7 @@ func (service ImportService) updateGroupSettings(tx *gorm.DB, createdSystemEmail
 					EmailDefaultReceiptPaidById: groupSetting.EmailDefaultReceiptPaidById,
 				}
 
-				idString := simpleutils.UintToString(groupSetting.ID)
+				idString := utils.UintToString(groupSetting.ID)
 				_, err := groupSettingRepository.UpdateGroupSettings(idString, command)
 				if err != nil {
 					return err

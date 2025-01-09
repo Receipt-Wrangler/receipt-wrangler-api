@@ -6,7 +6,6 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -70,7 +69,7 @@ func GetDashboardsForUser(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			dashboardRepository := repositories.NewDashboardRepository(nil)
 			token := structs.GetJWT(r)
-			uintGroupId, err := simpleutils.StringToUint(groupId)
+			uintGroupId, err := utils.StringToUint(groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -98,7 +97,7 @@ func GetDashboardsForUser(w http.ResponseWriter, r *http.Request) {
 func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 	dashboardId := chi.URLParam(r, "dashboardId")
 	dashboardRepository := repositories.NewDashboardRepository(nil)
-	uintDashboardId, err := simpleutils.StringToUint(dashboardId)
+	uintDashboardId, err := utils.StringToUint(dashboardId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -110,7 +109,7 @@ func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stringGroupId := simpleutils.UintToString(dashboard.GroupID)
+	stringGroupId := utils.UintToString(dashboard.GroupID)
 
 	handler := structs.Handler{
 		ErrorMessage: "Error updating dashboard",
@@ -159,7 +158,7 @@ func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 
 func DeleteDashboard(w http.ResponseWriter, r *http.Request) {
 	dashboardId := chi.URLParam(r, "dashboardId")
-	uintDashboardId, err := simpleutils.StringToUint(dashboardId)
+	uintDashboardId, err := utils.StringToUint(dashboardId)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -172,7 +171,7 @@ func DeleteDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stringDashboardId := simpleutils.UintToString(dashboard.GroupID)
+	stringDashboardId := utils.UintToString(dashboard.GroupID)
 
 	handler := structs.Handler{
 		ErrorMessage: "Error deleteing dashboard",

@@ -5,7 +5,6 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -29,7 +28,7 @@ func Search(w http.ResponseWriter, r *http.Request) {
 
 				token := structs.GetJWT(r)
 				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
-				groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				groupIds, err := groupMemberRepository.GetGroupIdsByUserId(utils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}

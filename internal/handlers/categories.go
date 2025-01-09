@@ -7,7 +7,6 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -128,7 +127,7 @@ func UpdateCategory(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.APPLICATION_JSON,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "categoryId")
-			uintId, err := simpleutils.StringToUint(id)
+			uintId, err := utils.StringToUint(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -192,7 +191,7 @@ func GetCategoryNameCount(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting category count",
 		Writer:       w,
 		Request:      r,
-		UserRole: 	 models.ADMIN,
+		UserRole:     models.ADMIN,
 		ResponseType: constants.TEXT_PLAIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			categoryRepository := repositories.NewCategoryRepository(nil)

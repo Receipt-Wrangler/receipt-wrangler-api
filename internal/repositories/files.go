@@ -11,7 +11,6 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 	"regexp"
 	"strings"
@@ -69,7 +68,7 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 		groupNameToUse = group.Name
 	}
 
-	strGroupId := simpleutils.UintToString(groupId)
+	strGroupId := utils.UintToString(groupId)
 	groupPath, err := simpleutils.BuildGroupPathString(strGroupId, groupNameToUse)
 	if err != nil {
 		return "", err
@@ -79,7 +78,7 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 }
 
 func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
-	path, err := repository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+	path, err := repository.BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
 
 	if err != nil {
 		return nil, err

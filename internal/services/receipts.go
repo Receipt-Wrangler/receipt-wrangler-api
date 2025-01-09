@@ -7,7 +7,6 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strconv"
@@ -59,7 +58,7 @@ func (service ReceiptService) DeleteReceipt(id string) error {
 		fileRepository.SetTransaction(tx)
 
 		for _, f := range receipt.ImageFiles {
-			path, _ := fileRepository.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
+			path, _ := fileRepository.BuildFilePath(utils.UintToString(f.ReceiptId), utils.UintToString(f.ID), f.Name)
 			imagesToDelete = append(imagesToDelete, path)
 		}
 
@@ -119,7 +118,7 @@ func (service ReceiptService) QuickScan(
 	receiptRepository := repositories.NewReceiptRepository(service.TX)
 	receiptImageRepository := repositories.NewReceiptImageRepository(service.TX)
 
-	groupIdString := simpleutils.UintToString(groupId)
+	groupIdString := utils.UintToString(groupId)
 
 	now := time.Now()
 	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand, groupIdString)

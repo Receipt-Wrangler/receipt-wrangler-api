@@ -9,7 +9,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -149,7 +148,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 				groupRepository := repositories.NewGroupRepository(nil)
 				receiptRepository := repositories.NewReceiptRepository(nil)
 
-				uintGroupId, err := simpleutils.StringToUint(groupId)
+				uintGroupId, err := utils.StringToUint(groupId)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -161,13 +160,13 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 
 				if isAllGroup {
 					groupMemberRepository := repositories.NewGroupMemberRepository(nil)
-					userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+					userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(utils.UintToString(token.UserId))
 					if err != nil {
 						return http.StatusInternalServerError, err
 					}
 
 					for _, userGroupId := range userGroupIds {
-						totalGroupIds = append(totalGroupIds, simpleutils.UintToString(userGroupId))
+						totalGroupIds = append(totalGroupIds, utils.UintToString(userGroupId))
 					}
 				} else {
 					totalGroupIds = append(totalGroupIds, groupId)
@@ -185,7 +184,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 
 			if len(receiptIds) > 0 {
 				for _, receiptId := range receiptIds {
-					receiptIdUint, err := simpleutils.StringToUint(receiptId)
+					receiptIdUint, err := utils.StringToUint(receiptId)
 					if err != nil {
 						return http.StatusInternalServerError, err
 					}
@@ -360,7 +359,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			token := structs.GetJWT(r)
-			if simpleutils.UintToString(token.UserId) == id {
+			if utils.UintToString(token.UserId) == id {
 				return 500, errors.New("user cannot delete itself")
 			}
 

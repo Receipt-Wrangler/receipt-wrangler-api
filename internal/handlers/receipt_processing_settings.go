@@ -8,7 +8,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -228,7 +227,7 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 			var decryptKey bool
 
 			if command.ID > 0 && command.UpsertReceiptProcessingSettingsCommand.IsEmpty() {
-				stringId := simpleutils.UintToString(command.ID)
+				stringId := utils.UintToString(command.ID)
 
 				client, clientErr := services.NewAiService(stringId)
 				if clientErr != nil {

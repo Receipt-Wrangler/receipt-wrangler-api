@@ -5,8 +5,8 @@ import (
 	"os"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/logging"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 	"strings"
 )
 
@@ -27,7 +27,7 @@ func GetDatabaseConfig() (structs.DatabaseConfig, error) {
 	portToUse := 0
 
 	if dbEngine == "postgresql" || dbEngine == "mariadb" || dbEngine == "mysql" {
-		parsedPort, err := simpleutils.StringToInt(port)
+		parsedPort, err := utils.StringToInt(port)
 		if err != nil {
 			return structs.DatabaseConfig{}, err
 		}

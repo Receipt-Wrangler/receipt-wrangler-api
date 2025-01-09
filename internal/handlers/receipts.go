@@ -12,7 +12,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"receipt-wrangler/api/internal/wranglerasynq"
@@ -96,7 +95,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 
 			} else {
 				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
-				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(utils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -152,7 +151,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stringId := simpleutils.UintToString(command.GroupId)
+	stringId := utils.UintToString(command.GroupId)
 
 	// TODO: Clean up to make sure group id is not an all group, and remove middleware sets and checks
 	handler := structs.Handler{
@@ -197,7 +196,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 
 	var groupIds = make([]string, 0)
 	for i := 0; i < len(quickScanCommand.GroupIds); i++ {
-		groupIds = append(groupIds, simpleutils.UintToString(quickScanCommand.GroupIds[i]))
+		groupIds = append(groupIds, utils.UintToString(quickScanCommand.GroupIds[i]))
 	}
 
 	handler := structs.Handler{
@@ -350,7 +349,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 
 	receiptIdStrings := make([]string, len(bulkCommand.ReceiptIds))
 	for i := 0; i < len(bulkCommand.ReceiptIds); i++ {
-		receiptIdStrings[i] = simpleutils.UintToString(bulkCommand.ReceiptIds[i])
+		receiptIdStrings[i] = utils.UintToString(bulkCommand.ReceiptIds[i])
 	}
 
 	handler := structs.Handler{
@@ -601,8 +600,8 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 				}
 
 				dstPath, err := fileRepository.BuildFilePath(
-					simpleutils.UintToString(newReceipt.ID),
-					simpleutils.UintToString(fileData.ID),
+					utils.UintToString(newReceipt.ID),
+					utils.UintToString(fileData.ID),
 					fileData.Name,
 				)
 				if err != nil {

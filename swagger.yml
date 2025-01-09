@@ -2289,6 +2289,13 @@ components:
       enum:
         - "START"
         - "END"
+    QueueName:
+      type: string
+      enum:
+        - "quick_scan"
+        - "email_polling"
+        - "email_receipt_processing"
+        - "email_receipt_image_cleanup"
     BaseModel:
       type: object
       required:
@@ -3727,6 +3734,17 @@ components:
         password:
           type: string
           description: IMAP password
+    AsynqQueueConfiguration:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            name:
+              $ref: "#/components/schemas/AsynqQueueConfiguration"
+            priority:
+              type: integer
+              description: Queue priority
+
     SystemSettings:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
@@ -3771,18 +3789,11 @@ components:
             asynqConcurrency:
               type: integer
               description: Concurrency for asynq worker
-            asynqQuickScanPriority:
-              type: integer
-              description: Priority for Quick Scan processing
-            asynqEmailReceiptProcessingPriority:
-              type: integer
-              description: Priority for Email Receipt Processing
-            asynqEmailPollingPriority:
-              type: integer
-              description: Priority for email polling
-            asynqEmailReceiptImageCleanupPriority:
-              type: integer
-              description: Priority for email receipt image clean up
+            asynqQueueConfigurations:
+              type: array
+              items:
+                $ref: "#/components/schemas/AsynqQueueConfiguration"
+
     UpsertSystemSettingsCommand:
       type: object
       required:

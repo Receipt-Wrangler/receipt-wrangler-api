@@ -1,8 +1,9 @@
 package models
 
 type AsynqQueueConfiguration struct {
-	SystemSettings   SystemSettings
-	SystemSettingsId uint
-	QueueName        QueueName
-	Priority         int
+	BaseModel
+	SystemSettings   SystemSettings `json:"-"`
+	SystemSettingsId uint           `json:"-"`
+	Name             QueueName      `json:"name"`
+	Priority         int            `json:"priority"`
 }

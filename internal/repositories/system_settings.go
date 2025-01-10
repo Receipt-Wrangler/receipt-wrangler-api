@@ -32,15 +32,31 @@ func (repository SystemSettingsRepository) GetSystemSettings() (models.SystemSet
 	}
 
 	if count == 0 {
-		err = db.Model(&models.SystemSettings{}).Create(&models.SystemSettings{}).Error
+		err = db.Model(&models.SystemSettings{}).Create(&models.SystemSettings{
+			BaseModel: models.BaseModel{
+				ID: 1,
+			},
+		}).Error
 		if err != nil {
 			return models.SystemSettings{}, err
 		}
 	}
 
-	err = db.Model(&models.SystemSettings{}).Preload(clause.Associations).First(&systemSettings).Error
+	err = db.Model(&models.SystemSettings{}).Preload(clause.Associations).Preload("AsynqQueueConfigurations").First(&systemSettings).Error
 	if err != nil {
 		return models.SystemSettings{}, err
+	}
+
+	// NOTE: Eventually this can get deleted. This is to fix associations not working if ID Is 0
+	if systemSettings.ID == 0 {
+		err = db.Model(models.SystemSettings{}).Where("id = 0").Update("id", 1).Error
+		if err != nil {
+			return models.SystemSettings{}, err
+		}
+	}
+
+	if len(systemSettings.AsynqQueueConfigurations) == 0 {
+		systemSettings.AsynqQueueConfigurations = models.GetAllDefaultQueueConfigurations()
 	}
 
 	return systemSettings, nil

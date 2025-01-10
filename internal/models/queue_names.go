@@ -1,5 +1,10 @@
 package models
 
+import (
+	"database/sql/driver"
+	"errors"
+)
+
 type QueueName string
 
 const (
@@ -8,6 +13,22 @@ const (
 	EmailReceiptProcessingQueue   QueueName = "email_receipt_processing"
 	EmailReceiptImageCleanupQueue QueueName = "email_receipt_image_cleanup"
 )
+
+func (name *QueueName) Scan(value string) error {
+	*name = QueueName(value)
+	return nil
+}
+
+func (name QueueName) Value() (driver.Value, error) {
+	if name != QuickScanQueue &&
+		name != EmailPollingQueue &&
+		name != EmailReceiptProcessingQueue &&
+		name != EmailReceiptImageCleanupQueue {
+		return nil, errors.New("invalid queue name")
+	}
+
+	return string(name), nil
+}
 
 func GetQueueNames() []QueueName {
 	return []QueueName{

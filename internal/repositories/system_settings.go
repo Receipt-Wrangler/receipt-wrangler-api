@@ -65,27 +65,33 @@ func (repository SystemSettingsRepository) GetSystemReceiptProcessingSettings() 
 func (repository SystemSettingsRepository) UpdateSystemSettings(command commands.UpsertSystemSettingsCommand) (models.SystemSettings, error) {
 	db := repository.GetDB()
 
-	var existingSettings models.SystemSettings
-
-	db.Model(&models.SystemSettings{}).First(&existingSettings)
-
-	existingSettings.EnableLocalSignUp = command.EnableLocalSignUp
-	existingSettings.DebugOcr = command.DebugOcr
-	existingSettings.NumWorkers = command.NumWorkers
-	existingSettings.CurrencyDisplay = command.CurrencyDisplay
-	existingSettings.CurrencyThousandthsSeparator = command.CurrencyThousandthsSeparator
-	existingSettings.CurrencyDecimalSeparator = command.CurrencyDecimalSeparator
-	existingSettings.CurrencySymbolPosition = command.CurrencySymbolPosition
-	existingSettings.CurrencyHideDecimalPlaces = command.CurrencyHideDecimalPlaces
-	existingSettings.EmailPollingInterval = command.EmailPollingInterval
-	existingSettings.ReceiptProcessingSettingsId = command.ReceiptProcessingSettingsId
-	existingSettings.FallbackReceiptProcessingSettingsId = command.FallbackReceiptProcessingSettingsId
-	existingSettings.AsynqConcurrency = command.AsynqConcurrency
-
-	err := db.Model(&models.SystemSettings{}).Select("*").Where("id = ?", existingSettings.ID).Updates(&existingSettings).Error
+	existingSettings, err := repository.GetSystemSettings()
 	if err != nil {
 		return models.SystemSettings{}, err
 	}
 
-	return existingSettings, nil
+	updatedSettings, err := command.ToSystemSettings()
+	if err != nil {
+		return models.SystemSettings{}, err
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		txErr := db.Model(&models.SystemSettings{}).Select("*").Where("id = ?", existingSettings.ID).Updates(&updatedSettings).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Model(&existingSettings).Association("AsynqQueueConfigurations").Replace(&updatedSettings.AsynqQueueConfigurations)
+		if txErr != nil {
+			return txErr
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return models.SystemSettings{}, nil
+	}
+
+	return updatedSettings, nil
 }

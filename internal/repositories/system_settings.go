@@ -81,7 +81,10 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 			return txErr
 		}
 
-		txErr = tx.Model(&existingSettings).Association("AsynqQueueConfigurations").Replace(&updatedSettings.AsynqQueueConfigurations)
+		txErr = tx.Model(&updatedSettings).
+			Where("id = ?", existingSettings.ID).
+			Association("AsynqQueueConfigurations").
+			Replace(&updatedSettings.AsynqQueueConfigurations)
 		if txErr != nil {
 			return txErr
 		}

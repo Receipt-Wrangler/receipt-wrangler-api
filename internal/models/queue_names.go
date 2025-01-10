@@ -8,3 +8,21 @@ const (
 	EmailReceiptProcessingQueue   QueueName = "email_receipt_processing"
 	EmailReceiptImageCleanupQueue QueueName = "email_receipt_image_cleanup"
 )
+
+func GetQueueNames() []QueueName {
+	return []QueueName{
+		QuickScanQueue,
+		EmailPollingQueue,
+		EmailReceiptProcessingQueue,
+		EmailReceiptImageCleanupQueue,
+	}
+}
+
+func GetDefaultQueueConfigurationMap() map[QueueName]AsynqQueueConfiguration {
+	return map[QueueName]AsynqQueueConfiguration{
+		QuickScanQueue:                GetDefaultQuickScanQueueConfiguration(),
+		EmailPollingQueue:             GetDefaultEmailPollingQueueConfiguration(),
+		EmailReceiptProcessingQueue:   GetDefaultEmailReceiptProcessingQueueConfiguration(),
+		EmailReceiptImageCleanupQueue: GetDefaultEmailReceiptImageCleanupQueueConfiguration(),
+	}
+}

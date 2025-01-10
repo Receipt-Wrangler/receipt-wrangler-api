@@ -5,6 +5,7 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 )
 
 var server *asynq.Server
@@ -14,17 +15,36 @@ func StartEmbeddedAsynqServer() error {
 	if err != nil {
 		return err
 	}
+	queuePriorityMap := map[string]int{}
+	defaultQueueConfigurationMap := models.GetDefaultQueueConfigurationMap()
+
+	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
+	systemSettings, err := systemSettingsRepository.GetSystemSettings()
+	if err != nil {
+		return err
+	}
+
+	for _, queueName := range models.GetQueueNames() {
+		var queueConfigurationToUse models.AsynqQueueConfiguration
+		for _, queueConfiguration := range systemSettings.AsynqQueueConfigurations {
+			if queueConfiguration.Name == queueName {
+				queueConfigurationToUse = queueConfiguration
+				break
+			}
+		}
+
+		if queueConfigurationToUse.ID == 0 {
+			queueConfigurationToUse = defaultQueueConfigurationMap[queueName]
+		}
+
+		queuePriorityMap[string(queueName)] = queueConfigurationToUse.Priority
+	}
 
 	server = asynq.NewServer(
 		opts,
 		asynq.Config{
 			Concurrency: 10,
-			Queues: map[string]int{
-				string(models.QuickScanQueue):                4,
-				string(models.EmailReceiptProcessingQueue):   3,
-				string(models.EmailPollingQueue):             2,
-				string(models.EmailReceiptImageCleanupQueue): 1,
-			},
+			Queues:      queuePriorityMap,
 		},
 	)
 

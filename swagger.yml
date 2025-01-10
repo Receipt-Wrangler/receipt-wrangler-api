@@ -3862,6 +3862,8 @@ components:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
+          required:
+            - asynqQueueConfigurations
           properties:
             enableLocalSignUp:
               type: boolean

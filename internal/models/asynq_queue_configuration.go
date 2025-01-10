@@ -2,7 +2,7 @@ package models
 
 type AsynqQueueConfiguration struct {
 	BaseModel
-	Name             QueueName      `json:"name"`
+	Name             QueueName      `json:"name" gorm:"unique"`
 	Priority         int            `json:"priority"`
 	SystemSettings   SystemSettings `json:"-"`
 	SystemSettingsId uint           `json:"systemSettingsId"`

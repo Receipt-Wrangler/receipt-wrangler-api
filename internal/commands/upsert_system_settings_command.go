@@ -47,10 +47,6 @@ func (command *UpsertSystemSettingsCommand) Validate() structs.ValidatorError {
 		errorMap["emailPollingInterval"] = "Email polling interval must be greater than 0"
 	}
 
-	if command.NumWorkers < 1 {
-		errorMap["numWorkers"] = "Number of workers must be greater than 1"
-	}
-
 	if command.ReceiptProcessingSettingsId != nil && *command.ReceiptProcessingSettingsId <= 0 {
 		errorMap["receiptProcessingSettingsId"] = "Invalid receipt processing settings ID"
 	}
@@ -86,10 +82,15 @@ func (command *UpsertSystemSettingsCommand) Validate() structs.ValidatorError {
 		errorMap["asynqConcurrency"] = "Asynq concurrency must be greater than or equal to 0"
 	}
 
+	queueNames := models.GetQueueNames()
+	if len(command.AsynqQueueConfigurations) != len(queueNames) {
+		errorMap["asynqQueueConfigurations"] = "Asynq queue configurations must be provided for all queues"
+	}
+
 	return vErr
 }
 
-func (command *UpsertSystemSettingsCommand) ToSystemSettings() (models.SystemSettings, error) {
+func (command *UpsertSystemSettingsCommand) ToSystemSettings(id uint) (models.SystemSettings, error) {
 	var systemSettings models.SystemSettings
 
 	bytes, err := json.Marshal(command)
@@ -100,6 +101,11 @@ func (command *UpsertSystemSettingsCommand) ToSystemSettings() (models.SystemSet
 	err = json.Unmarshal(bytes, &systemSettings)
 	if err != nil {
 		return systemSettings, err
+	}
+
+	systemSettings.ID = id
+	for _, config := range systemSettings.AsynqQueueConfigurations {
+		config.SystemSettingsId = id
 	}
 
 	return systemSettings, nil

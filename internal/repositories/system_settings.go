@@ -86,23 +86,41 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 		return models.SystemSettings{}, err
 	}
 
-	updatedSettings, err := command.ToSystemSettings()
+	updatedSettings, err := command.ToSystemSettings(existingSettings.ID)
 	if err != nil {
 		return models.SystemSettings{}, err
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := db.Model(&models.SystemSettings{}).Select("*").Where("id = ?", existingSettings.ID).Updates(&updatedSettings).Error
+		txErr := tx.Model(&updatedSettings).Select("*").Omit("AsynqQueueConfigurations").Where("id = ?", existingSettings.ID).Updates(&updatedSettings).Error
 		if txErr != nil {
 			return txErr
 		}
 
-		txErr = tx.Model(&updatedSettings).
-			Where("id = ?", existingSettings.ID).
-			Association("AsynqQueueConfigurations").
-			Replace(&updatedSettings.AsynqQueueConfigurations)
+		var configCount int64
+		txErr = tx.Model(&models.AsynqQueueConfiguration{}).Count(&configCount).Error
 		if txErr != nil {
 			return txErr
+		}
+
+		if configCount == 0 {
+			txErr = tx.Model(&updatedSettings).
+				Where("id = ?", existingSettings.ID).
+				Association("AsynqQueueConfigurations").
+				Replace(&updatedSettings.AsynqQueueConfigurations)
+			if txErr != nil {
+				return txErr
+			}
+		} else {
+			for _, config := range updatedSettings.AsynqQueueConfigurations {
+				txErr = tx.Model(&models.AsynqQueueConfiguration{}).Where("name = ?", config.Name).Updates(&models.AsynqQueueConfiguration{
+					Priority: config.Priority,
+				}).Error
+
+				if txErr != nil {
+					return txErr
+				}
+			}
 		}
 
 		return nil

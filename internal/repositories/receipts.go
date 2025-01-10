@@ -131,7 +131,6 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
 	}
-
 	systemTaskResultDescription["before"] = before
 
 	err = db.Transaction(func(tx *gorm.DB) error {

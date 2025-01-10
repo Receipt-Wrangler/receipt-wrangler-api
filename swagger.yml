@@ -3740,11 +3740,18 @@ components:
         - type: object
           properties:
             name:
-              $ref: "#/components/schemas/AsynqQueueConfiguration"
+              $ref: "#/components/schemas/QueueName"
             priority:
               type: integer
               description: Queue priority
-
+    UpsertAsynqQueueConfiguration:
+      type: object
+      properties:
+        name:
+          $ref: "#/components/schemas/QueueName"
+        priority:
+          type: integer
+          description: Queue priority
     SystemSettings:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
@@ -3789,11 +3796,11 @@ components:
             asynqConcurrency:
               type: integer
               description: Concurrency for asynq worker
+              default: 10
             asynqQueueConfigurations:
               type: array
               items:
                 $ref: "#/components/schemas/AsynqQueueConfiguration"
-
     UpsertSystemSettingsCommand:
       type: object
       required:
@@ -3802,10 +3809,6 @@ components:
         - currencyHideDecimalPlaces
         - currencySymbolPosition
         - asynqConcurrency
-        - asynqEmailPollingPriority
-        - asynqEmailReceiptImageCleanupPriority
-        - asynqEmailReceiptProcessingPriority
-        - asynqQuickScanPriority
       properties:
         enableLocalSignUp:
           type: boolean
@@ -3840,18 +3843,10 @@ components:
         asynqConcurrency:
           type: integer
           description: Concurrency for asynq worker
-        asynqQuickScanPriority:
-          type: integer
-          description: Priority for Quick Scan processing
-        asynqEmailReceiptProcessingPriority:
-          type: integer
-          description: Priority for Email Receipt Processing
-        asynqEmailPollingPriority:
-          type: integer
-          description: Priority for email polling
-        asynqEmailReceiptImageCleanupPriority:
-          type: integer
-          description: Priority for email receipt image clean up
+        asynqQueueConfigurations:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpsertAsynqQueueConfiguration"
     CheckEmailConnectivityCommand:
       type: object
       properties:

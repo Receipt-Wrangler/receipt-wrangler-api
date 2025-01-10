@@ -108,6 +108,7 @@ func MakeMigrations() error {
 		&models.SystemTask{},
 		&models.ReceiptProcessingSettings{},
 		&models.Prompt{},
+		&models.GroupReceiptSettings{},
 	)
 
 	return err

@@ -507,6 +507,40 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /group/{groupId}/groupReceiptSettings:
+    put:
+      tags:
+        - Groups
+      summary: Update group receipt settings
+      description: This will update the group receipt settings for a group
+      operationId: updateGroupReceiptSettings
+      parameters:
+        - in: path
+          name: groupId
+          schema:
+            type: integer
+          required: true
+          description: Group Id to update
+      requestBody:
+        description: Group settings to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGroupReceiptSettingsCommand"
+      responses:
+        200:
+          description: The updated group receipt settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupReceiptSettings"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /group/getPagedGroups:
     post:
       tags:
@@ -2472,6 +2506,7 @@ components:
         - id
         - groupMembers
         - isAllGroup
+        - groupReceiptSettings
       type: object
       properties:
         createdAt:
@@ -2481,6 +2516,8 @@ components:
           format: uint64
         groupSettings:
           $ref: "#/components/schemas/GroupSettings"
+        groupReceiptSettings:
+          $ref: "#/components/schemas/GroupReceiptSettings"
         groupMembers:
           type: array
           description: Members of the group
@@ -2608,6 +2645,16 @@ components:
         status:
           type: string
           $ref: "#/components/schemas/ItemStatus"
+        categories:
+          type: array
+          description: Categories associated to the item
+          items:
+            $ref: "#/components/schemas/Category"
+        tags:
+          type: array
+          description: Tags associated to the item
+          items:
+            $ref: "#/components/schemas/Tag"
         updatedAt:
           type: string
       description: Itemized item on a receipt
@@ -3254,6 +3301,55 @@ components:
             icon:
               type: string
               description: Icon of shortcut
+    GroupReceiptSettings:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - groupId
+          properties:
+            groupId:
+              type: integer
+              description: Group foreign key
+            hideImages:
+              type: boolean
+              description: Hide receipt images
+            hideReceiptCategories:
+              type: boolean
+              description: Hide receipt categories
+            hideReceiptTags:
+              type: boolean
+              description: Hide receipt tags
+            hideItemCategories:
+              type: boolean
+              description: Hide receipt item categories
+            hideItemTags:
+              type: boolean
+              description: Hide receipt item tags
+            hideComments:
+              type: boolean
+              description: Hide receipt comments
+    UpdateGroupReceiptSettingsCommand:
+      type: object
+      properties:
+        hideImages:
+          type: boolean
+          description: Hide receipt images
+        hideReceiptCategories:
+          type: boolean
+          description: Hide receipt categories
+        hideReceiptTags:
+          type: boolean
+          description: Hide receipt tags
+        hideItemCategories:
+          type: boolean
+          description: Hide receipt item categories
+        hideItemTags:
+          type: boolean
+          description: Hide receipt item tags
+        hideComments:
+          type: boolean
+          description: Hide receipt comments
     GroupSettings:
       type: object
       required:
@@ -3682,6 +3778,16 @@ components:
           description: Receipt foreign key
         status:
           $ref: "#/components/schemas/ItemStatus"
+        categories:
+          type: array
+          description: Categories associated to item
+          items:
+            $ref: "#/components/schemas/UpsertCategoryCommand"
+        tags:
+          type: array
+          description: Tags associated to item
+          items:
+            $ref: "#/components/schemas/UpsertTagCommand"
     UpsertCommentCommand:
       type: object
       required:

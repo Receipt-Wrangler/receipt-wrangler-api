@@ -64,7 +64,7 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 
 	var groupSettings models.GroupSettings
 
-	err := db.Model(&models.GroupSettings{}).Where("group_id = ?", groupId).First(&groupSettings).Error
+	err := db.Model(&models.GroupSettings{}).Where("group_id = ?", groupId).First(&groupSettings).Preload(clause.Associations).Error
 	if err != nil {
 		return models.GroupSettings{}, err
 	}

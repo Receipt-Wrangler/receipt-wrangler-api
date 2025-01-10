@@ -317,7 +317,7 @@ func UpdateGroupReceiptSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error updating group receipt settings",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupId:      groupId,
 		GroupRole:    models.OWNER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {

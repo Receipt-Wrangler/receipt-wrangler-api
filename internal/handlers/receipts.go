@@ -12,7 +12,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"receipt-wrangler/api/internal/wranglerasynq"
@@ -32,7 +31,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      groupId,
 		GroupRole:    models.VIEWER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			pagedRequest := commands.ReceiptPagedRequestCommand{}
 			err := pagedRequest.LoadDataFromRequest(w, r)
@@ -77,7 +76,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting receipts",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var err error
 			var receipts []models.Receipt
@@ -96,7 +95,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 
 			} else {
 				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
-				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(token.UserId))
+				userGroupIds, err := groupMemberRepository.GetGroupIdsByUserId(utils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -152,7 +151,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stringId := simpleutils.UintToString(command.GroupId)
+	stringId := utils.UintToString(command.GroupId)
 
 	// TODO: Clean up to make sure group id is not an all group, and remove middleware sets and checks
 	handler := structs.Handler{
@@ -161,7 +160,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      stringId,
 		GroupRole:    models.EDITOR,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			receiptRepository := repositories.NewReceiptRepository(nil)
 			createdReceipt, err := receiptRepository.CreateReceipt(command, token.UserId)
@@ -197,7 +196,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 
 	var groupIds = make([]string, 0)
 	for i := 0; i < len(quickScanCommand.GroupIds); i++ {
-		groupIds = append(groupIds, simpleutils.UintToString(quickScanCommand.GroupIds[i]))
+		groupIds = append(groupIds, utils.UintToString(quickScanCommand.GroupIds[i]))
 	}
 
 	handler := structs.Handler{
@@ -206,7 +205,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupRole:    models.EDITOR,
 		GroupIds:     groupIds,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			if len(vErr.Errors) > 0 {
 				structs.WriteValidatorErrorResponse(w, vErr, http.StatusInternalServerError)
@@ -245,7 +244,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 
 				task := asynq.NewTask(wranglerasynq.QuickScan, payloadBytes)
 
-				_, err = wranglerasynq.EnqueueTask(task, wranglerasynq.QuickScanQueue)
+				_, err = wranglerasynq.EnqueueTask(task, models.QuickScanQueue)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -269,13 +268,19 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ReceiptId:    receiptId,
 		GroupRole:    models.VIEWER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			var receipt models.Receipt
 			id := chi.URLParam(r, "id")
 
-			err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Preload("Comments.Replies").Find(&receipt).Error
+			err := db.Model(models.Receipt{}).
+				Where("id = ?", id).
+				Preload(clause.Associations).
+				Preload("Comments.Replies").
+				Preload("ReceiptItems.Categories").
+				Preload("ReceiptItems.Tags").
+				Find(&receipt).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -304,7 +309,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ReceiptId:    receiptId,
 		GroupRole:    models.EDITOR,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			command := commands.UpsertReceiptCommand{}
@@ -350,7 +355,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 
 	receiptIdStrings := make([]string, len(bulkCommand.ReceiptIds))
 	for i := 0; i < len(bulkCommand.ReceiptIds); i++ {
-		receiptIdStrings[i] = simpleutils.UintToString(bulkCommand.ReceiptIds[i])
+		receiptIdStrings[i] = utils.UintToString(bulkCommand.ReceiptIds[i])
 	}
 
 	handler := structs.Handler{
@@ -359,7 +364,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ReceiptIds:   receiptIdStrings,
 		GroupRole:    models.EDITOR,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			receiptRepository := repositories.NewReceiptRepository(nil)
@@ -369,7 +374,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				return http.StatusBadRequest, errors.New("Status required")
 			}
 
-			if !utils.Contains(constants.ReceiptStatuses(), bulkCommand.Status) {
+			if !utils.Contains(models.ReceiptStatuses(), bulkCommand.Status) {
 				return http.StatusBadRequest, errors.New("Invalid status")
 			}
 
@@ -448,7 +453,7 @@ func HasAccess(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Insufficient permissions.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			groupService := services.NewGroupService(nil)
@@ -501,7 +506,7 @@ func DeleteReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ReceiptId:    receiptId,
 		GroupRole:    models.EDITOR,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			receiptService := services.NewReceiptService(nil)
@@ -528,7 +533,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ReceiptId:    receiptId,
 		GroupRole:    models.EDITOR,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			db := repositories.GetDB()
 			newReceipt := models.Receipt{}
@@ -601,8 +606,8 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 				}
 
 				dstPath, err := fileRepository.BuildFilePath(
-					simpleutils.UintToString(newReceipt.ID),
-					simpleutils.UintToString(fileData.ID),
+					utils.UintToString(newReceipt.ID),
+					utils.UintToString(fileData.ID),
 					fileData.Name,
 				)
 				if err != nil {

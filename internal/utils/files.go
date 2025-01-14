@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"os"
+	"path/filepath"
 )
 
 func WriteFile(path string, data []byte) error {
@@ -88,4 +89,18 @@ func ReadLastFileLine(filePath string) (string, error) {
 
 func Base64EncodeBytes(data []byte) string {
 	return base64.StdEncoding.EncodeToString(data)
+}
+
+func BuildGroupPathString(groupId string, groupName string) (string, error) {
+	basePath, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	groupPath := groupId + "-" + groupName
+	return filepath.Join(basePath, "data", groupPath), nil
+}
+
+func BuildFileName(rid string, fid string, fname string) string {
+	return rid + "-" + fid + "-" + fname
 }

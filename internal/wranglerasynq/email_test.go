@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	miniredis2 "github.com/alicebob/miniredis/v2"
 	"os"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
@@ -91,7 +92,7 @@ func TestEnqueueEmailProcessTasksShouldEnqueueTasks(t *testing.T) {
 		t.Fatalf("Failed to get inspector: %v", err)
 	}
 
-	taskInfos, err := inspector.ListPendingTasks(string(EmailReceiptProcessingQueue))
+	taskInfos, err := inspector.ListPendingTasks(string(models.EmailReceiptProcessingQueue))
 	if err != nil {
 		t.Fatalf("Failed to list pending tasks: %v", err)
 	}

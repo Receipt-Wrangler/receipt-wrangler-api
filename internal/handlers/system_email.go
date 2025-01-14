@@ -17,7 +17,7 @@ func GetAllSystemEmails(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving system emails",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			pagedData := structs.PagedData{
@@ -72,7 +72,7 @@ func GetSystemEmailById(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving system emails",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			systemEmailId := chi.URLParam(r, "id")
@@ -103,7 +103,7 @@ func AddSystemEmail(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error adding system email",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpsertSystemEmailCommand{}
@@ -144,7 +144,7 @@ func UpdateSystemEmail(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error updating system email",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpsertSystemEmailCommand{}

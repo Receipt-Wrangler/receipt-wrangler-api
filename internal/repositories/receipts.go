@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -44,18 +43,18 @@ func (repository ReceiptRepository) BeforeUpdateReceipt(currentReceipt models.Re
 			return err
 		}
 
-		oldGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(oldGroup.ID), oldGroup.Name)
+		oldGroupPath, err := utils.BuildGroupPathString(utils.UintToString(oldGroup.ID), oldGroup.Name)
 		if err != nil {
 			return err
 		}
 
-		newGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(newGroup.ID), newGroup.Name)
+		newGroupPath, err := utils.BuildGroupPathString(utils.UintToString(newGroup.ID), newGroup.Name)
 		if err != nil {
 			return err
 		}
 
 		for _, fileData := range currentReceipt.ImageFiles {
-			filename := simpleutils.BuildFileName(simpleutils.UintToString(currentReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+			filename := utils.BuildFileName(utils.UintToString(currentReceipt.ID), utils.UintToString(fileData.ID), fileData.Name)
 
 			oldFilePath := filepath.Join(oldGroupPath, filename)
 			newFilePathPath := filepath.Join(newGroupPath, filename)
@@ -95,7 +94,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 
 	systemTaskResultDescription := map[string]interface{}{}
 	var endedAt time.Time
-	stringId, err := simpleutils.StringToUint(id)
+	stringId, err := utils.StringToUint(id)
 	if err != nil {
 		return models.Receipt{}, err
 	}
@@ -110,7 +109,6 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		EndedAt:              &endedAt,
 		Status:               models.SYSTEM_TASK_SUCCEEDED,
 		RanByUserId:          &ranByUserId,
-		//RanByUserId: 1,
 	}
 
 	updatedReceipt, err := command.ToReceipt()
@@ -133,7 +131,6 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
 	}
-
 	systemTaskResultDescription["before"] = before
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -162,6 +159,18 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		txErr = tx.Model(&currentReceipt).Association("ReceiptItems").Replace(&updatedReceipt.ReceiptItems)
 		if txErr != nil {
 			return txErr
+		}
+
+		for _, item := range updatedReceipt.ReceiptItems {
+			txErr = tx.Model(&item).Association("Categories").Replace(&item.Categories)
+			if txErr != nil {
+				return txErr
+			}
+
+			txErr = tx.Model(&item).Association("Tags").Replace(&item.Tags)
+			if txErr != nil {
+				return txErr
+			}
 		}
 
 		err = repository.AfterReceiptUpdated(&updatedReceipt)
@@ -210,9 +219,19 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 	return fullyLoadedReceipt, nil
 }
 
+// TODO: Delete categories/tags here associated with items before deleting the items mkay
 func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.Receipt) error {
 	db := repository.GetDB()
-	err := db.Where("receipt_id IS NULL").Delete(&models.Item{}).Error
+
+	err := db.Table("item_categories").Where("item_id IN (?)",
+		db.Table("items").Select("id").Where("receipt_id IS NULL"),
+	).Delete(&struct{}{}).Error
+
+	err = db.Table("item_tags").Where("item_id IN (?)",
+		db.Table("items").Select("id").Where("receipt_id IS NULL"),
+	).Delete(&struct{}{}).Error
+
+	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Debug().Error
 	if err != nil {
 		return err
 	}
@@ -337,7 +356,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	var receipts []models.Receipt
 	var count int64
 
-	uintGroupId, err := simpleutils.StringToUint(groupId)
+	uintGroupId, err := utils.StringToUint(groupId)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -356,7 +375,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	// Filter receipts by group
 	if isAllGroup {
 		groupMemberRepository := NewGroupMemberRepository(nil)
-		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(userId))
+		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(utils.UintToString(userId))
 		if err != nil {
 			return nil, 0, err
 		}
@@ -575,7 +594,13 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 	db := repository.GetDB()
 	var receipt models.Receipt
 
-	err := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations).Find(&receipt).Error
+	err := db.Model(models.Receipt{}).
+		Where("id = ?", id).
+		Preload(clause.Associations).
+		Preload("ReceiptItems.Categories").
+		Preload("ReceiptItems.Tags").
+		Find(&receipt).
+		Error
 	if err != nil {
 		return models.Receipt{}, err
 	}

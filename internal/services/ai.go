@@ -203,7 +203,7 @@ func (service *AiService) OpenAiCustomChatCompletion(options structs.AiChatCompl
 		"stream":      false,
 	}
 	httpClient := http.Client{}
-	httpClient.Timeout = constants.AI_HTTP_TIMEOUT
+	httpClient.Timeout = constants.AiHttpTimeout
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -261,7 +261,7 @@ func (service *AiService) OllamaChatCompletion(options structs.AiChatCompletionO
 		"stream":      false,
 	}
 	httpClient := http.Client{}
-	httpClient.Timeout = constants.AI_HTTP_TIMEOUT
+	httpClient.Timeout = constants.AiHttpTimeout
 
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {

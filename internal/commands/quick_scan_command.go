@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 	"strings"
 )
 
@@ -19,7 +19,7 @@ type QuickScanCommand struct {
 }
 
 func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
-	err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
+	err := r.ParseMultipartForm(constants.MultipartFormMaxSize)
 
 	var form = r.Form
 
@@ -48,7 +48,7 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 	}
 
 	for _, userId := range formPaidByUserIds {
-		formattedUserId, err := simpleutils.StringToUint(userId)
+		formattedUserId, err := utils.StringToUint(userId)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func (command *QuickScanCommand) LoadDataFromRequest(w http.ResponseWriter, r *h
 	}
 
 	for _, groupId := range formGroupIds {
-		formattedGroupId, err := simpleutils.StringToUint(groupId)
+		formattedGroupId, err := utils.StringToUint(groupId)
 		if err != nil {
 			return err
 		}

@@ -13,7 +13,7 @@ func GetFeatureConfig(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error getting feature config.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			systemSettingsService := services.NewSystemSettingsService(nil)
 

@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -100,6 +100,7 @@ func (repository GroupRepository) CreateGroup(command commands.UpsertGroupComman
 	err := db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
 		groupSettingsRepository := NewGroupSettingsRepository(tx)
+		groupReceiptSettingsRepository := NewGroupReceiptSettingsRepository(tx)
 
 		txErr := tx.Model(&groupToCreate).Create(&groupToCreate).Error
 		if txErr != nil {
@@ -129,6 +130,12 @@ func (repository GroupRepository) CreateGroup(command commands.UpsertGroupComman
 			return txErr
 		}
 
+		_, txErr = groupReceiptSettingsRepository.CreateGroupReceiptSettings(groupToCreate.ID)
+		if txErr != nil {
+			repository.ClearTransaction()
+			return txErr
+		}
+
 		repository.ClearTransaction()
 		return nil
 	})
@@ -148,7 +155,7 @@ func (repository GroupRepository) UpdateGroup(command commands.UpsertGroupComman
 	// TODO: move hooks from model to repository func
 	db := repository.GetDB()
 
-	u64Id, err := simpleutils.StringToUint64(groupId)
+	u64Id, err := utils.StringToUint64(groupId)
 	if err != nil {
 		return models.Group{}, err
 	}
@@ -186,7 +193,7 @@ func (repository GroupRepository) UpdateGroup(command commands.UpsertGroupComman
 		return models.Group{}, err
 	}
 
-	returnGroup, err := repository.GetGroupById(groupId, true, true)
+	returnGroup, err := repository.GetGroupById(groupId, true, true, true)
 	if err != nil {
 		return models.Group{}, err
 	}
@@ -194,7 +201,11 @@ func (repository GroupRepository) UpdateGroup(command commands.UpsertGroupComman
 	return returnGroup, nil
 }
 
-func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bool, createMissingGroupSettings bool) (models.Group, error) {
+func (repository GroupRepository) GetGroupById(id string,
+	preloadGroupMembers bool,
+	createMissingGroupSettings bool,
+	createMissingGroupReceiptSettings bool,
+) (models.Group, error) {
 	db := repository.GetDB()
 	var group models.Group
 
@@ -209,7 +220,8 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 		Preload("GroupSettings.EmailWhiteList").
 		Preload("GroupSettings.SystemEmail").
 		Preload("GroupSettings.Prompt").
-		Preload("GroupSettings.FallbackPrompt")
+		Preload("GroupSettings.FallbackPrompt").
+		Preload("GroupReceiptSettings")
 
 	err := query.First(&group).Error
 	if err != nil {
@@ -217,13 +229,22 @@ func (repository GroupRepository) GetGroupById(id string, preloadGroupMembers bo
 	}
 
 	if group.GroupSettings.ID == 0 && createMissingGroupSettings {
-		groupSettingsRepository := NewGroupSettingsRepository(db)
+		groupSettingsRepository := NewGroupSettingsRepository(repository.TX)
 
 		groupSettings := models.GroupSettings{
 			GroupId: group.ID,
 		}
 
 		_, err := groupSettingsRepository.CreateGroupSettings(groupSettings)
+		if err != nil {
+			return models.Group{}, err
+		}
+	}
+
+	if group.GroupReceiptSettings.ID == 0 && createMissingGroupReceiptSettings {
+		groupReceiptSettingsRepository := NewGroupReceiptSettingsRepository(repository.TX)
+
+		_, err := groupReceiptSettingsRepository.CreateGroupReceiptSettings(group.ID)
 		if err != nil {
 			return models.Group{}, err
 		}

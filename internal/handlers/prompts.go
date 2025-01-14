@@ -18,7 +18,7 @@ func GetPagedPrompts(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.PagedRequestCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -67,7 +67,7 @@ func GetPromptById(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			promptRepository := repositories.NewPromptRepository(nil)
@@ -97,7 +97,7 @@ func UpdatePromptById(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			command := commands.UpsertPromptCommand{}
@@ -139,7 +139,7 @@ func CreatePrompt(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpsertPromptCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -180,7 +180,7 @@ func DeletePromptById(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			promptRepository := repositories.NewPromptRepository(nil)
@@ -204,7 +204,7 @@ func CreateDefaultPrompt(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			promptService := services.NewPromptService(nil)
 			prompt, err := promptService.CreateDefaultPrompt()

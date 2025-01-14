@@ -6,7 +6,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -33,7 +32,7 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 			if len(groupId) > 0 {
 				groupService := services.NewGroupService(nil)
 				token := structs.GetJWT(r)
-				err := groupService.ValidateGroupRole(role, groupId, simpleutils.UintToString(token.UserId))
+				err := groupService.ValidateGroupRole(role, groupId, utils.UintToString(token.UserId))
 
 				if err != nil {
 					logging.LogStd(logging.LOG_LEVEL_ERROR, "Unauthorized request", r)
@@ -53,7 +52,7 @@ func CanDeleteGroup(next http.Handler) http.Handler {
 		errMsg := "User must be a part of at least one group."
 
 		groupMemberRepository := repositories.NewGroupMemberRepository(nil)
-		groupMembers, err := groupMemberRepository.GetGroupMembersByUserId(simpleutils.UintToString(token.UserId))
+		groupMembers, err := groupMemberRepository.GetGroupMembersByUserId(utils.UintToString(token.UserId))
 		if err != nil {
 			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 			utils.WriteCustomErrorResponse(w, errMsg, http.StatusInternalServerError)

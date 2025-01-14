@@ -10,7 +10,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -20,13 +19,13 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 	errMessage := "Error uploading image."
 	fileRepository := repositories.NewFileRepository(nil)
 
-	err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
+	err := r.ParseMultipartForm(constants.MultipartFormMaxSize)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 	}
 
-	receiptId, err := simpleutils.StringToUint(r.Form.Get("receiptId"))
+	receiptId, err := utils.StringToUint(r.Form.Get("receiptId"))
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
@@ -44,7 +43,7 @@ func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: errMessage,
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		ReceiptId:    r.Form.Get("receiptId"),
 		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -110,14 +109,14 @@ func GetReceiptImage(w http.ResponseWriter, r *http.Request) {
 		utils.WriteCustomErrorResponse(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
-	stringReceiptId := simpleutils.UintToString(fileData.ReceiptId)
+	stringReceiptId := utils.UintToString(fileData.ReceiptId)
 
 	handler := structs.Handler{
 		ErrorMessage: "Error retrieving image.",
 		ReceiptId:    stringReceiptId,
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var receipt models.Receipt
 			var bytes []byte
@@ -168,7 +167,7 @@ func DownloadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		utils.WriteCustomErrorResponse(w, errorMessage, http.StatusInternalServerError)
 		return
 	}
-	stringReceiptId := simpleutils.UintToString(fileData.ReceiptId)
+	stringReceiptId := utils.UintToString(fileData.ReceiptId)
 
 	handler := structs.Handler{
 		ErrorMessage: "Error downloading image.",
@@ -180,7 +179,7 @@ func DownloadReceiptImage(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			fileRepository := repositories.NewFileRepository(nil)
 
-			path, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+			path, err := fileRepository.BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -207,7 +206,7 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.WriteCustomErrorResponse(w, errorMessage, http.StatusInternalServerError)
 	}
-	stringReceiptId := simpleutils.UintToString(fileData.ReceiptId)
+	stringReceiptId := utils.UintToString(fileData.ReceiptId)
 
 	handler := structs.Handler{
 		ErrorMessage: "Error deleting image.",
@@ -221,7 +220,7 @@ func RemoveReceiptImage(w http.ResponseWriter, r *http.Request) {
 			}
 
 			fileRepository := repositories.NewFileRepository(nil)
-			path, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), id, fileData.Name)
+			path, err := fileRepository.BuildFilePath(utils.UintToString(fileData.ReceiptId), id, fileData.Name)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -244,7 +243,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error performing magic fill.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			receiptImageId := r.URL.Query().Get("receiptImageId")
 			receiptCommand := commands.UpsertReceiptCommand{}
@@ -281,7 +280,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 
 				receiptCommand = command
 			} else {
-				err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
+				err := r.ParseMultipartForm(constants.MultipartFormMaxSize)
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -345,7 +344,7 @@ func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error converting image.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			fileRepository := repositories.NewFileRepository(nil)
 			result := make(map[string]string)
@@ -401,7 +400,7 @@ func validateReceiptImageAccess(r *http.Request, groupRole models.GroupRole, rec
 	token := structs.GetJWT(r)
 	groupService := services.NewGroupService(nil)
 
-	receiptImageIdUint, err := simpleutils.StringToUint(receiptImageId)
+	receiptImageIdUint, err := utils.StringToUint(receiptImageId)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
@@ -412,7 +411,7 @@ func validateReceiptImageAccess(r *http.Request, groupRole models.GroupRole, rec
 		return http.StatusInternalServerError, err
 	}
 
-	err = groupService.ValidateGroupRole(groupRole, simpleutils.UintToString(receiptImage.Receipt.GroupId), simpleutils.UintToString(token.UserId))
+	err = groupService.ValidateGroupRole(groupRole, utils.UintToString(receiptImage.Receipt.GroupId), utils.UintToString(token.UserId))
 	if err != nil {
 		return http.StatusForbidden, err
 	}

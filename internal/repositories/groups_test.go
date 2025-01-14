@@ -53,7 +53,7 @@ func TestShouldGetGroupById(t *testing.T) {
 	CreateTestGroup()
 	setUpGroupTest()
 	groupRepository := setupGroupRepository()
-	testGroup, err := groupRepository.GetGroupById("1", false, true)
+	testGroup, err := groupRepository.GetGroupById("1", false, true, true)
 
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
@@ -71,7 +71,7 @@ func TestShouldGetAGroupWithGroupMembers(t *testing.T) {
 	CreateTestGroupWithUsers()
 	groupRepository := setupGroupRepository()
 
-	testGroup, err := groupRepository.GetGroupById("1", true, true)
+	testGroup, err := groupRepository.GetGroupById("1", true, true, true)
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
 	}
@@ -86,7 +86,7 @@ func TestShouldGetAGroupWithGroupMembers(t *testing.T) {
 func TestShouldReturnErrorIfGroupDoesNotExist(t *testing.T) {
 	defer teardownGroupTest()
 	groupRepository := setupGroupRepository()
-	testGroup, err := groupRepository.GetGroupById("2332", false, true)
+	testGroup, err := groupRepository.GetGroupById("2332", false, true, true)
 
 	if err == nil {
 		utils.PrintTestError(t, err, "error")

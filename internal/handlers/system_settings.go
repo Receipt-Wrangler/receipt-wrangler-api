@@ -18,7 +18,7 @@ func GetSystemSettings(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
 			systemSettings, err := systemSettingsRepository.GetSystemSettings()
@@ -47,7 +47,7 @@ func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
 			command := commands.UpsertSystemSettingsCommand{}
@@ -92,5 +92,25 @@ func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
+	HandleRequest(handler)
+}
+
+func RestartTaskServer(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error restarting task server, please restart the entire application",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			err := wranglerasynq.RestartEmbeddedAsynqServer()
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			return 0, nil
+		},
+	}
 	HandleRequest(handler)
 }

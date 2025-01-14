@@ -10,7 +10,6 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 	"regexp"
 	"time"
@@ -43,7 +42,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 	}
 
 	if command.ID > 0 && hostIsEmpty && portIsEmpty && usernameIsEmpty && passwordIsEmpty {
-		stringId := simpleutils.UintToString(command.ID)
+		stringId := utils.UintToString(command.ID)
 		systemEmailRepository := repositories.NewSystemEmailRepository(nil)
 		systemEmail, err := systemEmailRepository.GetSystemEmailById(stringId)
 		if err != nil {

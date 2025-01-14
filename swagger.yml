@@ -507,6 +507,40 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /group/{groupId}/groupReceiptSettings:
+    put:
+      tags:
+        - Groups
+      summary: Update group receipt settings
+      description: This will update the group receipt settings for a group
+      operationId: updateGroupReceiptSettings
+      parameters:
+        - in: path
+          name: groupId
+          schema:
+            type: integer
+          required: true
+          description: Group Id to update
+      requestBody:
+        description: Group settings to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGroupReceiptSettingsCommand"
+      responses:
+        200:
+          description: The updated group receipt settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupReceiptSettings"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /group/getPagedGroups:
     post:
       tags:
@@ -2139,6 +2173,20 @@ paths:
           $ref: "#/components/responses/Internal"
         403:
           $ref: "#/components/responses/Forbidden"
+  /systemSettings/restartTaskServer:
+    post:
+      tags:
+        - SystemSettings
+      summary: Restart task server
+      description: This will restart the task server
+      operationId: restartTaskServer
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /import/importConfigJson:
     post:
       tags:
@@ -2289,6 +2337,13 @@ components:
       enum:
         - "START"
         - "END"
+    QueueName:
+      type: string
+      enum:
+        - "quick_scan"
+        - "email_polling"
+        - "email_receipt_processing"
+        - "email_receipt_image_cleanup"
     BaseModel:
       type: object
       required:
@@ -2465,6 +2520,7 @@ components:
         - id
         - groupMembers
         - isAllGroup
+        - groupReceiptSettings
       type: object
       properties:
         createdAt:
@@ -2474,6 +2530,8 @@ components:
           format: uint64
         groupSettings:
           $ref: "#/components/schemas/GroupSettings"
+        groupReceiptSettings:
+          $ref: "#/components/schemas/GroupReceiptSettings"
         groupMembers:
           type: array
           description: Members of the group
@@ -2601,6 +2659,16 @@ components:
         status:
           type: string
           $ref: "#/components/schemas/ItemStatus"
+        categories:
+          type: array
+          description: Categories associated to the item
+          items:
+            $ref: "#/components/schemas/Category"
+        tags:
+          type: array
+          description: Tags associated to the item
+          items:
+            $ref: "#/components/schemas/Tag"
         updatedAt:
           type: string
       description: Itemized item on a receipt
@@ -3247,6 +3315,55 @@ components:
             icon:
               type: string
               description: Icon of shortcut
+    GroupReceiptSettings:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - groupId
+          properties:
+            groupId:
+              type: integer
+              description: Group foreign key
+            hideImages:
+              type: boolean
+              description: Hide receipt images
+            hideReceiptCategories:
+              type: boolean
+              description: Hide receipt categories
+            hideReceiptTags:
+              type: boolean
+              description: Hide receipt tags
+            hideItemCategories:
+              type: boolean
+              description: Hide receipt item categories
+            hideItemTags:
+              type: boolean
+              description: Hide receipt item tags
+            hideComments:
+              type: boolean
+              description: Hide receipt comments
+    UpdateGroupReceiptSettingsCommand:
+      type: object
+      properties:
+        hideImages:
+          type: boolean
+          description: Hide receipt images
+        hideReceiptCategories:
+          type: boolean
+          description: Hide receipt categories
+        hideReceiptTags:
+          type: boolean
+          description: Hide receipt tags
+        hideItemCategories:
+          type: boolean
+          description: Hide receipt item categories
+        hideItemTags:
+          type: boolean
+          description: Hide receipt item tags
+        hideComments:
+          type: boolean
+          description: Hide receipt comments
     GroupSettings:
       type: object
       required:
@@ -3675,6 +3792,16 @@ components:
           description: Receipt foreign key
         status:
           $ref: "#/components/schemas/ItemStatus"
+        categories:
+          type: array
+          description: Categories associated to item
+          items:
+            $ref: "#/components/schemas/UpsertCategoryCommand"
+        tags:
+          type: array
+          description: Tags associated to item
+          items:
+            $ref: "#/components/schemas/UpsertTagCommand"
     UpsertCommentCommand:
       type: object
       required:
@@ -3727,10 +3854,30 @@ components:
         password:
           type: string
           description: IMAP password
+    TaskQueueConfiguration:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            name:
+              $ref: "#/components/schemas/QueueName"
+            priority:
+              type: integer
+              description: Queue priority
+    UpsertTaskQueueConfiguration:
+      type: object
+      properties:
+        name:
+          $ref: "#/components/schemas/QueueName"
+        priority:
+          type: integer
+          description: Queue priority
     SystemSettings:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
+          required:
+            - taskQueueConfigurations
           properties:
             enableLocalSignUp:
               type: boolean
@@ -3768,6 +3915,14 @@ components:
             fallbackReceiptProcessingSettingsId:
               type: integer
               description: Fallback receipt processing settings foreign key
+            taskConcurrency:
+              type: integer
+              description: Concurrency for task worker
+              default: 10
+            taskQueueConfigurations:
+              type: array
+              items:
+                $ref: "#/components/schemas/TaskQueueConfiguration"
     UpsertSystemSettingsCommand:
       type: object
       required:
@@ -3775,6 +3930,7 @@ components:
         - currencyDecimalSeparator
         - currencyHideDecimalPlaces
         - currencySymbolPosition
+        - taskConcurrency
       properties:
         enableLocalSignUp:
           type: boolean
@@ -3806,6 +3962,13 @@ components:
         fallbackReceiptProcessingSettingsId:
           type: integer
           description: Fallback receipt processing settings foreign key
+        taskConcurrency:
+          type: integer
+          description: Concurrency for task worker
+        taskQueueConfigurations:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpsertTaskQueueConfiguration"
     CheckEmailConnectivityCommand:
       type: object
       properties:
@@ -3850,8 +4013,6 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/SystemTask"
-            asynqTaskId:
-              type: string
     GetSystemTaskCommand:
       allOf:
         - $ref: "#/components/schemas/PagedRequestCommand"

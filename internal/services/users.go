@@ -3,14 +3,14 @@ package services
 import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
 
 func DeleteUser(userId string) error {
 	db := repositories.GetDB()
-	uintUserId, err := simpleutils.StringToUint(userId)
+	uintUserId, err := utils.StringToUint(userId)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func DeleteUser(userId string) error {
 		}
 
 		for i := 0; i < len(receipts); i++ {
-			txErr = receiptService.DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
+			txErr = receiptService.DeleteReceipt(utils.UintToString(receipts[i].ID))
 			if txErr != nil {
 				return txErr
 			}
@@ -50,7 +50,7 @@ func DeleteUser(userId string) error {
 		for i := 0; i < len(groups); i++ {
 			group := groups[i]
 			if len(group.GroupMembers) == 1 {
-				txErr := groupService.DeleteGroup(simpleutils.UintToString(group.ID), true)
+				txErr := groupService.DeleteGroup(utils.UintToString(group.ID), true)
 				if txErr != nil {
 					return txErr
 				} else {

@@ -32,15 +32,31 @@ func (repository SystemSettingsRepository) GetSystemSettings() (models.SystemSet
 	}
 
 	if count == 0 {
-		err = db.Model(&models.SystemSettings{}).Create(&models.SystemSettings{}).Error
+		err = db.Model(&models.SystemSettings{}).Create(&models.SystemSettings{
+			BaseModel: models.BaseModel{
+				ID: 1,
+			},
+		}).Error
 		if err != nil {
 			return models.SystemSettings{}, err
 		}
 	}
 
-	err = db.Model(&models.SystemSettings{}).Preload(clause.Associations).First(&systemSettings).Error
+	err = db.Model(&models.SystemSettings{}).Preload(clause.Associations).Preload("TaskQueueConfigurations").First(&systemSettings).Error
 	if err != nil {
 		return models.SystemSettings{}, err
+	}
+
+	// NOTE: Eventually this can get deleted. This is to fix associations not working if ID Is 0
+	if systemSettings.ID == 0 {
+		err = db.Model(models.SystemSettings{}).Where("id = 0").Update("id", 1).Error
+		if err != nil {
+			return models.SystemSettings{}, err
+		}
+	}
+
+	if len(systemSettings.TaskQueueConfigurations) == 0 {
+		systemSettings.TaskQueueConfigurations = models.GetAllDefaultQueueConfigurations()
 	}
 
 	return systemSettings, nil
@@ -65,26 +81,54 @@ func (repository SystemSettingsRepository) GetSystemReceiptProcessingSettings() 
 func (repository SystemSettingsRepository) UpdateSystemSettings(command commands.UpsertSystemSettingsCommand) (models.SystemSettings, error) {
 	db := repository.GetDB()
 
-	var existingSettings models.SystemSettings
-
-	db.Model(&models.SystemSettings{}).First(&existingSettings)
-
-	existingSettings.EnableLocalSignUp = command.EnableLocalSignUp
-	existingSettings.DebugOcr = command.DebugOcr
-	existingSettings.NumWorkers = command.NumWorkers
-	existingSettings.CurrencyDisplay = command.CurrencyDisplay
-	existingSettings.CurrencyThousandthsSeparator = command.CurrencyThousandthsSeparator
-	existingSettings.CurrencyDecimalSeparator = command.CurrencyDecimalSeparator
-	existingSettings.CurrencySymbolPosition = command.CurrencySymbolPosition
-	existingSettings.CurrencyHideDecimalPlaces = command.CurrencyHideDecimalPlaces
-	existingSettings.EmailPollingInterval = command.EmailPollingInterval
-	existingSettings.ReceiptProcessingSettingsId = command.ReceiptProcessingSettingsId
-	existingSettings.FallbackReceiptProcessingSettingsId = command.FallbackReceiptProcessingSettingsId
-
-	err := db.Model(&models.SystemSettings{}).Select("*").Where("id = ?", existingSettings.ID).Updates(&existingSettings).Error
+	existingSettings, err := repository.GetSystemSettings()
 	if err != nil {
 		return models.SystemSettings{}, err
 	}
 
-	return existingSettings, nil
+	updatedSettings, err := command.ToSystemSettings(existingSettings.ID)
+	if err != nil {
+		return models.SystemSettings{}, err
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		txErr := tx.Model(&updatedSettings).Select("*").Omit("TaskQueueConfigurations").Where("id = ?", existingSettings.ID).Updates(&updatedSettings).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		var configCount int64
+		txErr = tx.Model(&models.TaskQueueConfiguration{}).Count(&configCount).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		if configCount == 0 {
+			txErr = tx.Model(&updatedSettings).
+				Where("id = ?", existingSettings.ID).
+				Association("TaskQueueConfigurations").
+				Replace(&updatedSettings.TaskQueueConfigurations)
+			if txErr != nil {
+				return txErr
+			}
+		} else {
+			for _, config := range updatedSettings.TaskQueueConfigurations {
+				txErr = tx.Model(&models.TaskQueueConfiguration{}).Where("name = ?", config.Name).Updates(&models.TaskQueueConfiguration{
+					Priority: config.Priority,
+				}).Error
+
+				if txErr != nil {
+					return txErr
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return models.SystemSettings{}, nil
+	}
+
+	return updatedSettings, nil
 }

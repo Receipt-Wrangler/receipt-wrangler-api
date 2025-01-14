@@ -8,7 +8,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -19,7 +18,7 @@ func GetPagedReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.PagedRequestCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -68,7 +67,7 @@ func CreateReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpsertReceiptProcessingSettingsCommand{}
 
@@ -110,7 +109,7 @@ func GetReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 
@@ -141,7 +140,7 @@ func UpdateReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request)
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 			updateKey := r.URL.Query().Get("updateKey") == "true"
@@ -186,7 +185,7 @@ func DeleteReceiptProcessingSettingsById(w http.ResponseWriter, r *http.Request)
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
 
@@ -210,7 +209,7 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			command := commands.CheckReceiptProcessingSettingsCommand{}
@@ -228,7 +227,7 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 			var decryptKey bool
 
 			if command.ID > 0 && command.UpsertReceiptProcessingSettingsCommand.IsEmpty() {
-				stringId := simpleutils.UintToString(command.ID)
+				stringId := utils.UintToString(command.ID)
 
 				client, clientErr := services.NewAiService(stringId)
 				if clientErr != nil {

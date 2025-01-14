@@ -1,4 +1,4 @@
 package constants
 
-const JWT_KEY = "jwt"
-const REFRESH_TOKEN_KEY = "refresh_token"
+const JwtKey = "jwt"
+const RefreshTokenKey = "refresh_token"

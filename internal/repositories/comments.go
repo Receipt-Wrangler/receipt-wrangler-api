@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
@@ -123,7 +122,7 @@ func (repository CommentRepository) sendNotificationsToUsers(comment models.Comm
 	notificationRepository := NewNotificationRepository(repository.TX)
 	receiptRepository := NewReceiptRepository(repository.TX)
 
-	receipt, err := receiptRepository.GetReceiptById(simpleutils.UintToString(comment.ReceiptId))
+	receipt, err := receiptRepository.GetReceiptById(utils.UintToString(comment.ReceiptId))
 	if err != nil {
 		return err
 	}

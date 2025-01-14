@@ -23,7 +23,7 @@ func tearDownGroupTests() {
 }
 
 func TestShouldNotAllowAdminToUpdateGroupSettingsIdWithBadId(t *testing.T) {
-	defer tearDownPromptTests()
+	defer tearDownGroupTests()
 	reader := strings.NewReader("")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api", reader)
@@ -44,7 +44,29 @@ func TestShouldNotAllowAdminToUpdateGroupSettingsIdWithBadId(t *testing.T) {
 }
 
 func TestShouldNotUserToUpdateGroupSettingsById(t *testing.T) {
-	defer tearDownPromptTests()
+	defer tearDownGroupTests()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api", reader)
+	expectedStatusCode := http.StatusForbidden
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("groupId", "1")
+	routeContext := context.WithValue(r.Context(), chi.RouteCtxKey, chiContext)
+	r = r.WithContext(routeContext)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
+	UpdateGroupReceiptSettings(w, r)
+
+	if w.Result().StatusCode != expectedStatusCode {
+		utils.PrintTestError(t, w.Result().StatusCode, expectedStatusCode)
+	}
+}
+
+func TestShouldNotUserToUpdateGroupReceiptSettingsById(t *testing.T) {
+	defer tearDownGroupTests()
 	reader := strings.NewReader("")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api", reader)

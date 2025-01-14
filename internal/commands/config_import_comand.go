@@ -18,7 +18,7 @@ type ConfigImportCommand struct {
 }
 
 func (command *ConfigImportCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
-	err := r.ParseMultipartForm(constants.MULTIPART_FORM_MAX_SIZE)
+	err := r.ParseMultipartForm(constants.MultipartFormMaxSize)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (command *ConfigImportCommand) LoadDataFromRequest(w http.ResponseWriter, r
 		return err
 	}
 
-	if mimeType.String() != constants.APPLICATION_JSON {
+	if mimeType.String() != constants.ApplicationJson {
 		return errors.New("Invalid file type")
 	}
 

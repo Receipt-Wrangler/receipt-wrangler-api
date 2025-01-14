@@ -7,8 +7,8 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 	"time"
 )
 
@@ -38,7 +38,7 @@ func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(met
 		return ""
 	}
 
-	idToUseString := simpleutils.UintToString(idToUse)
+	idToUseString := utils.UintToString(idToUse)
 
 	receiptProcessingSettings, err := receiptProcessingSettingsRepository.GetReceiptProcessingSettingsById(idToUseString)
 	if err != nil {

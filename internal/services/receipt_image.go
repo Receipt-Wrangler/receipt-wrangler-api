@@ -6,7 +6,6 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"sync"
@@ -22,14 +21,14 @@ func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, com
 		return result, commands.ReceiptProcessingMetadata{}, err
 	}
 
-	groupIdString := simpleutils.UintToString(receipt.GroupId)
+	groupIdString := utils.UintToString(receipt.GroupId)
 
 	systemReceiptProcessingService, err := NewSystemReceiptProcessingService(nil, groupIdString)
 	if err != nil {
 		return result, commands.ReceiptProcessingMetadata{}, err
 	}
 
-	receiptImageUint, err := simpleutils.StringToUint(receiptImageId)
+	receiptImageUint, err := utils.StringToUint(receiptImageId)
 	if err != nil {
 		return result, commands.ReceiptProcessingMetadata{}, err
 	}
@@ -41,7 +40,7 @@ func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, com
 	}
 	fileRepository := repositories.NewReceiptImageRepository(nil)
 
-	receiptImagePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
+	receiptImagePath, err := fileRepository.BuildFilePath(utils.UintToString(receiptImage.ReceiptId), receiptImageId, receiptImage.Name)
 	if err != nil {
 		return result, commands.ReceiptProcessingMetadata{}, err
 	}
@@ -52,7 +51,7 @@ func ReadReceiptImage(receiptImageId string) (commands.UpsertReceiptCommand, com
 	}
 
 	// TODO: make generic
-	if receiptImage.FileType == constants.APPLICATION_PDF {
+	if receiptImage.FileType == constants.ApplicationPdf {
 		bytes, err := fileRepository.ConvertPdfToJpg(receiptImageBytes)
 		if err != nil {
 			return commands.UpsertReceiptCommand{}, commands.ReceiptProcessingMetadata{}, err
@@ -107,7 +106,7 @@ func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData,
 	groupService := NewGroupService(nil)
 	groupIds := make([]uint, 0)
 
-	group, err := groupRepository.GetGroupById(groupId, false, true)
+	group, err := groupRepository.GetGroupById(groupId, false, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +121,7 @@ func GetReceiptImagesForGroup(groupId string, userId string) ([]models.FileData,
 			groupIds = append(groupIds, group.ID)
 		}
 	} else {
-		uintGroupId, err := simpleutils.StringToUint(groupId)
+		uintGroupId, err := utils.StringToUint(groupId)
 		if err != nil {
 			return nil, err
 		}
@@ -149,7 +148,7 @@ func GetReceiptFromReceiptImageId(receiptImageId string) (models.Receipt, error)
 		return models.Receipt{}, err
 	}
 
-	receiptIdString := simpleutils.UintToString(fileData.ReceiptId)
+	receiptIdString := utils.UintToString(fileData.ReceiptId)
 
 	receiptRepository := repositories.NewReceiptRepository(nil)
 	receipt, err = receiptRepository.GetReceiptById(receiptIdString)
@@ -181,7 +180,7 @@ func ReadAllReceiptImagesForGroup(groupId string, userId string) ([]structs.OcrE
 			// Acquire a semaphore slot
 			semaphore <- struct{}{}
 
-			filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fd.ReceiptId), simpleutils.UintToString(fd.ID), fd.Name)
+			filePath, err := fileRepository.BuildFilePath(utils.UintToString(fd.ReceiptId), utils.UintToString(fd.ID), fd.Name)
 			if err != nil {
 				results <- structs.OcrExport{OcrText: "", Filename: "", Err: err}
 			} else {

@@ -8,7 +8,6 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -81,8 +80,8 @@ func BuildTokenCookies(jwt string, refreshToken string) (http.Cookie, http.Cooki
 		secure = true
 	}
 
-	accessTokenCookie := http.Cookie{Name: constants.JWT_KEY, Value: jwt, HttpOnly: true, Path: "/", Expires: utils.GetAccessTokenExpiryDate().Time, SameSite: sameSite, Secure: secure}
-	refreshTokenCookie := http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: refreshToken, HttpOnly: true, Path: "/", Expires: utils.GetRefreshTokenExpiryDate().Time, SameSite: sameSite, Secure: secure}
+	accessTokenCookie := http.Cookie{Name: constants.JwtKey, Value: jwt, HttpOnly: true, Path: "/", Expires: utils.GetAccessTokenExpiryDate().Time, SameSite: sameSite, Secure: secure}
+	refreshTokenCookie := http.Cookie{Name: constants.RefreshTokenKey, Value: refreshToken, HttpOnly: true, Path: "/", Expires: utils.GetRefreshTokenExpiryDate().Time, SameSite: sameSite, Secure: secure}
 
 	return accessTokenCookie, refreshTokenCookie
 }
@@ -93,11 +92,11 @@ func PrepareAccessTokenClaims(accessTokenClaims structs.Claims) {
 }
 
 func GetEmptyAccessTokenCookie() http.Cookie {
-	return http.Cookie{Name: constants.JWT_KEY, Value: "", HttpOnly: false, Path: "/", MaxAge: -1}
+	return http.Cookie{Name: constants.JwtKey, Value: "", HttpOnly: false, Path: "/", MaxAge: -1}
 }
 
 func GetEmptyRefreshTokenCookie() http.Cookie {
-	return http.Cookie{Name: constants.REFRESH_TOKEN_KEY, Value: "", HttpOnly: true, Path: "/", MaxAge: -1}
+	return http.Cookie{Name: constants.RefreshTokenKey, Value: "", HttpOnly: true, Path: "/", MaxAge: -1}
 }
 
 func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
@@ -171,7 +170,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	systemSettingsService := NewSystemSettingsService(nil)
 	systemSettingsRepository := repositories.NewSystemSettingsRepository(nil)
 	tagRepository := repositories.NewTagsRepository(nil)
-	stringUserId := simpleutils.UintToString(userId)
+	stringUserId := utils.UintToString(userId)
 
 	systemSettings, err := systemSettingsRepository.GetSystemSettings()
 	if err != nil {
@@ -225,7 +224,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.CurrencyDecimalSeparator = systemSettings.CurrencyDecimalSeparator
 	appData.CurrencySymbolPosition = systemSettings.CurrencySymbolPosition
 	appData.CurrencyHideDecimalPlaces = systemSettings.CurrencyHideDecimalPlaces
-	appData.Icons = constants.Icons
+	appData.Icons = structs.Icons
 
 	if r != nil {
 		claims := structs.GetJWT(r)

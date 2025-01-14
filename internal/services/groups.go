@@ -8,7 +8,7 @@ import (
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 )
 
 type GroupService struct {
@@ -59,7 +59,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 	db := service.GetDB()
 	var receipts []models.Receipt
 
-	uintGroupId, err := simpleutils.StringToUint(groupId)
+	uintGroupId, err := utils.StringToUint(groupId)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		}
 	}
 
-	group, err := groupRepository.GetGroupById(groupId, false, false)
+	group, err := groupRepository.GetGroupById(groupId, false, false, false)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 
 		// Delete receipts in group
 		for i := 0; i < len(receipts); i++ {
-			txErr = receiptService.DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
+			txErr = receiptService.DeleteReceipt(utils.UintToString(receipts[i].ID))
 			if txErr != nil {
 				return txErr
 			}
@@ -111,6 +111,14 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 			}
 		}
 
+		// Delete Group Receipt Settings
+		if group.GroupReceiptSettings.GroupId > 0 {
+			txErr = tx.Model(&group.GroupReceiptSettings).Select(clause.Associations).Delete(&group.GroupReceiptSettings).Error
+			if txErr != nil {
+				return txErr
+			}
+		}
+
 		// Delete group
 		txErr = tx.Model(&group.GroupSettings).Select(clause.Associations).Delete(&group).Error
 		if txErr != nil {
@@ -118,7 +126,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		}
 
 		// Remove group's directory
-		groupPath, txErr := simpleutils.BuildGroupPathString(simpleutils.UintToString(group.ID), group.Name)
+		groupPath, txErr := utils.BuildGroupPathString(utils.UintToString(group.ID), group.Name)
 		if txErr != nil {
 			return txErr
 		}
@@ -140,7 +148,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 func (service GroupService) ValidateGroupRole(role models.GroupRole, groupId string, userId string) error {
 	groupMap := models.BuildGroupMap()
 
-	groupMemberRepository := repositories.NewGroupMemberRepository(service.GetDB())
+	groupMemberRepository := repositories.NewGroupMemberRepository(service.TX)
 	groupMember, err := groupMemberRepository.GetGroupMemberByUserIdAndGroupId(userId, groupId)
 	if err != nil {
 		return err

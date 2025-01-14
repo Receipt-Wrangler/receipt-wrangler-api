@@ -10,7 +10,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -45,7 +44,7 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 		return HandleError(err)
 	}
 
-	groupIdString := simpleutils.UintToString(payload.GroupSettingsId)
+	groupIdString := utils.UintToString(payload.GroupSettingsId)
 	groupSettingsToUse, err := groupSettingsRepository.GetGroupSettingsById(groupIdString)
 	if err != nil {
 		return HandleError(err)

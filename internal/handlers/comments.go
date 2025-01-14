@@ -6,7 +6,6 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 
@@ -30,7 +29,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	receiptString := simpleutils.UintToString(upsertCommentCommand.ReceiptId)
+	receiptString := utils.UintToString(upsertCommentCommand.ReceiptId)
 
 	handler := structs.Handler{
 		ErrorMessage: "Error adding comment",
@@ -38,7 +37,7 @@ func AddComment(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ReceiptId:    receiptString,
 		GroupRole:    models.VIEWER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			commentRepository := repositories.NewCommentRepository(nil)
 

@@ -25,3 +25,7 @@ func (self ReceiptStatus) Value() (driver.Value, error) {
 	}
 	return string(self), nil
 }
+
+func ReceiptStatuses() []interface{} {
+	return []interface{}{OPEN, NEEDS_ATTENTION, RESOLVED, DRAFT}
+}

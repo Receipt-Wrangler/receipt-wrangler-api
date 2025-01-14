@@ -40,17 +40,20 @@ func StartEmbeddedAsynqServer() error {
 		queuePriorityMap[string(queueName)] = queueConfigurationToUse.Priority
 	}
 
+	asynqConfig := asynq.Config{
+		Concurrency: systemSettings.AsynqConcurrency,
+		Queues:      queuePriorityMap,
+	}
+
 	server = asynq.NewServer(
 		opts,
-		asynq.Config{
-			Concurrency: 10,
-			Queues:      queuePriorityMap,
-		},
+		asynqConfig,
 	)
 
 	mux := BuildMux()
 
 	go func() {
+		logging.LogStd(logging.LOG_LEVEL_INFO, "Starting Asynq Server")
 		err = server.Run(mux)
 		if err != nil {
 			logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())

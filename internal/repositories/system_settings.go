@@ -42,7 +42,7 @@ func (repository SystemSettingsRepository) GetSystemSettings() (models.SystemSet
 		}
 	}
 
-	err = db.Model(&models.SystemSettings{}).Preload(clause.Associations).Preload("AsynqQueueConfigurations").First(&systemSettings).Error
+	err = db.Model(&models.SystemSettings{}).Preload(clause.Associations).Preload("TaskQueueConfigurations").First(&systemSettings).Error
 	if err != nil {
 		return models.SystemSettings{}, err
 	}
@@ -55,8 +55,8 @@ func (repository SystemSettingsRepository) GetSystemSettings() (models.SystemSet
 		}
 	}
 
-	if len(systemSettings.AsynqQueueConfigurations) == 0 {
-		systemSettings.AsynqQueueConfigurations = models.GetAllDefaultQueueConfigurations()
+	if len(systemSettings.TaskQueueConfigurations) == 0 {
+		systemSettings.TaskQueueConfigurations = models.GetAllDefaultQueueConfigurations()
 	}
 
 	return systemSettings, nil
@@ -92,13 +92,13 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		txErr := tx.Model(&updatedSettings).Select("*").Omit("AsynqQueueConfigurations").Where("id = ?", existingSettings.ID).Updates(&updatedSettings).Error
+		txErr := tx.Model(&updatedSettings).Select("*").Omit("TaskQueueConfigurations").Where("id = ?", existingSettings.ID).Updates(&updatedSettings).Error
 		if txErr != nil {
 			return txErr
 		}
 
 		var configCount int64
-		txErr = tx.Model(&models.AsynqQueueConfiguration{}).Count(&configCount).Error
+		txErr = tx.Model(&models.TaskQueueConfiguration{}).Count(&configCount).Error
 		if txErr != nil {
 			return txErr
 		}
@@ -106,14 +106,14 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 		if configCount == 0 {
 			txErr = tx.Model(&updatedSettings).
 				Where("id = ?", existingSettings.ID).
-				Association("AsynqQueueConfigurations").
-				Replace(&updatedSettings.AsynqQueueConfigurations)
+				Association("TaskQueueConfigurations").
+				Replace(&updatedSettings.TaskQueueConfigurations)
 			if txErr != nil {
 				return txErr
 			}
 		} else {
-			for _, config := range updatedSettings.AsynqQueueConfigurations {
-				txErr = tx.Model(&models.AsynqQueueConfiguration{}).Where("name = ?", config.Name).Updates(&models.AsynqQueueConfiguration{
+			for _, config := range updatedSettings.TaskQueueConfigurations {
+				txErr = tx.Model(&models.TaskQueueConfiguration{}).Where("name = ?", config.Name).Updates(&models.TaskQueueConfiguration{
 					Priority: config.Priority,
 				}).Error
 

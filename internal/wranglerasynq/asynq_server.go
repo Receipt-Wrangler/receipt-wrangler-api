@@ -25,8 +25,8 @@ func StartEmbeddedAsynqServer() error {
 	}
 
 	for _, queueName := range models.GetQueueNames() {
-		var queueConfigurationToUse models.AsynqQueueConfiguration
-		for _, queueConfiguration := range systemSettings.AsynqQueueConfigurations {
+		var queueConfigurationToUse models.TaskQueueConfiguration
+		for _, queueConfiguration := range systemSettings.TaskQueueConfigurations {
 			if queueConfiguration.Name == queueName {
 				queueConfigurationToUse = queueConfiguration
 				break
@@ -41,7 +41,7 @@ func StartEmbeddedAsynqServer() error {
 	}
 
 	asynqConfig := asynq.Config{
-		Concurrency: systemSettings.AsynqConcurrency,
+		Concurrency: systemSettings.TaskConcurrency,
 		Queues:      queuePriorityMap,
 	}
 

@@ -39,8 +39,8 @@ func GetQueueNames() []QueueName {
 	}
 }
 
-func GetDefaultQueueConfigurationMap() map[QueueName]AsynqQueueConfiguration {
-	return map[QueueName]AsynqQueueConfiguration{
+func GetDefaultQueueConfigurationMap() map[QueueName]TaskQueueConfiguration {
+	return map[QueueName]TaskQueueConfiguration{
 		QuickScanQueue:                GetDefaultQuickScanQueueConfiguration(),
 		EmailPollingQueue:             GetDefaultEmailPollingQueueConfiguration(),
 		EmailReceiptProcessingQueue:   GetDefaultEmailReceiptProcessingQueueConfiguration(),

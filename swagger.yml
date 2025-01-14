@@ -3854,7 +3854,7 @@ components:
         password:
           type: string
           description: IMAP password
-    AsynqQueueConfiguration:
+    TaskQueueConfiguration:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
@@ -3864,7 +3864,7 @@ components:
             priority:
               type: integer
               description: Queue priority
-    UpsertAsynqQueueConfiguration:
+    UpsertTaskQueueConfiguration:
       type: object
       properties:
         name:
@@ -3877,7 +3877,7 @@ components:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
           required:
-            - asynqQueueConfigurations
+            - taskQueueConfigurations
           properties:
             enableLocalSignUp:
               type: boolean
@@ -3915,14 +3915,14 @@ components:
             fallbackReceiptProcessingSettingsId:
               type: integer
               description: Fallback receipt processing settings foreign key
-            asynqConcurrency:
+            taskConcurrency:
               type: integer
-              description: Concurrency for asynq worker
+              description: Concurrency for task worker
               default: 10
-            asynqQueueConfigurations:
+            taskQueueConfigurations:
               type: array
               items:
-                $ref: "#/components/schemas/AsynqQueueConfiguration"
+                $ref: "#/components/schemas/TaskQueueConfiguration"
     UpsertSystemSettingsCommand:
       type: object
       required:
@@ -3930,7 +3930,7 @@ components:
         - currencyDecimalSeparator
         - currencyHideDecimalPlaces
         - currencySymbolPosition
-        - asynqConcurrency
+        - taskConcurrency
       properties:
         enableLocalSignUp:
           type: boolean
@@ -3962,13 +3962,13 @@ components:
         fallbackReceiptProcessingSettingsId:
           type: integer
           description: Fallback receipt processing settings foreign key
-        asynqConcurrency:
+        taskConcurrency:
           type: integer
-          description: Concurrency for asynq worker
-        asynqQueueConfigurations:
+          description: Concurrency for task worker
+        taskQueueConfigurations:
           type: array
           items:
-            $ref: "#/components/schemas/UpsertAsynqQueueConfiguration"
+            $ref: "#/components/schemas/UpsertTaskQueueConfiguration"
     CheckEmailConnectivityCommand:
       type: object
       properties:
@@ -4013,8 +4013,6 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/SystemTask"
-            asynqTaskId:
-              type: string
     GetSystemTaskCommand:
       allOf:
         - $ref: "#/components/schemas/PagedRequestCommand"

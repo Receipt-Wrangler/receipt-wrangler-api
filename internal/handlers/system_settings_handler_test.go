@@ -92,9 +92,9 @@ func TestShouldValidateUpsertSystemSettingsCommand(t *testing.T) {
 		PromptId: 1,
 	})
 
-	defaultAsynqConfigCommands := make([]commands.UpsertAsynqQueueConfigurationCommand, 0)
+	defaultAsynqConfigCommands := make([]commands.UpsertTaskQueueConfigurationCommand, 0)
 	for _, config := range models.GetAllDefaultQueueConfigurations() {
-		defaultAsynqConfigCommands = append(defaultAsynqConfigCommands, commands.UpsertAsynqQueueConfigurationCommand{
+		defaultAsynqConfigCommands = append(defaultAsynqConfigCommands, commands.UpsertTaskQueueConfigurationCommand{
 			Name:     config.Name,
 			Priority: 1,
 		})
@@ -167,8 +167,8 @@ func TestShouldValidateUpsertSystemSettingsCommand(t *testing.T) {
 				NumWorkers:                          1,
 				CurrencyDecimalSeparator:            models.DOT,
 				CurrencySymbolPosition:              models.START,
-				AsynqConcurrency:                    10,
-				AsynqQueueConfigurations:            defaultAsynqConfigCommands,
+				TaskConcurrency:                     10,
+				TaskQueueConfigurations:             defaultAsynqConfigCommands,
 			},
 			expect: http.StatusBadRequest,
 		},
@@ -181,8 +181,8 @@ func TestShouldValidateUpsertSystemSettingsCommand(t *testing.T) {
 				NumWorkers:                          1,
 				CurrencyThousandthsSeparator:        models.COMMA,
 				CurrencySymbolPosition:              models.START,
-				AsynqConcurrency:                    10,
-				AsynqQueueConfigurations:            defaultAsynqConfigCommands,
+				TaskConcurrency:                     10,
+				TaskQueueConfigurations:             defaultAsynqConfigCommands,
 			},
 			expect: http.StatusBadRequest,
 		},
@@ -195,8 +195,8 @@ func TestShouldValidateUpsertSystemSettingsCommand(t *testing.T) {
 				NumWorkers:                          1,
 				CurrencyThousandthsSeparator:        models.COMMA,
 				CurrencyDecimalSeparator:            models.DOT,
-				AsynqConcurrency:                    10,
-				AsynqQueueConfigurations:            defaultAsynqConfigCommands,
+				TaskConcurrency:                     10,
+				TaskQueueConfigurations:             defaultAsynqConfigCommands,
 			},
 			expect: http.StatusBadRequest,
 		},
@@ -211,8 +211,8 @@ func TestShouldValidateUpsertSystemSettingsCommand(t *testing.T) {
 				CurrencyThousandthsSeparator:        models.COMMA,
 				CurrencyDecimalSeparator:            models.DOT,
 				CurrencySymbolPosition:              models.START,
-				AsynqConcurrency:                    10,
-				AsynqQueueConfigurations:            defaultAsynqConfigCommands,
+				TaskConcurrency:                     10,
+				TaskQueueConfigurations:             defaultAsynqConfigCommands,
 			},
 			expect: http.StatusOK,
 		},

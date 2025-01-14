@@ -1,6 +1,6 @@
 package models
 
-type AsynqQueueConfiguration struct {
+type TaskQueueConfiguration struct {
 	BaseModel
 	Name             QueueName      `json:"name" gorm:"unique"`
 	Priority         int            `json:"priority"`
@@ -8,36 +8,36 @@ type AsynqQueueConfiguration struct {
 	SystemSettingsId uint           `json:"systemSettingsId"`
 }
 
-func GetDefaultQuickScanQueueConfiguration() AsynqQueueConfiguration {
-	return AsynqQueueConfiguration{
+func GetDefaultQuickScanQueueConfiguration() TaskQueueConfiguration {
+	return TaskQueueConfiguration{
 		Name:     QuickScanQueue,
 		Priority: 4,
 	}
 }
 
-func GetDefaultEmailReceiptProcessingQueueConfiguration() AsynqQueueConfiguration {
-	return AsynqQueueConfiguration{
+func GetDefaultEmailReceiptProcessingQueueConfiguration() TaskQueueConfiguration {
+	return TaskQueueConfiguration{
 		Name:     EmailReceiptProcessingQueue,
 		Priority: 3,
 	}
 }
 
-func GetDefaultEmailPollingQueueConfiguration() AsynqQueueConfiguration {
-	return AsynqQueueConfiguration{
+func GetDefaultEmailPollingQueueConfiguration() TaskQueueConfiguration {
+	return TaskQueueConfiguration{
 		Name:     EmailPollingQueue,
 		Priority: 2,
 	}
 }
 
-func GetDefaultEmailReceiptImageCleanupQueueConfiguration() AsynqQueueConfiguration {
-	return AsynqQueueConfiguration{
+func GetDefaultEmailReceiptImageCleanupQueueConfiguration() TaskQueueConfiguration {
+	return TaskQueueConfiguration{
 		Name:     EmailReceiptImageCleanupQueue,
 		Priority: 1,
 	}
 }
 
-func GetAllDefaultQueueConfigurations() []AsynqQueueConfiguration {
-	return []AsynqQueueConfiguration{
+func GetAllDefaultQueueConfigurations() []TaskQueueConfiguration {
+	return []TaskQueueConfiguration{
 		GetDefaultQuickScanQueueConfiguration(),
 		GetDefaultEmailReceiptProcessingQueueConfiguration(),
 		GetDefaultEmailPollingQueueConfiguration(),

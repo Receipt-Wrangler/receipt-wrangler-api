@@ -2173,6 +2173,20 @@ paths:
           $ref: "#/components/responses/Internal"
         403:
           $ref: "#/components/responses/Forbidden"
+  /systemSettings/restartTaskServer:
+    post:
+      tags:
+        - SystemSettings
+      summary: Restart task server
+      description: This will restart the task server
+      operationId: restartTaskServer
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /import/importConfigJson:
     post:
       tags:

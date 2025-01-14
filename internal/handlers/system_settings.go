@@ -94,3 +94,23 @@ func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func RestartTaskServer(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error restarting task server, please restart the entire application",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			err := wranglerasynq.RestartEmbeddedAsynqServer()
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			return 0, nil
+		},
+	}
+	HandleRequest(handler)
+}

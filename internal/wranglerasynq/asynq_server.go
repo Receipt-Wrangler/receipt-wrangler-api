@@ -73,3 +73,8 @@ func BuildMux() *asynq.ServeMux {
 func ShutDownEmbeddedAsynqServer() {
 	server.Shutdown()
 }
+
+func RestartEmbeddedAsynqServer() error {
+	ShutDownEmbeddedAsynqServer()
+	return StartEmbeddedAsynqServer()
+}

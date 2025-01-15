@@ -3236,6 +3236,7 @@ components:
               - $ref: "#/components/schemas/SystemTask"
               - $ref: "#/components/schemas/ReceiptProcessingSettings"
               - $ref: "#/components/schemas/SystemEmail"
+              - $ref: "#/components/schemas/Activity"
         totalCount:
           type: integer
     FeatureConfig:

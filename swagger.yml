@@ -2371,6 +2371,8 @@ components:
           format: uint64
         resultDescription:
           type: string
+        canBeRestarted:
+          type: boolean
         childSystemTasks:
           type: array
           items:

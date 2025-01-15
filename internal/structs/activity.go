@@ -14,4 +14,5 @@ type Activity struct {
 	ResultDescription string                  `json:"resultDescription"`
 	RanByUserId       *uint                   `json:"ranByUserId"`
 	ChildSystemTasks  []*models.SystemTask    `json:"childSystemTasks"`
+	CanBeRestarted    bool                    `json:"canBeRestarted"`
 }

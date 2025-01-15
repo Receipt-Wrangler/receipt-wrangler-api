@@ -1807,6 +1807,35 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /systemTask/getPagedActivities:
+    post:
+      tags:
+        - SystemTask
+      summary: Gets paged activities
+      description: This will return paged activities for a list of groups
+      operationId: getPagedActivities
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedActivityRequestCommand"
+      responses:
+        200:
+          description: Paged activities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
   /prompt/:
     post:
       tags:

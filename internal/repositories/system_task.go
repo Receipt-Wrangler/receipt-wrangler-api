@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/structs"
 
 	"gorm.io/gorm"
 )
@@ -55,6 +56,39 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	if query.Error != nil {
 		return nil, 0, err
 	}
+
+	return results, count, nil
+}
+
+func (repository SystemTaskRepository) GetPagedActivities(command commands.PagedActivityRequestCommand) (
+	[]structs.Activity,
+	int64,
+	error,
+) {
+	db := repository.GetDB()
+	var results []structs.Activity
+	var count int64
+
+	// TODO: implement rerun
+	if !isColumnNameValid(command.OrderBy) {
+		return nil, 0, errors.New("invalid column name")
+	}
+
+	query := db.Distinct("system_tasks.*").
+		Table("system_tasks").
+		Select("system_tasks.*").
+		Joins("LEFT JOIN users ON system_tasks.ran_by_user_id = users.id").
+		Joins("LEFT JOIN group_members ON users.id = group_members.user_id").
+		Joins("LEFT JOIN receipts ON system_tasks.associated_entity_type = 'RECEIPT' AND system_tasks.associated_entity_id = receipts.id").
+		Where("(group_members.group_id IN ?) OR receipts.group_id IN ?", command.GroupIds, command.GroupIds).
+		Where("system_tasks.type NOT IN ?", []string{"MAGIC_FILL", "SYSTEM_EMAIL_CONNECTIVITY_CHECK", "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK", "META_ASSOCIATE_TASKS_TO_RECEIPT"})
+
+	query.Count(&count)
+
+	query = repository.Sort(query, command.OrderBy, command.SortDirection)
+	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
+
+	query.Find(&results)
 
 	return results, count, nil
 }

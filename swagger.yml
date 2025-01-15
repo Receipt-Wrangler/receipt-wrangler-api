@@ -3140,6 +3140,14 @@ components:
           properties:
             filter:
               $ref: "#/components/schemas/GroupFilter"
+    PagedActivityRequestCommand:
+      allOf:
+        - $ref: "#/components/schemas/PagedRequestCommand"
+        - type: object
+          properties:
+            groupIds:
+              type: array
+              items: integer
     GroupFilter:
       type: object
       properties:

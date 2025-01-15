@@ -2278,6 +2278,7 @@ components:
       enum:
         - "GROUP_SUMMARY"
         - "FILTERED_RECEIPTS"
+        - "GROUP_ACTIVITY"
     AiType:
       type: string
       enum:

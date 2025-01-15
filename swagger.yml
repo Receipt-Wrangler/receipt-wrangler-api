@@ -2345,6 +2345,36 @@ components:
         - "email_polling"
         - "email_receipt_processing"
         - "email_receipt_image_cleanup"
+    Activity:
+      type: object
+      required:
+        - id
+        - type
+        - status
+        - startedAt
+        - endedAt
+        - ranByUserId
+        - childSystemTasks
+      properties:
+        id:
+          type: integer
+        type:
+          $ref: "#/components/schemas/SystemTaskType"
+        status:
+          $ref: "#/components/schemas/SystemTaskStatus"
+        startedAt:
+          type: string
+        endedAt:
+          type: string
+        ranByUserId:
+          type: integer
+          format: uint64
+        resultDescription:
+          type: string
+        childSystemTasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemTask"
     BaseModel:
       type: object
       required:
@@ -3769,7 +3799,6 @@ components:
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/UpsertCommentCommand"
-
     UpsertItemCommand:
       type: object
       required:

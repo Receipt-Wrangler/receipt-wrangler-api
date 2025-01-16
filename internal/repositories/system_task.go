@@ -74,14 +74,20 @@ func (repository SystemTaskRepository) GetPagedActivities(command commands.Paged
 		return nil, 0, errors.New("invalid column name")
 	}
 
-	query := db.Distinct("system_tasks.*").
-		Table("system_tasks").
-		Select("system_tasks.*").
+	filteredSystemTaskTypes := []models.SystemTaskType{
+		models.MAGIC_FILL,
+		models.SYSTEM_EMAIL_CONNECTIVITY_CHECK,
+		models.RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK,
+		models.META_ASSOCIATE_TASKS_TO_RECEIPT,
+	}
+
+	query := db.Model(&models.SystemTask{}).
+		Distinct().
 		Joins("LEFT JOIN users ON system_tasks.ran_by_user_id = users.id").
 		Joins("LEFT JOIN group_members ON users.id = group_members.user_id").
 		Joins("LEFT JOIN receipts ON system_tasks.associated_entity_type = 'RECEIPT' AND system_tasks.associated_entity_id = receipts.id").
 		Where("(group_members.group_id IN ?) OR receipts.group_id IN ?", command.GroupIds, command.GroupIds).
-		Where("system_tasks.type NOT IN ?", []string{"MAGIC_FILL", "SYSTEM_EMAIL_CONNECTIVITY_CHECK", "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK", "META_ASSOCIATE_TASKS_TO_RECEIPT"})
+		Where("system_tasks.type NOT IN ?", filteredSystemTaskTypes)
 
 	query.Count(&count)
 

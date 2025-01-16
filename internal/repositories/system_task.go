@@ -85,7 +85,8 @@ func (repository SystemTaskRepository) GetPagedActivities(command commands.Paged
 		Distinct().
 		Joins("LEFT JOIN users ON system_tasks.ran_by_user_id = users.id").
 		Joins("LEFT JOIN group_members ON users.id = group_members.user_id").
-		Joins("LEFT JOIN receipts ON system_tasks.associated_entity_type = 'RECEIPT' AND system_tasks.associated_entity_id = receipts.id").
+		Joins("LEFT JOIN receipts ON system_tasks.associated_entity_type = 'RECEIPT' "+
+			"AND system_tasks.associated_entity_id = receipts.id").
 		Where("(group_members.group_id IN ?) OR receipts.group_id IN ?", command.GroupIds, command.GroupIds).
 		Where("system_tasks.type NOT IN ?", filteredSystemTaskTypes)
 

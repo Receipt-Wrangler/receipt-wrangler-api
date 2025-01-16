@@ -29,12 +29,10 @@ func (repository *DashboardRepository) CreateDashboard(command commands.UpsertDa
 	groupId, _ = utils.StringToUint(command.GroupId)
 
 	for i, widget := range command.Widgets {
-		configuration := []byte("{}")
-
 		widgets[i] = models.Widget{
 			Name:          widget.Name,
 			WidgetType:    widget.WidgetType,
-			Configuration: configuration,
+			Configuration: widget.Configuration,
 		}
 	}
 

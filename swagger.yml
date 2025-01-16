@@ -3176,7 +3176,8 @@ components:
           properties:
             groupIds:
               type: array
-              items: integer
+              items:
+                type: integer
     GroupFilter:
       type: object
       properties:

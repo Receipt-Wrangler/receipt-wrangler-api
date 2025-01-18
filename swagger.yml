@@ -2339,6 +2339,7 @@ components:
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
         - "RECEIPT_UPLOADED"
+        - "RECEIPT_UPDATED"
         - "PROMPT_GENERATED"
     AssociatedEntityType:
       type: string

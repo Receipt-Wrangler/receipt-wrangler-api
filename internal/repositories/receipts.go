@@ -289,6 +289,7 @@ func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt,
 	return nil
 }
 
+// TODO: remove resultDescription
 func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceiptCommand, createdByUserID uint) (models.Receipt, error) {
 	db := repository.GetDB()
 	notificationRepository := NewNotificationRepository(nil)
@@ -299,6 +300,14 @@ func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceipt
 
 	if receipt.GroupId > 0 {
 		receipt.CreatedBy = &createdByUserID
+	}
+
+	systemTask := commands.UpsertSystemTaskCommand{
+		Type:                 models.RECEIPT_UPLOADED,
+		AssociatedEntityType: models.RECEIPT,
+		StartedAt:            time.Now(),
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		RanByUserId:          &createdByUserID,
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -328,11 +337,23 @@ func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceipt
 		return nil
 	})
 	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
 	}
 
 	var fullyLoadedReceipt models.Receipt
 	err = db.Model(models.Receipt{}).Where("id = ?", receipt.ID).Preload(clause.Associations).Find(&fullyLoadedReceipt).Error
+	if err != nil {
+		createFailedUpdateSystemTask(systemTask, err)
+		return models.Receipt{}, err
+	}
+
+	endedAt := time.Now()
+	systemTask.EndedAt = &endedAt
+	systemTask.AssociatedSystemTaskId = &fullyLoadedReceipt.ID
+
+	systemTaskRepository := NewSystemTaskRepository(nil)
+	_, err = systemTaskRepository.CreateSystemTask(systemTask)
 	if err != nil {
 		return models.Receipt{}, err
 	}

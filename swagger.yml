@@ -2399,14 +2399,8 @@ components:
         ranByUserId:
           type: integer
           format: uint64
-        resultDescription:
-          type: string
         canBeRestarted:
           type: boolean
-        childSystemTasks:
-          type: array
-          items:
-            $ref: "#/components/schemas/SystemTask"
     BaseModel:
       type: object
       required:

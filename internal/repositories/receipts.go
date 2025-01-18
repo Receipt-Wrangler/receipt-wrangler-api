@@ -289,10 +289,10 @@ func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt,
 	return nil
 }
 
-// TODO: remove resultDescription
 func (repository ReceiptRepository) CreateReceipt(
 	command commands.UpsertReceiptCommand,
 	createdByUserID uint,
+	createSystemTask bool,
 ) (models.Receipt, error) {
 	db := repository.GetDB()
 	notificationRepository := NewNotificationRepository(nil)
@@ -340,25 +340,37 @@ func (repository ReceiptRepository) CreateReceipt(
 		return nil
 	})
 	if err != nil {
-		createFailedUpdateSystemTask(systemTask, err)
+		if !createSystemTask {
+			createFailedUpdateSystemTask(systemTask, err)
+		}
 		return models.Receipt{}, err
 	}
 
 	var fullyLoadedReceipt models.Receipt
 	err = db.Model(models.Receipt{}).Where("id = ?", receipt.ID).Preload(clause.Associations).Find(&fullyLoadedReceipt).Error
 	if err != nil {
-		createFailedUpdateSystemTask(systemTask, err)
+		if !createSystemTask {
+			createFailedUpdateSystemTask(systemTask, err)
+		}
 		return models.Receipt{}, err
 	}
 
-	endedAt := time.Now()
-	systemTask.EndedAt = &endedAt
-	systemTask.AssociatedSystemTaskId = &fullyLoadedReceipt.ID
+	if createSystemTask {
+		endedAt := time.Now()
+		systemTask.EndedAt = &endedAt
+		systemTask.AssociatedSystemTaskId = &fullyLoadedReceipt.ID
+		newReceiptString, err := getReceiptString(fullyLoadedReceipt)
+		if err != nil {
+			return models.Receipt{}, err
+		}
 
-	systemTaskRepository := NewSystemTaskRepository(nil)
-	_, err = systemTaskRepository.CreateSystemTask(systemTask)
-	if err != nil {
-		return models.Receipt{}, err
+		systemTask.ResultDescription = newReceiptString
+
+		systemTaskRepository := NewSystemTaskRepository(nil)
+		_, err = systemTaskRepository.CreateSystemTask(systemTask)
+		if err != nil {
+			return models.Receipt{}, err
+		}
 	}
 
 	return fullyLoadedReceipt, nil

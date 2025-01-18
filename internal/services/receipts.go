@@ -181,7 +181,7 @@ func (service ReceiptService) QuickScan(
 		systemTaskService.SetTransaction(tx)
 		uploadStart := time.Now()
 
-		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId)
+		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId, false)
 		uploadEnd := time.Now()
 		_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 			err,

@@ -10,3 +10,5 @@ type Widget struct {
 	WidgetType    WidgetType      `gorm:"not null;" json:"widgetType"`
 	Configuration json.RawMessage `json:"configuration"`
 }
+
+// For configuration we need can filter between the group's activities and my activities

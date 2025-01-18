@@ -8,6 +8,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"receipt-wrangler/api/internal/wranglerasynq"
 )
 
 func GetSystemTasks(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +92,11 @@ func GetActivitiesForGroups(w http.ResponseWriter, r *http.Request) {
 
 			systemTaskRepository := repositories.NewSystemTaskRepository(nil)
 			activities, count, err := systemTaskRepository.GetPagedActivities(command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = wranglerasynq.SetActivityCanBeRestarted(&activities)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

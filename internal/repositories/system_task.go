@@ -6,6 +6,7 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/wranglerasynq"
 
 	"gorm.io/gorm"
 )
@@ -97,6 +98,30 @@ func (repository SystemTaskRepository) GetPagedActivities(command commands.Paged
 
 	query.Find(&results)
 
+	inspector, err := wranglerasynq.GetAsynqInspector()
+	if err != nil {
+		return nil, 0, err
+	}
+	archivedTasks, err := inspector.ListArchivedTasks(string(models.QuickScanQueue))
+
+	systemTaskRepository := NewSystemTaskRepository(nil)
+
+	for _, activity := range results {
+		if activity.Type == models.QUICK_SCAN && activity.AssociatedSystemTaskId != nil {
+			associatedSystemTask, err := systemTaskRepository.GetSystemTaskById(*activity.AssociatedSystemTaskId)
+			if err != nil {
+				return nil, 0, err
+			}
+			for i := 0; i < len(archivedTasks); i++ {
+				task := archivedTasks[i]
+				if task.ID == associatedSystemTask.AsynqTaskId {
+					activity.CanBeRestarted = true
+					break
+				}
+			}
+		}
+	}
+
 	return results, count, nil
 }
 
@@ -149,4 +174,16 @@ func (repository SystemTaskRepository) DeleteSystemTaskByAssociatedEntityId(
 	}
 
 	return nil
+}
+
+func (repository SystemTaskRepository) GetSystemTaskById(id uint) (models.SystemTask, error) {
+	db := repository.GetDB()
+	var systemTask models.SystemTask
+
+	err := db.Model(&models.SystemTask{}).Where("id = ?", id).First(&systemTask).Error
+	if err != nil {
+		return models.SystemTask{}, err
+	}
+
+	return systemTask, nil
 }

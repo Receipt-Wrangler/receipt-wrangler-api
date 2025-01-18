@@ -290,7 +290,10 @@ func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt,
 }
 
 // TODO: remove resultDescription
-func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceiptCommand, createdByUserID uint) (models.Receipt, error) {
+func (repository ReceiptRepository) CreateReceipt(
+	command commands.UpsertReceiptCommand,
+	createdByUserID uint,
+) (models.Receipt, error) {
 	db := repository.GetDB()
 	notificationRepository := NewNotificationRepository(nil)
 	receipt, err := command.ToReceipt()

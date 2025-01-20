@@ -134,7 +134,7 @@ func (service ReceiptService) QuickScan(
 	groupIdString := utils.UintToString(groupId)
 
 	now := time.Now()
-	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand, groupIdString)
+	receiptCommand, receiptProcessingMetadata, magicFillErr := MagicFillFromImage(magicFillCommand, groupIdString)
 	finishedAt := time.Now()
 
 	metaCombineSystemTask, err := systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
@@ -161,8 +161,8 @@ func (service ReceiptService) QuickScan(
 		return models.Receipt{}, taskErr
 	}
 
-	if err != nil {
-		return models.Receipt{}, err
+	if magicFillErr != nil {
+		return models.Receipt{}, magicFillErr
 	}
 
 	if receiptCommand.PaidByUserID == 0 {

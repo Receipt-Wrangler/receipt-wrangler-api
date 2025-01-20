@@ -11,9 +11,11 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 	if err != nil {
 		return err
 	}
+
 	archivedTasks, err := inspector.ListArchivedTasks(string(models.QuickScanQueue))
 	if err != nil {
 		return err
+
 	}
 	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
 
@@ -25,6 +27,7 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 			if err != nil {
 				return err
 			}
+
 			for i := 0; i < len(archivedTasks); i++ {
 				task := archivedTasks[i]
 				if task.ID == associatedSystemTask.AsynqTaskId {

@@ -118,7 +118,7 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 		)
 
 		createReceiptStart := time.Now()
-		createdReceipt, err := receiptRepository.CreateReceipt(command, 0)
+		createdReceipt, err := receiptRepository.CreateReceipt(command, 0, false)
 		_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 			err,
 			createdReceipt,

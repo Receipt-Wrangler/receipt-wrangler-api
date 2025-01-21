@@ -191,7 +191,6 @@ func TestShouldAcceptReceiptAccessBasedOnGroup(t *testing.T) {
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
-		GroupRole:    models.OWNER,
 		ReceiptId:    "1",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			return 0, nil
@@ -274,6 +273,64 @@ func TestShouldAcceptReceiptsAccessBasedOnGroup(t *testing.T) {
 	HandleRequest(handler)
 
 	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestShouldRejectAccessBasedOnEmptyGroupId(t *testing.T) {
+	defer tearDownGenericHandlerTest()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1}})
+	r = r.WithContext(newContext)
+
+	repositories.CreateTestGroupWithUsers()
+
+	handler := structs.Handler{
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationJson,
+		GroupRole:    models.VIEWER,
+		GroupId:      "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestShouldRejectAccessBasedOnEmptyGroupIds(t *testing.T) {
+	defer tearDownGenericHandlerTest()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1}})
+	r = r.WithContext(newContext)
+
+	repositories.CreateTestGroupWithUsers()
+
+	handler := structs.Handler{
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationJson,
+		GroupRole:    models.VIEWER,
+		GroupIds:     []string{},
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+
+	if w.Result().StatusCode != http.StatusForbidden {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
 	}
 }

@@ -1807,6 +1807,60 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /systemTask/getPagedActivities:
+    post:
+      tags:
+        - SystemTask
+      summary: Gets paged activities
+      description: This will return paged activities for a list of groups
+      operationId: getPagedActivities
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedActivityRequestCommand"
+      responses:
+        200:
+          description: Paged activities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
+  /systemTask/rerunActivity/{id}:
+    post:
+      tags:
+        - SystemTask
+      summary: Attempts to rerun activity
+      description: This will rerun a failed activity
+      operationId: rerunActivity
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of activity to restart
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
   /prompt/:
     post:
       tags:
@@ -2278,6 +2332,7 @@ components:
       enum:
         - "GROUP_SUMMARY"
         - "FILTERED_RECEIPTS"
+        - "GROUP_ACTIVITY"
     AiType:
       type: string
       enum:
@@ -2309,6 +2364,7 @@ components:
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
         - "RECEIPT_UPLOADED"
+        - "RECEIPT_UPDATED"
         - "PROMPT_GENERATED"
     AssociatedEntityType:
       type: string
@@ -2344,6 +2400,32 @@ components:
         - "email_polling"
         - "email_receipt_processing"
         - "email_receipt_image_cleanup"
+    Activity:
+      type: object
+      required:
+        - id
+        - type
+        - status
+        - startedAt
+        - endedAt
+        - ranByUserId
+        - childSystemTasks
+      properties:
+        id:
+          type: integer
+        type:
+          $ref: "#/components/schemas/SystemTaskType"
+        status:
+          $ref: "#/components/schemas/SystemTaskStatus"
+        startedAt:
+          type: string
+        endedAt:
+          type: string
+        ranByUserId:
+          type: integer
+          format: uint64
+        canBeRestarted:
+          type: boolean
     BaseModel:
       type: object
       required:
@@ -3107,6 +3189,15 @@ components:
           properties:
             filter:
               $ref: "#/components/schemas/GroupFilter"
+    PagedActivityRequestCommand:
+      allOf:
+        - $ref: "#/components/schemas/PagedRequestCommand"
+        - type: object
+          properties:
+            groupIds:
+              type: array
+              items:
+                type: integer
     GroupFilter:
       type: object
       properties:
@@ -3203,6 +3294,7 @@ components:
               - $ref: "#/components/schemas/SystemTask"
               - $ref: "#/components/schemas/ReceiptProcessingSettings"
               - $ref: "#/components/schemas/SystemEmail"
+              - $ref: "#/components/schemas/Activity"
         totalCount:
           type: integer
     FeatureConfig:
@@ -3768,7 +3860,6 @@ components:
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/UpsertCommentCommand"
-
     UpsertItemCommand:
       type: object
       required:

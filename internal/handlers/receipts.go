@@ -163,7 +163,7 @@ func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			receiptRepository := repositories.NewReceiptRepository(nil)
-			createdReceipt, err := receiptRepository.CreateReceipt(command, token.UserId)
+			createdReceipt, err := receiptRepository.CreateReceipt(command, token.UserId, true)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

@@ -2,11 +2,11 @@ package repositories
 
 import (
 	"errors"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-
-	"gorm.io/gorm"
+	"receipt-wrangler/api/internal/structs"
 )
 
 type SystemTaskRepository struct {
@@ -55,6 +55,45 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	if query.Error != nil {
 		return nil, 0, err
 	}
+
+	return results, count, nil
+}
+
+func (repository SystemTaskRepository) GetPagedActivities(command commands.PagedActivityRequestCommand) (
+	[]structs.Activity,
+	int64,
+	error,
+) {
+	db := repository.GetDB()
+	var results []structs.Activity
+	var count int64
+
+	if !isColumnNameValid(command.OrderBy) {
+		return nil, 0, errors.New("invalid column name")
+	}
+
+	filteredSystemTaskTypes := []models.SystemTaskType{
+		models.MAGIC_FILL,
+		models.SYSTEM_EMAIL_CONNECTIVITY_CHECK,
+		models.RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK,
+		models.META_ASSOCIATE_TASKS_TO_RECEIPT,
+	}
+
+	query := db.Model(&models.SystemTask{}).
+		Distinct().
+		Joins("LEFT JOIN users ON system_tasks.ran_by_user_id = users.id").
+		Joins("LEFT JOIN group_members ON users.id = group_members.user_id").
+		Joins("LEFT JOIN receipts ON system_tasks.associated_entity_type = 'RECEIPT' "+
+			"AND system_tasks.associated_entity_id = receipts.id").
+		Where("(group_members.group_id IN ?) OR receipts.group_id IN ?", command.GroupIds, command.GroupIds).
+		Where("system_tasks.type NOT IN ?", filteredSystemTaskTypes)
+
+	query.Count(&count)
+
+	query = repository.Sort(query, command.OrderBy, command.SortDirection)
+	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
+
+	query.Find(&results)
 
 	return results, count, nil
 }
@@ -108,4 +147,16 @@ func (repository SystemTaskRepository) DeleteSystemTaskByAssociatedEntityId(
 	}
 
 	return nil
+}
+
+func (repository SystemTaskRepository) GetSystemTaskById(id uint) (models.SystemTask, error) {
+	db := repository.GetDB()
+	var systemTask models.SystemTask
+
+	err := db.Model(&models.SystemTask{}).Where("id = ?", id).First(&systemTask).Error
+	if err != nil {
+		return models.SystemTask{}, err
+	}
+
+	return systemTask, nil
 }

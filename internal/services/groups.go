@@ -47,7 +47,12 @@ func (service GroupService) GetGroupsForUser(userId string) ([]models.Group, err
 		return nil, err
 	}
 
-	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Order("is_all_group desc").Find(&groups).Error
+	err = db.Model(models.Group{}).
+		Where("id IN ?", groupIds).
+		Preload(clause.Associations).
+		Order("is_all_group desc").
+		Find(&groups).Error
+
 	if err != nil {
 		return nil, err
 	}

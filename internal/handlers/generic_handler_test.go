@@ -191,7 +191,6 @@ func TestShouldAcceptReceiptAccessBasedOnGroup(t *testing.T) {
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
-		GroupRole:    models.OWNER,
 		ReceiptId:    "1",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			return 0, nil

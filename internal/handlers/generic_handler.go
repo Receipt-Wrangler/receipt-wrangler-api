@@ -43,7 +43,7 @@ func HandleRequest(handler structs.Handler) {
 		}
 	}
 
-	if len(handler.GroupRole) > 0 && len(handler.GroupId) == 0 {
+	if len(handler.GroupRole) > 0 && len(handler.GroupId) == 0 && len(handler.GroupIds) == 0 {
 		utils.WriteCustomErrorResponse(handler.Writer, "Group ID is required to validate group role", http.StatusForbidden)
 		return
 	}
@@ -65,7 +65,7 @@ func HandleRequest(handler structs.Handler) {
 		}
 	}
 
-	if len(handler.GroupRole) > 0 && len(handler.GroupIds) == 0 {
+	if len(handler.GroupRole) > 0 && len(handler.GroupIds) == 0 && len(handler.GroupId) == 0 {
 		utils.WriteCustomErrorResponse(handler.Writer, "Group IDs are required to validate group role", http.StatusForbidden)
 		return
 	}

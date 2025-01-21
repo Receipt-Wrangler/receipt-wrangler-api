@@ -68,7 +68,6 @@ func (repository SystemTaskRepository) GetPagedActivities(command commands.Paged
 	var results []structs.Activity
 	var count int64
 
-	// TODO: implement rerun
 	if !isColumnNameValid(command.OrderBy) {
 		return nil, 0, errors.New("invalid column name")
 	}

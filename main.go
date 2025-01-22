@@ -20,7 +20,6 @@ import (
 )
 
 func main() {
-	// TODO:  maybe add queue priority? add TTLs add Redis pass support
 	err := logging.InitLog()
 	if err != nil {
 		fmt.Println("Failed to initialize log")

@@ -1,6 +1,7 @@
 package wranglerasynq
 
 import (
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -14,8 +15,9 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 
 	archivedTasks, err := inspector.ListArchivedTasks(string(models.QuickScanQueue))
 	if err != nil {
-		return err
-
+		// We do not return this error because it will happen on a fresh redis instance, with no quick scans ever ran
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+		return nil
 	}
 	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
 

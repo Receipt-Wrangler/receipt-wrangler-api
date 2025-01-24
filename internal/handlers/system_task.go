@@ -66,10 +66,11 @@ func GetSystemTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetActivitiesForGroups(w http.ResponseWriter, r *http.Request) {
+	errorMsg := "Error getting group activities"
 	command := commands.PagedActivityRequestCommand{}
 	err := command.LoadDataFromRequest(w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
@@ -79,7 +80,7 @@ func GetActivitiesForGroups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	handler := structs.Handler{
-		ErrorMessage: "Error getting group activities",
+		ErrorMessage: errorMsg,
 		Writer:       w,
 		Request:      r,
 		GroupIds:     stringGroupIds,
@@ -130,11 +131,12 @@ func GetActivitiesForGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 func RerunActivity(w http.ResponseWriter, r *http.Request) {
+	errorMsg := "Error rerunning activity"
 	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
 	inspector, err := wranglerasynq.GetAsynqInspector()
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
@@ -142,14 +144,14 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 	systemTaskUintId, err := utils.StringToUint(systemTaskId)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
 	systemTask, err := systemTaskRepository.GetSystemTaskById(systemTaskUintId)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
@@ -168,7 +170,7 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 	parentSystemTask, err := systemTaskRepository.GetSystemTaskById(*systemTask.AssociatedSystemTaskId)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
@@ -181,7 +183,7 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 	taskInfo, err := inspector.GetTaskInfo(string(models.QuickScanQueue), parentSystemTask.AsynqTaskId)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
@@ -189,14 +191,14 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(taskInfo.Payload, &payload)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
 	stringGroupId := utils.UintToString(payload.GroupId)
 
 	handler := structs.Handler{
-		ErrorMessage: "Error rerunning activity",
+		ErrorMessage: errorMsg,
 		Writer:       w,
 		Request:      r,
 		GroupId:      stringGroupId,

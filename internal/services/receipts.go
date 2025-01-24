@@ -143,6 +143,7 @@ func (service ReceiptService) QuickScan(
 		AssociatedEntityType: models.NOOP_ENTITY_TYPE,
 		AssociatedEntityId:   0,
 		AsynqTaskId:          asynqTaskId,
+		GroupId:              &groupId,
 	})
 	if err != nil {
 		return models.Receipt{}, err
@@ -154,6 +155,7 @@ func (service ReceiptService) QuickScan(
 		finishedAt,
 		models.QUICK_SCAN,
 		&token.UserId,
+		&groupId,
 		func(command commands.UpsertSystemTaskCommand) *uint {
 			return &metaCombineSystemTask.ID
 		})

@@ -123,6 +123,8 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		return models.Receipt{}, err
 	}
 
+	systemTask.GroupId = &currentReceipt.GroupId
+
 	// NOTE: ID and field used for afterReceiptUpdated
 	updatedReceipt.ID = currentReceipt.ID
 	updatedReceipt.ResolvedDate = currentReceipt.ResolvedDate

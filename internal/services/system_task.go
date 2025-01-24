@@ -56,6 +56,7 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 	endDate time.Time,
 	taskType models.SystemTaskType,
 	userId *uint,
+	groupId *uint,
 	parentAssociatedSystemTaskId func(command commands.UpsertSystemTaskCommand) *uint) (structs.ReceiptProcessingSystemTasks, error) {
 	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	result := structs.ReceiptProcessingSystemTasks{}
@@ -70,6 +71,7 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			EndedAt:              &endDate,
 			ResultDescription:    metadata.RawResponse,
 			RanByUserId:          userId,
+			GroupId:              groupId,
 		}
 
 		if parentAssociatedSystemTaskId != nil {
@@ -98,6 +100,7 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			EndedAt:              &endDate,
 			ResultDescription:    metadata.FallbackRawResponse,
 			RanByUserId:          userId,
+			GroupId:              groupId,
 		}
 
 		if parentAssociatedSystemTaskId != nil {
@@ -234,6 +237,7 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 		EndedAt:                &uploadFinished,
 		ResultDescription:      resultDescription,
 		AssociatedSystemTaskId: &systemTaskId,
+		GroupId:                &createdReceipt.GroupId,
 	})
 	if err != nil {
 		return models.SystemTask{}, err

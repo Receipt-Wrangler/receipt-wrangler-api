@@ -44,8 +44,8 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 		return HandleError(err)
 	}
 
-	groupIdString := utils.UintToString(payload.GroupSettingsId)
-	groupSettingsToUse, err := groupSettingsRepository.GetGroupSettingsById(groupIdString)
+	groupSettingsIdString := utils.UintToString(payload.GroupSettingsId)
+	groupSettingsToUse, err := groupSettingsRepository.GetGroupSettingsById(groupSettingsIdString)
 	if err != nil {
 		return HandleError(err)
 	}
@@ -56,6 +56,7 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 		return HandleError(fmt.Errorf("could not find group settings with id %d", payload.GroupSettingsId))
 	}
 
+	groupIdString := utils.UintToString(groupSettingsToUse.GroupId)
 	start := time.Now()
 	baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(payload.ImageForOcrPath, groupIdString)
 	end := time.Now()
@@ -112,6 +113,7 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 			end,
 			models.EMAIL_UPLOAD,
 			nil,
+			&groupSettingsToUse.GroupId,
 			func(command commands.UpsertSystemTaskCommand) *uint {
 				return &emailReadSystemTask.ID
 			},

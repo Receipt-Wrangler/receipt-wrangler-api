@@ -2279,6 +2279,10 @@ components:
       description: The request was not allowed
     Internal:
       description: There was an error processing the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalErrorResponse'
   schemas:
     ReceiptStatus:
       description: Status of a receipt
@@ -4273,3 +4277,12 @@ components:
         version:
           type: string
           description: Version
+
+    InternalErrorResponse:
+      type: object
+      required:
+        - errorMsg
+      properties:
+        errorMsg:
+          type: string
+          description: Error message

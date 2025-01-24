@@ -114,6 +114,7 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 		EndedAt:                command.EndedAt,
 		ResultDescription:      command.ResultDescription,
 		RanByUserId:            command.RanByUserId,
+		GroupId:                command.GroupId,
 		AssociatedSystemTaskId: command.AssociatedSystemTaskId,
 		AsynqTaskId:            command.AsynqTaskId,
 	}

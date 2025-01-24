@@ -2428,6 +2428,9 @@ components:
         ranByUserId:
           type: integer
           format: uint64
+        groupId:
+          type: integer
+          format: uint64
         canBeRestarted:
           type: boolean
     BaseModel:
@@ -4100,6 +4103,9 @@ components:
             associatedEntityType:
               $ref: "#/components/schemas/AssociatedEntityType"
             ranByUserId:
+              type: integer
+              format: uint64
+            groupId:
               type: integer
               format: uint64
             resultDescription:

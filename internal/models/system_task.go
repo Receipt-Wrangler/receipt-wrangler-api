@@ -17,6 +17,7 @@ type SystemTask struct {
 	ResultDescription      string               `json:"resultDescription"`
 	RanByUser              *User                `json:"-"`
 	RanByUserId            *uint                `json:"ranByUserId"`
+	GroupId                *uint                `json:"groupId"`
 	AssociatedSystemTask   *SystemTask          `json:"associatedSystemTask"`
 	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
 	ChildSystemTasks       []*SystemTask        `gorm:"foreignKey:AssociatedSystemTaskId" json:"childSystemTasks"`

@@ -14,6 +14,7 @@ type UpsertSystemTaskCommand struct {
 	EndedAt                *time.Time                  `json:"endedAt"`
 	ResultDescription      string                      `json:"resultDescription"`
 	RanByUserId            *uint                       `json:"ranByUserId"`
+	GroupId                *uint                       `json:"groupId"`
 	AssociatedSystemTaskId *uint                       `json:"associatedSystemTaskId"`
 	AsynqTaskId            string                      `json:"asynqTaskId"`
 }

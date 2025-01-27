@@ -104,7 +104,6 @@ func (service ReceiptService) QuickScan(
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
 	systemTaskService := NewSystemTaskService(service.TX)
-	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	var createdReceipt models.Receipt
 
 	fileRepository := repositories.NewFileRepository(service.TX)
@@ -137,18 +136,6 @@ func (service ReceiptService) QuickScan(
 	receiptCommand, receiptProcessingMetadata, magicFillErr := MagicFillFromImage(magicFillCommand, groupIdString)
 	finishedAt := time.Now()
 
-	metaCombineSystemTask, err := systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
-		Type:                 models.META_COMBINE_QUICK_SCAN,
-		Status:               models.SYSTEM_TASK_SUCCEEDED,
-		AssociatedEntityType: models.NOOP_ENTITY_TYPE,
-		AssociatedEntityId:   0,
-		AsynqTaskId:          asynqTaskId,
-		GroupId:              &groupId,
-	})
-	if err != nil {
-		return models.Receipt{}, err
-	}
-
 	quickScanSystemTasks, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
 		receiptProcessingMetadata,
 		now,
@@ -156,9 +143,7 @@ func (service ReceiptService) QuickScan(
 		models.QUICK_SCAN,
 		&token.UserId,
 		&groupId,
-		func(command commands.UpsertSystemTaskCommand) *uint {
-			return &metaCombineSystemTask.ID
-		})
+		nil)
 	if taskErr != nil {
 		return models.Receipt{}, taskErr
 	}
@@ -212,7 +197,7 @@ func (service ReceiptService) QuickScan(
 
 		err = systemTaskService.AssociateSystemTasksToReceipt(
 			createdReceipt.ID,
-			metaCombineSystemTask.ID,
+			quickScanSystemTasks.SystemTask.ID,
 			&groupId,
 			uploadStart,
 			uploadEnd)

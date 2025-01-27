@@ -57,6 +57,7 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 	taskType models.SystemTaskType,
 	userId *uint,
 	groupId *uint,
+	asynqTaskId string,
 	parentAssociatedSystemTaskId func(command commands.UpsertSystemTaskCommand) *uint) (structs.ReceiptProcessingSystemTasks, error) {
 	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	result := structs.ReceiptProcessingSystemTasks{}
@@ -70,6 +71,7 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			StartedAt:            startDate,
 			EndedAt:              &endDate,
 			ResultDescription:    metadata.RawResponse,
+			AsynqTaskId:          asynqTaskId,
 			RanByUserId:          userId,
 			GroupId:              groupId,
 		}
@@ -99,6 +101,7 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			StartedAt:            startDate,
 			EndedAt:              &endDate,
 			ResultDescription:    metadata.FallbackRawResponse,
+			AsynqTaskId:          asynqTaskId,
 			RanByUserId:          userId,
 			GroupId:              groupId,
 		}
@@ -247,66 +250,11 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 		ResultDescription:      resultDescription,
 		AssociatedSystemTaskId: &systemTaskId,
 		GroupId:                &createdReceipt.GroupId,
+		ReceiptId:              &createdReceipt.ID,
 	})
 	if err != nil {
 		return models.SystemTask{}, err
 	}
 
 	return systemTask, nil
-}
-
-func (service SystemTaskService) AssociateSystemTasksToReceipt(
-	createdReceiptId uint,
-	parentProcessingSystemTaskId uint,
-	groupId *uint,
-	uploadStart time.Time,
-	uploadEnd time.Time,
-) error {
-	db := service.GetDB()
-
-	err := db.Transaction(func(tx *gorm.DB) error {
-		systemTaskRepository := repositories.NewSystemTaskRepository(tx)
-
-		associateTasksToReceipt, txErr := systemTaskRepository.CreateSystemTask(
-			service.BuildAssociateSystemTasksToReceiptTask(
-				createdReceiptId,
-				uploadStart,
-				uploadEnd,
-				groupId,
-			))
-		if txErr != nil {
-			return txErr
-		}
-
-		txErr = tx.Model(models.SystemTask{}).
-			Where("id = ?", parentProcessingSystemTaskId).
-			Update("associated_system_task_id", associateTasksToReceipt.ID).Error
-		if txErr != nil {
-			return txErr
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (service SystemTaskService) BuildAssociateSystemTasksToReceiptTask(
-	createdReceiptId uint,
-	uploadStart time.Time,
-	uploadEnd time.Time,
-	groupId *uint,
-) commands.UpsertSystemTaskCommand {
-	return commands.UpsertSystemTaskCommand{
-		Type:                 models.META_ASSOCIATE_TASKS_TO_RECEIPT,
-		Status:               models.SYSTEM_TASK_SUCCEEDED,
-		AssociatedEntityType: models.RECEIPT,
-		AssociatedEntityId:   createdReceiptId,
-		StartedAt:            uploadStart,
-		EndedAt:              &uploadEnd,
-		GroupId:              groupId,
-	}
 }

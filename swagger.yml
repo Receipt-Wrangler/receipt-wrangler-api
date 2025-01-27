@@ -2357,7 +2357,6 @@ components:
     SystemTaskType:
       type: string
       enum:
-        - "META_ASSOCIATE_TASKS_TO_RECEIPT"
         - "OCR_PROCESSING"
         - "CHAT_COMPLETION"
         - "MAGIC_FILL"

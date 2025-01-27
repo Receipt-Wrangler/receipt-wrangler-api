@@ -143,7 +143,7 @@ func (service ReceiptService) QuickScan(
 		models.QUICK_SCAN,
 		&token.UserId,
 		&groupId,
-		nil)
+		asynqTaskId, nil)
 	if taskErr != nil {
 		return models.Receipt{}, taskErr
 	}
@@ -169,7 +169,6 @@ func (service ReceiptService) QuickScan(
 		uploadStart := time.Now()
 
 		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId, false)
-		uploadEnd := time.Now()
 		_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 			err,
 			createdReceipt,
@@ -192,17 +191,6 @@ func (service ReceiptService) QuickScan(
 		}
 		_, err := receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 		if err != nil {
-			return err
-		}
-
-		err = systemTaskService.AssociateSystemTasksToReceipt(
-			createdReceipt.ID,
-			quickScanSystemTasks.SystemTask.ID,
-			&groupId,
-			uploadStart,
-			uploadEnd)
-		if err != nil {
-			tx.Commit()
 			return err
 		}
 

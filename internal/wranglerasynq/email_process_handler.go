@@ -114,12 +114,12 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 			models.EMAIL_UPLOAD,
 			nil,
 			&groupSettingsToUse.GroupId,
+			"",
 			func(command commands.UpsertSystemTaskCommand) *uint {
 				return &emailReadSystemTask.ID
 			},
 		)
 
-		createReceiptStart := time.Now()
 		createdReceipt, err := receiptRepository.CreateReceipt(command, 0, false)
 		_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 			err,
@@ -134,7 +134,6 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 			tx.Commit()
 			return HandleError(taskErr)
 		}
-		createReceiptEnd := time.Now()
 
 		fileData := models.FileData{
 			ReceiptId: createdReceipt.ID,
@@ -145,18 +144,6 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 
 		_, err = receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 		if err != nil {
-			return HandleError(err)
-		}
-
-		err = systemTaskService.AssociateSystemTasksToReceipt(
-			createdReceipt.ID,
-			emailReadSystemTask.ID,
-			&groupSettingsToUse.GroupId,
-			createReceiptStart,
-			createReceiptEnd,
-		)
-		if err != nil {
-			tx.Commit()
 			return HandleError(err)
 		}
 

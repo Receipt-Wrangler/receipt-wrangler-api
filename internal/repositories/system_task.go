@@ -76,7 +76,6 @@ func (repository SystemTaskRepository) GetPagedActivities(command commands.Paged
 		models.MAGIC_FILL,
 		models.SYSTEM_EMAIL_CONNECTIVITY_CHECK,
 		models.RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK,
-		models.META_ASSOCIATE_TASKS_TO_RECEIPT,
 	}
 
 	query := db.Model(&models.SystemTask{}).
@@ -114,6 +113,7 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 		EndedAt:                command.EndedAt,
 		ResultDescription:      command.ResultDescription,
 		RanByUserId:            command.RanByUserId,
+		ReceiptId:              command.ReceiptId,
 		GroupId:                command.GroupId,
 		AssociatedSystemTaskId: command.AssociatedSystemTaskId,
 		AsynqTaskId:            command.AsynqTaskId,

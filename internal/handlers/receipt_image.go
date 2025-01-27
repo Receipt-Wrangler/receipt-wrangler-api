@@ -270,6 +270,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					models.MAGIC_FILL,
 					&token.UserId,
 					nil,
+					"",
 					nil,
 				)
 				if taskErr != nil {
@@ -315,6 +316,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					models.MAGIC_FILL,
 					&token.UserId,
 					nil,
+					"",
 					nil,
 				)
 				if taskErr != nil {

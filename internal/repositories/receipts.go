@@ -124,6 +124,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 	}
 
 	systemTask.GroupId = &currentReceipt.GroupId
+	systemTask.ReceiptId = &currentReceipt.ID
 
 	// NOTE: ID and field used for afterReceiptUpdated
 	updatedReceipt.ID = currentReceipt.ID

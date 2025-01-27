@@ -72,20 +72,17 @@ func (repository SystemTaskRepository) GetPagedActivities(command commands.Paged
 		return nil, 0, errors.New("invalid column name")
 	}
 
-	filteredSystemTaskTypes := []models.SystemTaskType{
-		models.MAGIC_FILL,
-		models.SYSTEM_EMAIL_CONNECTIVITY_CHECK,
-		models.RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK,
+	systemTaskTypesToGet := []models.SystemTaskType{
+		models.QUICK_SCAN,
+		models.RECEIPT_UPLOADED,
+		models.RECEIPT_UPDATED,
 	}
 
 	query := db.Model(&models.SystemTask{}).
-		Distinct().
-		Joins("LEFT JOIN users ON system_tasks.ran_by_user_id = users.id").
-		Joins("LEFT JOIN group_members ON users.id = group_members.user_id").
-		Joins("LEFT JOIN receipts ON system_tasks.associated_entity_type = 'RECEIPT' "+
-			"AND system_tasks.associated_entity_id = receipts.id").
-		Where("(group_members.group_id IN ?) OR receipts.group_id IN ?", command.GroupIds, command.GroupIds).
-		Where("system_tasks.type NOT IN ?", filteredSystemTaskTypes)
+		Omit("can_be_restarted").
+		Where("type IN ?", systemTaskTypesToGet).
+		Where("group_id IN ?", command.GroupIds).
+		Where("ran_by_user_id IS NOT NULL")
 
 	query.Count(&count)
 

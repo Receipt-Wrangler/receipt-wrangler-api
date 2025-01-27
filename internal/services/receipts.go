@@ -213,6 +213,7 @@ func (service ReceiptService) QuickScan(
 		err = systemTaskService.AssociateSystemTasksToReceipt(
 			createdReceipt.ID,
 			metaCombineSystemTask.ID,
+			&groupId,
 			uploadStart,
 			uploadEnd)
 		if err != nil {

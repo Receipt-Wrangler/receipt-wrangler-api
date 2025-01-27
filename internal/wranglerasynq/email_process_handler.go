@@ -151,6 +151,7 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 		err = systemTaskService.AssociateSystemTasksToReceipt(
 			createdReceipt.ID,
 			emailReadSystemTask.ID,
+			&groupSettingsToUse.GroupId,
 			createReceiptStart,
 			createReceiptEnd,
 		)

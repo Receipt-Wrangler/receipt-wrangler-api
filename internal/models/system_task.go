@@ -17,6 +17,7 @@ type SystemTask struct {
 	ResultDescription      string               `json:"resultDescription"`
 	RanByUser              *User                `json:"-"`
 	RanByUserId            *uint                `json:"ranByUserId"`
+	ReceiptId              *uint                `json:"receiptId"`
 	GroupId                *uint                `json:"groupId"`
 	AssociatedSystemTask   *SystemTask          `json:"associatedSystemTask"`
 	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`

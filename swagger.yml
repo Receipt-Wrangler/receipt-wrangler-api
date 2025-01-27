@@ -2428,6 +2428,9 @@ components:
         ranByUserId:
           type: integer
           format: uint64
+        receiptId:
+          type: integer
+          format: uint64
         groupId:
           type: integer
           format: uint64
@@ -4103,6 +4106,9 @@ components:
             associatedEntityType:
               $ref: "#/components/schemas/AssociatedEntityType"
             ranByUserId:
+              type: integer
+              format: uint64
+            receiptId:
               type: integer
               format: uint64
             groupId:

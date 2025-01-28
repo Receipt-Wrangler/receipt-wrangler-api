@@ -1,6 +1,7 @@
 package wranglerasynq
 
 import (
+	"errors"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -24,15 +25,15 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 	for i := range *activities {
 		activity := &(*activities)[i]
 
-		if activity.Type == models.QUICK_SCAN && activity.AssociatedSystemTaskId != nil {
-			associatedSystemTask, err := systemTaskRepository.GetSystemTaskById(*activity.AssociatedSystemTaskId)
+		if activity.Type == models.QUICK_SCAN {
+			systemTask, err := systemTaskRepository.GetSystemTaskById(activity.Id)
 			if err != nil {
 				return err
 			}
 
 			for i := 0; i < len(archivedTasks); i++ {
 				task := archivedTasks[i]
-				if task.ID == associatedSystemTask.AsynqTaskId {
+				if task.ID == systemTask.AsynqTaskId {
 					activity.CanBeRestarted = true
 					break
 				}
@@ -41,4 +42,16 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 	}
 
 	return nil
+}
+
+func SystemTaskToQueueName(taskType models.SystemTaskType) (string, error) {
+	if taskType.Value() == models.QUICK_SCAN.Value() {
+		return string(models.QuickScanQueue), nil
+	}
+
+	if taskType.Value() == models.EMAIL_UPLOAD.Value() {
+		return string(models.EmailReceiptProcessingQueue), nil
+	}
+
+	return "", errors.New("unsupported task type")
 }

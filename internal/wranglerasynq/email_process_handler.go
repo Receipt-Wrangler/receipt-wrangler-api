@@ -50,19 +50,67 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 		return HandleError(err)
 	}
 
-	emailProcessStart := time.Now()
-
 	if groupSettingsToUse.ID == 0 {
 		return HandleError(fmt.Errorf("could not find group settings with id %d", payload.GroupSettingsId))
 	}
 
 	groupIdString := utils.UintToString(groupSettingsToUse.GroupId)
 	start := time.Now()
-	baseCommand, processingMetadata, err := services.ReadReceiptImageFromFileOnly(payload.ImageForOcrPath, groupIdString)
+	baseCommand, processingMetadata, processingErr := services.ReadReceiptImageFromFileOnly(payload.ImageForOcrPath, groupIdString)
 	end := time.Now()
 
+	metadataBytes, err := json.Marshal(payload.Metadata)
 	if err != nil {
 		return HandleError(err)
+	}
+
+	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+
+	status := models.SYSTEM_TASK_SUCCEEDED
+	if processingErr != nil {
+		status = models.SYSTEM_TASK_FAILED
+	}
+
+	resultDescription := string(metadataBytes)
+	if processingErr != nil {
+		resultDescription = processingErr.Error()
+	}
+
+	emailReadSystemTask, err := systemTaskRepository.CreateSystemTask(
+		commands.UpsertSystemTaskCommand{
+			Type:                 models.EMAIL_READ,
+			Status:               status,
+			AssociatedEntityType: models.SYSTEM_EMAIL,
+			AssociatedEntityId:   groupSettingsToUse.SystemEmail.ID,
+			StartedAt:            start,
+			EndedAt:              &end,
+			RanByUserId:          nil,
+			ResultDescription:    resultDescription,
+			AsynqTaskId:          taskId,
+		},
+	)
+	if err != nil {
+		return HandleError(err)
+	}
+
+	processingSystemTasks, err := systemTaskService.CreateSystemTasksFromMetadata(
+		processingMetadata,
+		start,
+		end,
+		models.EMAIL_UPLOAD,
+		nil,
+		&groupSettingsToUse.GroupId,
+		"",
+		func(command commands.UpsertSystemTaskCommand) *uint {
+			return &emailReadSystemTask.ID
+		},
+	)
+	if err != nil {
+		return HandleError(err)
+	}
+
+	if processingErr != nil {
+		return HandleError(processingErr)
 	}
 
 	command := baseCommand
@@ -81,44 +129,7 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		receiptRepository := repositories.NewReceiptRepository(tx)
 		receiptImageRepository := repositories.NewReceiptImageRepository(tx)
-		systemTaskRepository := repositories.NewSystemTaskRepository(tx)
 		systemTaskService.SetTransaction(tx)
-		emailProcessEnd := time.Now()
-
-		metadataBytes, err := json.Marshal(payload.Metadata)
-		if err != nil {
-			return HandleError(err)
-		}
-
-		emailReadSystemTask, err := systemTaskRepository.CreateSystemTask(
-			commands.UpsertSystemTaskCommand{
-				Type:                 models.EMAIL_READ,
-				Status:               models.SYSTEM_TASK_SUCCEEDED,
-				AssociatedEntityType: models.SYSTEM_EMAIL,
-				AssociatedEntityId:   groupSettingsToUse.SystemEmail.ID,
-				StartedAt:            emailProcessStart,
-				EndedAt:              &emailProcessEnd,
-				RanByUserId:          nil,
-				ResultDescription:    string(metadataBytes),
-				AsynqTaskId:          taskId,
-			},
-		)
-		if err != nil {
-			return HandleError(err)
-		}
-
-		processingSystemTasks, err := systemTaskService.CreateSystemTasksFromMetadata(
-			processingMetadata,
-			start,
-			end,
-			models.EMAIL_UPLOAD,
-			nil,
-			&groupSettingsToUse.GroupId,
-			"",
-			func(command commands.UpsertSystemTaskCommand) *uint {
-				return &emailReadSystemTask.ID
-			},
-		)
 
 		createdReceipt, err := receiptRepository.CreateReceipt(command, 0, false)
 		_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(

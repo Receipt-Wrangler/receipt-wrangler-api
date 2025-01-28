@@ -45,11 +45,11 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 }
 
 func SystemTaskToQueueName(taskType models.SystemTaskType) (string, error) {
-	if taskType.Value() == models.QUICK_SCAN.Value() {
+	if string(taskType) == string(models.QUICK_SCAN) {
 		return string(models.QuickScanQueue), nil
 	}
 
-	if taskType.Value() == models.EMAIL_UPLOAD.Value() {
+	if string(taskType) == string(models.EMAIL_UPLOAD) {
 		return string(models.EmailReceiptProcessingQueue), nil
 	}
 

@@ -135,6 +135,13 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 			return HandleError(taskErr)
 		}
 
+		if processingSystemTasks.SystemTask.ID > 0 {
+			err = systemTaskService.AssociateProcessingSystemTasksToReceipt(processingSystemTasks, createdReceipt.ID)
+			if err != nil {
+				return HandleError(err)
+			}
+		}
+
 		fileData := models.FileData{
 			ReceiptId: createdReceipt.ID,
 			Name:      payload.Attachment.Filename,

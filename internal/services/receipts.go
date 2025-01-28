@@ -183,6 +183,11 @@ func (service ReceiptService) QuickScan(
 			return err
 		}
 
+		taskErr = systemTaskService.AssociateProcessingSystemTasksToReceipt(quickScanSystemTasks, createdReceipt.ID)
+		if taskErr != nil {
+			return taskErr
+		}
+
 		fileData := models.FileData{
 			Name:      originalFileName,
 			Size:      uint(fileInfo.Size()),

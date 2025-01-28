@@ -25,7 +25,7 @@ func NewSystemTaskService(tx *gorm.DB) SystemTaskService {
 }
 
 func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(metadata commands.ReceiptProcessingMetadata) string {
-	receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
+	receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(service.TX)
 	idToUse := uint(0)
 
 	if metadata.ReceiptProcessingSettingsIdRan > 0 && metadata.DidReceiptProcessingSettingsSucceed {
@@ -216,7 +216,7 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 	quickScanSystemTasks structs.ReceiptProcessingSystemTasks,
 	uploadStart time.Time,
 ) (models.SystemTask, error) {
-	systemTaskRepository := repositories.NewSystemTaskRepository(service.GetDB())
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	receiptProcessingSettingsId := quickScanSystemTasks.SystemTask.AssociatedEntityId
 	systemTaskId := quickScanSystemTasks.SystemTask.ID
 	status := models.SYSTEM_TASK_SUCCEEDED
@@ -257,4 +257,27 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 	}
 
 	return systemTask, nil
+}
+
+func (service SystemTaskService) AssociateProcessingSystemTasksToReceipt(
+	tasks structs.ReceiptProcessingSystemTasks,
+	receiptId uint,
+) error {
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
+
+	if tasks.SystemTask.ID > 0 {
+		err := systemTaskRepository.AssociateSystemTaskToReceipt(receiptId, tasks.SystemTask.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if tasks.FallbackSystemTask.ID > 0 {
+		err := systemTaskRepository.AssociateSystemTaskToReceipt(receiptId, tasks.FallbackSystemTask.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -76,13 +76,14 @@ func (repository SystemTaskRepository) GetPagedActivities(command commands.Paged
 		models.QUICK_SCAN,
 		models.RECEIPT_UPLOADED,
 		models.RECEIPT_UPDATED,
+		models.EMAIL_UPLOAD,
 	}
 
 	query := db.Model(&models.SystemTask{}).
 		Omit("can_be_restarted").
 		Where("type IN ?", systemTaskTypesToGet).
 		Where("group_id IN ?", command.GroupIds).
-		Where("ran_by_user_id IS NOT NULL")
+		Not(db.Where("type = ? AND ran_by_user_id IS NULL", models.RECEIPT_UPLOADED))
 
 	query.Count(&count)
 
@@ -157,4 +158,9 @@ func (repository SystemTaskRepository) GetSystemTaskById(id uint) (models.System
 	}
 
 	return systemTask, nil
+}
+
+func (repository SystemTaskRepository) AssociateSystemTaskToReceipt(receiptId uint, systemTaskId uint) error {
+	db := repository.GetDB()
+	return db.Model(&models.SystemTask{}).Where("id = ?", systemTaskId).Update("receipt_id", receiptId).Error
 }

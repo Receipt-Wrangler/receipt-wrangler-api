@@ -14,25 +14,34 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 		return err
 	}
 
-	archivedTasks, err := inspector.ListArchivedTasks(string(models.QuickScanQueue))
+	rerunableArchivedTasks, err := inspector.ListArchivedTasks(string(models.QuickScanQueue))
 	if err != nil {
 		// We do not return this error because it will happen on a fresh redis instance, with no quick scans ever ran
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return nil
 	}
+
+	archivedEmailProcessingTasks, err := inspector.ListArchivedTasks(string(models.EmailReceiptProcessingQueue))
+	if err != nil {
+		// We do not return this error because it will happen on a fresh redis instance, with no quick scans ever ran
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+		return nil
+	}
+	rerunableArchivedTasks = append(rerunableArchivedTasks, archivedEmailProcessingTasks...)
+
 	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
 
 	for i := range *activities {
 		activity := &(*activities)[i]
 
-		if activity.Type == models.QUICK_SCAN {
+		if activity.Type == models.QUICK_SCAN || activity.Type == models.EMAIL_UPLOAD {
 			systemTask, err := systemTaskRepository.GetSystemTaskById(activity.Id)
 			if err != nil {
 				return err
 			}
 
-			for i := 0; i < len(archivedTasks); i++ {
-				task := archivedTasks[i]
+			for i := 0; i < len(rerunableArchivedTasks); i++ {
+				task := rerunableArchivedTasks[i]
 				if task.ID == systemTask.AsynqTaskId {
 					activity.CanBeRestarted = true
 					break

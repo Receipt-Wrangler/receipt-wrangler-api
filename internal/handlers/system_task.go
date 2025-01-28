@@ -155,13 +155,20 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if systemTask.Type != models.QUICK_SCAN {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, "Only quick scan activities can be rerun")
+	if systemTask.Type != models.QUICK_SCAN && systemTask.Type != models.EMAIL_UPLOAD {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Only quick scan and email upload activities can be rerun")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	taskInfo, err := inspector.GetTaskInfo(string(models.QuickScanQueue), systemTask.AsynqTaskId)
+	queueName, err := wranglerasynq.SystemTaskToQueueName(systemTask.Type)
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
+		return
+	}
+
+	taskInfo, err := inspector.GetTaskInfo(queueName, systemTask.AsynqTaskId)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
@@ -177,6 +184,19 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stringGroupId := utils.UintToString(payload.GroupId)
+	if payload.GroupSettingsId > 0 {
+		groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+
+		stringId := utils.UintToString(payload.GroupSettingsId)
+		groupSettings, err := groupSettingsRepository.GetGroupSettingsById(stringId)
+		if err != nil {
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+			utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
+			return
+		}
+
+		stringGroupId = utils.UintToString(groupSettings.GroupId)
+	}
 
 	handler := structs.Handler{
 		ErrorMessage: errorMsg,
@@ -185,11 +205,6 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 		GroupId:      stringGroupId,
 		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			queueName, err := wranglerasynq.SystemTaskToQueueName(systemTask.Type)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
 			err = inspector.RunTask(queueName, systemTask.AsynqTaskId)
 			if err != nil {
 				return http.StatusInternalServerError, err

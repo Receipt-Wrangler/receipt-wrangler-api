@@ -2410,7 +2410,6 @@ components:
         - status
         - startedAt
         - endedAt
-        - ranByUserId
         - childSystemTasks
       properties:
         id:

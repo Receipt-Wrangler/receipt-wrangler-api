@@ -37,7 +37,16 @@ func StartEmailPolling() error {
 		logging.LogStd(logging.LOG_LEVEL_INFO, err.Error())
 	}
 
-	pollTask := asynq.NewTask(EmailPoll, nil)
+	payload := EmailPollTaskPayload{
+		PollAllGroups: true,
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	pollTask := asynq.NewTask(EmailPoll, payloadBytes)
 	_, err = RegisterTask(GetPollTimeString(systemSettings.EmailPollingInterval), pollTask, models.EmailPollingQueue, 0)
 	if err != nil {
 		return err

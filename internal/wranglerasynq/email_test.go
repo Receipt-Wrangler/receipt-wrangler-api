@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	miniredis2 "github.com/alicebob/miniredis/v2"
 	"os"
+	"receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -34,6 +35,7 @@ func initEmailProcessHandlerTest() {
 
 func TestEnqueueEmailProcessTasksShouldEnqueueTasks(t *testing.T) {
 	// Setup and teardown
+	utils.MakeDirectory(env.GetBasePath() + "/temp")
 	defer teardownEmailProcessHandlerTest()
 	initEmailProcessHandlerTest()
 	fileRepository := repositories.NewFileRepository(nil)

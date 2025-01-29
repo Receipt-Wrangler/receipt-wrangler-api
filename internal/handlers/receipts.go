@@ -450,7 +450,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 
 func HasAccess(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Insufficient permissions.",
+		ErrorMessage: "Unable to access receipt",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationJson,

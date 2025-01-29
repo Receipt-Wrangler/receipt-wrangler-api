@@ -2357,13 +2357,11 @@ components:
     SystemTaskType:
       type: string
       enum:
-        - "META_ASSOCIATE_TASKS_TO_RECEIPT"
         - "OCR_PROCESSING"
         - "CHAT_COMPLETION"
         - "MAGIC_FILL"
         - "QUICK_SCAN"
         - "EMAIL_READ"
-        - "META_COMBINE_QUICK_SCAN"
         - "EMAIL_UPLOAD"
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
@@ -2412,7 +2410,6 @@ components:
         - status
         - startedAt
         - endedAt
-        - ranByUserId
         - childSystemTasks
       properties:
         id:
@@ -2426,6 +2423,12 @@ components:
         endedAt:
           type: string
         ranByUserId:
+          type: integer
+          format: uint64
+        receiptId:
+          type: integer
+          format: uint64
+        groupId:
           type: integer
           format: uint64
         canBeRestarted:
@@ -4100,6 +4103,12 @@ components:
             associatedEntityType:
               $ref: "#/components/schemas/AssociatedEntityType"
             ranByUserId:
+              type: integer
+              format: uint64
+            receiptId:
+              type: integer
+              format: uint64
+            groupId:
               type: integer
               format: uint64
             resultDescription:

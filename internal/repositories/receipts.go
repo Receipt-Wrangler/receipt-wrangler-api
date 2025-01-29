@@ -123,6 +123,9 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		return models.Receipt{}, err
 	}
 
+	systemTask.GroupId = &currentReceipt.GroupId
+	systemTask.ReceiptId = &currentReceipt.ID
+
 	// NOTE: ID and field used for afterReceiptUpdated
 	updatedReceipt.ID = currentReceipt.ID
 	updatedReceipt.ResolvedDate = currentReceipt.ResolvedDate
@@ -358,12 +361,14 @@ func (repository ReceiptRepository) CreateReceipt(
 	if createSystemTask {
 		endedAt := time.Now()
 		systemTask.EndedAt = &endedAt
-		systemTask.AssociatedSystemTaskId = &fullyLoadedReceipt.ID
+		systemTask.AssociatedEntityId = fullyLoadedReceipt.ID
 		newReceiptString, err := getReceiptString(fullyLoadedReceipt)
 		if err != nil {
 			return models.Receipt{}, err
 		}
 
+		systemTask.ReceiptId = &fullyLoadedReceipt.ID
+		systemTask.GroupId = &fullyLoadedReceipt.GroupId
 		systemTask.ResultDescription = newReceiptString
 
 		systemTaskRepository := NewSystemTaskRepository(nil)

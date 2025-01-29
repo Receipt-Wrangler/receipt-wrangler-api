@@ -155,39 +155,27 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if systemTask.Type != models.QUICK_SCAN {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, "Only quick scan activities can be rerun")
+	if systemTask.Type != models.QUICK_SCAN && systemTask.Type != models.EMAIL_UPLOAD {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Only quick scan and email upload activities can be rerun")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if systemTask.AssociatedSystemTaskId == nil {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, "Associated system task id is required to rerun quick scan activity")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	parentSystemTask, err := systemTaskRepository.GetSystemTaskById(*systemTask.AssociatedSystemTaskId)
+	queueName, err := wranglerasynq.SystemTaskToQueueName(systemTask.Type)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
-	if parentSystemTask.AsynqTaskId == "" {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, "Parent system task does not have an asynq task id")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	taskInfo, err := inspector.GetTaskInfo(string(models.QuickScanQueue), parentSystemTask.AsynqTaskId)
+	taskInfo, err := inspector.GetTaskInfo(queueName, systemTask.AsynqTaskId)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
 
-	var payload wranglerasynq.QuickScanTaskPayload
+	var payload wranglerasynq.RerunTaskPayload
 	err = json.Unmarshal(taskInfo.Payload, &payload)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
@@ -196,6 +184,19 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stringGroupId := utils.UintToString(payload.GroupId)
+	if payload.GroupSettingsId > 0 {
+		groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+
+		stringId := utils.UintToString(payload.GroupSettingsId)
+		groupSettings, err := groupSettingsRepository.GetGroupSettingsById(stringId)
+		if err != nil {
+			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+			utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
+			return
+		}
+
+		stringGroupId = utils.UintToString(groupSettings.GroupId)
+	}
 
 	handler := structs.Handler{
 		ErrorMessage: errorMsg,
@@ -204,7 +205,7 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 		GroupId:      stringGroupId,
 		GroupRole:    models.EDITOR,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			err = inspector.RunTask(string(models.QuickScanQueue), parentSystemTask.AsynqTaskId)
+			err = inspector.RunTask(queueName, systemTask.AsynqTaskId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

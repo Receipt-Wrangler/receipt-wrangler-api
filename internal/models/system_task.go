@@ -17,6 +17,8 @@ type SystemTask struct {
 	ResultDescription      string               `json:"resultDescription"`
 	RanByUser              *User                `json:"-"`
 	RanByUserId            *uint                `json:"ranByUserId"`
+	ReceiptId              *uint                `json:"receiptId"`
+	GroupId                *uint                `json:"groupId"`
 	AssociatedSystemTask   *SystemTask          `json:"associatedSystemTask"`
 	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
 	ChildSystemTasks       []*SystemTask        `gorm:"foreignKey:AssociatedSystemTaskId" json:"childSystemTasks"`
@@ -45,8 +47,6 @@ func (self SystemTaskStatus) Value() (driver.Value, error) {
 type SystemTaskType string
 
 const (
-	META_COMBINE_QUICK_SCAN                        SystemTaskType = "META_COMBINE_QUICK_SCAN"
-	META_ASSOCIATE_TASKS_TO_RECEIPT                SystemTaskType = "META_ASSOCIATE_TASKS_TO_RECEIPT"
 	RECEIPT_UPLOADED                               SystemTaskType = "RECEIPT_UPLOADED"
 	OCR_PROCESSING                                 SystemTaskType = "OCR_PROCESSING"
 	CHAT_COMPLETION                                SystemTaskType = "CHAT_COMPLETION"
@@ -75,8 +75,6 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 		self != CHAT_COMPLETION &&
 		self != OCR_PROCESSING &&
 		self != RECEIPT_UPLOADED &&
-		self != META_COMBINE_QUICK_SCAN &&
-		self != META_ASSOCIATE_TASKS_TO_RECEIPT &&
 		self != PROMPT_GENERATED &&
 		self != RECEIPT_UPDATED {
 		return nil, errors.New("invalid SystemTaskType")

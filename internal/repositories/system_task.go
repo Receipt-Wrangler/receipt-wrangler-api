@@ -72,21 +72,18 @@ func (repository SystemTaskRepository) GetPagedActivities(command commands.Paged
 		return nil, 0, errors.New("invalid column name")
 	}
 
-	filteredSystemTaskTypes := []models.SystemTaskType{
-		models.MAGIC_FILL,
-		models.SYSTEM_EMAIL_CONNECTIVITY_CHECK,
-		models.RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK,
-		models.META_ASSOCIATE_TASKS_TO_RECEIPT,
+	systemTaskTypesToGet := []models.SystemTaskType{
+		models.QUICK_SCAN,
+		models.RECEIPT_UPLOADED,
+		models.RECEIPT_UPDATED,
+		models.EMAIL_UPLOAD,
 	}
 
 	query := db.Model(&models.SystemTask{}).
-		Distinct().
-		Joins("LEFT JOIN users ON system_tasks.ran_by_user_id = users.id").
-		Joins("LEFT JOIN group_members ON users.id = group_members.user_id").
-		Joins("LEFT JOIN receipts ON system_tasks.associated_entity_type = 'RECEIPT' "+
-			"AND system_tasks.associated_entity_id = receipts.id").
-		Where("(group_members.group_id IN ?) OR receipts.group_id IN ?", command.GroupIds, command.GroupIds).
-		Where("system_tasks.type NOT IN ?", filteredSystemTaskTypes)
+		Omit("can_be_restarted").
+		Where("type IN ?", systemTaskTypesToGet).
+		Where("group_id IN ?", command.GroupIds).
+		Not(db.Where("type = ? AND ran_by_user_id IS NULL", models.RECEIPT_UPLOADED))
 
 	query.Count(&count)
 
@@ -114,6 +111,8 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 		EndedAt:                command.EndedAt,
 		ResultDescription:      command.ResultDescription,
 		RanByUserId:            command.RanByUserId,
+		ReceiptId:              command.ReceiptId,
+		GroupId:                command.GroupId,
 		AssociatedSystemTaskId: command.AssociatedSystemTaskId,
 		AsynqTaskId:            command.AsynqTaskId,
 	}
@@ -159,4 +158,9 @@ func (repository SystemTaskRepository) GetSystemTaskById(id uint) (models.System
 	}
 
 	return systemTask, nil
+}
+
+func (repository SystemTaskRepository) AssociateSystemTaskToReceipt(receiptId uint, systemTaskId uint) error {
+	db := repository.GetDB()
+	return db.Model(&models.SystemTask{}).Where("id = ?", systemTaskId).Update("receipt_id", receiptId).Error
 }

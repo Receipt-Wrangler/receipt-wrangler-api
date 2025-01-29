@@ -104,7 +104,6 @@ func (service ReceiptService) QuickScan(
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
 	systemTaskService := NewSystemTaskService(service.TX)
-	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	var createdReceipt models.Receipt
 
 	fileRepository := repositories.NewFileRepository(service.TX)
@@ -137,26 +136,14 @@ func (service ReceiptService) QuickScan(
 	receiptCommand, receiptProcessingMetadata, magicFillErr := MagicFillFromImage(magicFillCommand, groupIdString)
 	finishedAt := time.Now()
 
-	metaCombineSystemTask, err := systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
-		Type:                 models.META_COMBINE_QUICK_SCAN,
-		Status:               models.SYSTEM_TASK_SUCCEEDED,
-		AssociatedEntityType: models.NOOP_ENTITY_TYPE,
-		AssociatedEntityId:   0,
-		AsynqTaskId:          asynqTaskId,
-	})
-	if err != nil {
-		return models.Receipt{}, err
-	}
-
 	quickScanSystemTasks, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
 		receiptProcessingMetadata,
 		now,
 		finishedAt,
 		models.QUICK_SCAN,
 		&token.UserId,
-		func(command commands.UpsertSystemTaskCommand) *uint {
-			return &metaCombineSystemTask.ID
-		})
+		&groupId,
+		asynqTaskId, nil)
 	if taskErr != nil {
 		return models.Receipt{}, taskErr
 	}
@@ -182,7 +169,6 @@ func (service ReceiptService) QuickScan(
 		uploadStart := time.Now()
 
 		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId, false)
-		uploadEnd := time.Now()
 		_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 			err,
 			createdReceipt,
@@ -197,6 +183,11 @@ func (service ReceiptService) QuickScan(
 			return err
 		}
 
+		taskErr = systemTaskService.AssociateProcessingSystemTasksToReceipt(quickScanSystemTasks, createdReceipt.ID)
+		if taskErr != nil {
+			return taskErr
+		}
+
 		fileData := models.FileData{
 			Name:      originalFileName,
 			Size:      uint(fileInfo.Size()),
@@ -205,16 +196,6 @@ func (service ReceiptService) QuickScan(
 		}
 		_, err := receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 		if err != nil {
-			return err
-		}
-
-		err = systemTaskService.AssociateSystemTasksToReceipt(
-			createdReceipt.ID,
-			metaCombineSystemTask.ID,
-			uploadStart,
-			uploadEnd)
-		if err != nil {
-			tx.Commit()
 			return err
 		}
 

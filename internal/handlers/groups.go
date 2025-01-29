@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hibiken/asynq"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -409,7 +411,18 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			err = wranglerasynq.CallClient(false, groupIdsToPoll)
+			// TODO: Enqueue instead
+			taskPayload := wranglerasynq.EmailPollTaskPayload{
+				GroupIds: groupIdsToPoll,
+			}
+
+			payloadBytes, err := json.Marshal(taskPayload)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			task := asynq.NewTask(wranglerasynq.EmailPoll, payloadBytes)
+			_, err = wranglerasynq.EnqueueTask(task, models.EmailPollingQueue)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

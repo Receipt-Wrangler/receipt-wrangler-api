@@ -12,6 +12,8 @@ type Activity struct {
 	StartedAt              time.Time               `json:"startedAt"`
 	EndedAt                *time.Time              `json:"endedAt"`
 	RanByUserId            *uint                   `json:"ranByUserId"`
+	ReceiptId              *uint                   `json:"receiptId"`
+	GroupId                *uint                   `json:"groupId"`
 	CanBeRestarted         bool                    `json:"canBeRestarted"`
 	AssociatedSystemTaskId *uint                   `json:"-"`
 }

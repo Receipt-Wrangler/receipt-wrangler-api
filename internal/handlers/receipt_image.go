@@ -269,7 +269,10 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					endTimer,
 					models.MAGIC_FILL,
 					&token.UserId,
-					nil)
+					nil,
+					"",
+					nil,
+				)
 				if taskErr != nil {
 					return http.StatusInternalServerError, taskErr
 				}
@@ -312,7 +315,10 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 					endTimer,
 					models.MAGIC_FILL,
 					&token.UserId,
-					nil)
+					nil,
+					"",
+					nil,
+				)
 				if taskErr != nil {
 					return http.StatusInternalServerError, taskErr
 				}

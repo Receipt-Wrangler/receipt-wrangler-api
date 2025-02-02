@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"os"
@@ -207,4 +208,121 @@ func (service ReceiptService) QuickScan(
 
 	os.Remove(tempPath)
 	return createdReceipt, nil
+}
+
+func (service ReceiptService) DuplicateReceipt(
+	userId uint,
+	receiptId string,
+) (models.Receipt, error) {
+	db := repositories.GetDB()
+	newReceipt := models.Receipt{}
+
+	systemTaskCommand := commands.UpsertSystemTaskCommand{
+		Type:                 models.RECEIPT_UPLOADED,
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		AssociatedEntityType: models.RECEIPT,
+		AssociatedEntityId:   0,
+		StartedAt:            time.Now(),
+		EndedAt:              nil,
+		ResultDescription:    "",
+		RanByUserId:          &userId,
+		ReceiptId:            nil,
+		GroupId:              nil,
+	}
+
+	receiptRepository := repositories.NewReceiptRepository(nil)
+	receipt, err := receiptRepository.GetFullyLoadedReceiptById(receiptId)
+	defer func() {
+		systemTaskService := NewSystemTaskService(nil)
+		systemTaskService.CreateSystemTaskFromError(systemTaskCommand, err)
+	}()
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	systemTaskCommand.GroupId = &receipt.GroupId
+
+	copier.Copy(&newReceipt, receipt)
+
+	newReceipt.ID = 0
+	newReceipt.Name = newReceipt.Name + " duplicate"
+	newReceipt.ImageFiles = make([]models.FileData, 0)
+	newReceipt.ReceiptItems = make([]models.Item, 0)
+	newReceipt.Comments = make([]models.Comment, 0)
+	newReceipt.CreatedAt = time.Now()
+	newReceipt.UpdatedAt = time.Now()
+	newReceipt.CreatedBy = &userId
+
+	// Remove fks from any related data
+	for _, fileData := range receipt.ImageFiles {
+		var newFileData models.FileData
+		copier.Copy(&newFileData, fileData)
+
+		newFileData.ID = 0
+		newFileData.ReceiptId = 0
+		newFileData.Receipt = models.Receipt{}
+		newReceipt.ImageFiles = append(newReceipt.ImageFiles, newFileData)
+	}
+
+	// Copy items
+	for _, item := range receipt.ReceiptItems {
+		var newItem models.Item
+		copier.Copy(&newItem, item)
+
+		newItem.ID = 0
+		newItem.ReceiptId = 0
+		newItem.Receipt = models.Receipt{}
+		newReceipt.ReceiptItems = append(newReceipt.ReceiptItems, newItem)
+	}
+
+	// Copy comments
+	for _, comment := range receipt.Comments {
+		var newComment models.Comment
+		copier.Copy(&newComment, comment)
+
+		newComment.ID = 0
+		newComment.ReceiptId = 0
+		newComment.Receipt = models.Receipt{}
+		newReceipt.Comments = append(newReceipt.Comments, newComment)
+	}
+
+	err = db.Create(&newReceipt).Error
+	if err != nil {
+		return models.Receipt{}, err
+	}
+	systemTaskCommand.AssociatedEntityId = newReceipt.ID
+	systemTaskCommand.ReceiptId = &newReceipt.ID
+
+	resultString, err := newReceipt.ToString()
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	systemTaskCommand.ResultDescription = resultString
+
+	// Copy receipt images
+	fileRepository := repositories.NewFileRepository(nil)
+	for i, fileData := range newReceipt.ImageFiles {
+		srcFileData := receipt.ImageFiles[i]
+		srcImageBytes, err := fileRepository.GetBytesForFileData(srcFileData)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		dstPath, err := fileRepository.BuildFilePath(
+			utils.UintToString(newReceipt.ID),
+			utils.UintToString(fileData.ID),
+			fileData.Name,
+		)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		err = utils.WriteFile(dstPath, srcImageBytes)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+	}
+
+	return newReceipt, nil
 }

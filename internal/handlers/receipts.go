@@ -539,13 +539,31 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			newReceipt := models.Receipt{}
 			userId := structs.GetJWT(r).UserId
 
+			systemTaskCommand := commands.UpsertSystemTaskCommand{
+				Type:                 models.RECEIPT_UPLOADED,
+				Status:               models.SYSTEM_TASK_SUCCEEDED,
+				AssociatedEntityType: models.RECEIPT,
+				AssociatedEntityId:   0,
+				StartedAt:            time.Now(),
+				EndedAt:              nil,
+				ResultDescription:    "",
+				RanByUserId:          &userId,
+				ReceiptId:            nil,
+				GroupId:              nil,
+			}
+
 			receiptId := chi.URLParam(r, "id")
 			receiptRepository := repositories.NewReceiptRepository(nil)
 			receipt, err := receiptRepository.GetFullyLoadedReceiptById(receiptId)
-
+			defer func() {
+				systemTaskService := services.NewSystemTaskService(nil)
+				systemTaskService.CreateSystemTaskFromError(systemTaskCommand, err)
+			}()
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
+
+			systemTaskCommand.GroupId = &receipt.GroupId
 
 			copier.Copy(&newReceipt, receipt)
 
@@ -595,6 +613,8 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
+			systemTaskCommand.AssociatedEntityId = newReceipt.ID
+			systemTaskCommand.ReceiptId = &newReceipt.ID
 
 			// Copy receipt images
 			fileRepository := repositories.NewFileRepository(nil)

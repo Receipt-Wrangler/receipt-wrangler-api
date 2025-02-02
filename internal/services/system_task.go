@@ -281,3 +281,18 @@ func (service SystemTaskService) AssociateProcessingSystemTasksToReceipt(
 
 	return nil
 }
+
+func (service SystemTaskService) CreateSystemTaskFromError(command commands.UpsertSystemTaskCommand, err error) (models.SystemTask, error) {
+	now := time.Now()
+	command.EndedAt = &now
+
+	if err != nil {
+		command.ResultDescription = err.Error()
+		command.Status = models.SYSTEM_TASK_FAILED
+	} else {
+		command.Status = models.SYSTEM_TASK_SUCCEEDED
+	}
+
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
+	return systemTaskRepository.CreateSystemTask(command)
+}

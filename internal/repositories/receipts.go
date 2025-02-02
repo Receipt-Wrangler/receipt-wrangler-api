@@ -80,15 +80,6 @@ func createFailedUpdateSystemTask(command commands.UpsertSystemTaskCommand, err 
 	repository.CreateSystemTask(command)
 }
 
-func getReceiptString(receipt models.Receipt) (string, error) {
-	bytes, err := json.Marshal(receipt)
-	if err != nil {
-		return "", err
-	}
-
-	return string(bytes), nil
-}
-
 func (repository ReceiptRepository) UpdateReceipt(id string, command commands.UpsertReceiptCommand, userId uint) (models.Receipt, error) {
 	db := repository.GetDB()
 
@@ -129,7 +120,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 	// NOTE: ID and field used for afterReceiptUpdated
 	updatedReceipt.ID = currentReceipt.ID
 	updatedReceipt.ResolvedDate = currentReceipt.ResolvedDate
-	before, err := getReceiptString(currentReceipt)
+	before, err := currentReceipt.ToString()
 	if err != nil {
 		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
@@ -195,7 +186,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		return models.Receipt{}, err
 	}
 
-	after, err := getReceiptString(fullyLoadedReceipt)
+	after, err := fullyLoadedReceipt.ToString()
 	if err != nil {
 		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
@@ -362,7 +353,7 @@ func (repository ReceiptRepository) CreateReceipt(
 		endedAt := time.Now()
 		systemTask.EndedAt = &endedAt
 		systemTask.AssociatedEntityId = fullyLoadedReceipt.ID
-		newReceiptString, err := getReceiptString(fullyLoadedReceipt)
+		newReceiptString, err := fullyLoadedReceipt.ToString()
 		if err != nil {
 			return models.Receipt{}, err
 		}

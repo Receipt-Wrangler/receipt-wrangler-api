@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/hibiken/asynq"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -15,12 +18,6 @@ import (
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"receipt-wrangler/api/internal/wranglerasynq"
-	"time"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/jinzhu/copier"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
@@ -535,97 +532,18 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.EDITOR,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := repositories.GetDB()
-			newReceipt := models.Receipt{}
-			userId := structs.GetJWT(r).UserId
+			token := structs.GetJWT(r)
 
-			receiptId := chi.URLParam(r, "id")
-			receiptRepository := repositories.NewReceiptRepository(nil)
-			receipt, err := receiptRepository.GetFullyLoadedReceiptById(receiptId)
-
+			receiptService := services.NewReceiptService(nil)
+			newReceipt, err := receiptService.DuplicateReceipt(token.UserId, receiptId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			copier.Copy(&newReceipt, receipt)
-
-			newReceipt.ID = 0
-			newReceipt.Name = newReceipt.Name + " duplicate"
-			newReceipt.ImageFiles = make([]models.FileData, 0)
-			newReceipt.ReceiptItems = make([]models.Item, 0)
-			newReceipt.Comments = make([]models.Comment, 0)
-			newReceipt.CreatedAt = time.Now()
-			newReceipt.UpdatedAt = time.Now()
-			newReceipt.CreatedBy = &userId
-
-			// Remove fks from any related data
-			for _, fileData := range receipt.ImageFiles {
-				var newFileData models.FileData
-				copier.Copy(&newFileData, fileData)
-
-				newFileData.ID = 0
-				newFileData.ReceiptId = 0
-				newFileData.Receipt = models.Receipt{}
-				newReceipt.ImageFiles = append(newReceipt.ImageFiles, newFileData)
-			}
-
-			// Copy items
-			for _, item := range receipt.ReceiptItems {
-				var newItem models.Item
-				copier.Copy(&newItem, item)
-
-				newItem.ID = 0
-				newItem.ReceiptId = 0
-				newItem.Receipt = models.Receipt{}
-				newReceipt.ReceiptItems = append(newReceipt.ReceiptItems, newItem)
-			}
-
-			// Copy comments
-			for _, comment := range receipt.Comments {
-				var newComment models.Comment
-				copier.Copy(&newComment, comment)
-
-				newComment.ID = 0
-				newComment.ReceiptId = 0
-				newComment.Receipt = models.Receipt{}
-				newReceipt.Comments = append(newReceipt.Comments, newComment)
-			}
-
-			err = db.Create(&newReceipt).Error
+			responseBytes, err := json.Marshal(newReceipt)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
-
-			// Copy receipt images
-			fileRepository := repositories.NewFileRepository(nil)
-			for i, fileData := range newReceipt.ImageFiles {
-				srcFileData := receipt.ImageFiles[i]
-				srcImageBytes, err := fileRepository.GetBytesForFileData(srcFileData)
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				dstPath, err := fileRepository.BuildFilePath(
-					utils.UintToString(newReceipt.ID),
-					utils.UintToString(fileData.ID),
-					fileData.Name,
-				)
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-
-				err = utils.WriteFile(dstPath, srcImageBytes)
-				if err != nil {
-					return http.StatusInternalServerError, err
-				}
-			}
-
-			responseBytes, err := utils.MarshalResponseData(newReceipt)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			// before we can create again we need to clear out all the fks
 
 			w.WriteHeader(http.StatusOK)
 			w.Write(responseBytes)

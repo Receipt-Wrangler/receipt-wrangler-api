@@ -1,3 +1,3 @@
 package constants
 
-const DEFAULT_PROMPT_NAME = "Default Prompt"
+const DefaultPromptName = "Default Prompt"

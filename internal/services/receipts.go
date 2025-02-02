@@ -1,15 +1,15 @@
 package services
 
 import (
+	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"mime/multipart"
 	"os"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 	"strconv"
 	"time"
 )
@@ -60,7 +60,7 @@ func (service ReceiptService) DeleteReceipt(id string) error {
 		fileRepository.SetTransaction(tx)
 
 		for _, f := range receipt.ImageFiles {
-			path, _ := fileRepository.BuildFilePath(simpleutils.UintToString(f.ReceiptId), simpleutils.UintToString(f.ID), f.Name)
+			path, _ := fileRepository.BuildFilePath(utils.UintToString(f.ReceiptId), utils.UintToString(f.ID), f.Name)
 			imagesToDelete = append(imagesToDelete, path)
 		}
 
@@ -96,25 +96,27 @@ func (service ReceiptService) DeleteReceipt(id string) error {
 
 func (service ReceiptService) QuickScan(
 	token *structs.Claims,
-	file multipart.File,
-	fileHeader *multipart.FileHeader,
 	paidByUserId uint,
 	groupId uint,
 	status models.ReceiptStatus,
+	tempPath string,
+	originalFileName string,
+	asynqTaskId string,
 ) (models.Receipt, error) {
 	db := repositories.GetDB()
 	systemTaskService := NewSystemTaskService(service.TX)
-	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	var createdReceipt models.Receipt
 
 	fileRepository := repositories.NewFileRepository(service.TX)
-
-	fileBytes := make([]byte, fileHeader.Size)
-	_, err := file.Read(fileBytes)
+	fileBytes, err := utils.ReadFile(tempPath)
 	if err != nil {
 		return models.Receipt{}, err
 	}
-	defer file.Close()
+
+	fileInfo, err := os.Stat(tempPath)
+	if err != nil {
+		return models.Receipt{}, err
+	}
 
 	validatedFileType, err := fileRepository.ValidateFileType(fileBytes)
 	if err != nil {
@@ -123,27 +125,17 @@ func (service ReceiptService) QuickScan(
 
 	magicFillCommand := commands.MagicFillCommand{
 		ImageData: fileBytes,
-		Filename:  fileHeader.Filename,
+		Filename:  originalFileName,
 	}
 
 	receiptRepository := repositories.NewReceiptRepository(service.TX)
 	receiptImageRepository := repositories.NewReceiptImageRepository(service.TX)
 
-	groupIdString := simpleutils.UintToString(groupId)
+	groupIdString := utils.UintToString(groupId)
 
 	now := time.Now()
-	receiptCommand, receiptProcessingMetadata, err := MagicFillFromImage(magicFillCommand, groupIdString)
+	receiptCommand, receiptProcessingMetadata, magicFillErr := MagicFillFromImage(magicFillCommand, groupIdString)
 	finishedAt := time.Now()
-
-	metaCombineSystemTask, err := systemTaskRepository.CreateSystemTask(commands.UpsertSystemTaskCommand{
-		Type:                 models.META_COMBINE_QUICK_SCAN,
-		Status:               models.SYSTEM_TASK_SUCCEEDED,
-		AssociatedEntityType: models.NOOP_ENTITY_TYPE,
-		AssociatedEntityId:   0,
-	})
-	if err != nil {
-		return models.Receipt{}, err
-	}
 
 	quickScanSystemTasks, taskErr := systemTaskService.CreateSystemTasksFromMetadata(
 		receiptProcessingMetadata,
@@ -151,15 +143,14 @@ func (service ReceiptService) QuickScan(
 		finishedAt,
 		models.QUICK_SCAN,
 		&token.UserId,
-		func(command commands.UpsertSystemTaskCommand) *uint {
-			return &metaCombineSystemTask.ID
-		})
+		&groupId,
+		asynqTaskId, nil)
 	if taskErr != nil {
 		return models.Receipt{}, taskErr
 	}
 
-	if err != nil {
-		return models.Receipt{}, err
+	if magicFillErr != nil {
+		return models.Receipt{}, magicFillErr
 	}
 
 	if receiptCommand.PaidByUserID == 0 {
@@ -178,8 +169,7 @@ func (service ReceiptService) QuickScan(
 		systemTaskService.SetTransaction(tx)
 		uploadStart := time.Now()
 
-		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId)
-		uploadEnd := time.Now()
+		createdReceipt, err = receiptRepository.CreateReceipt(receiptCommand, token.UserId, false)
 		_, taskErr := systemTaskService.CreateReceiptUploadedSystemTask(
 			err,
 			createdReceipt,
@@ -194,24 +184,19 @@ func (service ReceiptService) QuickScan(
 			return err
 		}
 
+		taskErr = systemTaskService.AssociateProcessingSystemTasksToReceipt(quickScanSystemTasks, createdReceipt.ID)
+		if taskErr != nil {
+			return taskErr
+		}
+
 		fileData := models.FileData{
-			Name:      fileHeader.Filename,
-			Size:      uint(fileHeader.Size),
+			Name:      originalFileName,
+			Size:      uint(fileInfo.Size()),
 			ReceiptId: createdReceipt.ID,
 			FileType:  validatedFileType,
 		}
 		_, err := receiptImageRepository.CreateReceiptImage(fileData, fileBytes)
 		if err != nil {
-			return err
-		}
-
-		err = systemTaskService.AssociateSystemTasksToReceipt(
-			createdReceipt.ID,
-			metaCombineSystemTask.ID,
-			uploadStart,
-			uploadEnd)
-		if err != nil {
-			tx.Commit()
 			return err
 		}
 
@@ -221,5 +206,123 @@ func (service ReceiptService) QuickScan(
 		return models.Receipt{}, err
 	}
 
+	os.Remove(tempPath)
 	return createdReceipt, nil
+}
+
+func (service ReceiptService) DuplicateReceipt(
+	userId uint,
+	receiptId string,
+) (models.Receipt, error) {
+	db := repositories.GetDB()
+	newReceipt := models.Receipt{}
+
+	systemTaskCommand := commands.UpsertSystemTaskCommand{
+		Type:                 models.RECEIPT_UPLOADED,
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		AssociatedEntityType: models.RECEIPT,
+		AssociatedEntityId:   0,
+		StartedAt:            time.Now(),
+		EndedAt:              nil,
+		ResultDescription:    "",
+		RanByUserId:          &userId,
+		ReceiptId:            nil,
+		GroupId:              nil,
+	}
+
+	receiptRepository := repositories.NewReceiptRepository(nil)
+	receipt, err := receiptRepository.GetFullyLoadedReceiptById(receiptId)
+	defer func() {
+		systemTaskService := NewSystemTaskService(nil)
+		systemTaskService.CreateSystemTaskFromError(systemTaskCommand, err)
+	}()
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	systemTaskCommand.GroupId = &receipt.GroupId
+
+	copier.Copy(&newReceipt, receipt)
+
+	newReceipt.ID = 0
+	newReceipt.Name = newReceipt.Name + " duplicate"
+	newReceipt.ImageFiles = make([]models.FileData, 0)
+	newReceipt.ReceiptItems = make([]models.Item, 0)
+	newReceipt.Comments = make([]models.Comment, 0)
+	newReceipt.CreatedAt = time.Now()
+	newReceipt.UpdatedAt = time.Now()
+	newReceipt.CreatedBy = &userId
+
+	// Remove fks from any related data
+	for _, fileData := range receipt.ImageFiles {
+		var newFileData models.FileData
+		copier.Copy(&newFileData, fileData)
+
+		newFileData.ID = 0
+		newFileData.ReceiptId = 0
+		newFileData.Receipt = models.Receipt{}
+		newReceipt.ImageFiles = append(newReceipt.ImageFiles, newFileData)
+	}
+
+	// Copy items
+	for _, item := range receipt.ReceiptItems {
+		var newItem models.Item
+		copier.Copy(&newItem, item)
+
+		newItem.ID = 0
+		newItem.ReceiptId = 0
+		newItem.Receipt = models.Receipt{}
+		newReceipt.ReceiptItems = append(newReceipt.ReceiptItems, newItem)
+	}
+
+	// Copy comments
+	for _, comment := range receipt.Comments {
+		var newComment models.Comment
+		copier.Copy(&newComment, comment)
+
+		newComment.ID = 0
+		newComment.ReceiptId = 0
+		newComment.Receipt = models.Receipt{}
+		newReceipt.Comments = append(newReceipt.Comments, newComment)
+	}
+
+	err = db.Create(&newReceipt).Error
+	if err != nil {
+		return models.Receipt{}, err
+	}
+	systemTaskCommand.AssociatedEntityId = newReceipt.ID
+	systemTaskCommand.ReceiptId = &newReceipt.ID
+
+	resultString, err := newReceipt.ToString()
+	if err != nil {
+		return models.Receipt{}, err
+	}
+
+	systemTaskCommand.ResultDescription = resultString
+
+	// Copy receipt images
+	fileRepository := repositories.NewFileRepository(nil)
+	for i, fileData := range newReceipt.ImageFiles {
+		srcFileData := receipt.ImageFiles[i]
+		srcImageBytes, err := fileRepository.GetBytesForFileData(srcFileData)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		dstPath, err := fileRepository.BuildFilePath(
+			utils.UintToString(newReceipt.ID),
+			utils.UintToString(fileData.ID),
+			fileData.Name,
+		)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		err = utils.WriteFile(dstPath, srcImageBytes)
+		if err != nil {
+			return models.Receipt{}, err
+		}
+	}
+
+	return newReceipt, nil
 }

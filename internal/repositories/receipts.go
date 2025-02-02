@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 	"time"
 
@@ -44,18 +43,18 @@ func (repository ReceiptRepository) BeforeUpdateReceipt(currentReceipt models.Re
 			return err
 		}
 
-		oldGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(oldGroup.ID), oldGroup.Name)
+		oldGroupPath, err := utils.BuildGroupPathString(utils.UintToString(oldGroup.ID), oldGroup.Name)
 		if err != nil {
 			return err
 		}
 
-		newGroupPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(newGroup.ID), newGroup.Name)
+		newGroupPath, err := utils.BuildGroupPathString(utils.UintToString(newGroup.ID), newGroup.Name)
 		if err != nil {
 			return err
 		}
 
 		for _, fileData := range currentReceipt.ImageFiles {
-			filename := simpleutils.BuildFileName(simpleutils.UintToString(currentReceipt.ID), simpleutils.UintToString(fileData.ID), fileData.Name)
+			filename := utils.BuildFileName(utils.UintToString(currentReceipt.ID), utils.UintToString(fileData.ID), fileData.Name)
 
 			oldFilePath := filepath.Join(oldGroupPath, filename)
 			newFilePathPath := filepath.Join(newGroupPath, filename)
@@ -81,21 +80,12 @@ func createFailedUpdateSystemTask(command commands.UpsertSystemTaskCommand, err 
 	repository.CreateSystemTask(command)
 }
 
-func getReceiptString(receipt models.Receipt) (string, error) {
-	bytes, err := json.Marshal(receipt)
-	if err != nil {
-		return "", err
-	}
-
-	return string(bytes), nil
-}
-
 func (repository ReceiptRepository) UpdateReceipt(id string, command commands.UpsertReceiptCommand, userId uint) (models.Receipt, error) {
 	db := repository.GetDB()
 
 	systemTaskResultDescription := map[string]interface{}{}
 	var endedAt time.Time
-	stringId, err := simpleutils.StringToUint(id)
+	stringId, err := utils.StringToUint(id)
 	if err != nil {
 		return models.Receipt{}, err
 	}
@@ -124,15 +114,17 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		return models.Receipt{}, err
 	}
 
+	systemTask.GroupId = &currentReceipt.GroupId
+	systemTask.ReceiptId = &currentReceipt.ID
+
 	// NOTE: ID and field used for afterReceiptUpdated
 	updatedReceipt.ID = currentReceipt.ID
 	updatedReceipt.ResolvedDate = currentReceipt.ResolvedDate
-	before, err := getReceiptString(currentReceipt)
+	before, err := currentReceipt.ToString()
 	if err != nil {
 		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
 	}
-
 	systemTaskResultDescription["before"] = before
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -194,7 +186,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 		return models.Receipt{}, err
 	}
 
-	after, err := getReceiptString(fullyLoadedReceipt)
+	after, err := fullyLoadedReceipt.ToString()
 	if err != nil {
 		createFailedUpdateSystemTask(systemTask, err)
 		return models.Receipt{}, err
@@ -291,7 +283,11 @@ func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt,
 	return nil
 }
 
-func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceiptCommand, createdByUserID uint) (models.Receipt, error) {
+func (repository ReceiptRepository) CreateReceipt(
+	command commands.UpsertReceiptCommand,
+	createdByUserID uint,
+	createSystemTask bool,
+) (models.Receipt, error) {
 	db := repository.GetDB()
 	notificationRepository := NewNotificationRepository(nil)
 	receipt, err := command.ToReceipt()
@@ -301,6 +297,14 @@ func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceipt
 
 	if receipt.GroupId > 0 {
 		receipt.CreatedBy = &createdByUserID
+	}
+
+	systemTask := commands.UpsertSystemTaskCommand{
+		Type:                 models.RECEIPT_UPLOADED,
+		AssociatedEntityType: models.RECEIPT,
+		StartedAt:            time.Now(),
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		RanByUserId:          &createdByUserID,
 	}
 
 	err = db.Transaction(func(tx *gorm.DB) error {
@@ -330,13 +334,39 @@ func (repository ReceiptRepository) CreateReceipt(command commands.UpsertReceipt
 		return nil
 	})
 	if err != nil {
+		if !createSystemTask {
+			createFailedUpdateSystemTask(systemTask, err)
+		}
 		return models.Receipt{}, err
 	}
 
 	var fullyLoadedReceipt models.Receipt
 	err = db.Model(models.Receipt{}).Where("id = ?", receipt.ID).Preload(clause.Associations).Find(&fullyLoadedReceipt).Error
 	if err != nil {
+		if !createSystemTask {
+			createFailedUpdateSystemTask(systemTask, err)
+		}
 		return models.Receipt{}, err
+	}
+
+	if createSystemTask {
+		endedAt := time.Now()
+		systemTask.EndedAt = &endedAt
+		systemTask.AssociatedEntityId = fullyLoadedReceipt.ID
+		newReceiptString, err := fullyLoadedReceipt.ToString()
+		if err != nil {
+			return models.Receipt{}, err
+		}
+
+		systemTask.ReceiptId = &fullyLoadedReceipt.ID
+		systemTask.GroupId = &fullyLoadedReceipt.GroupId
+		systemTask.ResultDescription = newReceiptString
+
+		systemTaskRepository := NewSystemTaskRepository(nil)
+		_, err = systemTaskRepository.CreateSystemTask(systemTask)
+		if err != nil {
+			return models.Receipt{}, err
+		}
 	}
 
 	return fullyLoadedReceipt, nil
@@ -358,7 +388,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	var receipts []models.Receipt
 	var count int64
 
-	uintGroupId, err := simpleutils.StringToUint(groupId)
+	uintGroupId, err := utils.StringToUint(groupId)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -377,7 +407,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	// Filter receipts by group
 	if isAllGroup {
 		groupMemberRepository := NewGroupMemberRepository(nil)
-		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(simpleutils.UintToString(userId))
+		groupIds, err := groupMemberRepository.GetGroupIdsByUserId(utils.UintToString(userId))
 		if err != nil {
 			return nil, 0, err
 		}

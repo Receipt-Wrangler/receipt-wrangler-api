@@ -2,11 +2,11 @@ package repositories
 
 import (
 	"errors"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-
-	"gorm.io/gorm"
+	"receipt-wrangler/api/internal/structs"
 )
 
 type SystemTaskRepository struct {
@@ -59,6 +59,42 @@ func (repository SystemTaskRepository) GetPagedSystemTasks(command commands.GetS
 	return results, count, nil
 }
 
+func (repository SystemTaskRepository) GetPagedActivities(command commands.PagedActivityRequestCommand) (
+	[]structs.Activity,
+	int64,
+	error,
+) {
+	db := repository.GetDB()
+	var results []structs.Activity
+	var count int64
+
+	if !isColumnNameValid(command.OrderBy) {
+		return nil, 0, errors.New("invalid column name")
+	}
+
+	systemTaskTypesToGet := []models.SystemTaskType{
+		models.QUICK_SCAN,
+		models.RECEIPT_UPLOADED,
+		models.RECEIPT_UPDATED,
+		models.EMAIL_UPLOAD,
+	}
+
+	query := db.Model(&models.SystemTask{}).
+		Omit("can_be_restarted").
+		Where("type IN ?", systemTaskTypesToGet).
+		Where("group_id IN ?", command.GroupIds).
+		Not(db.Where("type = ? AND ran_by_user_id IS NULL", models.RECEIPT_UPLOADED))
+
+	query.Count(&count)
+
+	query = repository.Sort(query, command.OrderBy, command.SortDirection)
+	query = query.Scopes(repository.Paginate(command.Page, command.PageSize))
+
+	query.Find(&results)
+
+	return results, count, nil
+}
+
 func isColumnNameValid(columnName string) bool {
 	return columnName == "type" || columnName == "status" || columnName == "associated_entity_type" || columnName == "associated_entity_id" || columnName == "started_at" || columnName == "ended_at" || columnName == "result_description" || columnName == "ran_by_user_id"
 }
@@ -75,7 +111,10 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 		EndedAt:                command.EndedAt,
 		ResultDescription:      command.ResultDescription,
 		RanByUserId:            command.RanByUserId,
+		ReceiptId:              command.ReceiptId,
+		GroupId:                command.GroupId,
 		AssociatedSystemTaskId: command.AssociatedSystemTaskId,
+		AsynqTaskId:            command.AsynqTaskId,
 	}
 
 	err := db.Create(&systemTask).Error
@@ -96,12 +135,32 @@ func (repository SystemTaskRepository) CreateSystemTask(command commands.UpsertS
 	return systemTask, nil
 }
 
-func (repository SystemTaskRepository) DeleteSystemTaskByAssociatedEntityId(associatedEntityId string) error {
+func (repository SystemTaskRepository) DeleteSystemTaskByAssociatedEntityId(
+	associatedEntityId string,
+	emailType models.AssociatedEntityType,
+) error {
 	db := repository.GetDB()
-	err := db.Where("associated_entity_id = ?", associatedEntityId).Delete(&models.SystemTask{}).Error
+	err := db.Where("associated_entity_id = ? and associated_entity_type = ?", associatedEntityId, emailType).Delete(&models.SystemTask{}).Error
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (repository SystemTaskRepository) GetSystemTaskById(id uint) (models.SystemTask, error) {
+	db := repository.GetDB()
+	var systemTask models.SystemTask
+
+	err := db.Model(&models.SystemTask{}).Where("id = ?", id).First(&systemTask).Error
+	if err != nil {
+		return models.SystemTask{}, err
+	}
+
+	return systemTask, nil
+}
+
+func (repository SystemTaskRepository) AssociateSystemTaskToReceipt(receiptId uint, systemTaskId uint) error {
+	db := repository.GetDB()
+	return db.Model(&models.SystemTask{}).Where("id = ?", systemTaskId).Update("receipt_id", receiptId).Error
 }

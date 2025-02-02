@@ -8,7 +8,7 @@ import (
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 )
 
 type GroupService struct {
@@ -47,7 +47,12 @@ func (service GroupService) GetGroupsForUser(userId string) ([]models.Group, err
 		return nil, err
 	}
 
-	err = db.Model(models.Group{}).Where("id IN ?", groupIds).Preload(clause.Associations).Order("is_all_group desc").Find(&groups).Error
+	err = db.Model(models.Group{}).
+		Where("id IN ?", groupIds).
+		Preload(clause.Associations).
+		Order("is_all_group desc").
+		Find(&groups).Error
+
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +64,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 	db := service.GetDB()
 	var receipts []models.Receipt
 
-	uintGroupId, err := simpleutils.StringToUint(groupId)
+	uintGroupId, err := utils.StringToUint(groupId)
 	if err != nil {
 		return err
 	}
@@ -88,7 +93,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 
 		// Delete receipts in group
 		for i := 0; i < len(receipts); i++ {
-			txErr = receiptService.DeleteReceipt(simpleutils.UintToString(receipts[i].ID))
+			txErr = receiptService.DeleteReceipt(utils.UintToString(receipts[i].ID))
 			if txErr != nil {
 				return txErr
 			}
@@ -126,7 +131,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		}
 
 		// Remove group's directory
-		groupPath, txErr := simpleutils.BuildGroupPathString(simpleutils.UintToString(group.ID), group.Name)
+		groupPath, txErr := utils.BuildGroupPathString(utils.UintToString(group.ID), group.Name)
 		if txErr != nil {
 			return txErr
 		}

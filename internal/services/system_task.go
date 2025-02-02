@@ -7,8 +7,8 @@ import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 	"time"
 )
 
@@ -25,7 +25,7 @@ func NewSystemTaskService(tx *gorm.DB) SystemTaskService {
 }
 
 func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(metadata commands.ReceiptProcessingMetadata) string {
-	receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(nil)
+	receiptProcessingSettingsRepository := repositories.NewReceiptProcessingSettings(service.TX)
 	idToUse := uint(0)
 
 	if metadata.ReceiptProcessingSettingsIdRan > 0 && metadata.DidReceiptProcessingSettingsSucceed {
@@ -38,7 +38,7 @@ func (service SystemTaskService) BuildSuccessReceiptProcessResultDescription(met
 		return ""
 	}
 
-	idToUseString := simpleutils.UintToString(idToUse)
+	idToUseString := utils.UintToString(idToUse)
 
 	receiptProcessingSettings, err := receiptProcessingSettingsRepository.GetReceiptProcessingSettingsById(idToUseString)
 	if err != nil {
@@ -56,6 +56,8 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 	endDate time.Time,
 	taskType models.SystemTaskType,
 	userId *uint,
+	groupId *uint,
+	asynqTaskId string,
 	parentAssociatedSystemTaskId func(command commands.UpsertSystemTaskCommand) *uint) (structs.ReceiptProcessingSystemTasks, error) {
 	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	result := structs.ReceiptProcessingSystemTasks{}
@@ -69,7 +71,9 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			StartedAt:            startDate,
 			EndedAt:              &endDate,
 			ResultDescription:    metadata.RawResponse,
+			AsynqTaskId:          asynqTaskId,
 			RanByUserId:          userId,
+			GroupId:              groupId,
 		}
 
 		if parentAssociatedSystemTaskId != nil {
@@ -97,7 +101,9 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 			StartedAt:            startDate,
 			EndedAt:              &endDate,
 			ResultDescription:    metadata.FallbackRawResponse,
+			AsynqTaskId:          asynqTaskId,
 			RanByUserId:          userId,
+			GroupId:              groupId,
 		}
 
 		if parentAssociatedSystemTaskId != nil {
@@ -120,13 +126,17 @@ func (service SystemTaskService) CreateSystemTasksFromMetadata(metadata commands
 	return result, nil
 }
 
-func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.SystemTask, metadata commands.ReceiptProcessingMetadata) ([]models.SystemTask, error) {
+func (service SystemTaskService) CreateChildSystemTasks(
+	parentSystemTask models.SystemTask,
+	metadata commands.ReceiptProcessingMetadata,
+) ([]models.SystemTask, error) {
 	var systemTasks []models.SystemTask
 	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	isFallback := parentSystemTask.AssociatedEntityId == metadata.FallbackReceiptProcessingSettingsIdRan
 
 	if !isFallback && len(metadata.OcrSystemTaskCommand.Type) > 0 {
 		metadata.OcrSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		metadata.OcrSystemTaskCommand.GroupId = parentSystemTask.GroupId
 		ocrSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.OcrSystemTaskCommand)
 		if err != nil {
 			return []models.SystemTask{}, err
@@ -137,6 +147,7 @@ func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.
 
 	if !isFallback && len(metadata.PromptSystemTaskCommand.Type) > 0 {
 		metadata.PromptSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		metadata.PromptSystemTaskCommand.GroupId = parentSystemTask.GroupId
 		promptSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.PromptSystemTaskCommand)
 		if err != nil {
 			return []models.SystemTask{}, err
@@ -147,6 +158,7 @@ func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.
 
 	if !isFallback && len(metadata.ChatCompletionSystemTaskCommand.Type) > 0 {
 		metadata.ChatCompletionSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		metadata.ChatCompletionSystemTaskCommand.GroupId = parentSystemTask.GroupId
 		chatCompletionSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.ChatCompletionSystemTaskCommand)
 		if err != nil {
 			return []models.SystemTask{}, err
@@ -157,6 +169,7 @@ func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.
 
 	if isFallback && len(metadata.FallbackOcrSystemTaskCommand.Type) > 0 {
 		metadata.FallbackOcrSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		metadata.FallbackOcrSystemTaskCommand.GroupId = parentSystemTask.GroupId
 		fallbackOcrSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.FallbackOcrSystemTaskCommand)
 		if err != nil {
 			return []models.SystemTask{}, err
@@ -167,6 +180,7 @@ func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.
 
 	if isFallback && len(metadata.FallbackPromptSystemTaskCommand.Type) > 0 {
 		metadata.FallbackPromptSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		metadata.FallbackPromptSystemTaskCommand.GroupId = parentSystemTask.GroupId
 		fallbackPromptSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.FallbackPromptSystemTaskCommand)
 		if err != nil {
 			return []models.SystemTask{}, err
@@ -177,6 +191,7 @@ func (service SystemTaskService) CreateChildSystemTasks(parentSystemTask models.
 
 	if isFallback && len(metadata.FallbackChatCompletionSystemTaskCommand.Type) > 0 {
 		metadata.FallbackChatCompletionSystemTaskCommand.AssociatedSystemTaskId = &parentSystemTask.ID
+		metadata.FallbackChatCompletionSystemTaskCommand.GroupId = parentSystemTask.GroupId
 		fallbackChatCompletionSystemTask, err := systemTaskRepository.CreateSystemTask(metadata.FallbackChatCompletionSystemTaskCommand)
 		if err != nil {
 			return []models.SystemTask{}, err
@@ -201,7 +216,7 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 	quickScanSystemTasks structs.ReceiptProcessingSystemTasks,
 	uploadStart time.Time,
 ) (models.SystemTask, error) {
-	systemTaskRepository := repositories.NewSystemTaskRepository(service.GetDB())
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 	receiptProcessingSettingsId := quickScanSystemTasks.SystemTask.AssociatedEntityId
 	systemTaskId := quickScanSystemTasks.SystemTask.ID
 	status := models.SYSTEM_TASK_SUCCEEDED
@@ -234,6 +249,8 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 		EndedAt:                &uploadFinished,
 		ResultDescription:      resultDescription,
 		AssociatedSystemTaskId: &systemTaskId,
+		GroupId:                &createdReceipt.GroupId,
+		ReceiptId:              &createdReceipt.ID,
 	})
 	if err != nil {
 		return models.SystemTask{}, err
@@ -242,54 +259,40 @@ func (service SystemTaskService) CreateReceiptUploadedSystemTask(
 	return systemTask, nil
 }
 
-func (service SystemTaskService) AssociateSystemTasksToReceipt(
-	createdReceiptId uint,
-	parentProcessingSystemTaskId uint,
-	uploadStart time.Time,
-	uploadEnd time.Time,
+func (service SystemTaskService) AssociateProcessingSystemTasksToReceipt(
+	tasks structs.ReceiptProcessingSystemTasks,
+	receiptId uint,
 ) error {
-	db := service.GetDB()
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		systemTaskRepository := repositories.NewSystemTaskRepository(tx)
-
-		associateTasksToReceipt, txErr := systemTaskRepository.CreateSystemTask(
-			service.BuildAssociateSystemTasksToReceiptTask(
-				createdReceiptId,
-				uploadStart,
-				uploadEnd,
-			))
-		if txErr != nil {
-			return txErr
+	if tasks.SystemTask.ID > 0 {
+		err := systemTaskRepository.AssociateSystemTaskToReceipt(receiptId, tasks.SystemTask.ID)
+		if err != nil {
+			return err
 		}
+	}
 
-		txErr = tx.Model(models.SystemTask{}).
-			Where("id = ?", parentProcessingSystemTaskId).
-			Update("associated_system_task_id", associateTasksToReceipt.ID).Error
-		if txErr != nil {
-			return txErr
+	if tasks.FallbackSystemTask.ID > 0 {
+		err := systemTaskRepository.AssociateSystemTaskToReceipt(receiptId, tasks.FallbackSystemTask.ID)
+		if err != nil {
+			return err
 		}
-
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	return nil
 }
 
-func (service SystemTaskService) BuildAssociateSystemTasksToReceiptTask(
-	createdReceiptId uint,
-	uploadStart time.Time,
-	uploadEnd time.Time,
-) commands.UpsertSystemTaskCommand {
-	return commands.UpsertSystemTaskCommand{
-		Type:                 models.META_ASSOCIATE_TASKS_TO_RECEIPT,
-		Status:               models.SYSTEM_TASK_SUCCEEDED,
-		AssociatedEntityType: models.RECEIPT,
-		AssociatedEntityId:   createdReceiptId,
-		StartedAt:            uploadStart,
-		EndedAt:              &uploadEnd,
+func (service SystemTaskService) CreateSystemTaskFromError(command commands.UpsertSystemTaskCommand, err error) (models.SystemTask, error) {
+	now := time.Now()
+	command.EndedAt = &now
+
+	if err != nil {
+		command.ResultDescription = err.Error()
+		command.Status = models.SYSTEM_TASK_FAILED
+	} else {
+		command.Status = models.SYSTEM_TASK_SUCCEEDED
 	}
+
+	systemTaskRepository := repositories.NewSystemTaskRepository(service.TX)
+	return systemTaskRepository.CreateSystemTask(command)
 }

@@ -13,6 +13,8 @@ func BuildSystemTaskRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux
 
 	systemTaskRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 	systemTaskRouter.Post("/getPagedSystemTasks", handlers.GetSystemTasks)
+	systemTaskRouter.Post("/getPagedActivities", handlers.GetActivitiesForGroups)
+	systemTaskRouter.Post("/rerunActivity/{id}", handlers.RerunActivity)
 
 	return systemTaskRouter
 }

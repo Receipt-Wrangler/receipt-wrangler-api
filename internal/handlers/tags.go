@@ -18,7 +18,7 @@ func GetAllTags(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving tags",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			tagsRepository := repositories.NewTagsRepository(nil)
 			tags, err := tagsRepository.GetAllTags("*")
@@ -46,7 +46,7 @@ func CreateTag(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error creating tag",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			tag := commands.UpsertTagCommand{}
 			err := tag.LoadDataFromRequest(w, r)
@@ -85,7 +85,7 @@ func GetPagedTags(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving tags",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			pagedData := structs.PagedData{}
 			pagedRequestCommand := commands.PagedRequestCommand{}
@@ -129,7 +129,7 @@ func UpdateTag(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "tagId")
 
@@ -166,7 +166,7 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "tagId")
 
@@ -191,7 +191,7 @@ func GetTagNameCount(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.TEXT_PLAIN,
+		ResponseType: constants.TextPlain,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			tagRepository := repositories.NewTagsRepository(nil)
 			tagName := chi.URLParam(r, "tagName")

@@ -102,6 +102,7 @@ func MakeMigrations() error {
 		&models.GroupSettings{},
 		&models.Dashboard{},
 		&models.Widget{},
+		&models.TaskQueueConfiguration{},
 		&models.SystemSettings{},
 		&models.SystemEmail{},
 		&models.SystemTask{},

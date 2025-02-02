@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -155,7 +155,7 @@ func (repository GroupRepository) UpdateGroup(command commands.UpsertGroupComman
 	// TODO: move hooks from model to repository func
 	db := repository.GetDB()
 
-	u64Id, err := simpleutils.StringToUint64(groupId)
+	u64Id, err := utils.StringToUint64(groupId)
 	if err != nil {
 		return models.Group{}, err
 	}

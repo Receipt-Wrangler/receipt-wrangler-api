@@ -29,7 +29,7 @@ func TestShouldSetContentTypeHeader(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			return 0, nil
 		},
@@ -39,8 +39,8 @@ func TestShouldSetContentTypeHeader(t *testing.T) {
 
 	contentType := w.Header().Get("Content-Type")
 
-	if contentType != constants.APPLICATION_JSON {
-		utils.PrintTestError(t, contentType, constants.APPLICATION_JSON)
+	if contentType != constants.ApplicationJson {
+		utils.PrintTestError(t, contentType, constants.ApplicationJson)
 	}
 }
 
@@ -58,7 +58,7 @@ func TestShouldRejectAccessBasedOnGroupId(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupRole:    models.VIEWER,
 		GroupId:      "2",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -87,7 +87,7 @@ func TestShouldRejectAccessBasedOnGroupIdIfGroupDoesNotExist(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupRole:    models.VIEWER,
 		GroupId:      "500",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -116,7 +116,7 @@ func TestShouldRejectAccessBasedOnGroupIdIfGroupIdIsMalformed(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupRole:    models.VIEWER,
 		GroupId:      "bad parse",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -152,7 +152,7 @@ func TestShouldRejectReceiptAccessBasedOnGroup(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupRole:    models.EDITOR,
 		ReceiptId:    "1",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -190,8 +190,7 @@ func TestShouldAcceptReceiptAccessBasedOnGroup(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
-		GroupRole:    models.OWNER,
+		ResponseType: constants.ApplicationJson,
 		ReceiptId:    "1",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			return 0, nil
@@ -219,7 +218,7 @@ func TestShouldAcceptAccessBasedOnGroupId(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupRole:    models.VIEWER,
 		GroupId:      "1",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -263,7 +262,7 @@ func TestShouldAcceptReceiptsAccessBasedOnGroup(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupRole:    models.OWNER,
 		ReceiptIds:   []string{"1", "2"},
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -274,6 +273,64 @@ func TestShouldAcceptReceiptsAccessBasedOnGroup(t *testing.T) {
 	HandleRequest(handler)
 
 	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestShouldRejectAccessBasedOnEmptyGroupId(t *testing.T) {
+	defer tearDownGenericHandlerTest()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1}})
+	r = r.WithContext(newContext)
+
+	repositories.CreateTestGroupWithUsers()
+
+	handler := structs.Handler{
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationJson,
+		GroupRole:    models.VIEWER,
+		GroupId:      "",
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+
+	if w.Result().StatusCode != http.StatusForbidden {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestShouldRejectAccessBasedOnEmptyGroupIds(t *testing.T) {
+	defer tearDownGenericHandlerTest()
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 1}})
+	r = r.WithContext(newContext)
+
+	repositories.CreateTestGroupWithUsers()
+
+	handler := structs.Handler{
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationJson,
+		GroupRole:    models.VIEWER,
+		GroupIds:     []string{},
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+
+	if w.Result().StatusCode != http.StatusForbidden {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
 	}
 }
@@ -301,7 +358,7 @@ func TestShouldRejectReceiptAccessBasedOnWrongGroupRole(t *testing.T) {
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupRole:    models.OWNER,
 		ReceiptId:    "1",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -345,7 +402,7 @@ func TestShouldRejectReceiptAccessBasedOnWrongGroupRoleForMultipleReceipts(t *te
 	handler := structs.Handler{
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupRole:    models.OWNER,
 		ReceiptIds:   []string{"1", "2"},
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {

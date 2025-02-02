@@ -2,7 +2,7 @@ package models
 
 import (
 	"os"
-	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -28,15 +28,15 @@ func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {
 		}
 
 		if groupToUpdate.Name != dbGroup.Name {
-			oldGroupId := simpleutils.UintToString(dbGroup.ID)
-			newGroupId := simpleutils.UintToString(groupToUpdate.ID)
+			oldGroupId := utils.UintToString(dbGroup.ID)
+			newGroupId := utils.UintToString(groupToUpdate.ID)
 
-			oldGroupPath, err := simpleutils.BuildGroupPathString(oldGroupId, dbGroup.Name)
+			oldGroupPath, err := utils.BuildGroupPathString(oldGroupId, dbGroup.Name)
 			if err != nil {
 				return err
 			}
 
-			newGroupPath, err := simpleutils.BuildGroupPathString(newGroupId, groupToUpdate.Name)
+			newGroupPath, err := utils.BuildGroupPathString(newGroupId, groupToUpdate.Name)
 			if err != nil {
 				return err
 			}
@@ -50,7 +50,7 @@ func (groupToUpdate *Group) BeforeUpdate(tx *gorm.DB) (err error) {
 
 func (deletedGroup *Group) AfterDelete(tx *gorm.DB) (err error) {
 	if deletedGroup.ID > 0 {
-		dataPath, err := simpleutils.BuildGroupPathString(simpleutils.UintToString(deletedGroup.ID), deletedGroup.Name)
+		dataPath, err := utils.BuildGroupPathString(utils.UintToString(deletedGroup.ID), deletedGroup.Name)
 		if err != nil {
 			return err
 		}

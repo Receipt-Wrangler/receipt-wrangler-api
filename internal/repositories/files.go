@@ -11,7 +11,6 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 	"regexp"
 	"strings"
@@ -47,7 +46,7 @@ func (repository BaseRepository) BuildFilePath(receiptId string, receiptImageId 
 		return "", err
 	}
 
-	fileName := simpleutils.BuildFileName(receiptId, receiptImageId, receiptImageFileName)
+	fileName := utils.BuildFileName(receiptId, receiptImageId, receiptImageFileName)
 	path := filepath.Join(groupPath, fileName)
 
 	return path, nil
@@ -69,8 +68,8 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 		groupNameToUse = group.Name
 	}
 
-	strGroupId := simpleutils.UintToString(groupId)
-	groupPath, err := simpleutils.BuildGroupPathString(strGroupId, groupNameToUse)
+	strGroupId := utils.UintToString(groupId)
+	groupPath, err := utils.BuildGroupPathString(strGroupId, groupNameToUse)
 	if err != nil {
 		return "", err
 	}
@@ -79,7 +78,7 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 }
 
 func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
-	path, err := repository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+	path, err := repository.BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
 
 	if err != nil {
 		return nil, err
@@ -105,12 +104,12 @@ func (repository BaseRepository) GetBytesFromImageBytes(imageData []byte) ([]byt
 		return nil, err
 	}
 
-	if validatedType == constants.APPLICATION_PDF {
+	if validatedType == constants.ApplicationPdf {
 		bytes, err = repository.ConvertPdfToJpg(imageData)
 		if err != nil {
 			return nil, err
 		}
-	} else if validatedType == constants.IMAGE_HEIC {
+	} else if validatedType == constants.ImageHeic {
 		bytes, err = repository.ConvertHeicToJpg(imageData)
 		if err != nil {
 			return nil, err
@@ -128,7 +127,7 @@ func (repository BaseRepository) IsImage(imageData []byte) (bool, error) {
 		return false, err
 	}
 
-	isImage, err := regexp.Match(constants.ANY_IMAGE, []byte(validatedFileType))
+	isImage, err := regexp.Match(constants.AnyImage, []byte(validatedFileType))
 	if err != nil {
 		return false, err
 	}
@@ -142,7 +141,7 @@ func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
 		return false, err
 	}
 
-	isPdf, err := regexp.Match(constants.APPLICATION_PDF, []byte(validatedFileType))
+	isPdf, err := regexp.Match(constants.ApplicationPdf, []byte(validatedFileType))
 	if err != nil {
 		return false, err
 	}
@@ -152,7 +151,7 @@ func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
 
 func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) {
 	fileType := mimetype.Detect(bytes).String()
-	acceptedFileTypes := []string{constants.ANY_IMAGE, constants.APPLICATION_PDF}
+	acceptedFileTypes := []string{constants.AnyImage, constants.ApplicationPdf}
 
 	for _, acceptedFileType := range acceptedFileTypes {
 		matched, _ := regexp.Match(acceptedFileType, []byte(fileType))
@@ -167,7 +166,7 @@ func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) 
 
 func (repository BaseRepository) ValidateJsonFileType(bytes []byte) (string, error) {
 	fileType := mimetype.Detect(bytes).String()
-	acceptedFileTypes := []string{constants.APPLICATION_JSON}
+	acceptedFileTypes := []string{constants.ApplicationJson}
 
 	for _, acceptedFileType := range acceptedFileTypes {
 		matched, _ := regexp.Match(acceptedFileType, []byte(fileType))
@@ -381,4 +380,10 @@ func (repository BaseRepository) CreateZipFromTempFiles(zipFilename string, file
 
 func (repository BaseRepository) GetTempDirectoryPath() string {
 	return config.GetBasePath() + "/temp"
+}
+
+func (repository BaseRepository) GetTestJpgBytes() ([]byte, error) {
+	path := config.GetBasePath() + "/testing/test.jpg"
+
+	return utils.ReadFile(path)
 }

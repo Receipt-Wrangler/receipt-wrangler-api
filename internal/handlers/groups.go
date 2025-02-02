@@ -1,20 +1,21 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hibiken/asynq"
 	"net/http"
 	"os"
 	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
-	"receipt-wrangler/api/internal/email"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"receipt-wrangler/api/internal/wranglerasynq"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -25,7 +26,7 @@ func GetPagedGroups(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving groups.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.PagedGroupRequestCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -40,7 +41,7 @@ func GetPagedGroups(w http.ResponseWriter, r *http.Request) {
 			}
 
 			token := structs.GetJWT(r)
-			userIdString := simpleutils.UintToString(token.UserId)
+			userIdString := utils.UintToString(token.UserId)
 			groupRepository := repositories.NewGroupRepository(nil)
 
 			groups, count, err := groupRepository.GetPagedGroups(command, userIdString)
@@ -77,12 +78,12 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving groups.",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			groupService := services.NewGroupService(nil)
 
-			groups, err := groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+			groups, err := groupService.GetGroupsForUser(utils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -104,7 +105,7 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				groups, err = groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				groups, err = groupService.GetGroupsForUser(utils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
@@ -133,7 +134,7 @@ func GetGroupById(w http.ResponseWriter, r *http.Request) {
 		GroupId:      chi.URLParam(r, "groupId"),
 		GroupRole:    models.VIEWER,
 		OrUserRole:   models.ADMIN,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "groupId")
 
@@ -163,7 +164,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error creating group",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpsertGroupCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -221,7 +222,7 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		GroupId:      chi.URLParam(r, "groupId"),
 		GroupRole:    models.OWNER,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpsertGroupCommand{}
 			err := command.LoadDataFromRequest(w, r)
@@ -237,7 +238,7 @@ func UpdateGroup(w http.ResponseWriter, r *http.Request) {
 			groupId := chi.URLParam(r, "groupId")
 
 			groupRepository := repositories.NewGroupRepository(nil)
-			uintGroupId, err := simpleutils.StringToUint(groupId)
+			uintGroupId, err := utils.StringToUint(groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -277,7 +278,7 @@ func UpdateGroupSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error updating group settings",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.UpdateGroupSettingsCommand{}
@@ -318,7 +319,7 @@ func UpdateGroupReceiptSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error updating group receipt settings",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.APPLICATION_JSON,
+		ResponseType: constants.ApplicationJson,
 		GroupId:      groupId,
 		GroupRole:    models.OWNER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -365,7 +366,7 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 
 			groupIdsToPoll := []string{}
 
-			uintGroupId, err := simpleutils.StringToUint(groupId)
+			uintGroupId, err := utils.StringToUint(groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -379,14 +380,14 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 				disabledEmailIntegrationCnt := 0
 				groupService := services.NewGroupService(nil)
 
-				groups, err := groupService.GetGroupsForUser(simpleutils.UintToString(token.UserId))
+				groups, err := groupService.GetGroupsForUser(utils.UintToString(token.UserId))
 				if err != nil {
 					return http.StatusInternalServerError, err
 				}
 
 				for _, group := range groups {
 					if group.GroupSettings.EmailIntegrationEnabled {
-						groupIdsToPoll = append(groupIdsToPoll, simpleutils.UintToString(group.ID))
+						groupIdsToPoll = append(groupIdsToPoll, utils.UintToString(group.ID))
 					} else {
 						disabledEmailIntegrationCnt += 1
 					}
@@ -406,11 +407,22 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 					if !groupSetting.EmailIntegrationEnabled {
 						return http.StatusBadRequest, errors.New("email integration is not enabled for this group")
 					}
-					groupIdsToPoll = append(groupIdsToPoll, simpleutils.UintToString(groupSetting.GroupId))
+					groupIdsToPoll = append(groupIdsToPoll, utils.UintToString(groupSetting.GroupId))
 				}
 			}
 
-			err = email.CallClient(false, groupIdsToPoll)
+			// TODO: Enqueue instead
+			taskPayload := wranglerasynq.EmailPollTaskPayload{
+				GroupIds: groupIdsToPoll,
+			}
+
+			payloadBytes, err := json.Marshal(taskPayload)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			task := asynq.NewTask(wranglerasynq.EmailPoll, payloadBytes)
+			_, err = wranglerasynq.EnqueueTask(task, models.EmailPollingQueue)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -435,7 +447,7 @@ func DeleteGroup(w http.ResponseWriter, r *http.Request) {
 			id := chi.URLParam(r, "groupId")
 			groupService := services.NewGroupService(nil)
 
-			uintGroupId, err := simpleutils.StringToUint(id)
+			uintGroupId, err := utils.StringToUint(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -472,12 +484,12 @@ func GetOcrTextForGroup(w http.ResponseWriter, r *http.Request) {
 		GroupId:      groupId,
 		GroupRole:    models.OWNER,
 		UserRole:     models.ADMIN,
-		ResponseType: constants.APPLICATION_ZIP,
+		ResponseType: constants.ApplicationZip,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetJWT(r)
 			zipFilename := "results.zip"
 
-			ocrResults, err := services.ReadAllReceiptImagesForGroup(groupId, simpleutils.UintToString(token.UserId))
+			ocrResults, err := services.ReadAllReceiptImagesForGroup(groupId, utils.UintToString(token.UserId))
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

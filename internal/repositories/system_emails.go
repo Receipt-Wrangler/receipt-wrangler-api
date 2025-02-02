@@ -119,7 +119,7 @@ func (repository SystemEmailRepository) DeleteSystemEmail(id string) error {
 		taskRepository := NewSystemTaskRepository(tx)
 		repository.SetTransaction(tx)
 
-		err := taskRepository.DeleteSystemTaskByAssociatedEntityId(id)
+		err := taskRepository.DeleteSystemTaskByAssociatedEntityId(id, models.SYSTEM_EMAIL)
 		if err != nil {
 			return err
 		}

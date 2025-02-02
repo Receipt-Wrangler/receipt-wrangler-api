@@ -25,7 +25,7 @@ func NewPromptService(tx *gorm.DB) PromptService {
 func (service PromptService) CreateDefaultPrompt() (models.Prompt, error) {
 	db := service.GetDB()
 	var defaultPromptCount int64
-	db.Model(models.Prompt{}).Where("name = ?", constants.DEFAULT_PROMPT_NAME).Count(&defaultPromptCount)
+	db.Model(models.Prompt{}).Where("name = ?", constants.DefaultPromptName).Count(&defaultPromptCount)
 
 	defaultPrompt := fmt.Sprintf(`
 Find the receipt's name, total cost, and date. Format the found data as:
@@ -49,13 +49,14 @@ Choose up to 2 categories from the given list based on the receipt's items and s
 }
 
 Emphasize the relationship between the category and the receipt, and use the description of the category to fine tune the results. Do not return categories that have an empty name or do not exist.
+If there are no categories to chose from, then please make categories an empty array.
+Likewise, if there are not tags to choose from, then make tags an empty array.
 
-
-Categories: @categories
+Categories to chose from: @categories
 
 Follow the same process as described for categories for tags.
 
-Tags: @tags
+Tags to chose from: @tags
 
 Receipt text: @ocrText
 `)
@@ -66,7 +67,7 @@ Receipt text: @ocrText
 
 	promptRepository := repositories.NewPromptRepository(service.TX)
 	command := commands.UpsertPromptCommand{
-		Name:        constants.DEFAULT_PROMPT_NAME,
+		Name:        constants.DefaultPromptName,
 		Description: "Default prompt used for previous versions of Receipt Wrangler.",
 		Prompt:      defaultPrompt,
 	}

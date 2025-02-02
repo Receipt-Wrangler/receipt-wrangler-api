@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"github.com/shopspring/decimal"
 	"time"
 )
@@ -21,4 +22,13 @@ type Receipt struct {
 	ImageFiles   []FileData      `json:"imageFiles"`
 	ReceiptItems []Item          `json:"receiptItems"`
 	Comments     []Comment       `json:"comments"`
+}
+
+func (r *Receipt) ToString() (string, error) {
+	bytes, err := json.Marshal(r)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
 }

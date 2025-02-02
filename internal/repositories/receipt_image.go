@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
@@ -48,7 +47,7 @@ func (repository ReceiptImageRepository) CreateReceiptImage(fileData models.File
 	}
 
 	// Get initial group directory to see if it exists
-	filePath, err := fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), "", fileData.Name)
+	filePath, err := fileRepository.BuildFilePath(utils.UintToString(fileData.ReceiptId), "", fileData.Name)
 	if err != nil {
 		return models.FileData{}, err
 	}
@@ -67,7 +66,7 @@ func (repository ReceiptImageRepository) CreateReceiptImage(fileData models.File
 	}
 
 	// Rebuild file path with correct file id
-	filePath, err = fileRepository.BuildFilePath(simpleutils.UintToString(fileData.ReceiptId), simpleutils.UintToString(fileData.ID), fileData.Name)
+	filePath, err = fileRepository.BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
 	if err != nil {
 		return models.FileData{}, err
 	}

@@ -3,7 +3,6 @@ package repositories
 import (
 	"fmt"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
@@ -110,7 +109,7 @@ func BuildNotificationsForUsers(userIds []uint, title string, body string, notif
 
 func BuildNotificationForGroup(groupId uint, title string, body string, notificationType models.NotificationType, usersToOmit []interface{}) ([]models.Notification, error) {
 	groupMemberRepository := NewGroupMemberRepository(nil)
-	groupMembers, err := groupMemberRepository.GetsGroupMembersByGroupId(simpleutils.UintToString(groupId))
+	groupMembers, err := groupMemberRepository.GetsGroupMembersByGroupId(utils.UintToString(groupId))
 	if err != nil {
 		return nil, err
 	}
@@ -135,5 +134,5 @@ func BuildNotificationForGroup(groupId uint, title string, body string, notifica
 }
 
 func BuildParamaterisedString(idType string, id uint, displayKey string, typeOfData string) string {
-	return fmt.Sprintf("${%s:%s.%s:%s}", idType, simpleutils.UintToString(id), displayKey, typeOfData)
+	return fmt.Sprintf("${%s:%s.%s:%s}", idType, utils.UintToString(id), displayKey, typeOfData)
 }

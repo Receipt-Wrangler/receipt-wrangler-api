@@ -1,4 +1,4 @@
-package simpleutils
+package utils
 
 import (
 	"strconv"

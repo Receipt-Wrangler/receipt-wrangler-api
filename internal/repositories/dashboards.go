@@ -3,7 +3,7 @@ package repositories
 import (
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/simpleutils"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -26,15 +26,13 @@ func (repository *DashboardRepository) CreateDashboard(command commands.UpsertDa
 	widgets := make([]models.Widget, len(command.Widgets))
 	var groupId uint
 
-	groupId, _ = simpleutils.StringToUint(command.GroupId)
+	groupId, _ = utils.StringToUint(command.GroupId)
 
 	for i, widget := range command.Widgets {
-		configuration := []byte("{}")
-
 		widgets[i] = models.Widget{
 			Name:          widget.Name,
 			WidgetType:    widget.WidgetType,
-			Configuration: configuration,
+			Configuration: widget.Configuration,
 		}
 	}
 
@@ -110,7 +108,7 @@ func (repository *DashboardRepository) DeleteDashboardById(dashboardId uint) err
 
 func (repository *DashboardRepository) UpdateDashboardById(dashboardId uint, command commands.UpsertDashboardCommand) (models.Dashboard, error) {
 	db := repository.GetDB()
-	groupId, err := simpleutils.StringToUint(command.GroupId)
+	groupId, err := utils.StringToUint(command.GroupId)
 	if err != nil {
 		return models.Dashboard{}, err
 	}

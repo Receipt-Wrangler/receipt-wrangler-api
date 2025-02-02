@@ -35,7 +35,7 @@ func RefreshToken(w http.ResponseWriter, r *http.Request) {
 					return http.StatusInternalServerError, err
 				}
 
-				w.Header().Set("Content-Type", constants.APPLICATION_JSON)
+				w.Header().Set("Content-Type", constants.ApplicationJson)
 
 				w.WriteHeader(http.StatusOK)
 				w.Write(bytes)

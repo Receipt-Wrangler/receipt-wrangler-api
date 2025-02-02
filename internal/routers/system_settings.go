@@ -13,6 +13,7 @@ func BuildSystemSettingsRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi
 	systemSettingsRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 	systemSettingsRouter.Get("/", handlers.GetSystemSettings)
 	systemSettingsRouter.Put("/", handlers.UpdateSystemSettings)
+	systemSettingsRouter.Post("/restartTaskServer", handlers.RestartTaskServer)
 
 	return systemSettingsRouter
 }

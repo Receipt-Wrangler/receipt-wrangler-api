@@ -1,14 +1,15 @@
 package utils
 
 import (
+	"crypto/rand"
 	"encoding/base64"
-	"math/rand"
 	"strings"
 )
 
 func GetRandomString(length int) (string, error) {
 	bytes := make([]byte, length)
 	_, err := rand.Read(bytes)
+
 	if err != nil {
 		return "", err
 	}

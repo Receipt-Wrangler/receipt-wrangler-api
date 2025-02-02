@@ -732,13 +732,7 @@ paths:
       operationId: quickScanReceipt
       responses:
         200:
-          description: The created receipts
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Receipt"
+          $ref: "#/components/responses/Ok"
         500:
           $ref: "#/components/responses/Internal"
       security:
@@ -1813,6 +1807,60 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+  /systemTask/getPagedActivities:
+    post:
+      tags:
+        - SystemTask
+      summary: Gets paged activities
+      description: This will return paged activities for a list of groups
+      operationId: getPagedActivities
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedActivityRequestCommand"
+      responses:
+        200:
+          description: Paged activities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
+  /systemTask/rerunActivity/{id}:
+    post:
+      tags:
+        - SystemTask
+      summary: Attempts to rerun activity
+      description: This will rerun a failed activity
+      operationId: rerunActivity
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Id of activity to restart
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+      security:
+        - bearerAuth: [ ]
   /prompt/:
     post:
       tags:
@@ -2179,6 +2227,20 @@ paths:
           $ref: "#/components/responses/Internal"
         403:
           $ref: "#/components/responses/Forbidden"
+  /systemSettings/restartTaskServer:
+    post:
+      tags:
+        - SystemSettings
+      summary: Restart task server
+      description: This will restart the task server
+      operationId: restartTaskServer
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        500:
+          $ref: "#/components/responses/Internal"
+        403:
+          $ref: "#/components/responses/Forbidden"
   /import/importConfigJson:
     post:
       tags:
@@ -2217,6 +2279,10 @@ components:
       description: The request was not allowed
     Internal:
       description: There was an error processing the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalErrorResponse'
   schemas:
     ReceiptStatus:
       description: Status of a receipt
@@ -2270,6 +2336,7 @@ components:
       enum:
         - "GROUP_SUMMARY"
         - "FILTERED_RECEIPTS"
+        - "GROUP_ACTIVITY"
     AiType:
       type: string
       enum:
@@ -2290,17 +2357,16 @@ components:
     SystemTaskType:
       type: string
       enum:
-        - "META_ASSOCIATE_TASKS_TO_RECEIPT"
         - "OCR_PROCESSING"
         - "CHAT_COMPLETION"
         - "MAGIC_FILL"
         - "QUICK_SCAN"
         - "EMAIL_READ"
-        - "META_COMBINE_QUICK_SCAN"
         - "EMAIL_UPLOAD"
         - "SYSTEM_EMAIL_CONNECTIVITY_CHECK"
         - "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
         - "RECEIPT_UPLOADED"
+        - "RECEIPT_UPDATED"
         - "PROMPT_GENERATED"
     AssociatedEntityType:
       type: string
@@ -2329,6 +2395,44 @@ components:
       enum:
         - "START"
         - "END"
+    QueueName:
+      type: string
+      enum:
+        - "quick_scan"
+        - "email_polling"
+        - "email_receipt_processing"
+        - "email_receipt_image_cleanup"
+    Activity:
+      type: object
+      required:
+        - id
+        - type
+        - status
+        - startedAt
+        - endedAt
+        - childSystemTasks
+      properties:
+        id:
+          type: integer
+        type:
+          $ref: "#/components/schemas/SystemTaskType"
+        status:
+          $ref: "#/components/schemas/SystemTaskStatus"
+        startedAt:
+          type: string
+        endedAt:
+          type: string
+        ranByUserId:
+          type: integer
+          format: uint64
+        receiptId:
+          type: integer
+          format: uint64
+        groupId:
+          type: integer
+          format: uint64
+        canBeRestarted:
+          type: boolean
     BaseModel:
       type: object
       required:
@@ -3092,6 +3196,15 @@ components:
           properties:
             filter:
               $ref: "#/components/schemas/GroupFilter"
+    PagedActivityRequestCommand:
+      allOf:
+        - $ref: "#/components/schemas/PagedRequestCommand"
+        - type: object
+          properties:
+            groupIds:
+              type: array
+              items:
+                type: integer
     GroupFilter:
       type: object
       properties:
@@ -3188,6 +3301,7 @@ components:
               - $ref: "#/components/schemas/SystemTask"
               - $ref: "#/components/schemas/ReceiptProcessingSettings"
               - $ref: "#/components/schemas/SystemEmail"
+              - $ref: "#/components/schemas/Activity"
         totalCount:
           type: integer
     FeatureConfig:
@@ -3753,7 +3867,6 @@ components:
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/UpsertCommentCommand"
-
     UpsertItemCommand:
       type: object
       required:
@@ -3839,10 +3952,30 @@ components:
         password:
           type: string
           description: IMAP password
+    TaskQueueConfiguration:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          properties:
+            name:
+              $ref: "#/components/schemas/QueueName"
+            priority:
+              type: integer
+              description: Queue priority
+    UpsertTaskQueueConfiguration:
+      type: object
+      properties:
+        name:
+          $ref: "#/components/schemas/QueueName"
+        priority:
+          type: integer
+          description: Queue priority
     SystemSettings:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
         - type: object
+          required:
+            - taskQueueConfigurations
           properties:
             enableLocalSignUp:
               type: boolean
@@ -3880,6 +4013,14 @@ components:
             fallbackReceiptProcessingSettingsId:
               type: integer
               description: Fallback receipt processing settings foreign key
+            taskConcurrency:
+              type: integer
+              description: Concurrency for task worker
+              default: 10
+            taskQueueConfigurations:
+              type: array
+              items:
+                $ref: "#/components/schemas/TaskQueueConfiguration"
     UpsertSystemSettingsCommand:
       type: object
       required:
@@ -3887,6 +4028,7 @@ components:
         - currencyDecimalSeparator
         - currencyHideDecimalPlaces
         - currencySymbolPosition
+        - taskConcurrency
       properties:
         enableLocalSignUp:
           type: boolean
@@ -3918,6 +4060,13 @@ components:
         fallbackReceiptProcessingSettingsId:
           type: integer
           description: Fallback receipt processing settings foreign key
+        taskConcurrency:
+          type: integer
+          description: Concurrency for task worker
+        taskQueueConfigurations:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpsertTaskQueueConfiguration"
     CheckEmailConnectivityCommand:
       type: object
       properties:
@@ -3954,6 +4103,12 @@ components:
             associatedEntityType:
               $ref: "#/components/schemas/AssociatedEntityType"
             ranByUserId:
+              type: integer
+              format: uint64
+            receiptId:
+              type: integer
+              format: uint64
+            groupId:
               type: integer
               format: uint64
             resultDescription:
@@ -4131,3 +4286,12 @@ components:
         version:
           type: string
           description: Version
+
+    InternalErrorResponse:
+      type: object
+      required:
+        - errorMsg
+      properties:
+        errorMsg:
+          type: string
+          description: Error message

@@ -6,7 +6,6 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
-	"receipt-wrangler/api/internal/simpleutils"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -26,7 +25,7 @@ func HandleRequest(handler structs.Handler) {
 			return
 		}
 
-		handler.GroupId = simpleutils.UintToString(receipt.GroupId)
+		handler.GroupId = utils.UintToString(receipt.GroupId)
 	}
 
 	if len(handler.ReceiptIds) > 0 {
@@ -40,14 +39,19 @@ func HandleRequest(handler structs.Handler) {
 		}
 
 		for _, receipt := range receipts {
-			handler.GroupIds = append(handler.GroupIds, simpleutils.UintToString(receipt.GroupId))
+			handler.GroupIds = append(handler.GroupIds, utils.UintToString(receipt.GroupId))
 		}
+	}
+
+	if len(handler.GroupRole) > 0 && len(handler.GroupId) == 0 && len(handler.GroupIds) == 0 {
+		utils.WriteCustomErrorResponse(handler.Writer, "Group ID is required to validate group role", http.StatusForbidden)
+		return
 	}
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		groupService := services.NewGroupService(nil)
 		token := structs.GetJWT(handler.Request)
-		err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, simpleutils.UintToString(token.UserId))
+		err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, utils.UintToString(token.UserId))
 		hasOrUserRole := false
 
 		if len(handler.OrUserRole) > 0 {
@@ -61,12 +65,17 @@ func HandleRequest(handler structs.Handler) {
 		}
 	}
 
+	if len(handler.GroupRole) > 0 && len(handler.GroupIds) == 0 && len(handler.GroupId) == 0 {
+		utils.WriteCustomErrorResponse(handler.Writer, "Group IDs are required to validate group role", http.StatusForbidden)
+		return
+	}
+
 	if len(handler.GroupRole) > 0 && len(handler.GroupIds) > 0 {
 		groupService := services.NewGroupService(nil)
 		token := structs.GetJWT(handler.Request)
 
 		for _, groupId := range handler.GroupIds {
-			err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), groupId, simpleutils.UintToString(token.UserId))
+			err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), groupId, utils.UintToString(token.UserId))
 			if err != nil {
 				logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 				utils.WriteCustomErrorResponse(handler.Writer, "User is unauthorized to access entity", http.StatusForbidden)

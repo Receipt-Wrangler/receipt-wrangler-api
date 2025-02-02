@@ -2,7 +2,6 @@ package wranglerasynq
 
 import (
 	"errors"
-	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
@@ -17,14 +16,12 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 	rerunableArchivedTasks, err := inspector.ListArchivedTasks(string(models.QuickScanQueue))
 	if err != nil {
 		// We do not return this error because it will happen on a fresh redis instance, with no quick scans ever ran
-		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 		return nil
 	}
 
 	archivedEmailProcessingTasks, err := inspector.ListArchivedTasks(string(models.EmailReceiptProcessingQueue))
 	if err != nil {
-		// We do not return this error because it will happen on a fresh redis instance, with no quick scans ever ran
-		logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+		// We do not return this error because it will happen on a fresh redis instance, with no email processing ever ran
 		return nil
 	}
 	rerunableArchivedTasks = append(rerunableArchivedTasks, archivedEmailProcessingTasks...)

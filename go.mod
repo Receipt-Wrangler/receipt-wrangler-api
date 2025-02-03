@@ -10,7 +10,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.8
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-chi/chi/v5 v5.2.0
-	github.com/golang-jwt/jwt/v4 v4.5.1
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/generative-ai-go v0.19.0
 	github.com/hibiken/asynq v0.25.1
 	github.com/jinzhu/copier v0.4.0

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/auth0/go-jwt-middleware/v2/validator"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 

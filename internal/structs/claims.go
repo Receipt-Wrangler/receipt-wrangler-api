@@ -4,7 +4,7 @@ import (
 	"context"
 	"receipt-wrangler/api/internal/models"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Claims struct {

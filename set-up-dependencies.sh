@@ -1,3 +1,6 @@
+# Install build essential
+apt-get install -y build-essential
+
 # Install pip
 apt-get update
 apt-get install python3-pip -y

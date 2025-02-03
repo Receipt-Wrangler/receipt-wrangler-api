@@ -21,7 +21,7 @@ require (
 	golang.org/x/crypto v0.32.0
 	golang.org/x/net v0.34.0
 	google.golang.org/api v0.219.0
-	gopkg.in/gographics/imagick.v2 v2.7.0
+	gopkg.in/gographics/imagick.v3 v3.7.2
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/gorm v1.25.12

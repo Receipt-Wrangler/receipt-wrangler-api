@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/otiai10/gosseract/v2"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 	"gorm.io/gorm"
 	"image"
 	"image/jpeg"

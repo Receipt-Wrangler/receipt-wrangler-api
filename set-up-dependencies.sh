@@ -21,17 +21,30 @@ apt-get update -y -qq
 apt-get install apt-utils -y -qq
 apt-get install lsb-release -y -qq
 
-# Install tesseract
-apt-get install tesseract-ocr -y
-
 # Install dev files
 apt-get install -y -qq libtesseract-dev libleptonica-dev
 
 # Make sure english is installed
 apt-get install -y -qq tesseract-ocr-eng
 
-# Install imageMagick
-apt-get install -y -qq imagemagick libmagickwand-dev
+# Build ImageMagick from source
+apt-get install git -y -qq
+apt-get install pkg-config -y -qq
+apt-get install -y -qq libmagickwand-dev
+
+# Clone ImageMagick
+git clone --depth 1 https://github.com/ImageMagick/ImageMagick.git ImageMagick-7.1.1
+
+# Build ImageMagick
+cd ImageMagick-7.1.1
+./configure
+make
+make install
+ldconfig
+
+# Cleanup
+cd ..
+rm -rf ImageMagick-7.1.1
 
 # Adjust imageMagick policy to allow for pdf conversion
-sed -i 's|<policy domain="coder" rights="none" pattern="PDF" />|<policy domain="coder" rights="read\|write" pattern="PDF" />|g' /etc/ImageMagick-6/policy.xml
+sed -i 's|<policy domain="coder" rights="none" pattern="PDF" />|<policy domain="coder" rights="read\|write" pattern="PDF" />|g' /usr/local/etc/ImageMagick-7/policy.xml

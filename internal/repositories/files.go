@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/gabriel-vasile/mimetype"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 	"gorm.io/gorm"
 )
 
@@ -209,7 +209,7 @@ func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
 
 	// Must be *after* ReadImageFile
 	// Flatten image and remove alpha channel, to prevent alpha turning black in jpg
-	if err := mw.SetImageAlphaChannel(imagick.ALPHA_CHANNEL_FLATTEN); err != nil {
+	if err := mw.SetImageAlphaChannel(0); err != nil {
 		return nil, err
 	}
 

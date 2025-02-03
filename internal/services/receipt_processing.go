@@ -2,7 +2,7 @@ package services
 
 import (
 	"encoding/json"
-	"gopkg.in/gographics/imagick.v2/imagick"
+	"gopkg.in/gographics/imagick.v3/imagick"
 	"gorm.io/gorm"
 	"os"
 	"receipt-wrangler/api/internal/commands"

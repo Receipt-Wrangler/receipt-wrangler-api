@@ -58,7 +58,8 @@ func RevokeRefreshToken(next http.Handler) http.Handler {
 			}
 		}
 
-		err = db.Model(&models.RefreshToken{}).Where("token = ?", refreshTokenString).Find(&dbToken).Error
+		hashTokenString := utils.Sha256Hash([]byte(refreshTokenString.(string)))
+		err = db.Model(&models.RefreshToken{}).Where("token = ?", hashTokenString).Find(&dbToken).Error
 		if err != nil {
 			utils.WriteCustomErrorResponse(w, errMessage, http.StatusInternalServerError)
 			logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())

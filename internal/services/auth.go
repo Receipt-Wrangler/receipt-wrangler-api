@@ -139,14 +139,15 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS512, refreshTokenClaims)
 	refreshTokenString, err := refreshToken.SignedString([]byte(config.GetSecretKey()))
-
 	if err != nil {
 		return "", "", structs.Claims{}, err
 	}
 
+	hashTokenString := utils.Sha256Hash([]byte(refreshTokenString))
+
 	token := models.RefreshToken{
 		UserId: user.ID,
-		Token:  refreshTokenString,
+		Token:  hashTokenString,
 		IsUsed: false,
 	}
 

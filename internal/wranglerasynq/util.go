@@ -12,6 +12,7 @@ func SetActivityCanBeRestarted(activities *[]structs.Activity) error {
 	if err != nil {
 		return err
 	}
+	defer inspector.Close()
 
 	rerunableArchivedTasks, err := inspector.ListArchivedTasks(string(models.QuickScanQueue))
 	if err != nil {

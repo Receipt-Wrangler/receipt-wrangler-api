@@ -26,6 +26,7 @@ func StartEmailPolling() error {
 	if err != nil {
 		return nil
 	}
+	defer inspector.Close()
 
 	_, err = inspector.DeleteAllScheduledTasks(string(models.EmailPollingQueue))
 	if err != nil {

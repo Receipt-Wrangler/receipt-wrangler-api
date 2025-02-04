@@ -36,11 +36,19 @@ func GetDefaultEmailReceiptImageCleanupQueueConfiguration() TaskQueueConfigurati
 	}
 }
 
+func GetDefaultSystemCleanupQueueConfiguration() TaskQueueConfiguration {
+	return TaskQueueConfiguration{
+		Name:     SystemCleanUpQueue,
+		Priority: 5,
+	}
+}
+
 func GetAllDefaultQueueConfigurations() []TaskQueueConfiguration {
 	return []TaskQueueConfiguration{
 		GetDefaultQuickScanQueueConfiguration(),
 		GetDefaultEmailReceiptProcessingQueueConfiguration(),
 		GetDefaultEmailPollingQueueConfiguration(),
 		GetDefaultEmailReceiptImageCleanupQueueConfiguration(),
+		GetDefaultSystemCleanupQueueConfiguration(),
 	}
 }

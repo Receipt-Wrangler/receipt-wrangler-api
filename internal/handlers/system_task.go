@@ -139,6 +139,7 @@ func RerunActivity(w http.ResponseWriter, r *http.Request) {
 		utils.WriteCustomErrorResponse(w, errorMsg, http.StatusInternalServerError)
 		return
 	}
+	defer inspector.Close()
 
 	systemTaskId := chi.URLParam(r, "id")
 	systemTaskUintId, err := utils.StringToUint(systemTaskId)

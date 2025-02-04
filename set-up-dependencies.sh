@@ -41,7 +41,7 @@ git clone --depth 1 https://github.com/ImageMagick/ImageMagick.git ImageMagick-7
 # Build ImageMagick
 cd ImageMagick-7.1.1
 ./configure
-make
+make VERBOSE=1
 make install
 ldconfig
 

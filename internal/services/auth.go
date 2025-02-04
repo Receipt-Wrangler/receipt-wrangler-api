@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/auth0/go-jwt-middleware/v2/validator"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -139,19 +139,22 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS512, refreshTokenClaims)
 	refreshTokenString, err := refreshToken.SignedString([]byte(config.GetSecretKey()))
-
 	if err != nil {
 		return "", "", structs.Claims{}, err
 	}
 
+	hashTokenString := utils.Sha256Hash([]byte(refreshTokenString))
+	expiresAtFloat := float64(refreshTokenClaims.ExpiresAt.Unix())
+	expiresAt := time.Unix(int64(expiresAtFloat), 0).UTC()
+
 	token := models.RefreshToken{
-		UserId: user.ID,
-		Token:  refreshTokenString,
-		IsUsed: false,
+		UserId:    user.ID,
+		Token:     hashTokenString,
+		IsUsed:    false,
+		ExpiresAt: expiresAt,
 	}
 
 	err = db.Model(&models.RefreshToken{}).Create(&token).Error
-
 	if err != nil {
 		return "", "", structs.Claims{}, err
 	}

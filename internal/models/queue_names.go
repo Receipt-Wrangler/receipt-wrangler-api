@@ -12,6 +12,7 @@ const (
 	EmailPollingQueue             QueueName = "email_polling"
 	EmailReceiptProcessingQueue   QueueName = "email_receipt_processing"
 	EmailReceiptImageCleanupQueue QueueName = "email_receipt_image_cleanup"
+	SystemCleanUpQueue            QueueName = "system_clean_up"
 )
 
 func (name *QueueName) Scan(value string) error {
@@ -23,7 +24,8 @@ func (name QueueName) Value() (driver.Value, error) {
 	if name != QuickScanQueue &&
 		name != EmailPollingQueue &&
 		name != EmailReceiptProcessingQueue &&
-		name != EmailReceiptImageCleanupQueue {
+		name != EmailReceiptImageCleanupQueue &&
+		name != SystemCleanUpQueue {
 		return nil, errors.New("invalid queue name")
 	}
 
@@ -36,6 +38,7 @@ func GetQueueNames() []QueueName {
 		EmailPollingQueue,
 		EmailReceiptProcessingQueue,
 		EmailReceiptImageCleanupQueue,
+		SystemCleanUpQueue,
 	}
 }
 
@@ -45,5 +48,6 @@ func GetDefaultQueueConfigurationMap() map[QueueName]TaskQueueConfiguration {
 		EmailPollingQueue:             GetDefaultEmailPollingQueueConfiguration(),
 		EmailReceiptProcessingQueue:   GetDefaultEmailReceiptProcessingQueueConfiguration(),
 		EmailReceiptImageCleanupQueue: GetDefaultEmailReceiptImageCleanupQueueConfiguration(),
+		SystemCleanUpQueue:            GetDefaultSystemCleanupQueueConfiguration(),
 	}
 }

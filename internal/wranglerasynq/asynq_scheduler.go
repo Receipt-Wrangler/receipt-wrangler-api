@@ -8,7 +8,6 @@ import (
 
 var scheduler *asynq.Scheduler
 
-// TODO: finish implementing startup/shutdown of scheduler, then add email polling task id to system settings
 func StartEmbeddedAsynqScheduler() error {
 	opts, err := config.GetAsynqRedisClientConnectionOptions()
 	if err != nil {

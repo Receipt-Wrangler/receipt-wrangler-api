@@ -86,6 +86,11 @@ func main() {
 		}
 	}
 
+	err = wranglerasynq.StartSystemCleanUpTasks()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+	}
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 

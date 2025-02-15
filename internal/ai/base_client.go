@@ -13,7 +13,7 @@ type BaseClient struct {
 }
 
 func (baseClient BaseClient) getKey(decryptKey bool) (string, error) {
-	if decryptKey {
+	if decryptKey && len(baseClient.ReceiptProcessingSettings.Key) > 0 {
 		return baseClient.decryptKey()
 	}
 

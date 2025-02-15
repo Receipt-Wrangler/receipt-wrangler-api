@@ -6,6 +6,7 @@ import (
 	"golang.org/x/net/context"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
+	"strings"
 )
 
 type OpenAiClient struct {
@@ -26,13 +27,19 @@ func NewOpenAiClient(
 
 func (openAi OpenAiClient) GetChatCompletion() (structs.ChatCompletionResult, error) {
 	result := structs.ChatCompletionResult{}
+	var config openai.ClientConfig
 
 	key, err := openAi.getKey(openAi.Options.DecryptKey)
 	if err != nil {
 		return result, err
 	}
 
-	config := openai.DefaultConfig(key)
+	if strings.Contains(openAi.ReceiptProcessingSettings.Url, "azure") {
+		config = openai.DefaultAzureConfig(key, openAi.ReceiptProcessingSettings.Url)
+	} else {
+		config = openai.DefaultConfig(key)
+	}
+
 	if len(openAi.ReceiptProcessingSettings.Url) > 0 {
 		config.BaseURL = openAi.ReceiptProcessingSettings.Url
 	}

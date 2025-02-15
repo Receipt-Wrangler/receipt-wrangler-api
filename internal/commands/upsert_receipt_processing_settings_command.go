@@ -75,10 +75,6 @@ func (command *UpsertReceiptProcessingSettingsCommand) Validate(updateKey bool) 
 	}
 
 	if command.AiType == models.OPEN_AI_CUSTOM_NEW || command.AiType == models.OLLAMA {
-		if command.AiType == models.OPEN_AI_CUSTOM_NEW && command.IsVisionModel == true {
-			errors["isVisionModel"] = "vision is not supported for this AI type"
-		}
-
 		if len(command.Url) == 0 {
 			errors["url"] = "url is required"
 		}

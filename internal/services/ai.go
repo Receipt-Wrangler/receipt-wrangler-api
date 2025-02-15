@@ -5,11 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/generative-ai-go/genai"
 	"github.com/sashabaranov/go-openai"
-	"google.golang.org/api/option"
 	"io"
 	"net/http"
+	"receipt-wrangler/api/internal/ai"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	config "receipt-wrangler/api/internal/env"
@@ -47,6 +46,7 @@ func (service *AiService) CreateChatCompletion(options structs.AiChatCompletionO
 	}
 	response, rawResponse := "", ""
 	err := error(nil)
+	var client ai.Client
 
 	switch service.ReceiptProcessingSettings.AiType {
 	case models.OPEN_AI_CUSTOM_NEW:
@@ -59,7 +59,7 @@ func (service *AiService) CreateChatCompletion(options structs.AiChatCompletionO
 		response, rawResponse, err = service.OpenAiChatCompletion(options)
 
 	case models.GEMINI_NEW:
-		response, rawResponse, err = service.GeminiChatCompletion(options)
+		client = ai.NewGeminiClient(options, service.ReceiptProcessingSettings)
 	}
 	if err != nil {
 		endedAt := time.Now()
@@ -149,48 +149,6 @@ func (service *AiService) OpenAiChatCompletion(options structs.AiChatCompletionO
 
 	response := resp.Choices[0].Message.Content
 	return response, string(responseBytes), nil
-}
-
-func (service *AiService) GeminiChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
-	ctx := context.Background()
-	key, err := service.getKey(options.DecryptKey)
-	if err != nil {
-		return "", "", err
-	}
-
-	client, err := genai.NewClient(ctx, option.WithAPIKey(key))
-	if err != nil {
-		return "", "", err
-	}
-	defer client.Close()
-
-	model := client.GenerativeModel("gemini-pro")
-	prompt := ""
-	for _, aiMessage := range options.Messages {
-		prompt += aiMessage.Content + " "
-	}
-
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
-	if err != nil {
-		responseBytes, _ := json.Marshal(resp)
-
-		return "", string(responseBytes), err
-	}
-
-	responseBytes, err := json.Marshal(resp)
-	if err != nil {
-		return "", "", err
-	}
-
-	if len(resp.Candidates) > 0 {
-		for _, part := range resp.Candidates[0].Content.Parts {
-
-			json := fmt.Sprintf("%s", part)
-			return json, string(responseBytes), nil
-		}
-	}
-
-	return "", "", nil
 }
 
 func (service *AiService) OpenAiCustomChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {

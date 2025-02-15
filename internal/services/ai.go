@@ -210,63 +210,6 @@ func (service *AiService) OpenAiCustomChatCompletion(options structs.AiChatCompl
 	return result, string(responseBytes), nil
 }
 
-func (service *AiService) OllamaChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
-	result := ""
-	body := map[string]interface{}{
-		"model":       service.ReceiptProcessingSettings.Model,
-		"messages":    options.Messages,
-		"temperature": 0,
-		"stream":      false,
-	}
-	httpClient := http.Client{}
-	httpClient.Timeout = constants.AiHttpTimeout
-
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return "", "", err
-	}
-
-	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
-
-	request, err := http.NewRequest(http.MethodPost, service.ReceiptProcessingSettings.Url, bodyBytesBuffer)
-	if err != nil {
-		return "", "", err
-	}
-
-	request.Header.Set("Content-Type", "application/json")
-	request.Close = true
-
-	response, err := httpClient.Do(request)
-	if err != nil {
-		responseBytes, _ := json.Marshal(response)
-		return "", string(responseBytes), err
-	}
-
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		return "", "", err
-	}
-	defer response.Body.Close()
-
-	var responseObject structs.OllamaTextResponse
-	err = json.Unmarshal(responseBody, &responseObject)
-	if err != nil {
-		return "", "", err
-	}
-
-	if len(responseObject.Message.Content) >= 0 {
-		result = responseObject.Message.Content
-		result = utils.RemoveJsonFormat(result)
-	}
-
-	responseBytes, err := json.Marshal(responseObject)
-	if err != nil {
-		return "", "", err
-	}
-
-	return result, string(responseBytes), nil
-}
-
 func (service *AiService) CheckConnectivity(ranByUserId uint, decryptKey bool) (models.SystemTask, error) {
 	messages := []structs.AiClientMessage{
 		{

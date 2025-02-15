@@ -53,7 +53,7 @@ func (service *AiService) CreateChatCompletion(options structs.AiChatCompletionO
 		response, rawResponse, err = service.OpenAiCustomChatCompletion(options)
 
 	case models.OLLAMA:
-		response, rawResponse, err = service.OllamaChatCompletion(options)
+		client = ai.NewOllamaClient(options, service.ReceiptProcessingSettings)
 
 	case models.OPEN_AI_NEW:
 		response, rawResponse, err = service.OpenAiChatCompletion(options)

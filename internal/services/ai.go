@@ -2,10 +2,8 @@ package services
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/sashabaranov/go-openai"
 	"io"
 	"net/http"
 	"receipt-wrangler/api/internal/ai"
@@ -50,17 +48,22 @@ func (service *AiService) CreateChatCompletion(options structs.AiChatCompletionO
 
 	switch service.ReceiptProcessingSettings.AiType {
 	case models.OPEN_AI_CUSTOM_NEW:
-		response, rawResponse, err = service.OpenAiCustomChatCompletion(options)
+		client = ai.NewOpenAiClient(options, service.ReceiptProcessingSettings)
+
+	case models.OPEN_AI_NEW:
+		client = ai.NewOpenAiClient(options, service.ReceiptProcessingSettings)
 
 	case models.OLLAMA:
 		client = ai.NewOllamaClient(options, service.ReceiptProcessingSettings)
 
-	case models.OPEN_AI_NEW:
-		response, rawResponse, err = service.OpenAiChatCompletion(options)
-
 	case models.GEMINI_NEW:
 		client = ai.NewGeminiClient(options, service.ReceiptProcessingSettings)
+
+	default:
+		return "", systemTask, fmt.Errorf("invalid ai type: %s", service.ReceiptProcessingSettings.AiType)
 	}
+
+	result, err := client.GetChatCompletion()
 	if err != nil {
 		endedAt := time.Now()
 		systemTask.Status = models.SYSTEM_TASK_FAILED
@@ -69,86 +72,14 @@ func (service *AiService) CreateChatCompletion(options structs.AiChatCompletionO
 
 		return "", systemTask, err
 	}
+	response = result.Response
+	rawResponse = result.RawResponse
 
 	endedAt := time.Now()
 	systemTask.ResultDescription = rawResponse
 	systemTask.EndedAt = &endedAt
 
 	return response, systemTask, nil
-}
-
-func (service *AiService) OpenAiChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
-	key, err := service.getKey(options.DecryptKey)
-	if err != nil {
-		return "", "", err
-	}
-	client := openai.NewClient(key)
-
-	openAiMessages := make([]openai.ChatCompletionMessage, len(options.Messages))
-
-	if len(options.Messages) > 0 && len(options.Messages[0].Images) > 0 {
-		for i, message := range options.Messages {
-			chatParts := make([]openai.ChatMessagePart, 1+len(message.Images))
-
-			chatParts[0] = openai.ChatMessagePart{
-				Type: openai.ChatMessagePartTypeText,
-				Text: message.Content,
-			}
-			for j, image := range message.Images {
-				imageUrl := openai.ChatMessageImageURL{
-					URL:    image,
-					Detail: openai.ImageURLDetailAuto,
-				}
-
-				imagePart := openai.ChatMessagePart{
-					Type:     openai.ChatMessagePartTypeImageURL,
-					ImageURL: &imageUrl,
-				}
-
-				chatParts[j+1] = imagePart
-			}
-
-			openAiMessages[i] = openai.ChatCompletionMessage{
-				Role:         message.Role,
-				MultiContent: chatParts,
-			}
-		}
-	} else if len(options.Messages) > 0 {
-		for index, message := range options.Messages {
-			openAiMessages[index] = openai.ChatCompletionMessage{
-				Role:    message.Role,
-				Content: message.Content,
-			}
-		}
-	}
-
-	model := service.ReceiptProcessingSettings.Model
-	if len(model) == 0 {
-		model = openai.GPT3Dot5Turbo
-	}
-
-	resp, err := client.CreateChatCompletion(
-		context.Background(),
-		openai.ChatCompletionRequest{
-			Model:       model,
-			Messages:    openAiMessages,
-			N:           1,
-			Temperature: 0,
-		},
-	)
-	if err != nil {
-		responseBytes, _ := json.Marshal(resp)
-
-		return "", string(responseBytes), err
-	}
-
-	responseBytes, err := json.Marshal(resp)
-	if err != nil {
-		return "", "", err
-	}
-
-	response := resp.Choices[0].Message.Content
-	return response, string(responseBytes), nil
 }
 
 func (service *AiService) OpenAiCustomChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {

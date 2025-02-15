@@ -1,19 +1,12 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"receipt-wrangler/api/internal/ai"
 	"receipt-wrangler/api/internal/commands"
-	"receipt-wrangler/api/internal/constants"
-	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/utils"
 	"time"
 )
 
@@ -82,65 +75,6 @@ func (service *AiService) CreateChatCompletion(options structs.AiChatCompletionO
 	return response, systemTask, nil
 }
 
-func (service *AiService) OpenAiCustomChatCompletion(options structs.AiChatCompletionOptions) (string, string, error) {
-	result := ""
-	body := map[string]interface{}{
-		"model":       service.ReceiptProcessingSettings.Model,
-		"messages":    options.Messages,
-		"temperature": 0,
-		"max_tokens":  -1,
-		"stream":      false,
-	}
-	httpClient := http.Client{}
-	httpClient.Timeout = constants.AiHttpTimeout
-
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return "", "", err
-	}
-
-	bodyBytesBuffer := bytes.NewBuffer(bodyBytes)
-
-	request, err := http.NewRequest(http.MethodPost, service.ReceiptProcessingSettings.Url, bodyBytesBuffer)
-	if err != nil {
-		return "", "", err
-	}
-
-	request.Header.Set("Content-Type", "application/json")
-	request.Close = true
-
-	response, err := httpClient.Do(request)
-	if err != nil {
-		responseBytes, _ := json.Marshal(response)
-
-		return "", string(responseBytes), err
-	}
-
-	responseBody, err := io.ReadAll(response.Body)
-	if err != nil {
-		return "", "", err
-	}
-	defer response.Body.Close()
-
-	var responseObject structs.OpenAiCustomResponse
-
-	err = json.Unmarshal(responseBody, &responseObject)
-	if err != nil {
-		return "", "", err
-	}
-
-	if len(responseObject.Choices) >= 0 {
-		result = responseObject.Choices[0].Message.Content
-	}
-
-	responseBytes, err := json.Marshal(responseObject)
-	if err != nil {
-		return "", "", err
-	}
-
-	return result, string(responseBytes), nil
-}
-
 func (service *AiService) CheckConnectivity(ranByUserId uint, decryptKey bool) (models.SystemTask, error) {
 	messages := []structs.AiClientMessage{
 		{
@@ -184,16 +118,4 @@ func (service *AiService) CheckConnectivity(ranByUserId uint, decryptKey bool) (
 	return models.SystemTask{
 		Status: systemTaskCommand.Status,
 	}, nil
-}
-
-func (service *AiService) getKey(decryptKey bool) (string, error) {
-	if decryptKey {
-		return service.decryptKey()
-	}
-
-	return service.ReceiptProcessingSettings.Key, nil
-}
-
-func (service *AiService) decryptKey() (string, error) {
-	return utils.DecryptB64EncodedData(config.GetEncryptionKey(), service.ReceiptProcessingSettings.Key)
 }

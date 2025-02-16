@@ -149,7 +149,7 @@ func (service ReceiptProcessingService) processImage(
 			base64Image = ollamaImage
 		}
 
-		if receiptProcessingSettings.AiType == models.OPEN_AI_NEW {
+		if receiptProcessingSettings.AiType == models.OPEN_AI_NEW || receiptProcessingSettings.AiType == models.OPEN_AI_CUSTOM {
 			openAiImage, err := service.getOpenAiBase64Image(imagePath)
 			if err != nil {
 				return result, err
@@ -208,6 +208,7 @@ func (service ReceiptProcessingService) processImage(
 	return result, nil
 }
 
+// TODO: move to new ai client
 func (service ReceiptProcessingService) getOllamaBase64Image(imagePath string) (string, error) {
 	mw := imagick.NewMagickWand()
 	err := mw.ReadImage(imagePath)

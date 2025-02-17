@@ -155,3 +155,14 @@ func (repository *DashboardRepository) UpdateDashboardById(dashboardId uint, com
 
 	return updatedDashboard, nil
 }
+
+func (repository *DashboardRepository) GetDashboardsByGroupId(groupId uint) ([]models.Dashboard, error) {
+	db := repository.GetDB()
+	var dashboards []models.Dashboard
+	err := db.Where("group_id = ?", groupId).Find(&dashboards).Error
+	if err != nil {
+		return []models.Dashboard{}, err
+	}
+
+	return dashboards, nil
+}

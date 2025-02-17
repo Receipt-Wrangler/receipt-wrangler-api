@@ -139,7 +139,7 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 		}
 
 		// Delete group
-		txErr = tx.Model(&group.GroupSettings).Select(clause.Associations).Delete(&group).Error
+		txErr = tx.Delete(&group).Error
 		if txErr != nil {
 			return txErr
 		}

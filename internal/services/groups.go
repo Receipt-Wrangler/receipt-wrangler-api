@@ -99,6 +99,20 @@ func (service GroupService) DeleteGroup(groupId string, allowAllGroupDelete bool
 			}
 		}
 
+		// Delete dashboards in group
+		dashboardRepository := repositories.NewDashboardRepository(tx)
+		groupDashboards, txErr := dashboardRepository.GetDashboardsByGroupId(group.ID)
+		if txErr != nil {
+			return txErr
+		}
+
+		for _, dashboard := range groupDashboards {
+			txErr = dashboardRepository.DeleteDashboardById(dashboard.ID)
+			if txErr != nil {
+				return txErr
+			}
+		}
+
 		// Delete group members
 		txErr = tx.Where("group_id = ?", groupId).Delete(&models.GroupMember{}).Error
 		if txErr != nil {

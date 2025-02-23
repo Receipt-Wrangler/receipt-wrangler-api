@@ -1,8 +1,6 @@
 package services
 
 import (
-	"bytes"
-	"encoding/csv"
 	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
@@ -11,23 +9,26 @@ import (
 
 type ReceiptCsvService struct {
 	BaseService
+	CsvService
 }
 
 func NewReceiptCsvService(tx *gorm.DB) ReceiptCsvService {
-	service := ReceiptCsvService{BaseService: BaseService{
-		DB: repositories.GetDB(),
-		TX: tx,
-	}}
+	service := ReceiptCsvService{
+		BaseService: BaseService{
+			DB: repositories.GetDB(),
+			TX: tx,
+		},
+		CsvService: NewCsvService(),
+	}
 	return service
 }
 
-func (s *ReceiptCsvService) GetReceiptCsv(receipts []models.Receipt) (*bytes.Buffer, error) {
+func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) ([]byte, error) {
 	headers := []string{
 		"id",
 		"name",
 	}
-	rowData := make([][]string, 0, len(receipts)+1)
-	rowData = append(rowData, headers)
+	rowData := make([][]string, 0, len(receipts))
 
 	for _, receipt := range receipts {
 		newRow := []string{
@@ -37,12 +38,10 @@ func (s *ReceiptCsvService) GetReceiptCsv(receipts []models.Receipt) (*bytes.Buf
 		rowData = append(rowData, newRow)
 	}
 
-	buffer := new(bytes.Buffer)
-	writer := csv.NewWriter(buffer)
-	err := writer.WriteAll(rowData)
+	buffer, err := service.CsvService.BuildCsv(headers, rowData)
 	if err != nil {
 		return nil, err
 	}
 
-	return buffer, nil
+	return buffer.Bytes(), nil
 }

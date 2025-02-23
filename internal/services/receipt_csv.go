@@ -1,23 +1,16 @@
 package services
 
 import (
-	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/models"
-	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/utils"
 )
 
 type ReceiptCsvService struct {
-	BaseService
 	CsvService
 }
 
-func NewReceiptCsvService(tx *gorm.DB) ReceiptCsvService {
+func NewReceiptCsvService() ReceiptCsvService {
 	service := ReceiptCsvService{
-		BaseService: BaseService{
-			DB: repositories.GetDB(),
-			TX: tx,
-		},
 		CsvService: NewCsvService(),
 	}
 	return service

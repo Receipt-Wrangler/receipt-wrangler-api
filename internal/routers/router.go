@@ -120,5 +120,9 @@ func BuildRootRouter() *chi.Mux {
 	importRouter := BuildImportRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/import", importRouter)
 
+	// Export router
+	exportRouter := BuildExportRouter(tokenValidatorMiddleware)
+	rootRouter.Mount("/api/export", exportRouter)
+
 	return rootRouter
 }

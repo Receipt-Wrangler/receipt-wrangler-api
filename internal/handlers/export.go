@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
@@ -16,7 +17,7 @@ func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving tags",
 		Writer:       w,
 		Request:      r,
-		ResponseType: "",
+		ResponseType: constants.TextCsv,
 		GroupId:      groupId,
 		GroupRole:    models.VIEWER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {

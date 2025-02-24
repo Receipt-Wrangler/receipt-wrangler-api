@@ -61,7 +61,6 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) ([]
 }
 
 func (service *ReceiptCsvService) BuildCategoryString(categories []models.Category) string {
-	return ""
 	categoryNames := make([]string, 0, len(categories))
 	for _, category := range categories {
 		categoryNames = append(categoryNames, category.Name)
@@ -71,7 +70,6 @@ func (service *ReceiptCsvService) BuildCategoryString(categories []models.Catego
 }
 
 func (service *ReceiptCsvService) BuildTagString(tags []models.Tag) string {
-	return ""
 	tagNames := make([]string, 0, len(tags))
 	for _, tag := range tags {
 		tagNames = append(tagNames, tag.Name)

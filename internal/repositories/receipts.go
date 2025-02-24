@@ -375,7 +375,6 @@ func (repository ReceiptRepository) CreateReceipt(
 func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Receipt, error) {
 	db := GetDB()
 	var receipt models.Receipt
-
 	err := db.Model(models.Receipt{}).Where("id = ?", receiptId).First(&receipt).Debug().Error
 	if err != nil {
 		return models.Receipt{}, err
@@ -384,7 +383,12 @@ func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Rec
 	return receipt, nil
 }
 
-func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.ReceiptPagedRequestCommand) ([]models.Receipt, int64, error) {
+func (repository ReceiptRepository) GetPagedReceiptsByGroupId(
+	userId uint,
+	groupId string,
+	pagedRequest commands.ReceiptPagedRequestCommand,
+	associations string,
+) ([]models.Receipt, int64, error) {
 	var receipts []models.Receipt
 	var count int64
 
@@ -429,7 +433,14 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 		return nil, 0, err
 	}
 
-	query = query.Scopes(repository.Paginate(pagedRequest.Page, pagedRequest.PageSize)).Preload("Tags").Preload("Categories")
+	query = query.
+		Scopes(repository.Paginate(pagedRequest.Page, pagedRequest.PageSize)).
+		Preload("Tags").
+		Preload("Categories")
+
+	if len(associations) > 0 {
+		query = query.Preload(associations)
+	}
 
 	// Run Query
 	err = query.Find(&receipts).Error

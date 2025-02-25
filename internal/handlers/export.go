@@ -18,7 +18,7 @@ func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving tags",
 		Writer:       w,
 		Request:      r,
-		ResponseType: constants.TextCsv,
+		ResponseType: constants.ApplicationZip,
 		GroupId:      groupId,
 		GroupRole:    models.VIEWER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -43,14 +43,23 @@ func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
 			}
 
 			receiptCsvService := services.NewReceiptCsvService()
-			csvBytes, err := receiptCsvService.BuildReceiptCsv(receipts)
+			csvResult, err := receiptCsvService.BuildReceiptCsv(receipts)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			w.Header().Set("Content-Disposition", "attachment; filename=receipts.csv")
+			fileRepository := repositories.NewFileRepository(nil)
+			zip, err := fileRepository.ZipFiles(
+				[]string{"receipts.csv", "items.csv"},
+				[][]byte{csvResult.ReceiptCsvBytes, csvResult.ReceiptItemCsvBytes},
+			)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.Header().Set("Content-Disposition", "attachment; filename=data.zip")
 			w.WriteHeader(http.StatusOK)
-			w.Write(csvBytes)
+			w.Write(zip)
 
 			return 0, nil
 		},

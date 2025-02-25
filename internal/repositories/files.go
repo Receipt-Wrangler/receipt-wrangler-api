@@ -2,8 +2,10 @@ package repositories
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -32,7 +34,7 @@ func NewFileRepository(tx *gorm.DB) FileRepository {
 	return repository
 }
 
-func (repository BaseRepository) BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName string) (string, error) {
+func (repository FileRepository) BuildFilePath(receiptId string, receiptImageId string, receiptImageFileName string) (string, error) {
 	db := repository.GetDB()
 	var receipt models.Receipt
 
@@ -52,7 +54,7 @@ func (repository BaseRepository) BuildFilePath(receiptId string, receiptImageId 
 	return path, nil
 }
 
-func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
+func (repository FileRepository) BuildGroupPath(groupId uint, alternateGroupName string) (string, error) {
 	db := repository.GetDB()
 	var groupNameToUse string
 
@@ -77,7 +79,7 @@ func (repository BaseRepository) BuildGroupPath(groupId uint, alternateGroupName
 	return groupPath, nil
 }
 
-func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
+func (repository FileRepository) GetBytesForFileData(fileData models.FileData) ([]byte, error) {
 	path, err := repository.BuildFilePath(utils.UintToString(fileData.ReceiptId), utils.UintToString(fileData.ID), fileData.Name)
 
 	if err != nil {
@@ -97,7 +99,7 @@ func (repository BaseRepository) GetBytesForFileData(fileData models.FileData) (
 	return resultBytes, nil
 }
 
-func (repository BaseRepository) GetBytesFromImageBytes(imageData []byte) ([]byte, error) {
+func (repository FileRepository) GetBytesFromImageBytes(imageData []byte) ([]byte, error) {
 	var bytes []byte
 	validatedType, err := repository.ValidateFileType(imageData)
 	if err != nil {
@@ -121,7 +123,7 @@ func (repository BaseRepository) GetBytesFromImageBytes(imageData []byte) ([]byt
 	return bytes, nil
 }
 
-func (repository BaseRepository) IsImage(imageData []byte) (bool, error) {
+func (repository FileRepository) IsImage(imageData []byte) (bool, error) {
 	validatedFileType, err := repository.ValidateFileType(imageData)
 	if err != nil {
 		return false, err
@@ -135,7 +137,7 @@ func (repository BaseRepository) IsImage(imageData []byte) (bool, error) {
 	return isImage, nil
 }
 
-func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
+func (repository FileRepository) IsPdf(imageData []byte) (bool, error) {
 	validatedFileType, err := repository.ValidateFileType(imageData)
 	if err != nil {
 		return false, err
@@ -149,7 +151,7 @@ func (repository BaseRepository) IsPdf(imageData []byte) (bool, error) {
 	return isPdf, nil
 }
 
-func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) {
+func (repository FileRepository) ValidateFileType(bytes []byte) (string, error) {
 	fileType := mimetype.Detect(bytes).String()
 	acceptedFileTypes := []string{constants.AnyImage, constants.ApplicationPdf}
 
@@ -164,7 +166,7 @@ func (repository BaseRepository) ValidateFileType(bytes []byte) (string, error) 
 	return "", errors.New("invalid file type")
 }
 
-func (repository BaseRepository) ValidateJsonFileType(bytes []byte) (string, error) {
+func (repository FileRepository) ValidateJsonFileType(bytes []byte) (string, error) {
 	fileType := mimetype.Detect(bytes).String()
 	acceptedFileTypes := []string{constants.ApplicationJson}
 
@@ -179,7 +181,7 @@ func (repository BaseRepository) ValidateJsonFileType(bytes []byte) (string, err
 	return "", errors.New("invalid file type")
 }
 
-func (repository BaseRepository) ConvertHeicToJpg(bytes []byte) ([]byte, error) {
+func (repository FileRepository) ConvertHeicToJpg(bytes []byte) ([]byte, error) {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 
@@ -194,7 +196,7 @@ func (repository BaseRepository) ConvertHeicToJpg(bytes []byte) ([]byte, error) 
 	return mw.GetImageBlob()
 }
 
-func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
+func (repository FileRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
 	mw := imagick.NewMagickWand()
 	defer mw.Destroy()
 
@@ -260,7 +262,7 @@ func (repository BaseRepository) ConvertPdfToJpg(bytes []byte) ([]byte, error) {
 	return bytes, nil
 }
 
-func (repository BaseRepository) WriteTempFile(data []byte) (string, error) {
+func (repository FileRepository) WriteTempFile(data []byte) (string, error) {
 	tempPath := repository.GetTempDirectoryPath()
 	utils.MakeDirectory(tempPath)
 
@@ -290,7 +292,7 @@ func (repository BaseRepository) WriteTempFile(data []byte) (string, error) {
 	return filePath, nil
 }
 
-func (repository BaseRepository) BuildTempFilePath(fileType string) (string, error) {
+func (repository FileRepository) BuildTempFilePath(fileType string) (string, error) {
 	tempPath := repository.GetTempDirectoryPath()
 
 	filename, err := utils.GetRandomString(10)
@@ -303,7 +305,7 @@ func (repository BaseRepository) BuildTempFilePath(fileType string) (string, err
 	return filePath, nil
 }
 
-func (repository BaseRepository) GetFileType(bytes []byte) (string, error) {
+func (repository FileRepository) GetFileType(bytes []byte) (string, error) {
 	fileType, err := repository.ValidateFileType(bytes)
 	if err != nil {
 		return "", err
@@ -321,7 +323,7 @@ func (repository BaseRepository) GetFileType(bytes []byte) (string, error) {
 	return fileType, nil
 }
 
-func (repository BaseRepository) BuildEncodedImageString(bytes []byte) (string, error) {
+func (repository FileRepository) BuildEncodedImageString(bytes []byte) (string, error) {
 	fileType, err := repository.GetFileType(bytes)
 	if err != nil {
 		return "", err
@@ -331,7 +333,7 @@ func (repository BaseRepository) BuildEncodedImageString(bytes []byte) (string, 
 	return imageData, nil
 }
 
-func (repository BaseRepository) CreateZipFromTempFiles(zipFilename string, filenames []string) (string, error) {
+func (repository FileRepository) CreateZipFromTempFiles(zipFilename string, filenames []string) (string, error) {
 	tempPath := repository.GetTempDirectoryPath()
 	zipPath := filepath.Join(tempPath, zipFilename)
 
@@ -378,11 +380,43 @@ func (repository BaseRepository) CreateZipFromTempFiles(zipFilename string, file
 	return zipPath, nil
 }
 
-func (repository BaseRepository) GetTempDirectoryPath() string {
+func (repository FileRepository) ZipFiles(filenames []string, fileContents [][]byte) ([]byte, error) {
+	if len(filenames) != len(fileContents) {
+		return nil, errors.New("number of filenames does not match number of file contents")
+	}
+
+	if len(filenames) == 0 {
+		return nil, errors.New("no files to zip")
+	}
+
+	zipBuffer := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(zipBuffer)
+
+	for i, filename := range filenames {
+		file, err := zipWriter.Create(filename)
+		if err != nil {
+			return nil, fmt.Errorf("error creating file %s in zip: %w", filename, err)
+		}
+
+		_, err = file.Write(fileContents[i])
+		if err != nil {
+			return nil, fmt.Errorf("error writing content for file %s in zip: %w", filename, err)
+		}
+	}
+
+	err := zipWriter.Close()
+	if err != nil {
+		return nil, fmt.Errorf("error closing zip writer: %w", err)
+	}
+
+	return zipBuffer.Bytes(), nil
+}
+
+func (repository FileRepository) GetTempDirectoryPath() string {
 	return config.GetBasePath() + "/temp"
 }
 
-func (repository BaseRepository) GetTestJpgBytes() ([]byte, error) {
+func (repository FileRepository) GetTestJpgBytes() ([]byte, error) {
 	path := config.GetBasePath() + "/testing/test.jpg"
 
 	return utils.ReadFile(path)

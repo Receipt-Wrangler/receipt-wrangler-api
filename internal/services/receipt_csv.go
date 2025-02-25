@@ -2,6 +2,7 @@ package services
 
 import (
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 )
@@ -17,17 +18,21 @@ func NewReceiptCsvService() ReceiptCsvService {
 	return service
 }
 
-func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) ([]byte, error) {
+func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) (structs.ReceiptCsvResult, error) {
+	csvResult := structs.ReceiptCsvResult{}
+
+	items := make([]models.Item, 0)
+
 	headers := []string{
-		"id",
-		"added at",
-		"receipt date",
-		"name",
-		"paid by",
-		"amount",
-		"categories",
-		"tags",
-		"status",
+		"Id",
+		"Added At",
+		"Receipt Date",
+		"Name",
+		"Paid By",
+		"Amount",
+		"Status",
+		"Categories",
+		"Tags",
 	}
 	rowData := make([][]string, 0, len(receipts))
 
@@ -35,6 +40,10 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) ([]
 		resolvedDateString := ""
 		if receipt.ResolvedDate != nil {
 			resolvedDateString = receipt.ResolvedDate.String()
+		}
+
+		for _, item := range receipt.ReceiptItems {
+			items = append(items, item)
 		}
 
 		newRow := []string{
@@ -53,6 +62,48 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) ([]
 	}
 
 	buffer, err := service.CsvService.BuildCsv(headers, rowData)
+	if err != nil {
+		return structs.ReceiptCsvResult{}, err
+	}
+	csvResult.ReceiptCsvBytes = buffer.Bytes()
+
+	csvResult.ReceiptItemCsvBytes, err = service.BuildItemCsv(items)
+	if err != nil {
+		return structs.ReceiptCsvResult{}, err
+	}
+
+	return csvResult, nil
+}
+
+func (service *ReceiptCsvService) BuildItemCsv(items []models.Item) ([]byte, error) {
+	headers := []string{
+		"Id",
+		"Receipt Id",
+		"Name",
+		"Charged to User",
+		"Amount",
+		"Status",
+		"Categories",
+		"Tags",
+	}
+	rowData := make([][]string, 0, len(items))
+
+	for _, item := range items {
+		newRow := []string{
+			utils.UintToString(item.ID),
+			utils.UintToString(item.ReceiptId),
+			item.Name,
+			item.ChargedToUser.DisplayName,
+			item.Amount.String(),
+			string(item.Status),
+			service.BuildCategoryString(item.Categories),
+			service.BuildTagString(item.Tags),
+		}
+		rowData = append(rowData, newRow)
+	}
+
+	csvService := NewCsvService()
+	buffer, err := csvService.BuildCsv(headers, rowData)
 	if err != nil {
 		return nil, err
 	}

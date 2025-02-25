@@ -387,7 +387,7 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(
 	userId uint,
 	groupId string,
 	pagedRequest commands.ReceiptPagedRequestCommand,
-	associations string,
+	associations []string,
 ) ([]models.Receipt, int64, error) {
 	var receipts []models.Receipt
 	var count int64
@@ -439,8 +439,10 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(
 		query = query.Scopes(repository.Paginate(pagedRequest.Page, pagedRequest.PageSize))
 	}
 
-	if len(associations) > 0 {
-		query = query.Preload(associations)
+	if associations != nil && len(associations) > 0 {
+		for _, association := range associations {
+			query = query.Preload(association)
+		}
 	}
 
 	// Run Query

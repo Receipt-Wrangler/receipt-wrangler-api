@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
-	"gorm.io/gorm/clause"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -37,7 +36,19 @@ func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
 			token := structs.GetJWT(r)
 
 			receiptRepository := repositories.NewReceiptRepository(nil)
-			receipts, _, err := receiptRepository.GetPagedReceiptsByGroupId(token.UserId, groupId, pagedRequest, clause.Associations)
+			receipts, _, err := receiptRepository.
+				GetPagedReceiptsByGroupId(
+					token.UserId,
+					groupId,
+					pagedRequest,
+					[]string{
+						"PaidByUser",
+						"ReceiptItems",
+						"ReceiptItems.Categories",
+						"ReceiptItems.Tags",
+						"ReceiptItems.ChargedToUser",
+					},
+				)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

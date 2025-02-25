@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"io"
+	"receipt-wrangler/api/internal/utils"
 	"testing"
 )
 
@@ -19,42 +20,42 @@ func TestShouldZipMultipleFilesSuccessfully(t *testing.T) {
 
 	zipData, err := repository.ZipFiles(filenames, fileContents)
 	if err != nil {
-		t.Errorf("ZipFiles() error = %v, want nil", err)
+		utils.PrintTestError(t, err, nil)
 	}
 
 	// Verify zip contents
 	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
-		t.Errorf("Failed to read zip content: %v", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	if len(zipReader.File) != len(filenames) {
-		t.Errorf("ZipFiles() created zip with %d files, want %d", len(zipReader.File), len(filenames))
+		utils.PrintTestError(t, len(zipReader.File), len(filenames))
 		return
 	}
 
 	// Check each file in the zip
 	for i, zipFile := range zipReader.File {
 		if zipFile.Name != filenames[i] {
-			t.Errorf("ZipFiles() file[%d] name = %v, want %v", i, zipFile.Name, filenames[i])
+			utils.PrintTestError(t, zipFile.Name, filenames[i])
 		}
 
 		rc, err := zipFile.Open()
 		if err != nil {
-			t.Errorf("Failed to open zip file %v: %v", zipFile.Name, err)
+			utils.PrintTestError(t, err, nil)
 			continue
 		}
 
 		content, err := io.ReadAll(rc)
 		rc.Close()
 		if err != nil {
-			t.Errorf("Failed to read zip file %v: %v", zipFile.Name, err)
+			utils.PrintTestError(t, err, nil)
 			continue
 		}
 
 		if string(content) != string(fileContents[i]) {
-			t.Errorf("ZipFiles() file[%d] content = %v, want %v", i, string(content), string(fileContents[i]))
+			utils.PrintTestError(t, string(content), string(fileContents[i]))
 		}
 	}
 }
@@ -69,7 +70,7 @@ func TestShouldReturnErrorWhenFilenamesAndContentsDontMatch(t *testing.T) {
 
 	expectedError := "number of filenames does not match number of file contents"
 	if err == nil || err.Error() != expectedError {
-		t.Errorf("ZipFiles() error = %v, want %v", err, expectedError)
+		utils.PrintTestError(t, err, expectedError)
 	}
 }
 
@@ -83,7 +84,7 @@ func TestShouldReturnErrorWhenNoFilesAreProvided(t *testing.T) {
 
 	expectedError := "no files to zip"
 	if err == nil || err.Error() != expectedError {
-		t.Errorf("ZipFiles() error = %v, want %v", err, expectedError)
+		utils.PrintTestError(t, err, expectedError)
 	}
 }
 
@@ -95,37 +96,37 @@ func TestShouldHandleEmptyFileContent(t *testing.T) {
 
 	zipData, err := repository.ZipFiles(filenames, fileContents)
 	if err != nil {
-		t.Errorf("ZipFiles() error = %v, want nil", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	// Verify zip contents
 	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
-		t.Errorf("Failed to read zip content: %v", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	if len(zipReader.File) != 1 {
-		t.Errorf("ZipFiles() created zip with %d files, want 1", len(zipReader.File))
+		utils.PrintTestError(t, len(zipReader.File), 1)
 		return
 	}
 
 	rc, err := zipReader.File[0].Open()
 	if err != nil {
-		t.Errorf("Failed to open zip file: %v", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	content, err := io.ReadAll(rc)
 	rc.Close()
 	if err != nil {
-		t.Errorf("Failed to read zip file: %v", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	if len(content) != 0 {
-		t.Errorf("ZipFiles() file content length = %d, want 0", len(content))
+		utils.PrintTestError(t, len(content), 0)
 	}
 }
 
@@ -140,31 +141,137 @@ func TestShouldHandleLargeFileContent(t *testing.T) {
 
 	zipData, err := repository.ZipFiles(filenames, fileContents)
 	if err != nil {
-		t.Errorf("ZipFiles() error = %v, want nil", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	// Verify zip contents
 	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
-		t.Errorf("Failed to read zip content: %v", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	rc, err := zipReader.File[0].Open()
 	if err != nil {
-		t.Errorf("Failed to open zip file: %v", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	content, err := io.ReadAll(rc)
 	rc.Close()
 	if err != nil {
-		t.Errorf("Failed to read zip file: %v", err)
+		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	if len(content) != len(largeContent) {
-		t.Errorf("ZipFiles() file content length = %d, want %d", len(content), len(largeContent))
+		utils.PrintTestError(t, len(content), len(largeContent))
+	}
+}
+
+func TestShouldHandleSpecialCharactersInFilenames(t *testing.T) {
+	repository := NewFileRepository(nil)
+
+	filenames := []string{"special!@#$%^&*.txt", "path/with/slashes.txt", "空白.txt"}
+	fileContents := [][]byte{
+		[]byte("Special content"),
+		[]byte("Path content"),
+		[]byte("Unicode content"),
+	}
+
+	zipData, err := repository.ZipFiles(filenames, fileContents)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	// Verify zip contents
+	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	// Check each filename exists in the zip
+	for i, expectedName := range filenames {
+		found := false
+		for _, file := range zipReader.File {
+			if file.Name == expectedName {
+				found = true
+
+				rc, err := file.Open()
+				if err != nil {
+					utils.PrintTestError(t, err, nil)
+					break
+				}
+
+				content, err := io.ReadAll(rc)
+				rc.Close()
+				if err != nil {
+					utils.PrintTestError(t, err, nil)
+					break
+				}
+
+				if string(content) != string(fileContents[i]) {
+					utils.PrintTestError(t, string(content), string(fileContents[i]))
+				}
+
+				break
+			}
+		}
+
+		if !found {
+			utils.PrintTestError(t, "File not found", expectedName)
+		}
+	}
+}
+
+// Example of a table test in the style of the existing tests
+func TestShouldValidateZipFilesInput(t *testing.T) {
+	repository := NewFileRepository(nil)
+
+	tests := map[string]struct {
+		filenames    []string
+		fileContents [][]byte
+		expectErr    bool
+		expectedMsg  string
+	}{
+		"mismatched counts": {
+			filenames:    []string{"file1.txt", "file2.txt"},
+			fileContents: [][]byte{[]byte("Content")},
+			expectErr:    true,
+			expectedMsg:  "number of filenames does not match number of file contents",
+		},
+		"no files": {
+			filenames:    []string{},
+			fileContents: [][]byte{},
+			expectErr:    true,
+			expectedMsg:  "no files to zip",
+		},
+		"valid input": {
+			filenames:    []string{"file.txt"},
+			fileContents: [][]byte{[]byte("Content")},
+			expectErr:    false,
+		},
+	}
+
+	for _, test := range tests {
+		zipData, err := repository.ZipFiles(test.filenames, test.fileContents)
+
+		if test.expectErr {
+			if err == nil || err.Error() != test.expectedMsg {
+				utils.PrintTestError(t, err, test.expectedMsg)
+			}
+		} else {
+			if err != nil {
+				utils.PrintTestError(t, err, nil)
+			}
+
+			// Basic check that the zip was created
+			if zipData == nil || len(zipData) == 0 {
+				utils.PrintTestError(t, "empty data", "non-empty zip data")
+			}
+		}
 	}
 }

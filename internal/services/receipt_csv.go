@@ -54,9 +54,9 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) (st
 			receipt.Name,
 			receipt.PaidByUser.DisplayName,
 			receipt.Amount.String(),
+			string(receipt.Status),
 			service.BuildCategoryString(receipt.Categories),
 			service.BuildTagString(receipt.Tags),
-			string(receipt.Status),
 			resolvedDateString,
 		}
 		rowData = append(rowData, newRow)

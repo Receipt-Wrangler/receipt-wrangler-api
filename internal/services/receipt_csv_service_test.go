@@ -5,21 +5,37 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"testing"
+	"time"
 )
 
 func TestShouldBuildReceiptCsv(t *testing.T) {
 	expected :=
-		"id,name\n" +
-			"1,test\n"
+		"Id,Added At,Receipt Date,Name,Paid By,Amount,Status,Categories,Tags,Resolved Date\n" +
+			"1,2025-01-01,2025-01-01,test,Jim,123.45,OPEN,\"Groceries,Food\",\"Bill,Essential\",2025-01-01\n"
 
+	date := time.Date(
+		2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	service := NewReceiptCsvService()
 	receipts := []models.Receipt{
 		models.Receipt{
 			BaseModel: models.BaseModel{
-				ID: 1,
+				ID:        1,
+				CreatedAt: date,
 			},
-			Name:   "test",
-			Amount: decimal.NewFromFloat(123.45),
+			Date:       date,
+			Name:       "test",
+			PaidByUser: models.User{DisplayName: "Jim"},
+			Amount:     decimal.NewFromFloat(123.45),
+			Status:     models.OPEN,
+			Categories: []models.Category{
+				models.Category{Name: "Groceries"},
+				models.Category{Name: "Food"},
+			},
+			Tags: []models.Tag{
+				models.Tag{Name: "Bill"},
+				models.Tag{Name: "Essential"},
+			},
+			ResolvedDate: &date,
 		},
 	}
 

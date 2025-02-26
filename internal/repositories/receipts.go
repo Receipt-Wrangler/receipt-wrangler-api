@@ -421,6 +421,10 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(
 	}
 
 	// Set order by
+	if len(pagedRequest.OrderBy) == 0 {
+		pagedRequest.OrderBy = "created_at"
+	}
+
 	if repository.isTrustedValue(pagedRequest) {
 		orderBy := pagedRequest.OrderBy
 		query = query.Order(orderBy + " " + string(pagedRequest.SortDirection))

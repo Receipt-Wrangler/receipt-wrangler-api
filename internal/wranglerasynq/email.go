@@ -160,7 +160,7 @@ func pollEmailForGroupSettings(groupSettings []models.GroupSettings) error {
 }
 
 func enqueueEmailProcessTasks(metadataList []structs.EmailMetadata) error {
-	fileRepository := repositories.NewCategoryRepository(nil)
+	fileRepository := repositories.NewFileRepository(nil)
 
 	for _, metadata := range metadataList {
 

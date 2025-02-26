@@ -375,8 +375,7 @@ func (repository ReceiptRepository) CreateReceipt(
 func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Receipt, error) {
 	db := GetDB()
 	var receipt models.Receipt
-
-	err := db.Model(models.Receipt{}).Where("id = ?", receiptId).First(&receipt).Error
+	err := db.Model(models.Receipt{}).Where("id = ?", receiptId).First(&receipt).Debug().Error
 	if err != nil {
 		return models.Receipt{}, err
 	}
@@ -384,7 +383,12 @@ func (repository ReceiptRepository) GetReceiptById(receiptId string) (models.Rec
 	return receipt, nil
 }
 
-func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, groupId string, pagedRequest commands.ReceiptPagedRequestCommand) ([]models.Receipt, int64, error) {
+func (repository ReceiptRepository) GetPagedReceiptsByGroupId(
+	userId uint,
+	groupId string,
+	pagedRequest commands.ReceiptPagedRequestCommand,
+	associations []string,
+) ([]models.Receipt, int64, error) {
 	var receipts []models.Receipt
 	var count int64
 
@@ -417,6 +421,10 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 	}
 
 	// Set order by
+	if len(pagedRequest.OrderBy) == 0 {
+		pagedRequest.OrderBy = "created_at"
+	}
+
 	if repository.isTrustedValue(pagedRequest) {
 		orderBy := pagedRequest.OrderBy
 		query = query.Order(orderBy + " " + string(pagedRequest.SortDirection))
@@ -429,7 +437,17 @@ func (repository ReceiptRepository) GetPagedReceiptsByGroupId(userId uint, group
 		return nil, 0, err
 	}
 
-	query = query.Scopes(repository.Paginate(pagedRequest.Page, pagedRequest.PageSize)).Preload("Tags").Preload("Categories")
+	query = query.Preload("Categories").Preload("Tags")
+
+	if pagedRequest.PageSize > 0 && pagedRequest.Page > 0 {
+		query = query.Scopes(repository.Paginate(pagedRequest.Page, pagedRequest.PageSize))
+	}
+
+	if associations != nil && len(associations) > 0 {
+		for _, association := range associations {
+			query = query.Preload(association)
+		}
+	}
 
 	// Run Query
 	err = query.Find(&receipts).Error

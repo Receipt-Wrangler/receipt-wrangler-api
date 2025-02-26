@@ -309,6 +309,45 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /export/{groupId}:
+    post:
+      tags:
+        - Export
+      summary: Exports receipts
+      description:
+        This will export all receipts that belong to a group based on a filter [SYSTEM
+        USER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiptPagedRequestCommand"
+      parameters:
+        - in: query
+          name: format
+          schema:
+            $ref: "#/components/schemas/ExportFormat"
+          required: true
+        - in: path
+          name: groupId
+          schema:
+            type: integer
+          required: true
+          description: Get all receipts that belong to groupId
+      operationId: exportReceiptsForGroup
+      responses:
+        200:
+          description: The csv stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /featureConfig:
     get:
       tags:
@@ -2402,6 +2441,10 @@ components:
         - "email_polling"
         - "email_receipt_processing"
         - "email_receipt_image_cleanup"
+    ExportFormat:
+      type: string
+      enum:
+        - "CSV"
     Activity:
       type: object
       required:

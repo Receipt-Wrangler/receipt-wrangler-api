@@ -33,23 +33,24 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) (st
 		"Status",
 		"Categories",
 		"Tags",
+		"Resolved Date",
 	}
 	rowData := make([][]string, 0, len(receipts))
+	dateFormat := "2006-01-02"
 
 	for _, receipt := range receipts {
 		resolvedDateString := ""
 		if receipt.ResolvedDate != nil {
-			resolvedDateString = receipt.ResolvedDate.String()
+			resolvedDateString = receipt.ResolvedDate.Format(dateFormat)
 		}
 
 		for _, item := range receipt.ReceiptItems {
 			items = append(items, item)
 		}
-
 		newRow := []string{
 			utils.UintToString(receipt.ID),
-			receipt.CreatedAt.String(),
-			receipt.Date.String(),
+			receipt.CreatedAt.Format(dateFormat),
+			receipt.Date.Format(dateFormat),
 			receipt.Name,
 			receipt.PaidByUser.DisplayName,
 			receipt.Amount.String(),

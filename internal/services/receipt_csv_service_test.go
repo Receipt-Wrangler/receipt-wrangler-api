@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/shopspring/decimal"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"testing"
@@ -17,15 +18,17 @@ func TestShouldBuildReceiptCsv(t *testing.T) {
 			BaseModel: models.BaseModel{
 				ID: 1,
 			},
-			Name: "test",
+			Name:   "test",
+			Amount: decimal.NewFromFloat(123.45),
 		},
 	}
 
-	bytes, err := service.BuildReceiptCsv(receipts)
+	result, err := service.BuildReceiptCsv(receipts)
 	if err != nil {
-		utils.PrintTestError(t, string(bytes), expected)
+		utils.PrintTestError(t, result, expected)
 	}
 
+	bytes := result.ReceiptCsvBytes
 	if string(bytes) != expected {
 		utils.PrintTestError(t, string(bytes), expected)
 	}

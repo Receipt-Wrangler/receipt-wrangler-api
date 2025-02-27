@@ -171,8 +171,13 @@ func DeleteCategory(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "categoryId")
 
+			uintId, err := utils.StringToUint(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			categoryRepository := repositories.NewCategoryRepository(nil)
-			err := categoryRepository.DeleteCategory(id)
+			err = categoryRepository.DeleteCategory(uintId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

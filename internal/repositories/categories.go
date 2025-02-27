@@ -2,10 +2,9 @@ package repositories
 
 import (
 	"fmt"
+	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
-
-	"gorm.io/gorm"
 )
 
 type CategoryRepository struct {
@@ -79,12 +78,11 @@ func (repository CategoryRepository) UpdateCategory(categoryToUpdate models.Cate
 	return categoryToUpdate, nil
 }
 
-func (repository CategoryRepository) DeleteCategory(categoryId string) error {
+func (repository CategoryRepository) DeleteCategory(categoryId uint) error {
 	db := repository.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		query := fmt.Sprintf("DELETE FROM receipt_categories WHERE category_id = %s", categoryId)
-		err := tx.Exec(query).Error
+		err := tx.Delete(&models.ReceiptCategory{}, "category_id = ?", categoryId).Error
 		if err != nil {
 			return err
 		}

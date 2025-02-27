@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"receipt-wrangler/api/internal/commands"
 )
 
@@ -49,7 +50,16 @@ func (repository BaseRepository) Paginate(page int, pageSize int) func(db *gorm.
 }
 
 func (repository BaseRepository) Sort(db *gorm.DB, orderBy string, sortDirection commands.SortDirection) *gorm.DB {
-	return db.Order(orderBy + " " + string(sortDirection))
+	desc := false
+	if sortDirection == commands.DESCENDING {
+		desc = true
+	}
+
+	return db.Order(clause.OrderByColumn{
+		Column:  clause.Column{Name: orderBy},
+		Desc:    desc,
+		Reorder: false,
+	})
 }
 
 func (repository BaseRepository) GetCount(table string, queryWhere string) (int64, error) {

@@ -170,8 +170,13 @@ func DeleteTag(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "tagId")
 
+			uintId, err := utils.StringToUint(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			tagRepository := repositories.NewTagsRepository(nil)
-			err := tagRepository.DeleteTag(id)
+			err = tagRepository.DeleteTag(uintId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

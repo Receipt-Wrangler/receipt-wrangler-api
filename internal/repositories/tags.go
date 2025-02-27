@@ -89,12 +89,11 @@ func (repository TagsRepository) UpdateTag(tagId string, command commands.Upsert
 	return updatedTag, nil
 }
 
-func (repository TagsRepository) DeleteTag(tagId string) error {
+func (repository TagsRepository) DeleteTag(tagId uint) error {
 	db := repository.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		query := fmt.Sprintf("DELETE FROM receipt_tags WHERE tag_id = %s", tagId)
-		err := tx.Exec(query).Error
+		err := tx.Delete(&models.ReceiptTag{}, "tag_id = ?", tagId).Error
 		if err != nil {
 			return err
 		}

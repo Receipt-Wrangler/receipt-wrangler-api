@@ -138,22 +138,28 @@ func CreateTestCategories() {
 
 func TruncateTestDb() {
 	db := GetDB()
-	TruncateTable(db, "system_settings")
-	TruncateTable(db, "receipt_processing_settings")
-	TruncateTable(db, "notifications")
-	TruncateTable(db, "prompts")
-	TruncateTable(db, "system_emails")
-	TruncateTable(db, "system_tasks")
-	TruncateTable(db, "comments")
-	TruncateTable(db, "receipts")
-	TruncateTable(db, "group_members")
-	TruncateTable(db, "group_receipt_settings")
-	TruncateTable(db, "group_settings")
-	TruncateTable(db, "groups")
-	TruncateTable(db, "user_prefernces")
-	TruncateTable(db, "categories")
-	TruncateTable(db, "tags")
-	TruncateTable(db, "users")
+
+	// Get all table names
+	var tables []string
+	db.Raw("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").Scan(&tables)
+
+	// Disable foreign key constraints temporarily
+	db.Exec("PRAGMA foreign_keys = OFF")
+
+	// Begin transaction
+	tx := db.Begin()
+
+	// Truncate all tables and reset sequences
+	for _, table := range tables {
+		tx.Exec("DELETE FROM " + table)
+		tx.Exec("DELETE FROM sqlite_sequence WHERE name='" + table + "'")
+	}
+
+	// Commit transaction
+	tx.Commit()
+
+	// Re-enable foreign key constraints
+	db.Exec("PRAGMA foreign_keys = ON")
 }
 
 func RemoveTestDb() {

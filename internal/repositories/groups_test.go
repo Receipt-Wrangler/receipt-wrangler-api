@@ -20,6 +20,7 @@ func teardownGroupTest() {
 }
 
 func TestShouldCreateGroupSuccessfully(t *testing.T) {
+	defer teardownGroupTest()
 	groupToCreate := commands.UpsertGroupCommand{Name: "test"}
 	setUpGroupTest()
 	groupRepository := setupGroupRepository()
@@ -44,8 +45,6 @@ func TestShouldCreateGroupSuccessfully(t *testing.T) {
 	if createdGroup.GroupMembers[0].UserID != 1 {
 		utils.PrintTestError(t, createdGroup.GroupMembers[0].UserID, "1")
 	}
-
-	teardownGroupTest()
 }
 
 func TestShouldGetGroupById(t *testing.T) {

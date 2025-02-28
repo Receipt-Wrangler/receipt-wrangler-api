@@ -2,6 +2,7 @@ package services
 
 import (
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
@@ -128,4 +129,22 @@ func (service *ReceiptCsvService) BuildTagString(tags []models.Tag) string {
 	}
 
 	return strings.Join(tagNames, ",")
+}
+
+func (service *ReceiptCsvService) GetZippedCsvFiles(receipts []models.Receipt) ([]byte, error) {
+	csvResult, err := service.BuildReceiptCsv(receipts)
+	if err != nil {
+		return nil, err
+	}
+
+	fileRepository := repositories.NewFileRepository(nil)
+	zip, err := fileRepository.ZipFiles(
+		[]string{"receipts.csv", "items.csv"},
+		[][]byte{csvResult.ReceiptCsvBytes, csvResult.ReceiptItemCsvBytes},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return zip, nil
 }

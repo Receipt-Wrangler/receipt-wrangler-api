@@ -323,20 +323,38 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ReceiptPagedRequestCommand"
+      parameters:
+        - in: query
+          name: format
+          schema:
+            $ref: "#/components/schemas/ExportFormat"
+          required: true
+        - in: path
+          name: groupId
+          schema:
+            type: integer
+          required: true
+          description: Get all receipts that belong to groupId
+      operationId: exportReceiptsForGroup
+      responses:
+        200:
+          description: The csv stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /export:
     post:
       tags:
         - Export
       summary: Exports receipts
       description:
-        This will export individual receipts [SYSTEM
-        USER]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReceiptPagedRequestCommand"
+        This will export individual receipts [SYSTEM USER]
       parameters:
         - in: query
           name: format
@@ -349,7 +367,7 @@ paths:
             type: array
             items:
               type: integer
-      operationId: exportReceiptsForGroup
+      operationId: exportReceiptsById
       responses:
         200:
           description: The csv stream

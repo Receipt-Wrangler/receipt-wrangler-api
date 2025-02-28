@@ -323,18 +323,32 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ReceiptPagedRequestCommand"
+  /export:
+    post:
+      tags:
+        - Export
+      summary: Exports receipts
+      description:
+        This will export individual receipts [SYSTEM
+        USER]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiptPagedRequestCommand"
       parameters:
         - in: query
           name: format
           schema:
             $ref: "#/components/schemas/ExportFormat"
           required: true
-        - in: path
-          name: groupId
+        - in: query
+          name: receiptIds
           schema:
-            type: integer
-          required: true
-          description: Get all receipts that belong to groupId
+            type: array
+            items:
+              type: integer
       operationId: exportReceiptsForGroup
       responses:
         200:

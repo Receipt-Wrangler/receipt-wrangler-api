@@ -674,3 +674,21 @@ func (repository ReceiptRepository) GetReceiptsByGroupIds(groupIds []string, que
 
 	return receipts, nil
 }
+
+func (repository ReceiptRepository) GetReceiptsByIds(ids []string, associations []string) ([]models.Receipt, error) {
+	query := repository.GetDB().Model(models.Receipt{}).Where("id IN ?", ids)
+
+	if associations != nil {
+		for _, association := range associations {
+			query = query.Preload(association)
+		}
+	}
+
+	var receipts []models.Receipt
+	err := query.Find(&receipts).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return receipts, nil
+}

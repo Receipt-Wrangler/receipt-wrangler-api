@@ -14,7 +14,7 @@ import (
 func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
 	groupId := chi.URLParam(r, "groupId")
 	handler := structs.Handler{
-		ErrorMessage: "Error retrieving tags",
+		ErrorMessage: "Error exporting receipts",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationZip,
@@ -41,29 +41,14 @@ func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
 					token.UserId,
 					groupId,
 					pagedRequest,
-					[]string{
-						"PaidByUser",
-						"ReceiptItems",
-						"ReceiptItems.Categories",
-						"ReceiptItems.Tags",
-						"ReceiptItems.ChargedToUser",
-					},
+					getExportReceiptAssociations(),
 				)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
 			receiptCsvService := services.NewReceiptCsvService()
-			csvResult, err := receiptCsvService.BuildReceiptCsv(receipts)
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
-
-			fileRepository := repositories.NewFileRepository(nil)
-			zip, err := fileRepository.ZipFiles(
-				[]string{"receipts.csv", "items.csv"},
-				[][]byte{csvResult.ReceiptCsvBytes, csvResult.ReceiptItemCsvBytes},
-			)
+			zip, err := receiptCsvService.GetZippedCsvFiles(receipts)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
@@ -77,4 +62,53 @@ func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	HandleRequest(handler)
+}
+
+func ExportReceiptsById(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	receiptIds := r.Form["receiptIds"]
+
+	handler := structs.Handler{
+		ErrorMessage: "Error exporting receipts",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationZip,
+		ReceiptIds:   receiptIds,
+		GroupRole:    models.VIEWER,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			receiptRepository := repositories.NewReceiptRepository(nil)
+			receipts, err := receiptRepository.GetReceiptsByIds(receiptIds, getExportReceiptAssociations())
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			receiptCsvService := services.NewReceiptCsvService()
+			zip, err := receiptCsvService.GetZippedCsvFiles(receipts)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.Header().Set("Content-Disposition", "attachment; filename=data.zip")
+			w.WriteHeader(http.StatusOK)
+			w.Write(zip)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func getExportReceiptAssociations() []string {
+	return []string{
+		"PaidByUser",
+		"ReceiptItems",
+		"ReceiptItems.Categories",
+		"ReceiptItems.Tags",
+		"ReceiptItems.ChargedToUser",
+	}
 }

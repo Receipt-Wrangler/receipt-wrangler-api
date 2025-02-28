@@ -12,6 +12,7 @@ func BuildExportRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	exportRouter := chi.NewRouter()
 
 	exportRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
+	exportRouter.Post("/", handlers.ExportReceiptsById)
 	exportRouter.Post("/{groupId}", handlers.ExportAllReceiptsFromGroup)
 
 	return exportRouter

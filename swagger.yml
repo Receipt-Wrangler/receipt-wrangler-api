@@ -348,6 +348,38 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /export:
+    post:
+      tags:
+        - Export
+      summary: Exports receipts
+      description:
+        This will export individual receipts [SYSTEM USER]
+      parameters:
+        - in: query
+          name: format
+          schema:
+            $ref: "#/components/schemas/ExportFormat"
+          required: true
+        - in: query
+          name: receiptIds
+          schema:
+            type: array
+            items:
+              type: integer
+      operationId: exportReceiptsById
+      responses:
+        200:
+          description: The csv stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /featureConfig:
     get:
       tags:

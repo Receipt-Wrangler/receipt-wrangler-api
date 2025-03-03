@@ -6,5 +6,5 @@ type CustomFieldValue struct {
 	ReceiptId     uint        `json:"receiptId"`
 	CustomField   CustomField `json:"-"`
 	CustomFieldId uint        `json:"customFieldId"`
-	Value         interface{} `json:"value"`
+	Value         string      `json:"value"`
 }

@@ -10,7 +10,6 @@ import (
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/repositories"
-	"receipt-wrangler/api/internal/routers"
 	"receipt-wrangler/api/internal/wranglerasynq"
 	"syscall"
 	"time"

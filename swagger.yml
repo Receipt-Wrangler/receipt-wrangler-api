@@ -309,6 +309,32 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /customField/getPagedCustomFields:
+    post:
+      tags:
+        - CustomField
+      summary: Get paged custom fields
+      description: This will return paged cusotm fields
+      operationId: getPagedCustomFields
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
+      responses:
+        200:
+          description: Paged categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+
   /export/{groupId}:
     post:
       tags:
@@ -2477,6 +2503,13 @@ components:
       type: string
       enum:
         - "CSV"
+    CustomFieldType:
+      type: string
+      enum:
+        - "TEXT"
+        - "DATE"
+        - "SELECT"
+        - "CURRENCY"
     Activity:
       type: object
       required:
@@ -3377,6 +3410,7 @@ components:
               - $ref: "#/components/schemas/ReceiptProcessingSettings"
               - $ref: "#/components/schemas/SystemEmail"
               - $ref: "#/components/schemas/Activity"
+              - $ref: "#/components/schemas/CustomField"
         totalCount:
           type: integer
     FeatureConfig:
@@ -4361,6 +4395,53 @@ components:
         version:
           type: string
           description: Version
+    CustomFieldOption:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - customFieldId
+          properties:
+            value:
+              type: string
+              description: Custom Field Optioin value
+            customFieldId:
+              type: integer
+              description: Custom Field Id
+    CustomField:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - name
+            - type
+          properties:
+            name:
+              type: string
+              description: Custom Field name
+            type:
+              $ref: "#/components/schemas/CustomFieldType"
+            options:
+              type: array
+              items:
+                $ref: "#/components/schemas/CustomFieldOption"
+    CustomFieldValue:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - receiptId
+            - customFieldId
+          properties:
+            receiptId:
+              type: integer
+              description: Receipt Id
+            customFieldId:
+              type: integer
+              description: Custom Field ID
+            value:
+              type: string
+              description: Custom Field Value
 
     InternalErrorResponse:
       type: object

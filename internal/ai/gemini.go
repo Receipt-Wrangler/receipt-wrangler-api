@@ -41,7 +41,7 @@ func (gemini GeminiClient) GetChatCompletion() (structs.ChatCompletionResult, er
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-pro")
+	model := client.GenerativeModel(gemini.ReceiptProcessingSettings.Model)
 	prompt := ""
 	for _, aiMessage := range gemini.Options.Messages {
 		prompt += aiMessage.Content + " "

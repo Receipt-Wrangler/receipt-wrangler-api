@@ -152,7 +152,7 @@ func (repository FileRepository) IsPdf(imageData []byte) (bool, error) {
 }
 
 func (repository FileRepository) ValidateFileType(bytes []byte) (string, error) {
-	fileType := mimetype.Detect(bytes).String()
+	fileType := utils.GetMimeType(bytes).String()
 	acceptedFileTypes := []string{constants.AnyImage, constants.ApplicationPdf}
 
 	for _, acceptedFileType := range acceptedFileTypes {

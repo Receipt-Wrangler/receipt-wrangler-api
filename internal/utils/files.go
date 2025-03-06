@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"errors"
+	"github.com/gabriel-vasile/mimetype"
 	"os"
 	"path/filepath"
 )
@@ -103,4 +104,8 @@ func BuildGroupPathString(groupId string, groupName string) (string, error) {
 
 func BuildFileName(rid string, fid string, fname string) string {
 	return rid + "-" + fid + "-" + fname
+}
+
+func GetMimeType(bytes []byte) *mimetype.MIME {
+	return mimetype.Detect(bytes)
 }

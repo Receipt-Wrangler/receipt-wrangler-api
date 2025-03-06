@@ -8,6 +8,7 @@ import (
 	"google.golang.org/api/option"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
+	"receipt-wrangler/api/internal/utils"
 )
 
 type GeminiClient struct {
@@ -42,12 +43,28 @@ func (gemini GeminiClient) GetChatCompletion() (structs.ChatCompletionResult, er
 	defer client.Close()
 
 	model := client.GenerativeModel(gemini.ReceiptProcessingSettings.Model)
-	prompt := ""
+	parts := make([]genai.Part, 0)
 	for _, aiMessage := range gemini.Options.Messages {
-		prompt += aiMessage.Content + " "
+		parts = append(parts, genai.Text(aiMessage.Content))
+
+		if len(aiMessage.Images) > 0 {
+			for _, image := range aiMessage.Images {
+				imageBytes, err := utils.Base64Decode(image)
+				if err != nil {
+					return result, err
+				}
+
+				blob := genai.Blob{
+					MIMEType: utils.GetMimeType(imageBytes).String(),
+					Data:     imageBytes,
+				}
+
+				parts = append(parts, blob)
+			}
+		}
 	}
 
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+	resp, err := model.GenerateContent(ctx, parts...)
 	if err != nil {
 		responseBytes, _ := json.Marshal(resp)
 		result.RawResponse = string(responseBytes)
@@ -61,9 +78,8 @@ func (gemini GeminiClient) GetChatCompletion() (structs.ChatCompletionResult, er
 
 	if len(resp.Candidates) > 0 {
 		for _, part := range resp.Candidates[0].Content.Parts {
-
-			json := fmt.Sprintf("%s", part)
-			result.Response = json
+			partText := fmt.Sprintf("%s", part)
+			result.Response = partText
 			result.RawResponse = string(responseBytes)
 			return result, err
 		}

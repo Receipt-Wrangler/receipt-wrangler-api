@@ -10,6 +10,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"strings"
 	"time"
 )
 
@@ -132,7 +133,6 @@ func (service ReceiptProcessingService) processImage(
 	imagePath string,
 	receiptProcessingSettings models.ReceiptProcessingSettings,
 ) (commands.ReceiptProcessingResult, error) {
-
 	aiMessages := []structs.AiClientMessage{}
 	receipt := commands.UpsertReceiptCommand{}
 	result := commands.ReceiptProcessingResult{}
@@ -158,6 +158,14 @@ func (service ReceiptProcessingService) processImage(
 			base64Image = openAiImage
 		}
 
+		if receiptProcessingSettings.AiType == models.GEMINI_NEW {
+			geminiImage, err := service.getGeminiImage(imagePath)
+			if err != nil {
+				return result, err
+			}
+
+			base64Image = geminiImage
+		}
 	} else {
 		ocrService := NewOcrService(service.TX, receiptProcessingSettings)
 		resultText, ocrSystemTaskCommand, err := ocrService.ReadImage(imagePath)
@@ -199,13 +207,21 @@ func (service ReceiptProcessingService) processImage(
 		return result, err
 	}
 
-	err = json.Unmarshal([]byte(response), &receipt)
+	cleanedResponse := service.cleanResponse(response)
+
+	err = json.Unmarshal([]byte(cleanedResponse), &receipt)
 	if err != nil {
 		return result, err
 	}
 
 	result.Receipt = receipt
 	return result, nil
+}
+
+func (service ReceiptProcessingService) cleanResponse(response string) string {
+	response = strings.ReplaceAll(response, "```json", "")
+	response = strings.ReplaceAll(response, "```", "")
+	return response
 }
 
 // TODO: move to new ai client
@@ -237,6 +253,15 @@ func (service ReceiptProcessingService) getOpenAiBase64Image(imagePath string) (
 	}
 
 	return uri, nil
+}
+
+func (service ReceiptProcessingService) getGeminiImage(imagePath string) (string, error) {
+	fileBytes, err := os.ReadFile(imagePath)
+	if err != nil {
+		return "", err
+	}
+
+	return utils.Base64EncodeBytes(fileBytes), nil
 }
 
 func (service ReceiptProcessingService) buildPrompt(

@@ -314,7 +314,7 @@ paths:
       tags:
         - CustomField
       summary: Get paged custom fields
-      description: This will return paged cusotm fields
+      description: This will return paged custom fields
       operationId: getPagedCustomFields
       requestBody:
         description: Paging and sorting data
@@ -330,6 +330,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PagedData"
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
       security:

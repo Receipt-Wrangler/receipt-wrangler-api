@@ -25,7 +25,7 @@ func (repository CustomFieldRepository) GetPagedCustomFields(pagedRequestCommand
 	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
 
-	err := query.Scan(&customFields).Error
+	err := query.Model(&models.CustomField{}).Scan(&customFields).Error
 	if err != nil {
 		return nil, 0, err
 	}

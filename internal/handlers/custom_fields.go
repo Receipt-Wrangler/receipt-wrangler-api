@@ -11,7 +11,7 @@ import (
 
 func GetPagedCustomFields(w http.ResponseWriter, r *http.Request) {
 	handler := structs.Handler{
-		ErrorMessage: "Error getting receipts",
+		ErrorMessage: "Error getting custom fields",
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationJson,

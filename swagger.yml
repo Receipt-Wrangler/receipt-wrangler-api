@@ -4423,6 +4423,9 @@ components:
               description: Custom Field name
             type:
               $ref: "#/components/schemas/CustomFieldType"
+            description:
+              type: string
+              description: Custom Field description
             options:
               type: array
               items:

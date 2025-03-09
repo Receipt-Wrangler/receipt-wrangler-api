@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
@@ -22,10 +23,15 @@ func (repository CustomFieldRepository) GetPagedCustomFields(pagedRequestCommand
 	db := repository.GetDB()
 	var customFields []models.CustomField
 
+	err := repository.validateOrderBy(pagedRequestCommand.OrderBy)
+	if err != nil {
+		return customFields, 0, err
+	}
+
 	query := repository.Sort(db, pagedRequestCommand.OrderBy, pagedRequestCommand.SortDirection)
 	query = query.Scopes(repository.Paginate(pagedRequestCommand.Page, pagedRequestCommand.PageSize))
 
-	err := query.Model(&models.CustomField{}).Scan(&customFields).Error
+	err = query.Model(&models.CustomField{}).Scan(&customFields).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -37,4 +43,12 @@ func (repository CustomFieldRepository) GetPagedCustomFields(pagedRequestCommand
 	}
 
 	return customFields, count, nil
+}
+
+func (repository CustomFieldRepository) validateOrderBy(orderBy string) error {
+	if orderBy != "name" && orderBy != "type" && orderBy != "description" {
+		return errors.New("invalid orderBy")
+	}
+
+	return nil
 }

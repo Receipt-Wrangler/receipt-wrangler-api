@@ -33,6 +33,9 @@ func TestShouldGetAllCategories(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/api", reader)
 
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 2, UserRole: models.USER}})
+	r = r.WithContext(newContext)
+
 	GetAllCategories(w, r)
 
 	err := json.Unmarshal(w.Body.Bytes(), &categories)
@@ -63,6 +66,9 @@ func TestShouldCreateCategory(t *testing.T) {
 	reader := strings.NewReader(`{"name": "Test category", "description": "Test description"}`)
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/api", reader)
+
+	newContext := context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{CustomClaims: &structs.Claims{UserId: 2, UserRole: models.USER}})
+	r = r.WithContext(newContext)
 
 	CreateCategory(w, r)
 

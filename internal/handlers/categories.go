@@ -18,6 +18,7 @@ func GetAllCategories(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error retrieving categories",
 		Writer:       w,
 		Request:      r,
+		UserRole:     models.USER,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			categoriesRepository := repositories.NewCategoryRepository(nil)
@@ -46,6 +47,7 @@ func CreateCategory(w http.ResponseWriter, r *http.Request) {
 		ErrorMessage: "Error creating category",
 		Writer:       w,
 		Request:      r,
+		UserRole:     models.USER,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			category := models.Category{}
@@ -81,6 +83,7 @@ func GetPagedCategories(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
+		UserRole:     models.USER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			pagedData := structs.PagedData{}
 			pagedRequestCommand := commands.PagedRequestCommand{}

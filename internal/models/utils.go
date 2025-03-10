@@ -8,6 +8,14 @@ func BuildGroupMap() map[GroupRole]int {
 	return groupMap
 }
 
+func BuildUserRoleMap() map[UserRole]int {
+	userRoleMap := make(map[UserRole]int)
+	userRoleMap[USER] = 0
+	userRoleMap[ADMIN] = 1
+	return userRoleMap
+}
+
 func HasRole(role UserRole, roleToCheck UserRole) bool {
-	return role == roleToCheck
+	userRoleMap := BuildUserRoleMap()
+	return userRoleMap[role] <= userRoleMap[roleToCheck]
 }

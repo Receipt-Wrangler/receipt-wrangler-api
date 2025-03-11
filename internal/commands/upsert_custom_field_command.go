@@ -9,7 +9,6 @@ import (
 )
 
 type UpsertCustomFieldCommand struct {
-	Id          *uint                            `json:"id"`
 	Name        string                           `json:"name"`
 	Type        models.CustomFieldType           `json:"type"`
 	Description string                           `json:"description"`

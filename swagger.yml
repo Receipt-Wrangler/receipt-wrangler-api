@@ -4447,8 +4447,6 @@ components:
           - name
           - type
         properties:
-          id:
-            type: integer
           name:
             type: string
             description: Custom Field name

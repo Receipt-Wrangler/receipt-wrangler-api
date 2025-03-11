@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
@@ -15,6 +16,7 @@ func GetPagedCustomFields(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
+		UserRole:     models.USER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			pagedData := structs.PagedData{}
 			pagedRequestCommand := commands.PagedRequestCommand{}
@@ -47,6 +49,25 @@ func GetPagedCustomFields(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func CreateCustomField(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error creating custom field",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationJson,
+		UserRole:     models.USER,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 
 			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)

@@ -4406,10 +4406,21 @@ components:
           properties:
             value:
               type: string
-              description: Custom Field Optioin value
+              description: Custom Field Option value
             customFieldId:
               type: integer
               description: Custom Field Id
+    UpsertCustomFieldOptionCommand:
+      type: object
+      required:
+        - customFieldId
+      properties:
+        value:
+          type: string
+          description: Custom Field Option value
+        customFieldId:
+          type: integer
+          description: Custom Field Id
     CustomField:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
@@ -4430,6 +4441,26 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/CustomFieldOption"
+    UpsertCustomFieldCommand:
+        type: object
+        required:
+          - name
+          - type
+        properties:
+          id:
+            type: integer
+          name:
+            type: string
+            description: Custom Field name
+          type:
+            $ref: "#/components/schemas/CustomFieldType"
+          description:
+            type: string
+            description: Custom Field description
+          options:
+            type: array
+            items:
+              $ref: "#/components/schemas/UpsertCustomFieldOptionCommand"
     CustomFieldValue:
       allOf:
         - $ref: "#/components/schemas/BaseModel"

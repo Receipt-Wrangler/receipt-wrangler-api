@@ -309,6 +309,33 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /customField/:
+    post:
+      tags:
+        - CustomField
+      summary: Create custom field
+      description: This will create a custom field
+      operationId: createCustomField
+      requestBody:
+        description: Custom field to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertCustomFieldCommand"
+      responses:
+        200:
+          description: Created custom field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomField"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /customField/getPagedCustomFields:
     post:
       tags:
@@ -336,7 +363,6 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
-
   /export/{groupId}:
     post:
       tags:

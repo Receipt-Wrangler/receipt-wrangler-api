@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -68,6 +69,27 @@ func CreateCustomField(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.ApplicationJson,
 		UserRole:     models.USER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpsertCustomFieldCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErrs := command.Validate()
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			customFieldsRepository := repositories.NewCustomFieldRepository(nil)
+			customField, err := customFieldsRepository.CreateCustomField(command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			bytes, err := json.Marshal(customField)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
 
 			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)

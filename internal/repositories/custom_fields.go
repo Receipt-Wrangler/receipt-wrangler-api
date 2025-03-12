@@ -45,7 +45,10 @@ func (repository CustomFieldRepository) GetPagedCustomFields(pagedRequestCommand
 	return customFields, count, nil
 }
 
-func (repository CustomFieldRepository) CreateCustomField(command commands.UpsertCustomFieldCommand) (models.CustomField, error) {
+func (repository CustomFieldRepository) CreateCustomField(
+	command commands.UpsertCustomFieldCommand,
+	createdBy *uint,
+) (models.CustomField, error) {
 	db := repository.GetDB()
 
 	options := make([]models.CustomFieldOption, 0, len(command.Options))
@@ -58,6 +61,9 @@ func (repository CustomFieldRepository) CreateCustomField(command commands.Upser
 	}
 
 	customFieldToCreate := models.CustomField{
+		BaseModel: models.BaseModel{
+			CreatedBy: createdBy,
+		},
 		Name:        command.Name,
 		Type:        command.Type,
 		Description: command.Description,

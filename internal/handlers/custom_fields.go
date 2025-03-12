@@ -81,8 +81,9 @@ func CreateCustomField(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
+			token := structs.GetJWT(r)
 			customFieldsRepository := repositories.NewCustomFieldRepository(nil)
-			customField, err := customFieldsRepository.CreateCustomField(command)
+			customField, err := customFieldsRepository.CreateCustomField(command, &token.UserId)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

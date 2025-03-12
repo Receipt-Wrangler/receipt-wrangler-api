@@ -26,6 +26,10 @@ func (command *UpsertCustomFieldCommand) LoadDataFromRequest(w http.ResponseWrit
 		return err
 	}
 
+	if command.Type != models.SELECT && len(command.Options) > 0 {
+		command.Options = []UpsertCustomFieldOptionCommand{}
+	}
+
 	return nil
 }
 
@@ -39,6 +43,10 @@ func (command *UpsertCustomFieldCommand) Validate() structs.ValidatorError {
 
 	if len(command.Type) == 0 {
 		errors["type"] = "Type is required"
+	}
+
+	if command.Type == models.SELECT && len(command.Options) == 0 {
+		errors["options"] = "Options are required"
 	}
 
 	vErr.Errors = errors

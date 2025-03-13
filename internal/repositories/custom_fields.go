@@ -78,6 +78,18 @@ func (repository CustomFieldRepository) CreateCustomField(
 	return customFieldToCreate, nil
 }
 
+func (repository CustomFieldRepository) GetCustomFieldById(id uint) (models.CustomField, error) {
+	db := repository.GetDB()
+	var customField models.CustomField
+
+	err := db.First(&customField, id).Error
+	if err != nil {
+		return models.CustomField{}, err
+	}
+
+	return customField, nil
+}
+
 func (repository CustomFieldRepository) validateOrderBy(orderBy string) error {
 	if orderBy != "name" && orderBy != "type" && orderBy != "description" {
 		return errors.New("invalid orderBy")

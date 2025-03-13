@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
@@ -15,6 +17,7 @@ func GetPagedCustomFields(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
+		UserRole:     models.USER,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			pagedData := structs.PagedData{}
 			pagedRequestCommand := commands.PagedRequestCommand{}
@@ -44,6 +47,47 @@ func GetPagedCustomFields(w http.ResponseWriter, r *http.Request) {
 			pagedData.TotalCount = count
 
 			bytes, err := utils.MarshalResponseData(pagedData)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func CreateCustomField(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error creating custom field",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationJson,
+		UserRole:     models.USER,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.UpsertCustomFieldCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErrs := command.Validate()
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			token := structs.GetJWT(r)
+			customFieldsRepository := repositories.NewCustomFieldRepository(nil)
+			customField, err := customFieldsRepository.CreateCustomField(command, &token.UserId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+			bytes, err := json.Marshal(customField)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

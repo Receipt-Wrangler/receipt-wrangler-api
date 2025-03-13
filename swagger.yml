@@ -309,6 +309,33 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /customField/:
+    post:
+      tags:
+        - CustomField
+      summary: Create custom field
+      description: This will create a custom field
+      operationId: createCustomField
+      requestBody:
+        description: Custom field to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertCustomFieldCommand"
+      responses:
+        200:
+          description: Created custom field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomField"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /customField/getPagedCustomFields:
     post:
       tags:
@@ -336,7 +363,6 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
-
   /export/{groupId}:
     post:
       tags:
@@ -4406,10 +4432,21 @@ components:
           properties:
             value:
               type: string
-              description: Custom Field Optioin value
+              description: Custom Field Option value
             customFieldId:
               type: integer
               description: Custom Field Id
+    UpsertCustomFieldOptionCommand:
+      type: object
+      required:
+        - customFieldId
+      properties:
+        value:
+          type: string
+          description: Custom Field Option value
+        customFieldId:
+          type: integer
+          description: Custom Field Id
     CustomField:
       allOf:
         - $ref: "#/components/schemas/BaseModel"
@@ -4430,6 +4467,24 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/CustomFieldOption"
+    UpsertCustomFieldCommand:
+        type: object
+        required:
+          - name
+          - type
+        properties:
+          name:
+            type: string
+            description: Custom Field name
+          type:
+            $ref: "#/components/schemas/CustomFieldType"
+          description:
+            type: string
+            description: Custom Field description
+          options:
+            type: array
+            items:
+              $ref: "#/components/schemas/UpsertCustomFieldOptionCommand"
     CustomFieldValue:
       allOf:
         - $ref: "#/components/schemas/BaseModel"

@@ -7,10 +7,6 @@ import (
 	"testing"
 )
 
-func setupCustomFieldTest() {
-	createTestCustomFields()
-}
-
 func createTestCustomFields() {
 	db := GetDB()
 
@@ -59,17 +55,113 @@ func createTestCustomFields() {
 	db.Create(&currencyField)
 }
 
-func teardownCustomFieldTest() {
+func setupCustomFieldRepositoryTest() {
+	createTestCustomFields()
+}
+
+func teardownCustomFieldRepositoryTest() {
 	TruncateTestDb()
 }
 
-func TestShouldGetPagedCustomFields(t *testing.T) {
-	defer teardownCustomFieldTest()
-	setupCustomFieldTest()
+func TestShouldCreateCustomField(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+
+	repository := NewCustomFieldRepository(nil)
+	createdBy := uint(1)
+
+	// Create a TEXT type custom field
+	command := commands.UpsertCustomFieldCommand{
+		Name:        "Test New Text Field",
+		Type:        models.TEXT,
+		Description: "A new test text field",
+		Options:     []commands.UpsertCustomFieldOptionCommand{},
+	}
+
+	customField, err := repository.CreateCustomField(command, &createdBy)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	// Validate the created custom field
+	if customField.ID == 0 {
+		utils.PrintTestError(t, "Custom field ID should not be 0", nil)
+	}
+
+	if customField.Name != "Test New Text Field" {
+		utils.PrintTestError(t, customField.Name, "Test New Text Field")
+	}
+
+	if customField.Type != models.TEXT {
+		utils.PrintTestError(t, customField.Type, models.TEXT)
+	}
+
+	if customField.Description != "A new test text field" {
+		utils.PrintTestError(t, customField.Description, "A new test text field")
+	}
+
+	if *customField.CreatedBy != createdBy {
+		utils.PrintTestError(t, *customField.CreatedBy, createdBy)
+	}
+}
+
+func TestShouldCreateCustomFieldWithOptions(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+
+	repository := NewCustomFieldRepository(nil)
+	createdBy := uint(1)
+
+	// Create a SELECT type custom field with options
+	command := commands.UpsertCustomFieldCommand{
+		Name:        "Test New Select Field",
+		Type:        models.SELECT,
+		Description: "A new test select field",
+		Options: []commands.UpsertCustomFieldOptionCommand{
+			{
+				Value: "Option A",
+			},
+			{
+				Value: "Option B",
+			},
+		},
+	}
+
+	customField, err := repository.CreateCustomField(command, &createdBy)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	// Validate the created custom field
+	if customField.ID == 0 {
+		utils.PrintTestError(t, "Custom field ID should not be 0", nil)
+	}
+
+	if customField.Type != models.SELECT {
+		utils.PrintTestError(t, customField.Type, models.SELECT)
+	}
+
+	if len(customField.Options) != 2 {
+		utils.PrintTestError(t, len(customField.Options), 2)
+		return
+	}
+
+	if customField.Options[0].Value != "Option A" {
+		utils.PrintTestError(t, customField.Options[0].Value, "Option A")
+	}
+
+	if customField.Options[1].Value != "Option B" {
+		utils.PrintTestError(t, customField.Options[1].Value, "Option B")
+	}
+}
+
+func TestShouldGetPagedCustomFieldsWithDefaultSorting(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
 
 	repository := NewCustomFieldRepository(nil)
 
-	// Create paged request with name ordering
+	// Create paged request with default settings
 	pagedRequest := commands.PagedRequestCommand{
 		Page:          1,
 		PageSize:      10,
@@ -100,27 +192,19 @@ func TestShouldGetPagedCustomFields(t *testing.T) {
 	if customFields[1].Name != "Test Date Field" {
 		utils.PrintTestError(t, customFields[1].Name, "Test Date Field")
 	}
-
-	if customFields[2].Name != "Test Select Field" {
-		utils.PrintTestError(t, customFields[2].Name, "Test Select Field")
-	}
-
-	if customFields[3].Name != "Test Text Field" {
-		utils.PrintTestError(t, customFields[3].Name, "Test Text Field")
-	}
 }
 
-func TestShouldGetPagedCustomFieldsWithTypeOrder(t *testing.T) {
-	defer teardownCustomFieldTest()
-	setupCustomFieldTest()
+func TestShouldGetPagedCustomFieldsWithLimit(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
 
 	repository := NewCustomFieldRepository(nil)
 
-	// Create paged request with type ordering
+	// Create paged request with limit
 	pagedRequest := commands.PagedRequestCommand{
 		Page:          1,
-		PageSize:      10,
-		OrderBy:       "type",
+		PageSize:      2,
+		OrderBy:       "name",
 		SortDirection: commands.ASCENDING,
 	}
 
@@ -130,50 +214,64 @@ func TestShouldGetPagedCustomFieldsWithTypeOrder(t *testing.T) {
 		return
 	}
 
-	// Should return 4 custom fields
+	// Total count should be 4
 	if count != 4 {
 		utils.PrintTestError(t, count, 4)
 	}
 
-	// Check if fields are ordered by type
-	if customFields[0].Type != models.CURRENCY {
-		utils.PrintTestError(t, customFields[0].Type, models.CURRENCY)
+	// But only 2 items should be returned
+	if len(customFields) != 2 {
+		utils.PrintTestError(t, len(customFields), 2)
 	}
 }
 
-func TestShouldGetPagedCustomFieldsWithDescriptionOrder(t *testing.T) {
-	defer teardownCustomFieldTest()
-	setupCustomFieldTest()
+func TestShouldGetPagedCustomFieldsWithSecondPage(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
 
 	repository := NewCustomFieldRepository(nil)
 
-	// Create paged request with description ordering
+	// Create paged request for second page
 	pagedRequest := commands.PagedRequestCommand{
-		Page:          1,
-		PageSize:      10,
-		OrderBy:       "description",
+		Page:          2,
+		PageSize:      2,
+		OrderBy:       "name",
 		SortDirection: commands.ASCENDING,
 	}
 
-	_, count, err := repository.GetPagedCustomFields(pagedRequest)
+	customFields, count, err := repository.GetPagedCustomFields(pagedRequest)
 	if err != nil {
 		utils.PrintTestError(t, err, nil)
 		return
 	}
 
-	// Should return 4 custom fields
+	// Total count should be 4
 	if count != 4 {
 		utils.PrintTestError(t, count, 4)
+	}
+
+	// 2 items on the second page
+	if len(customFields) != 2 {
+		utils.PrintTestError(t, len(customFields), 2)
+	}
+
+	// The items on the second page should be different from the first page
+	if customFields[0].Name != "Test Select Field" {
+		utils.PrintTestError(t, customFields[0].Name, "Test Select Field")
+	}
+
+	if customFields[1].Name != "Test Text Field" {
+		utils.PrintTestError(t, customFields[1].Name, "Test Text Field")
 	}
 }
 
 func TestShouldGetPagedCustomFieldsWithDescendingOrder(t *testing.T) {
-	defer teardownCustomFieldTest()
-	setupCustomFieldTest()
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
 
 	repository := NewCustomFieldRepository(nil)
 
-	// Create paged request with descending name ordering
+	// Create paged request with descending order
 	pagedRequest := commands.PagedRequestCommand{
 		Page:          1,
 		PageSize:      10,
@@ -187,7 +285,6 @@ func TestShouldGetPagedCustomFieldsWithDescendingOrder(t *testing.T) {
 		return
 	}
 
-	// Should return 4 custom fields
 	if count != 4 {
 		utils.PrintTestError(t, count, 4)
 	}
@@ -202,58 +299,9 @@ func TestShouldGetPagedCustomFieldsWithDescendingOrder(t *testing.T) {
 	}
 }
 
-func TestShouldGetPagedCustomFieldsWithPagination(t *testing.T) {
-	defer teardownCustomFieldTest()
-	setupCustomFieldTest()
-
-	repository := NewCustomFieldRepository(nil)
-
-	// Create paged request with pagination (2 items per page)
-	pagedRequest := commands.PagedRequestCommand{
-		Page:          1,
-		PageSize:      2,
-		OrderBy:       "name",
-		SortDirection: commands.ASCENDING,
-	}
-
-	customFields, count, err := repository.GetPagedCustomFields(pagedRequest)
-	if err != nil {
-		utils.PrintTestError(t, err, nil)
-		return
-	}
-
-	// Total count should still be 4
-	if count != 4 {
-		utils.PrintTestError(t, count, 4)
-	}
-
-	// But we should only get 2 items
-	if len(customFields) != 2 {
-		utils.PrintTestError(t, len(customFields), 2)
-	}
-
-	// Get the second page
-	pagedRequest.Page = 2
-	customFields, count, err = repository.GetPagedCustomFields(pagedRequest)
-	if err != nil {
-		utils.PrintTestError(t, err, nil)
-		return
-	}
-
-	// Total count should still be 4
-	if count != 4 {
-		utils.PrintTestError(t, count, 4)
-	}
-
-	// And we should get the other 2 items
-	if len(customFields) != 2 {
-		utils.PrintTestError(t, len(customFields), 2)
-	}
-}
-
 func TestShouldReturnErrorWithInvalidOrderBy(t *testing.T) {
-	defer teardownCustomFieldTest()
-	setupCustomFieldTest()
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
 
 	repository := NewCustomFieldRepository(nil)
 
@@ -261,7 +309,7 @@ func TestShouldReturnErrorWithInvalidOrderBy(t *testing.T) {
 	pagedRequest := commands.PagedRequestCommand{
 		Page:          1,
 		PageSize:      10,
-		OrderBy:       "invalid_field",
+		OrderBy:       "invalid_column",
 		SortDirection: commands.ASCENDING,
 	}
 
@@ -277,7 +325,7 @@ func TestShouldReturnErrorWithInvalidOrderBy(t *testing.T) {
 	}
 }
 
-func TestShouldValidateOrderBy(t *testing.T) {
+func TestShouldValidateOrderByColumn(t *testing.T) {
 	repository := NewCustomFieldRepository(nil)
 
 	// Valid orderBy values

@@ -13,6 +13,7 @@ func BuildCustomFieldRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mu
 	router.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
 
 	router.Post("/getPagedCustomFields", handlers.GetPagedCustomFields)
+	router.Post("/", handlers.CreateCustomField)
 
 	return router
 }

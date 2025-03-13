@@ -45,6 +45,39 @@ func (repository CustomFieldRepository) GetPagedCustomFields(pagedRequestCommand
 	return customFields, count, nil
 }
 
+func (repository CustomFieldRepository) CreateCustomField(
+	command commands.UpsertCustomFieldCommand,
+	createdBy *uint,
+) (models.CustomField, error) {
+	db := repository.GetDB()
+
+	options := make([]models.CustomFieldOption, 0, len(command.Options))
+	for _, optionCommand := range command.Options {
+		option := models.CustomFieldOption{
+			CustomFieldId: optionCommand.CustomFieldId,
+			Value:         optionCommand.Value,
+		}
+		options = append(options, option)
+	}
+
+	customFieldToCreate := models.CustomField{
+		BaseModel: models.BaseModel{
+			CreatedBy: createdBy,
+		},
+		Name:        command.Name,
+		Type:        command.Type,
+		Description: command.Description,
+		Options:     options,
+	}
+
+	err := db.Create(&customFieldToCreate).Error
+	if err != nil {
+		return models.CustomField{}, err
+	}
+
+	return customFieldToCreate, nil
+}
+
 func (repository CustomFieldRepository) validateOrderBy(orderBy string) error {
 	if orderBy != "name" && orderBy != "type" && orderBy != "description" {
 		return errors.New("invalid orderBy")

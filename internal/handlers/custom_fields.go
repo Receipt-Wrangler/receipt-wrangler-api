@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -87,6 +88,41 @@ func CreateCustomField(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
+			bytes, err := json.Marshal(customField)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			w.Write(bytes)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func GetCustomFieldById(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error getting custom field",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationJson,
+		UserRole:     models.USER,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			customFieldId := chi.URLParam(r, "id")
+			customFieldIdUint, err := utils.StringToUint(customFieldId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			customFieldsRepository := repositories.NewCustomFieldRepository(nil)
+			customField, err := customFieldsRepository.GetCustomFieldById(customFieldIdUint)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			bytes, err := json.Marshal(customField)
 			if err != nil {
 				return http.StatusInternalServerError, err

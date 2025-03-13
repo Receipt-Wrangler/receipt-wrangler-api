@@ -336,6 +336,29 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /customField/{customFieldId}:
+    parameters:
+      - in: path
+        name: customFieldId
+        schema:
+          type: integer
+        required: true
+        description: Custom field Id to get
+    get:
+      tags:
+        - CustomField
+      summary: Get custom field
+      description: This will get a custom field by id
+      operationId: getCustomFieldById
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /customField/getPagedCustomFields:
     post:
       tags:

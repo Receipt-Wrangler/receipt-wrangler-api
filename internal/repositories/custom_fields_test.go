@@ -350,3 +350,114 @@ func TestShouldValidateOrderByColumn(t *testing.T) {
 		utils.PrintTestError(t, "Expected error for invalid orderBy 'created_at'", nil)
 	}
 }
+
+func TestShouldGetCustomFieldById(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
+
+	repository := NewCustomFieldRepository(nil)
+	db := GetDB()
+
+	// Get a custom field from the test DB to use its ID
+	var expectedCustomField models.CustomField
+	db.Where("name = ?", "Test Text Field").First(&expectedCustomField)
+
+	// Get the custom field by ID
+	customField, err := repository.GetCustomFieldById(expectedCustomField.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	// Validate the fetched custom field
+	if customField.ID != expectedCustomField.ID {
+		utils.PrintTestError(t, customField.ID, expectedCustomField.ID)
+	}
+
+	if customField.Name != "Test Text Field" {
+		utils.PrintTestError(t, customField.Name, "Test Text Field")
+	}
+
+	if customField.Type != models.TEXT {
+		utils.PrintTestError(t, string(customField.Type), string(models.TEXT))
+	}
+
+	if customField.Description != "A test text field" {
+		utils.PrintTestError(t, customField.Description, "A test text field")
+	}
+}
+
+func TestShouldGetCustomFieldByIdWithSelectType(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
+
+	repository := NewCustomFieldRepository(nil)
+	db := GetDB()
+
+	// Get a SELECT type custom field from the test DB
+	var expectedCustomField models.CustomField
+	db.Where("name = ?", "Test Select Field").First(&expectedCustomField)
+
+	// Get the custom field by ID
+	customField, err := repository.GetCustomFieldById(expectedCustomField.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	// Validate the fetched custom field
+	if customField.ID != expectedCustomField.ID {
+		utils.PrintTestError(t, customField.ID, expectedCustomField.ID)
+	}
+
+	if customField.Name != "Test Select Field" {
+		utils.PrintTestError(t, customField.Name, "Test Select Field")
+	}
+
+	if customField.Type != models.SELECT {
+		utils.PrintTestError(t, string(customField.Type), string(models.SELECT))
+	}
+
+	// Verify that options are preloaded
+	if len(customField.Options) != 2 {
+		utils.PrintTestError(t, len(customField.Options), 2)
+		return
+	}
+
+	// Verify option values
+	foundOption1 := false
+	foundOption2 := false
+
+	for _, option := range customField.Options {
+		if option.Value == "Option 1" {
+			foundOption1 = true
+		}
+		if option.Value == "Option 2" {
+			foundOption2 = true
+		}
+	}
+
+	if !foundOption1 {
+		utils.PrintTestError(t, "Missing Option 1", "Option 1 should be present")
+	}
+
+	if !foundOption2 {
+		utils.PrintTestError(t, "Missing Option 2", "Option 2 should be present")
+	}
+}
+
+func TestShouldReturnErrorForNonExistentCustomFieldId(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
+
+	repository := NewCustomFieldRepository(nil)
+
+	// Try to get a custom field with a non-existent ID
+	nonExistentId := uint(999)
+	_, err := repository.GetCustomFieldById(nonExistentId)
+
+	// Should return an error
+	if err == nil {
+		utils.PrintTestError(t, "Expected error for non-existent ID", nil)
+	}
+}

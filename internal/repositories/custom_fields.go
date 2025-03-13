@@ -84,7 +84,7 @@ func (repository CustomFieldRepository) GetCustomFieldById(id uint) (models.Cust
 	db := repository.GetDB()
 	var customField models.CustomField
 
-	err := db.First(&customField, id).Error
+	err := db.Preload("Options").First(&customField, id).Error
 	if err != nil {
 		return models.CustomField{}, err
 	}

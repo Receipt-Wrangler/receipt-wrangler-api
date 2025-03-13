@@ -15,6 +15,7 @@ import (
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/go-chi/chi/v5"
 )
 
 func setupCustomFieldHandlerTest() {
@@ -368,5 +369,132 @@ func TestGetPagedCustomFieldsHandlerWithEmptyBody(t *testing.T) {
 	// Check response status - should be error
 	if status := rr.Code; status != http.StatusInternalServerError {
 		utils.PrintTestError(t, status, http.StatusInternalServerError)
+	}
+}
+
+func TestGetCustomFieldByIdHandler(t *testing.T) {
+	defer teardownCustomFieldHandlerTest()
+	setupCustomFieldHandlerTest()
+
+	// Get a custom field from the test DB to use its ID
+	db := repositories.GetDB()
+	var customField models.CustomField
+	db.Where("name = ?", "Test Text Field").First(&customField)
+
+	// Create request to get custom field by ID
+	req, rr := createCustomFieldHandlerTestRequest(
+		"GET",
+		"/api/customField/"+utils.UintToString(customField.ID),
+		"",
+	)
+
+	// Set URL parameter
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, chi.NewRouteContext()))
+	chiCtx := chi.RouteContext(req.Context())
+	chiCtx.URLParams.Add("id", utils.UintToString(customField.ID))
+
+	// Call the handler
+	GetCustomFieldById(rr, req)
+
+	// Check response status
+	if status := rr.Code; status != http.StatusOK {
+		utils.PrintTestError(t, status, http.StatusOK)
+	}
+
+	// Parse response
+	var responseCustomField models.CustomField
+	err := json.Unmarshal(rr.Body.Bytes(), &responseCustomField)
+	if err != nil {
+		utils.PrintTestError(t, err.Error(), nil)
+	}
+
+	// Check if the returned custom field has the correct ID and properties
+	if responseCustomField.ID != customField.ID {
+		utils.PrintTestError(t, responseCustomField.ID, customField.ID)
+	}
+
+	if responseCustomField.Name != "Test Text Field" {
+		utils.PrintTestError(t, responseCustomField.Name, "Test Text Field")
+	}
+
+	if responseCustomField.Type != models.TEXT {
+		utils.PrintTestError(t, string(responseCustomField.Type), string(models.TEXT))
+	}
+}
+
+func TestGetCustomFieldByIdHandlerWithInvalidId(t *testing.T) {
+	defer teardownCustomFieldHandlerTest()
+	setupCustomFieldHandlerTest()
+
+	// Create request with invalid ID
+	req, rr := createCustomFieldHandlerTestRequest(
+		"GET",
+		"/api/customField/invalid",
+		"",
+	)
+
+	// Set URL parameter
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, chi.NewRouteContext()))
+	chiCtx := chi.RouteContext(req.Context())
+	chiCtx.URLParams.Add("id", "invalid")
+
+	// Call the handler
+	GetCustomFieldById(rr, req)
+
+	// Check response status - should be error
+	if status := rr.Code; status != http.StatusInternalServerError {
+		utils.PrintTestError(t, status, http.StatusInternalServerError)
+	}
+
+	// Parse error response
+	var errorResponse map[string]string
+	err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
+	if err != nil {
+		utils.PrintTestError(t, err.Error(), nil)
+	}
+
+	// Check error message
+	if errorMsg, exists := errorResponse["errorMsg"]; !exists || !strings.Contains(errorMsg, "Error getting custom field") {
+		utils.PrintTestError(t, errorMsg, "Error getting custom field")
+	}
+}
+
+func TestGetCustomFieldByIdHandlerWithNonExistentId(t *testing.T) {
+	defer teardownCustomFieldHandlerTest()
+	setupCustomFieldHandlerTest()
+
+	// Use a non-existent ID (999)
+	nonExistentId := "999"
+
+	// Create request with non-existent ID
+	req, rr := createCustomFieldHandlerTestRequest(
+		"GET",
+		"/api/customField/"+nonExistentId,
+		"",
+	)
+
+	// Set URL parameter
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, chi.NewRouteContext()))
+	chiCtx := chi.RouteContext(req.Context())
+	chiCtx.URLParams.Add("id", nonExistentId)
+
+	// Call the handler
+	GetCustomFieldById(rr, req)
+
+	// Check response status - should be error
+	if status := rr.Code; status != http.StatusInternalServerError {
+		utils.PrintTestError(t, status, http.StatusInternalServerError)
+	}
+
+	// Parse error response
+	var errorResponse map[string]string
+	err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
+	if err != nil {
+		utils.PrintTestError(t, err.Error(), nil)
+	}
+
+	// Check error message
+	if errorMsg, exists := errorResponse["errorMsg"]; !exists || !strings.Contains(errorMsg, "Error getting custom field") {
+		utils.PrintTestError(t, errorMsg, "Error getting custom field")
 	}
 }

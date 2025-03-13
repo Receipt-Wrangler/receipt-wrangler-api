@@ -92,6 +92,31 @@ func (repository CustomFieldRepository) GetCustomFieldById(id uint) (models.Cust
 	return customField, nil
 }
 
+func (repository CustomFieldRepository) DeleteCustomField(id uint) error {
+	db := repository.GetDB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// Delete associated options first
+		err := tx.Delete(&models.CustomFieldOption{}, "custom_field_id = ?", id).Error
+		if err != nil {
+			return err
+		}
+
+		// Delete the custom field
+		err = tx.Delete(&models.CustomField{}, id).Error
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (repository CustomFieldRepository) validateOrderBy(orderBy string) error {
 	if orderBy != "name" && orderBy != "type" && orderBy != "description" {
 		return errors.New("invalid orderBy")

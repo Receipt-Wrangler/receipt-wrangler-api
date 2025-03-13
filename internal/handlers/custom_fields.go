@@ -137,3 +137,32 @@ func GetCustomFieldById(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func DeleteCustomField(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting custom field",
+		Writer:       w,
+		Request:      r,
+		ResponseType: constants.ApplicationJson,
+		UserRole:     models.ADMIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			customFieldId := chi.URLParam(r, "id")
+			customFieldIdUint, err := utils.StringToUint(customFieldId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			customFieldsRepository := repositories.NewCustomFieldRepository(nil)
+			err = customFieldsRepository.DeleteCustomField(customFieldIdUint)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

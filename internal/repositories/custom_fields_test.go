@@ -461,3 +461,87 @@ func TestShouldReturnErrorForNonExistentCustomFieldId(t *testing.T) {
 		utils.PrintTestError(t, "Expected error for non-existent ID", nil)
 	}
 }
+
+func TestShouldDeleteCustomField(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
+
+	repository := NewCustomFieldRepository(nil)
+	db := GetDB()
+
+	// Get a TEXT type custom field to delete
+	var customField models.CustomField
+	db.Where("name = ?", "Test Text Field").First(&customField)
+	customFieldId := customField.ID
+
+	// Delete the custom field
+	err := repository.DeleteCustomField(customFieldId)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	// Try to get the deleted custom field - should return error
+	_, err = repository.GetCustomFieldById(customFieldId)
+	if err == nil {
+		utils.PrintTestError(t, "Expected error when getting deleted custom field", nil)
+	}
+}
+
+func TestShouldDeleteCustomFieldWithOptions(t *testing.T) {
+	defer teardownCustomFieldRepositoryTest()
+	setupCustomFieldRepositoryTest()
+
+	repository := NewCustomFieldRepository(nil)
+	db := GetDB()
+
+	// Get a SELECT type custom field with options
+	var customField models.CustomField
+	db.Where("name = ?", "Test Select Field").First(&customField)
+	customFieldId := customField.ID
+
+	// Verify options exist before deletion
+	var optionsCount int64
+	db.Model(&models.CustomFieldOption{}).Where("custom_field_id = ?", customFieldId).Count(&optionsCount)
+	if optionsCount == 0 {
+		utils.PrintTestError(t, "Expected options to exist before deletion", nil)
+		return
+	}
+
+	// Delete the custom field
+	err := repository.DeleteCustomField(customFieldId)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	// Verify custom field was deleted
+	var customFieldExists bool
+	err = db.Model(&models.CustomField{}).
+		Select("count(*) > 0").
+		Where("id = ?", customFieldId).
+		Find(&customFieldExists).
+		Error
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+	if customFieldExists {
+		utils.PrintTestError(t, "Custom field should be deleted", nil)
+	}
+
+	// Verify options were deleted
+	var optionsExist bool
+	err = db.Model(&models.CustomFieldOption{}).
+		Select("count(*) > 0").
+		Where("custom_field_id = ?", customFieldId).
+		Find(&optionsExist).
+		Error
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+	if optionsExist {
+		utils.PrintTestError(t, "Custom field options should be deleted", nil)
+	}
+}

@@ -498,3 +498,107 @@ func TestGetCustomFieldByIdHandlerWithNonExistentId(t *testing.T) {
 		utils.PrintTestError(t, errorMsg, "Error getting custom field")
 	}
 }
+
+func TestDeleteCustomFieldHandler(t *testing.T) {
+	defer teardownCustomFieldHandlerTest()
+	setupCustomFieldHandlerTest()
+
+	db := repositories.GetDB()
+
+	// Get a custom field from the test DB to use its ID
+	var customField models.CustomField
+	db.Where("name = ?", "Test Text Field").First(&customField)
+	customFieldId := customField.ID
+
+	// Create request to delete custom field
+	req, rr := createCustomFieldHandlerTestRequest(
+		"DELETE",
+		"/api/customField/"+utils.UintToString(customFieldId),
+		"",
+	)
+
+	// Set URL parameter
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, chi.NewRouteContext()))
+	chiCtx := chi.RouteContext(req.Context())
+	chiCtx.URLParams.Add("id", utils.UintToString(customFieldId))
+
+	// Call the handler
+	DeleteCustomField(rr, req)
+
+	// Check response status
+	if status := rr.Code; status != http.StatusOK {
+		utils.PrintTestError(t, status, http.StatusOK)
+	}
+
+	// Verify the custom field was deleted
+	var count int64
+	db.Model(&models.CustomField{}).Where("id = ?", customFieldId).Count(&count)
+	if count != 0 {
+		utils.PrintTestError(t, count, 0)
+	}
+}
+
+func TestDeleteCustomFieldHandlerWithInvalidId(t *testing.T) {
+	defer teardownCustomFieldHandlerTest()
+	setupCustomFieldHandlerTest()
+
+	// Create request with invalid ID
+	req, rr := createCustomFieldHandlerTestRequest(
+		"DELETE",
+		"/api/customField/invalid",
+		"",
+	)
+
+	// Set URL parameter
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, chi.NewRouteContext()))
+	chiCtx := chi.RouteContext(req.Context())
+	chiCtx.URLParams.Add("id", "invalid")
+
+	// Call the handler
+	DeleteCustomField(rr, req)
+
+	// Check response status - should be error
+	if status := rr.Code; status != http.StatusInternalServerError {
+		utils.PrintTestError(t, status, http.StatusInternalServerError)
+	}
+
+	// Parse error response
+	var errorResponse map[string]string
+	err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
+	if err != nil {
+		utils.PrintTestError(t, err.Error(), nil)
+	}
+
+	// Check error message
+	if errorMsg, exists := errorResponse["errorMsg"]; !exists || !strings.Contains(errorMsg, "Error deleting custom field") {
+		utils.PrintTestError(t, errorMsg, "Error deleting custom field")
+	}
+}
+
+func TestDeleteCustomFieldHandlerWithNonExistentId(t *testing.T) {
+	defer teardownCustomFieldHandlerTest()
+	setupCustomFieldHandlerTest()
+
+	// Use a non-existent ID (999)
+	nonExistentId := "999"
+
+	// Create request with non-existent ID
+	req, rr := createCustomFieldHandlerTestRequest(
+		"DELETE",
+		"/api/customField/"+nonExistentId,
+		"",
+	)
+
+	// Set URL parameter
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, chi.NewRouteContext()))
+	chiCtx := chi.RouteContext(req.Context())
+	chiCtx.URLParams.Add("id", nonExistentId)
+
+	// Call the handler
+	DeleteCustomField(rr, req)
+
+	// Should still return OK because deleting a non-existent record is not an error in this implementation
+	if status := rr.Code; status != http.StatusOK {
+		utils.PrintTestError(t, status, http.StatusOK)
+	}
+}

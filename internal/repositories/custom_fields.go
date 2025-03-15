@@ -96,13 +96,11 @@ func (repository CustomFieldRepository) DeleteCustomField(id uint) error {
 	db := repository.GetDB()
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		// Delete associated options first
 		err := tx.Delete(&models.CustomFieldOption{}, "custom_field_id = ?", id).Error
 		if err != nil {
 			return err
 		}
 
-		// Delete the custom field
 		err = tx.Delete(&models.CustomField{}, id).Error
 		if err != nil {
 			return err

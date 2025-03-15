@@ -352,6 +352,25 @@ paths:
       operationId: getCustomFieldById
       responses:
         200:
+          description: The custom field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomField"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+    delete:
+      tags:
+        - CustomField
+      summary: Delete custom field
+      description: This will delete a custom field by id
+      operationId: deleteCustomField
+      responses:
+        200:
           $ref: "#/components/responses/Ok"
         403:
           $ref: "#/components/responses/Forbidden"

@@ -2996,6 +2996,11 @@ components:
         - name
         - paidByUserId
         - status
+        - customFields
+        - categories
+        - tags
+        - receiptItems
+        - comments
         - id
       type: object
       properties:

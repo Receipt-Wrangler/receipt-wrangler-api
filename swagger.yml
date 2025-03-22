@@ -3012,6 +3012,11 @@ components:
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/Comment"
+        customFields:
+          type: array
+          description: Custom fields associated to receipt
+          items:
+            $ref: "#/components/schemas/CustomField"
         createdAt:
           type: string
         createdBy:

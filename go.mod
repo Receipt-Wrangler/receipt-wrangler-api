@@ -1,7 +1,7 @@
 module receipt-wrangler/api
 
 go 1.22.7
-toolchain go1.23.2
+toolchain go1.24.1
 
 require (
 	github.com/alicebob/miniredis/v2 v2.34.0
@@ -9,7 +9,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.8
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-chi/chi/v5 v5.2.0
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/generative-ai-go v0.19.0
 	github.com/hibiken/asynq v0.25.1
 	github.com/jinzhu/copier v0.4.0

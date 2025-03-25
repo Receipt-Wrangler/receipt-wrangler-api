@@ -12,4 +12,5 @@ type UpsertCustomFieldValueCommand struct {
 	DateValue     *time.Time       `json:"dateValue"`
 	SelectValue   *uint            `json:"selectValue"`
 	CurrencyValue *decimal.Decimal `json:"currencyValue"`
+	BooleanValue  *bool            `json:"booleanValue"`
 }

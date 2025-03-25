@@ -12,6 +12,7 @@ const (
 	DATE     CustomFieldType = "DATE"
 	SELECT   CustomFieldType = "SELECT"
 	CURRENCY CustomFieldType = "CURRENCY"
+	BOOLEAN  CustomFieldType = "BOOLEAN"
 )
 
 func (fieldType *CustomFieldType) Scan(value string) error {
@@ -24,7 +25,11 @@ func (fieldType CustomFieldType) Value() (driver.Value, error) {
 		return "", nil
 	}
 
-	if fieldType != TEXT && fieldType != DATE && fieldType != SELECT && fieldType != CURRENCY {
+	if fieldType != TEXT &&
+		fieldType != DATE &&
+		fieldType != SELECT &&
+		fieldType != CURRENCY &&
+		fieldType != BOOLEAN {
 		return "", errors.New("invalid custom field type")
 	}
 	return string(fieldType), nil

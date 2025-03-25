@@ -2580,6 +2580,7 @@ components:
         - "DATE"
         - "SELECT"
         - "CURRENCY"
+        - "BOOLEAN"
     Activity:
       type: object
       required:
@@ -4568,6 +4569,9 @@ components:
             currencyValue:
               type: string
               description: Custom Field Currency Value
+            booleanValue:
+              type: boolean
+              description: Custom Field Boolean Value
     UpsertCustomFieldValueCommand:
       type: object
       required:
@@ -4592,6 +4596,9 @@ components:
         currencyValue:
           type: string
           description: Custom Field Currency Value
+        booleanValue:
+          type: boolean
+          description: Custom Field Boolean Value
 
     InternalErrorResponse:
       type: object

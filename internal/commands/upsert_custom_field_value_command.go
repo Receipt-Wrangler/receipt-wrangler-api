@@ -1,15 +1,12 @@
-package models
+package commands
 
 import (
 	"github.com/shopspring/decimal"
 	"time"
 )
 
-type CustomFieldValue struct {
-	BaseModel
-	Receipt       Receipt          `json:"-"`
+type UpsertCustomFieldValueCommand struct {
 	ReceiptId     uint             `json:"receiptId"`
-	CustomField   CustomField      `json:"-"`
 	CustomFieldId uint             `json:"customFieldId"`
 	StringValue   *string          `json:"stringValue"`
 	DateValue     *time.Time       `json:"dateValue"`

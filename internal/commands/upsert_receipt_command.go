@@ -12,17 +12,18 @@ import (
 )
 
 type UpsertReceiptCommand struct {
-	Name            string                  `json:"name"`
-	Amount          decimal.Decimal         `json:"amount"`
-	Date            time.Time               `json:"date"`
-	GroupId         uint                    `json:"groupId"`
-	PaidByUserID    uint                    `json:"paidByUserId"`
-	Status          models.ReceiptStatus    `json:"status"`
-	Categories      []UpsertCategoryCommand `json:"categories"`
-	Tags            []UpsertTagCommand      `json:"tags"`
-	Items           []UpsertItemCommand     `json:"receiptItems"`
-	Comments        []UpsertCommentCommand  `json:"comments"`
-	CreatedByString string                  `json:"createdByString"`
+	Name            string                          `json:"name"`
+	Amount          decimal.Decimal                 `json:"amount"`
+	Date            time.Time                       `json:"date"`
+	GroupId         uint                            `json:"groupId"`
+	PaidByUserID    uint                            `json:"paidByUserId"`
+	Status          models.ReceiptStatus            `json:"status"`
+	Categories      []UpsertCategoryCommand         `json:"categories"`
+	Tags            []UpsertTagCommand              `json:"tags"`
+	Items           []UpsertItemCommand             `json:"receiptItems"`
+	Comments        []UpsertCommentCommand          `json:"comments"`
+	CustomFields    []UpsertCustomFieldValueCommand `json:"customFields"`
+	CreatedByString string                          `json:"createdByString"`
 }
 
 func (receipt *UpsertReceiptCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

@@ -2996,6 +2996,11 @@ components:
         - name
         - paidByUserId
         - status
+        - customFields
+        - categories
+        - tags
+        - receiptItems
+        - comments
         - id
       type: object
       properties:
@@ -3012,6 +3017,11 @@ components:
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/Comment"
+        customFields:
+          type: array
+          description: Custom fields associated to receipt
+          items:
+            $ref: "#/components/schemas/CustomFieldValue"
         createdAt:
           type: string
         createdBy:
@@ -4046,6 +4056,11 @@ components:
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/UpsertCommentCommand"
+        customFields:
+          type: array
+          description: Custom fields associated to receipt
+          items:
+            $ref: "#/components/schemas/UpsertCustomFieldCommand"
     UpsertItemCommand:
       type: object
       required:
@@ -4541,9 +4556,42 @@ components:
             customFieldId:
               type: integer
               description: Custom Field ID
-            value:
+            stringValue:
               type: string
-              description: Custom Field Value
+              description: Custom Field String Value
+            dateValue:
+              type: string
+              description: Custom Field Date Value
+            selectValue:
+              type: integer
+              description: Custom Field Select Value
+            currencyValue:
+              type: string
+              description: Custom Field Currency Value
+    UpsertCustomFieldValueCommand:
+      type: object
+      required:
+        - receiptId
+        - customFieldId
+      properties:
+        receiptId:
+          type: integer
+          description: Receipt Id
+        customFieldId:
+          type: integer
+          description: Custom Field ID
+        stringValue:
+          type: string
+          description: Custom Field String Value
+        dateValue:
+          type: string
+          description: Custom Field Date Value
+        selectValue:
+          type: integer
+          description: Custom Field Select Value
+        currencyValue:
+          type: string
+          description: Custom Field Currency Value
 
     InternalErrorResponse:
       type: object

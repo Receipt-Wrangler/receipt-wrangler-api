@@ -101,6 +101,11 @@ func (repository CustomFieldRepository) DeleteCustomField(id uint) error {
 			return err
 		}
 
+		err = tx.Delete(&models.CustomFieldValue{}, "custom_field_id = ?", id).Error
+		if err != nil {
+			return err
+		}
+
 		err = tx.Delete(&models.CustomField{}, id).Error
 		if err != nil {
 			return err

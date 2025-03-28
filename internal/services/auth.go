@@ -128,12 +128,18 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 		return "", "", structs.Claims{}, err
 	}
 
+	refreshTokenId, err := utils.GetRandomString(16)
+	if err != nil {
+		return "", "", structs.Claims{}, err
+	}
+
 	refreshTokenClaims := structs.Claims{
 		UserId: user.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
 			ExpiresAt: utils.GetRefreshTokenExpiryDate(),
+			ID:        refreshTokenId,
 		},
 	}
 

@@ -18,7 +18,7 @@ func MoveJWTCookieToHeader(next http.Handler) http.Handler {
 
 		accessTokenCookie, err := r.Cookie(constants.JwtKey)
 		if err != nil {
-			utils.WriteCustomErrorResponse(w, errMessage, http.StatusBadRequest)
+			utils.WriteCustomErrorResponse(w, errMessage, http.StatusForbidden)
 			logging.LogStd(logging.LOG_LEVEL_ERROR, errMessage)
 			return
 		}

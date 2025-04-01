@@ -155,6 +155,11 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 			return txErr
 		}
 
+		txErr = tx.Model(&currentReceipt).Association("CustomFields").Replace(&updatedReceipt.CustomFields)
+		if txErr != nil {
+			return txErr
+		}
+
 		for _, item := range updatedReceipt.ReceiptItems {
 			txErr = tx.Model(&item).Association("Categories").Replace(&item.Categories)
 			if txErr != nil {

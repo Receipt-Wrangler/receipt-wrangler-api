@@ -309,6 +309,102 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /customField/:
+    post:
+      tags:
+        - CustomField
+      summary: Create custom field
+      description: This will create a custom field
+      operationId: createCustomField
+      requestBody:
+        description: Custom field to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertCustomFieldCommand"
+      responses:
+        200:
+          description: Created custom field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomField"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+  /customField/{customFieldId}:
+    parameters:
+      - in: path
+        name: customFieldId
+        schema:
+          type: integer
+        required: true
+        description: Custom field Id to get
+    get:
+      tags:
+        - CustomField
+      summary: Get custom field
+      description: This will get a custom field by id
+      operationId: getCustomFieldById
+      responses:
+        200:
+          description: The custom field
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomField"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+    delete:
+      tags:
+        - CustomField
+      summary: Delete custom field
+      description: This will delete a custom field by id
+      operationId: deleteCustomField
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+  /customField/getPagedCustomFields:
+    post:
+      tags:
+        - CustomField
+      summary: Get paged custom fields
+      description: This will return paged custom fields
+      operationId: getPagedCustomFields
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
+      responses:
+        200:
+          description: Paged categories
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /export/{groupId}:
     post:
       tags:
@@ -2477,6 +2573,14 @@ components:
       type: string
       enum:
         - "CSV"
+    CustomFieldType:
+      type: string
+      enum:
+        - "TEXT"
+        - "DATE"
+        - "SELECT"
+        - "CURRENCY"
+        - "BOOLEAN"
     Activity:
       type: object
       required:
@@ -2893,6 +2997,11 @@ components:
         - name
         - paidByUserId
         - status
+        - customFields
+        - categories
+        - tags
+        - receiptItems
+        - comments
         - id
       type: object
       properties:
@@ -2909,6 +3018,11 @@ components:
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/Comment"
+        customFields:
+          type: array
+          description: Custom fields associated to receipt
+          items:
+            $ref: "#/components/schemas/CustomFieldValue"
         createdAt:
           type: string
         createdBy:
@@ -3377,6 +3491,7 @@ components:
               - $ref: "#/components/schemas/ReceiptProcessingSettings"
               - $ref: "#/components/schemas/SystemEmail"
               - $ref: "#/components/schemas/Activity"
+              - $ref: "#/components/schemas/CustomField"
         totalCount:
           type: integer
     FeatureConfig:
@@ -3942,6 +4057,11 @@ components:
           description: Comments associated to receipt
           items:
             $ref: "#/components/schemas/UpsertCommentCommand"
+        customFields:
+          type: array
+          description: Custom fields associated to receipt
+          items:
+            $ref: "#/components/schemas/UpsertCustomFieldCommand"
     UpsertItemCommand:
       type: object
       required:
@@ -4361,6 +4481,124 @@ components:
         version:
           type: string
           description: Version
+    CustomFieldOption:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - customFieldId
+          properties:
+            value:
+              type: string
+              description: Custom Field Option value
+            customFieldId:
+              type: integer
+              description: Custom Field Id
+    UpsertCustomFieldOptionCommand:
+      type: object
+      required:
+        - customFieldId
+      properties:
+        value:
+          type: string
+          description: Custom Field Option value
+        customFieldId:
+          type: integer
+          description: Custom Field Id
+    CustomField:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - name
+            - type
+          properties:
+            name:
+              type: string
+              description: Custom Field name
+            type:
+              $ref: "#/components/schemas/CustomFieldType"
+            description:
+              type: string
+              description: Custom Field description
+            options:
+              type: array
+              items:
+                $ref: "#/components/schemas/CustomFieldOption"
+    UpsertCustomFieldCommand:
+        type: object
+        required:
+          - name
+          - type
+        properties:
+          name:
+            type: string
+            description: Custom Field name
+          type:
+            $ref: "#/components/schemas/CustomFieldType"
+          description:
+            type: string
+            description: Custom Field description
+          options:
+            type: array
+            items:
+              $ref: "#/components/schemas/UpsertCustomFieldOptionCommand"
+    CustomFieldValue:
+      allOf:
+        - $ref: "#/components/schemas/BaseModel"
+        - type: object
+          required:
+            - receiptId
+            - customFieldId
+          properties:
+            receiptId:
+              type: integer
+              description: Receipt Id
+            customFieldId:
+              type: integer
+              description: Custom Field ID
+            stringValue:
+              type: string
+              description: Custom Field String Value
+            dateValue:
+              type: string
+              description: Custom Field Date Value
+            selectValue:
+              type: integer
+              description: Custom Field Select Value
+            currencyValue:
+              type: string
+              description: Custom Field Currency Value
+            booleanValue:
+              type: boolean
+              description: Custom Field Boolean Value
+    UpsertCustomFieldValueCommand:
+      type: object
+      required:
+        - receiptId
+        - customFieldId
+      properties:
+        receiptId:
+          type: integer
+          description: Receipt Id
+        customFieldId:
+          type: integer
+          description: Custom Field ID
+        stringValue:
+          type: string
+          description: Custom Field String Value
+        dateValue:
+          type: string
+          description: Custom Field Date Value
+        selectValue:
+          type: integer
+          description: Custom Field Select Value
+        currencyValue:
+          type: string
+          description: Custom Field Currency Value
+        booleanValue:
+          type: boolean
+          description: Custom Field Boolean Value
 
     InternalErrorResponse:
       type: object

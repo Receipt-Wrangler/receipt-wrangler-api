@@ -86,6 +86,9 @@ func MakeMigrations() error {
 	err := db.AutoMigrate(
 		&models.RefreshToken{},
 		&models.User{},
+		&models.CustomField{},
+		&models.CustomFieldValue{},
+		&models.CustomFieldOption{},
 		&models.Receipt{},
 		&models.Item{},
 		&models.FileData{},

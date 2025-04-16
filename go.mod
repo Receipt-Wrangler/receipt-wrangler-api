@@ -17,7 +17,7 @@ require (
 	github.com/sashabaranov/go-openai v1.38.1
 	github.com/shopspring/decimal v1.4.0
 	golang.org/x/crypto v0.36.0
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	google.golang.org/api v0.227.0
 	gopkg.in/gographics/imagick.v3 v3.7.2
 	gorm.io/driver/mysql v1.5.7

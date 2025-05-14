@@ -63,10 +63,11 @@ func (repository SystemEmailRepository) AddSystemEmail(command commands.UpsertSy
 	}
 
 	systemEmail := models.SystemEmail{
-		Host:     command.Host,
-		Port:     command.Port,
-		Username: command.Username,
-		Password: utils.EncodeToBase64(rawEncryptedPassword),
+		Host:        command.Host,
+		Port:        command.Port,
+		Username:    command.Username,
+		Password:    utils.EncodeToBase64(rawEncryptedPassword),
+		UseStartTls: command.UseStartTls,
 	}
 
 	err = db.Create(&systemEmail).Error
@@ -81,9 +82,10 @@ func (repository SystemEmailRepository) UpdateSystemEmail(id string, command com
 	db := repository.GetDB()
 
 	systemEmailToUpdate := models.SystemEmail{
-		Host:     command.Host,
-		Port:     command.Port,
-		Username: command.Username,
+		Host:        command.Host,
+		Port:        command.Port,
+		Username:    command.Username,
+		UseStartTls: command.UseStartTls,
 	}
 
 	currentSystemEmail, err := repository.GetSystemEmailById(id)

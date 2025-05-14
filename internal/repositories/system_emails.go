@@ -81,19 +81,20 @@ func (repository SystemEmailRepository) AddSystemEmail(command commands.UpsertSy
 func (repository SystemEmailRepository) UpdateSystemEmail(id string, command commands.UpsertSystemEmailCommand, updatePassword bool) (models.SystemEmail, error) {
 	db := repository.GetDB()
 
+	idUint, err := utils.StringToUint(id)
+	if err != nil {
+		return models.SystemEmail{}, err
+	}
+
 	systemEmailToUpdate := models.SystemEmail{
 		Host:        command.Host,
 		Port:        command.Port,
 		Username:    command.Username,
 		UseStartTLS: command.UseStartTLS,
 	}
+	systemEmailToUpdate.ID = idUint
 
-	currentSystemEmail, err := repository.GetSystemEmailById(id)
-	if err != nil {
-		return models.SystemEmail{}, err
-	}
-
-	action := db.Model(&currentSystemEmail)
+	action := db.Select("*").Omit("id").Model(&systemEmailToUpdate).Where("id = ?", id)
 
 	if updatePassword {
 		encodedPassword, err := utils.EncryptAndEncodeToBase64(config.GetEncryptionKey(), command.Password)

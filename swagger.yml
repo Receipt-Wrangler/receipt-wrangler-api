@@ -4127,7 +4127,7 @@ components:
             password:
               type: string
               description: IMAP password
-            useStartTls:
+            useStartTLS:
               type: boolean
               description: Whether to use STARTTLS
     UpsertSystemEmailCommand:
@@ -4150,7 +4150,7 @@ components:
         password:
           type: string
           description: IMAP password
-        useStartTls:
+        useStartTLS:
           type: boolean
           description: Whether to use STARTTLS
     TaskQueueConfiguration:

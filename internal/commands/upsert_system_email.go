@@ -12,7 +12,7 @@ type UpsertSystemEmailCommand struct {
 	Port        string `json:"port"`
 	Username    string `json:"username"`
 	Password    string `json:"password"`
-	UseStartTls bool   `json:"useStartTls"`
+	UseStartTLS bool   `json:"useStartTLS"`
 }
 
 func (command *UpsertSystemEmailCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

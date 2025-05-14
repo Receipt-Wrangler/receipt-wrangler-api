@@ -67,7 +67,7 @@ func (repository SystemEmailRepository) AddSystemEmail(command commands.UpsertSy
 		Port:        command.Port,
 		Username:    command.Username,
 		Password:    utils.EncodeToBase64(rawEncryptedPassword),
-		UseStartTls: command.UseStartTls,
+		UseStartTLS: command.UseStartTLS,
 	}
 
 	err = db.Create(&systemEmail).Error
@@ -85,7 +85,7 @@ func (repository SystemEmailRepository) UpdateSystemEmail(id string, command com
 		Host:        command.Host,
 		Port:        command.Port,
 		Username:    command.Username,
-		UseStartTls: command.UseStartTls,
+		UseStartTLS: command.UseStartTLS,
 	}
 
 	currentSystemEmail, err := repository.GetSystemEmailById(id)

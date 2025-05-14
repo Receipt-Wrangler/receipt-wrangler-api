@@ -6,7 +6,7 @@ type SystemEmail struct {
 	Port        string `gorm:"not null;" json:"port"`
 	Username    string `gorm:"not null;" json:"username"`
 	Password    string `gorm:"not null;" json:"-"`
-	UseStartTls bool   `gorm:"not null; default: false;" json:"useStartTls"`
+	UseStartTLS bool   `gorm:"not null; default: false;" json:"useStartTLS"`
 }
 
 type SystemEmailWithPassword struct {

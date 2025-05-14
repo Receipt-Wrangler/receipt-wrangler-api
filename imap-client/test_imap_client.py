@@ -8,7 +8,7 @@ from imap_client import ImapClient
 class TestShouldSetUpClientCorrectly(unittest.TestCase):
 
     def test_constructor(self):
-        client = ImapClient("host", "port", "username", "password", [], [])
+        client = ImapClient("host", "port", "username", "password", False, [], [])
         self.assertEqual(client.host, "host")
         self.assertEqual(client.port, "port")
         self.assertEqual(client.username, "username")
@@ -17,13 +17,13 @@ class TestShouldSetUpClientCorrectly(unittest.TestCase):
     @patch('imap_client.IMAPClient')
     def test_catch_error_with_bad_connect(self, mock_imapclient):
         mock_imapclient.side_effect = Exception('Failed to connect')
-        client = ImapClient("host", 993, "username", "password", [], [])
+        client = ImapClient("host", 993, "username", "password", False, [], [])
         with self.assertRaises(Exception) as context:
             client.connect()
         self.assertTrue('Failed to connect' in str(context.exception))
 
     def setUp(self):
-        self.client = ImapClient('host', 'port', 'username', 'password', [], [])
+        self.client = ImapClient('host', 'port', 'username', 'password', False, [], [])
 
     def test_get_formatted_to_or_from_data(self):
         message = Message()

@@ -21,7 +21,8 @@ class TestClient(unittest.TestCase):
                     "host": "imap.gmail.com",
                     "port": 993,
                     "username": "test@gmail.com",
-                    "password": "password"
+                    "password": "password",
+                    "useStartTLS": False
                 },
                 "subjectLineRegexes": [{"regex": ".*test.*"}],
                 "emailWhiteList": [{"email": "test@example.com"}],
@@ -53,6 +54,7 @@ class TestClient(unittest.TestCase):
             993,
             "test@gmail.com",
             "password",
+            False,
             [{"regex": ".*test.*"}],
             [{"email": "test@example.com"}]
         )
@@ -94,7 +96,8 @@ class TestClient(unittest.TestCase):
                     "host": "imap.gmail.com",
                     "port": 993,
                     "username": "test@gmail.com",
-                    "password": "password"
+                    "password": "password",
+                    "useStartTLS": False
                 },
                 "subjectLineRegexes": [{"regex": ".*test.*"}],
                 "emailWhiteList": [{"email": "test@example.com"}],
@@ -126,6 +129,7 @@ class TestClient(unittest.TestCase):
             993,
             "test@gmail.com",
             "password",
+            False,
             [{"regex": ".*test.*"}],
             [{"email": "test@example.com"}]
         )

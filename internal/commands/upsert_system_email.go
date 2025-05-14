@@ -8,10 +8,11 @@ import (
 )
 
 type UpsertSystemEmailCommand struct {
-	Host     string `json:"host"`
-	Port     string `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Host        string `json:"host"`
+	Port        string `json:"port"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	UseStartTLS bool   `json:"useStartTLS"`
 }
 
 func (command *UpsertSystemEmailCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

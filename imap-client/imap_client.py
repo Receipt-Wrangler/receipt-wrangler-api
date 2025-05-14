@@ -21,16 +21,22 @@ class ImapClient:
     email_whitelist = None
     client = None
 
-    def __init__(self, host, port, username, password, subject_line_regexes, email_whitelist):
+    def __init__(self, host, port, username, password, use_starttls, subject_line_regexes, email_whitelist):
         self.host = host
         self.port = port
         self.username = username
         self.password = password
+        self.use_starttls = use_starttls
         self.subject_line_regexes = subject_line_regexes or []
         self.email_whitelist = email_whitelist or []
 
     def connect(self):
-        self.client = IMAPClient(self.host, self.port)
+        if self.use_starttls:
+            self.client = IMAPClient(self.host, self.port, ssl=False)
+            self.client.starttls()
+        else:
+            self.client = IMAPClient(self.host, self.port)
+
         self.client.login(self.username, self.password)
 
     def get_unread_email_metadata(self):

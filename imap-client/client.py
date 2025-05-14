@@ -42,6 +42,7 @@ def main():
                 system_email["port"],
                 system_email["username"],
                 system_email["password"],
+                system_email["useStartTLS"],
                 all_subject_line_regexes,
                 all_email_whitelist
             )

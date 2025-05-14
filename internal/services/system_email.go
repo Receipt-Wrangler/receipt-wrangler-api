@@ -52,6 +52,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 		command.Host = systemEmail.Host
 		command.Port = systemEmail.Port
 		command.Username = systemEmail.Username
+		command.UseStartTLS = systemEmail.UseStartTLS
 
 		cleartextPassword, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), systemEmail.Password)
 		if err != nil {

@@ -50,10 +50,14 @@ func Login(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			if utils.IsMobileApp(r) {
+			tokensInBodyOnly := r.URL.Query().Get("tokensInBody") == "true"
+
+			if utils.IsMobileApp(r) || tokensInBodyOnly {
 				appData.Jwt = jwt
 				appData.RefreshToken = refreshToken
-			} else {
+			}
+
+			if !tokensInBodyOnly {
 				accessTokenCookie, refreshTokenCookie := services.BuildTokenCookies(jwt, refreshToken)
 
 				http.SetCookie(w, &accessTokenCookie)
@@ -62,7 +66,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 			appData.Claims = accessTokenClaims
 
-			// TODO: update frontend to use appData
 			bytes, err := utils.MarshalResponseData(appData)
 			if err != nil {
 				return http.StatusInternalServerError, err

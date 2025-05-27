@@ -742,6 +742,14 @@ paths:
         - Auth
       summary: Login
       description: This will log a user into the system
+      parameters:
+        - name: tokensInBody
+          in: query
+          description: When true, tokens are returned in the response body only without setting cookies
+          required: false
+          schema:
+            type: boolean
+            default: false
       requestBody:
         description: Login data
         required: true

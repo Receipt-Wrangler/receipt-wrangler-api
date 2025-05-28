@@ -457,3 +457,39 @@ func GetAppData(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func BulkDeleteUsers(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error bulk deleting users",
+		Writer:       w,
+		Request:      r,
+		UserRole:     models.ADMIN,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			command := commands.BulkUserDeleteCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			token := structs.GetJWT(r)
+			currentUserId := utils.UintToString(token.UserId)
+			
+			// Check if the current user is trying to delete themselves
+			for _, userId := range command.UserIds {
+				if userId == currentUserId {
+					return http.StatusBadRequest, errors.New("user cannot delete itself")
+				}
+			}
+
+			err = services.BulkDeleteUsers(command.UserIds)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

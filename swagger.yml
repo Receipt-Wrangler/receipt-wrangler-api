@@ -1735,6 +1735,31 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /user/bulk:
+    delete:
+      tags:
+        - User
+      summary: Bulk delete users
+      description: This will delete multiple users by their IDs [SYSTEM ADMIN]
+      requestBody:
+        description: User IDs to delete
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUserDeleteCommand"
+      operationId: bulkDeleteUsers
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
   /userPreferences:
     get:
       tags:
@@ -3368,6 +3393,16 @@ components:
           items:
             type: integer
           description: Receipt ids to update
+    BulkUserDeleteCommand:
+      required:
+        - userIds
+      type: object
+      properties:
+        userIds:
+          type: array
+          items:
+            type: string
+          description: User IDs to delete
     PagedRequestCommand:
       required:
         - page

@@ -19,6 +19,7 @@ func BuildUserRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
 	userRouter.With(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT, middleware.SetResetPasswordData).Post("/{id}/resetPassword", handlers.ResetPassword)
 	userRouter.With(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT, middleware.SetResetPasswordData).Post("/{id}/convertDummyUserToNormalUser", handlers.ConvertDummyUserToNormalUser)
 	userRouter.With(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT).Delete("/{id}", handlers.DeleteUser)
+	userRouter.With(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT).Delete("/bulk", handlers.BulkDeleteUsers)
 	userRouter.With(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT).Get("/amountOwedForUser", handlers.GetAmountOwedForUser)
 	userRouter.With(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT).Get("/getUserClaims", handlers.GetClaimsForLoggedInUser)
 	userRouter.With(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT).Get("/appData", handlers.GetAppData)

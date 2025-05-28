@@ -106,3 +106,13 @@ func DeleteUser(userId string) error {
 
 	return nil
 }
+
+func BulkDeleteUsers(userIds []string) error {
+	for _, userId := range userIds {
+		err := DeleteUser(userId)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

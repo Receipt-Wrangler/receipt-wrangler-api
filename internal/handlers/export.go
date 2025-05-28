@@ -110,5 +110,6 @@ func getExportReceiptAssociations() []string {
 		"ReceiptItems.Categories",
 		"ReceiptItems.Tags",
 		"ReceiptItems.ChargedToUser",
+		"ReceiptItems.Receipt",
 	}
 }

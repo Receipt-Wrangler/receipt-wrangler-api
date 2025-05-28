@@ -81,6 +81,8 @@ func (service *ReceiptCsvService) BuildItemCsv(items []models.Item) ([]byte, err
 	headers := []string{
 		"Id",
 		"Receipt Id",
+		"Receipt Name",
+		"Receipt Date",
 		"Name",
 		"Charged to User",
 		"Amount",
@@ -89,11 +91,14 @@ func (service *ReceiptCsvService) BuildItemCsv(items []models.Item) ([]byte, err
 		"Tags",
 	}
 	rowData := make([][]string, 0, len(items))
+	dateFormat := "2006-01-02"
 
 	for _, item := range items {
 		newRow := []string{
 			utils.UintToString(item.ID),
 			utils.UintToString(item.ReceiptId),
+			item.Receipt.Name,
+			item.Receipt.Date.Format(dateFormat),
 			item.Name,
 			item.ChargedToUser.DisplayName,
 			item.Amount.String(),

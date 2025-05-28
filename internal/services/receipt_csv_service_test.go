@@ -49,3 +49,64 @@ func TestShouldBuildReceiptCsv(t *testing.T) {
 		utils.PrintTestError(t, string(bytes), expected)
 	}
 }
+
+func TestShouldBuildItemCsv(t *testing.T) {
+	expected :=
+		"Id,Receipt Id,Receipt Name,Receipt Date,Name,Charged to User,Amount,Status,Categories,Tags\n" +
+			"1,2,Test Receipt,2025-01-01,Test Item,John,25.5,OPEN,\"Groceries,Food\",\"Essential,Bill\"\n" +
+			"2,3,Another Receipt,2025-01-02,Another Item,Jane,15.75,RESOLVED,Electronics,Gadget\n"
+
+	date1 := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	date2 := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+	
+	service := NewReceiptCsvService()
+	items := []models.Item{
+		{
+			BaseModel: models.BaseModel{ID: 1},
+			ReceiptId: 2,
+			Receipt: models.Receipt{
+				Name: "Test Receipt",
+				Date: date1,
+			},
+			Name:            "Test Item",
+			ChargedToUser:   models.User{DisplayName: "John"},
+			Amount:          decimal.NewFromFloat(25.50),
+			Status:          models.ITEM_OPEN,
+			Categories: []models.Category{
+				{Name: "Groceries"},
+				{Name: "Food"},
+			},
+			Tags: []models.Tag{
+				{Name: "Essential"},
+				{Name: "Bill"},
+			},
+		},
+		{
+			BaseModel: models.BaseModel{ID: 2},
+			ReceiptId: 3,
+			Receipt: models.Receipt{
+				Name: "Another Receipt",
+				Date: date2,
+			},
+			Name:            "Another Item",
+			ChargedToUser:   models.User{DisplayName: "Jane"},
+			Amount:          decimal.NewFromFloat(15.75),
+			Status:          models.ITEM_RESOLVED,
+			Categories: []models.Category{
+				{Name: "Electronics"},
+			},
+			Tags: []models.Tag{
+				{Name: "Gadget"},
+			},
+		},
+	}
+
+	result, err := service.BuildItemCsv(items)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+	}
+
+	if string(result) != expected {
+		utils.PrintTestError(t, string(result), expected)
+	}
+}

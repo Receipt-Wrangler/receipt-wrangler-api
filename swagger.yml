@@ -4104,7 +4104,7 @@ components:
           type: array
           description: Custom fields associated to receipt
           items:
-            $ref: "#/components/schemas/UpsertCustomFieldCommand"
+            $ref: "#/components/schemas/UpsertCustomFieldValueCommand"
     UpsertItemCommand:
       type: object
       required:

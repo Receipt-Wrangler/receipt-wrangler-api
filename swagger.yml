@@ -4575,23 +4575,23 @@ components:
               items:
                 $ref: "#/components/schemas/CustomFieldOption"
     UpsertCustomFieldCommand:
-        type: object
-        required:
-          - name
-          - type
-        properties:
-          name:
-            type: string
-            description: Custom Field name
-          type:
-            $ref: "#/components/schemas/CustomFieldType"
-          description:
-            type: string
-            description: Custom Field description
-          options:
-            type: array
-            items:
-              $ref: "#/components/schemas/UpsertCustomFieldOptionCommand"
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          description: Custom Field name
+        type:
+          $ref: "#/components/schemas/CustomFieldType"
+        description:
+          type: string
+          description: Custom Field description
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpsertCustomFieldOptionCommand"
     CustomFieldValue:
       allOf:
         - $ref: "#/components/schemas/BaseModel"

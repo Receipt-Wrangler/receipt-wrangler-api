@@ -160,13 +160,13 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 			return txErr
 		}
 
-		for _, item := range updatedReceipt.ReceiptShares {
-			txErr = tx.Model(&item).Association("Categories").Replace(&item.Categories)
+		for _, share := range updatedReceipt.ReceiptShares {
+			txErr = tx.Model(&share).Association("Categories").Replace(&share.Categories)
 			if txErr != nil {
 				return txErr
 			}
 
-			txErr = tx.Model(&item).Association("Tags").Replace(&item.Tags)
+			txErr = tx.Model(&share).Association("Tags").Replace(&share.Tags)
 			if txErr != nil {
 				return txErr
 			}
@@ -222,12 +222,12 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.Receipt) error {
 	db := repository.GetDB()
 
-	err := db.Table("item_categories").Where("item_id IN (?)",
-		db.Table("items").Select("id").Where("receipt_id IS NULL"),
+	err := db.Table("share_categories").Where("share_id IN (?)",
+		db.Table("shares").Select("id").Where("receipt_id IS NULL"),
 	).Delete(&struct{}{}).Error
 
-	err = db.Table("item_tags").Where("item_id IN (?)",
-		db.Table("items").Select("id").Where("receipt_id IS NULL"),
+	err = db.Table("share_tags").Where("share_id IN (?)",
+		db.Table("shares").Select("id").Where("receipt_id IS NULL"),
 	).Delete(&struct{}{}).Error
 
 	err = db.Where("receipt_id IS NULL").Delete(&models.Share{}).Debug().Error

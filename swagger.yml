@@ -2972,7 +2972,7 @@ components:
             $ref: "#/components/schemas/Tag"
         updatedAt:
           type: string
-      description: Itemized share on a receipt
+      description: Share on a receipt
       x-go-package: receipt-wrangler/api/internal/models
     Notification:
       required:

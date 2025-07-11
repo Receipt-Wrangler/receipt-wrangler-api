@@ -12,6 +12,6 @@ type Share struct {
 	Receipt         Receipt         `json:"-"`
 	ReceiptId       uint            `json:"receiptId"`
 	Status          ShareStatus     `gorm:"default:'OPEN'; not null" json:"status"`
-	Categories      []Category      `gorm:"many2many:item_categories" json:"categories"`
-	Tags            []Tag           `gorm:"many2many:item_tags" json:"tags"`
+	Categories      []Category      `gorm:"many2many:share_categories" json:"categories"`
+	Tags            []Tag           `gorm:"many2many:share_tags" json:"tags"`
 }

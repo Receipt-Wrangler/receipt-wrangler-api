@@ -280,8 +280,8 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 				Where("id = ?", id).
 				Preload(clause.Associations).
 				Preload("Comments.Replies").
-				Preload("ReceiptItems.Categories").
-				Preload("ReceiptItems.Tags").
+				Preload("ReceiptShares.Categories").
+				Preload("ReceiptShares.Tags").
 				Find(&receipt).Error
 			if err != nil {
 				return http.StatusInternalServerError, err

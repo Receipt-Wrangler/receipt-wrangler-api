@@ -106,10 +106,10 @@ func ExportReceiptsById(w http.ResponseWriter, r *http.Request) {
 func getExportReceiptAssociations() []string {
 	return []string{
 		"PaidByUser",
-		"ReceiptItems",
-		"ReceiptItems.Categories",
-		"ReceiptItems.Tags",
-		"ReceiptItems.ChargedToUser",
-		"ReceiptItems.Receipt",
+		"ReceiptShares",
+		"ReceiptShares.Categories",
+		"ReceiptShares.Tags",
+		"ReceiptShares.ChargedToUser",
+		"ReceiptShares.Receipt",
 	}
 }

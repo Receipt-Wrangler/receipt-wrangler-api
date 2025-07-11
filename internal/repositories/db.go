@@ -90,7 +90,7 @@ func MakeMigrations() error {
 		&models.CustomFieldValue{},
 		&models.CustomFieldOption{},
 		&models.Receipt{},
-		&models.Item{},
+		&models.Share{},
 		&models.FileData{},
 		&models.Tag{},
 		&models.Category{},

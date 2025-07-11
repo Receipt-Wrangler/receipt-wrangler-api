@@ -150,7 +150,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 			return txErr
 		}
 
-		txErr = tx.Model(&currentReceipt).Association("ReceiptItems").Replace(&updatedReceipt.ReceiptItems)
+		txErr = tx.Model(&currentReceipt).Association("ReceiptShares").Replace(&updatedReceipt.ReceiptShares)
 		if txErr != nil {
 			return txErr
 		}
@@ -160,7 +160,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 			return txErr
 		}
 
-		for _, item := range updatedReceipt.ReceiptItems {
+		for _, item := range updatedReceipt.ReceiptShares {
 			txErr = tx.Model(&item).Association("Categories").Replace(&item.Categories)
 			if txErr != nil {
 				return txErr
@@ -230,7 +230,7 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 		db.Table("items").Select("id").Where("receipt_id IS NULL"),
 	).Delete(&struct{}{}).Error
 
-	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Debug().Error
+	err = db.Where("receipt_id IS NULL").Delete(&models.Share{}).Debug().Error
 	if err != nil {
 		return err
 	}
@@ -246,14 +246,14 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 	}
 
 	if updatedReceipt.Status == models.RESOLVED && updatedReceipt.ID > 0 {
-		err := repository.UpdateItemsToStatus(updatedReceipt, models.ITEM_RESOLVED)
+		err := repository.UpdateItemsToStatus(updatedReceipt, models.SHARE_RESOLVED)
 		if err != nil {
 			return err
 		}
 	}
 
 	if updatedReceipt.Status == models.DRAFT && updatedReceipt.ID > 0 {
-		err := repository.UpdateItemsToStatus(updatedReceipt, models.ITEM_DRAFT)
+		err := repository.UpdateItemsToStatus(updatedReceipt, models.SHARE_DRAFT)
 		if err != nil {
 			return err
 		}
@@ -262,9 +262,9 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 	return nil
 }
 
-func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt, status models.ItemStatus) error {
+func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt, status models.ShareStatus) error {
 	db := repository.GetDB()
-	var items []models.Item
+	var items []models.Share
 	var itemIdsToUpdate []uint
 
 	err := db.Table("items").Where("receipt_id = ?", receipt.ID).Find(&items).Error
@@ -652,8 +652,8 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 	err := db.Model(models.Receipt{}).
 		Where("id = ?", id).
 		Preload(clause.Associations).
-		Preload("ReceiptItems.Categories").
-		Preload("ReceiptItems.Tags").
+		Preload("ReceiptShares.Categories").
+		Preload("ReceiptShares.Tags").
 		Find(&receipt).
 		Error
 	if err != nil {

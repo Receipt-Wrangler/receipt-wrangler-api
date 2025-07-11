@@ -6,18 +6,18 @@ import (
 	"receipt-wrangler/api/internal/structs"
 )
 
-type UpsertItemCommand struct {
+type UpsertShareCommand struct {
 	Amount          decimal.Decimal         `json:"amount"`
 	ChargedToUserId uint                    `json:"chargedToUserId"`
 	IsTaxed         bool                    `json:"isTaxed"`
 	Name            string                  `json:"name"`
 	ReceiptId       uint                    `json:"receiptId"`
-	Status          models.ItemStatus       `json:"status"`
+	Status          models.ShareStatus      `json:"status"`
 	Categories      []UpsertCategoryCommand `json:"categories"`
 	Tags            []UpsertTagCommand      `json:"tags"`
 }
 
-func (item *UpsertItemCommand) Validate(receiptAmount decimal.Decimal, isCreate bool) structs.ValidatorError {
+func (item *UpsertShareCommand) Validate(receiptAmount decimal.Decimal, isCreate bool) structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 

@@ -251,19 +251,19 @@ func TestShouldUpdateItemsToStatus(t *testing.T) {
 	var receipt models.Receipt
 	db.First(&receipt, 1)
 
-	err := repository.UpdateItemsToStatus(&receipt, models.ITEM_RESOLVED)
+	err := repository.UpdateItemsToStatus(&receipt, models.SHARE_RESOLVED)
 	if err != nil {
 		utils.PrintTestError(t, err, nil)
 		return
 	}
 
 	// Verify items have been updated
-	var items []models.Item
+	var items []models.Share
 	db.Where("receipt_id = ?", receipt.ID).Find(&items)
 
 	for _, item := range items {
-		if item.Status != models.ITEM_RESOLVED {
-			utils.PrintTestError(t, item.Status, models.ITEM_RESOLVED)
+		if item.Status != models.SHARE_RESOLVED {
+			utils.PrintTestError(t, item.Status, models.SHARE_RESOLVED)
 		}
 	}
 }
@@ -335,21 +335,21 @@ func createTestItems() {
 	db := GetDB()
 
 	// Create items for receipt 1
-	item1 := models.Item{
-		Name:            "Item 1",
+	item1 := models.Share{
+		Name:            "Share 1",
 		Amount:          decimal.NewFromFloat(50.00),
 		ReceiptId:       1,
 		ChargedToUserId: 2,
-		Status:          models.ITEM_OPEN,
+		Status:          models.SHARE_OPEN,
 	}
 	db.Create(&item1)
 
-	item2 := models.Item{
-		Name:            "Item 2",
+	item2 := models.Share{
+		Name:            "Share 2",
 		Amount:          decimal.NewFromFloat(50.00),
 		ReceiptId:       1,
 		ChargedToUserId: 3,
-		Status:          models.ITEM_OPEN,
+		Status:          models.SHARE_OPEN,
 	}
 	db.Create(&item2)
 }

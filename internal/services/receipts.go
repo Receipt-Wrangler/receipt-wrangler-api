@@ -64,7 +64,7 @@ func (service ReceiptService) DeleteReceipt(id string) error {
 			imagesToDelete = append(imagesToDelete, path)
 		}
 
-		for _, r := range receipt.ReceiptItems {
+		for _, r := range receipt.ReceiptShares {
 			err = tx.Model(&r).Association("Categories").Clear()
 			if err != nil {
 				return err
@@ -247,7 +247,7 @@ func (service ReceiptService) DuplicateReceipt(
 	newReceipt.ID = 0
 	newReceipt.Name = newReceipt.Name + " duplicate"
 	newReceipt.ImageFiles = make([]models.FileData, 0)
-	newReceipt.ReceiptItems = make([]models.Item, 0)
+	newReceipt.ReceiptShares = make([]models.Share, 0)
 	newReceipt.Comments = make([]models.Comment, 0)
 	newReceipt.CreatedAt = time.Now()
 	newReceipt.UpdatedAt = time.Now()
@@ -265,14 +265,14 @@ func (service ReceiptService) DuplicateReceipt(
 	}
 
 	// Copy items
-	for _, item := range receipt.ReceiptItems {
-		var newItem models.Item
+	for _, item := range receipt.ReceiptShares {
+		var newItem models.Share
 		copier.Copy(&newItem, item)
 
 		newItem.ID = 0
 		newItem.ReceiptId = 0
 		newItem.Receipt = models.Receipt{}
-		newReceipt.ReceiptItems = append(newReceipt.ReceiptItems, newItem)
+		newReceipt.ReceiptShares = append(newReceipt.ReceiptShares, newItem)
 	}
 
 	// Copy comments

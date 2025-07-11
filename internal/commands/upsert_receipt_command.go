@@ -20,7 +20,7 @@ type UpsertReceiptCommand struct {
 	Status          models.ReceiptStatus            `json:"status"`
 	Categories      []UpsertCategoryCommand         `json:"categories"`
 	Tags            []UpsertTagCommand              `json:"tags"`
-	Items           []UpsertItemCommand             `json:"receiptItems"`
+	Shares          []UpsertShareCommand            `json:"receiptShares"`
 	Comments        []UpsertCommentCommand          `json:"comments"`
 	CustomFields    []UpsertCustomFieldValueCommand `json:"customFields"`
 	CreatedByString string                          `json:"createdByString"`
@@ -88,8 +88,8 @@ func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint, isCreate bool) s
 		}
 	}
 
-	for i, item := range receipt.Items {
-		basePath := "receiptItems." + fmt.Sprintf("%d", i)
+	for i, item := range receipt.Shares {
+		basePath := "receiptShares." + fmt.Sprintf("%d", i)
 		itemErrors := item.Validate(receipt.Amount, isCreate)
 		for key, value := range itemErrors.Errors {
 			errors[basePath+"."+key] = value

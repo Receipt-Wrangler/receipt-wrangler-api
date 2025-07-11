@@ -2493,7 +2493,7 @@ components:
         - "RESOLVED"
         - "DRAFT"
         - ""
-    ItemStatus:
+    ShareStatus:
       type: string
       enum:
         - "OPEN"
@@ -2923,7 +2923,7 @@ components:
           type: integer
           description: User compound primary key
           format: uint64
-    Item:
+    Share:
       required:
         - amount
         - chargedToUserId
@@ -2952,14 +2952,14 @@ components:
           format: uint64
         name:
           type: string
-          description: Item name
+          description: Share name
         receiptId:
           type: integer
           description: Receipt foreign key
           format: uint64
         status:
           type: string
-          $ref: "#/components/schemas/ItemStatus"
+          $ref: "#/components/schemas/ShareStatus"
         categories:
           type: array
           description: Categories associated to the item
@@ -3033,7 +3033,7 @@ components:
         - customFields
         - categories
         - tags
-        - receiptItems
+        - receiptShares
         - comments
         - id
       type: object
@@ -3083,11 +3083,11 @@ components:
           type: integer
           description: User paid foreign key
           format: uint64
-        receiptItems:
+        receiptShares:
           type: array
           description: Items associated to receipt
           items:
-            $ref: "#/components/schemas/Item"
+            $ref: "#/components/schemas/Share"
         resolvedDate:
           type: string
           description: Date resolved
@@ -4090,11 +4090,11 @@ components:
           description: Tags associated to receipt
           items:
             $ref: "#/components/schemas/UpsertTagCommand"
-        receiptItems:
+        receiptShares:
           type: array
           description: Items associated to receipt
           items:
-            $ref: "#/components/schemas/UpsertItemCommand"
+            $ref: "#/components/schemas/UpsertShareCommand"
         comments:
           type: array
           description: Comments associated to receipt
@@ -4105,7 +4105,7 @@ components:
           description: Custom fields associated to receipt
           items:
             $ref: "#/components/schemas/UpsertCustomFieldValueCommand"
-    UpsertItemCommand:
+    UpsertShareCommand:
       type: object
       required:
         - amount
@@ -4122,12 +4122,12 @@ components:
           description: User foreign key
         name:
           type: string
-          description: Item name
+          description: Share name
         receiptId:
           type: integer
           description: Receipt foreign key
         status:
-          $ref: "#/components/schemas/ItemStatus"
+          $ref: "#/components/schemas/ShareStatus"
         categories:
           type: array
           description: Categories associated to item

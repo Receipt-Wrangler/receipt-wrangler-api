@@ -53,14 +53,14 @@ func TestShouldBuildReceiptCsv(t *testing.T) {
 func TestShouldBuildItemCsv(t *testing.T) {
 	expected :=
 		"Id,Receipt Id,Receipt Name,Receipt Date,Name,Charged to User,Amount,Status,Categories,Tags\n" +
-			"1,2,Test Receipt,2025-01-01,Test Item,John,25.5,OPEN,\"Groceries,Food\",\"Essential,Bill\"\n" +
-			"2,3,Another Receipt,2025-01-02,Another Item,Jane,15.75,RESOLVED,Electronics,Gadget\n"
+			"1,2,Test Receipt,2025-01-01,Test Share,John,25.5,OPEN,\"Groceries,Food\",\"Essential,Bill\"\n" +
+			"2,3,Another Receipt,2025-01-02,Another Share,Jane,15.75,RESOLVED,Electronics,Gadget\n"
 
 	date1 := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	date2 := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
-	
+
 	service := NewReceiptCsvService()
-	items := []models.Item{
+	items := []models.Share{
 		{
 			BaseModel: models.BaseModel{ID: 1},
 			ReceiptId: 2,
@@ -68,10 +68,10 @@ func TestShouldBuildItemCsv(t *testing.T) {
 				Name: "Test Receipt",
 				Date: date1,
 			},
-			Name:            "Test Item",
-			ChargedToUser:   models.User{DisplayName: "John"},
-			Amount:          decimal.NewFromFloat(25.50),
-			Status:          models.ITEM_OPEN,
+			Name:          "Test Share",
+			ChargedToUser: models.User{DisplayName: "John"},
+			Amount:        decimal.NewFromFloat(25.50),
+			Status:        models.SHARE_OPEN,
 			Categories: []models.Category{
 				{Name: "Groceries"},
 				{Name: "Food"},
@@ -88,10 +88,10 @@ func TestShouldBuildItemCsv(t *testing.T) {
 				Name: "Another Receipt",
 				Date: date2,
 			},
-			Name:            "Another Item",
-			ChargedToUser:   models.User{DisplayName: "Jane"},
-			Amount:          decimal.NewFromFloat(15.75),
-			Status:          models.ITEM_RESOLVED,
+			Name:          "Another Share",
+			ChargedToUser: models.User{DisplayName: "Jane"},
+			Amount:        decimal.NewFromFloat(15.75),
+			Status:        models.SHARE_RESOLVED,
 			Categories: []models.Category{
 				{Name: "Electronics"},
 			},

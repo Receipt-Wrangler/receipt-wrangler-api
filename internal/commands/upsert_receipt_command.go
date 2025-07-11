@@ -88,10 +88,10 @@ func (receipt *UpsertReceiptCommand) Validate(tokenUserId uint, isCreate bool) s
 		}
 	}
 
-	for i, item := range receipt.Shares {
+	for i, share := range receipt.Shares {
 		basePath := "receiptShares." + fmt.Sprintf("%d", i)
-		itemErrors := item.Validate(receipt.Amount, isCreate)
-		for key, value := range itemErrors.Errors {
+		shareErrors := share.Validate(receipt.Amount, isCreate)
+		for key, value := range shareErrors.Errors {
 			errors[basePath+"."+key] = value
 		}
 	}

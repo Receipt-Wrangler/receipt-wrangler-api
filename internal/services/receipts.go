@@ -264,15 +264,15 @@ func (service ReceiptService) DuplicateReceipt(
 		newReceipt.ImageFiles = append(newReceipt.ImageFiles, newFileData)
 	}
 
-	// Copy items
-	for _, item := range receipt.ReceiptShares {
-		var newItem models.Share
-		copier.Copy(&newItem, item)
+	// Copy shares
+	for _, share := range receipt.ReceiptShares {
+		var newShare models.Share
+		copier.Copy(&newShare, share)
 
-		newItem.ID = 0
-		newItem.ReceiptId = 0
-		newItem.Receipt = models.Receipt{}
-		newReceipt.ReceiptShares = append(newReceipt.ReceiptShares, newItem)
+		newShare.ID = 0
+		newShare.ReceiptId = 0
+		newShare.Receipt = models.Receipt{}
+		newReceipt.ReceiptShares = append(newReceipt.ReceiptShares, newShare)
 	}
 
 	// Copy comments

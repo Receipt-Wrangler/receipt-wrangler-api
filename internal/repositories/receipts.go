@@ -264,22 +264,22 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 
 func (repository ReceiptRepository) UpdateSharesToStatus(receipt *models.Receipt, status models.ShareStatus) error {
 	db := repository.GetDB()
-	var items []models.Share
-	var itemIdsToUpdate []uint
+	var shares []models.Share
+	var shareIdsToUpdate []uint
 
-	err := db.Table("items").Where("receipt_id = ?", receipt.ID).Find(&items).Error
+	err := db.Table("shares").Where("receipt_id = ?", receipt.ID).Find(&shares).Error
 	if err != nil {
 		return err
 	}
 
-	for _, item := range items {
-		if item.Status != status {
-			itemIdsToUpdate = append(itemIdsToUpdate, item.ID)
+	for _, share := range shares {
+		if share.Status != status {
+			shareIdsToUpdate = append(shareIdsToUpdate, share.ID)
 		}
 	}
 
-	if len(itemIdsToUpdate) > 0 {
-		err := db.Table("items").Where("id IN ?", itemIdsToUpdate).UpdateColumn("status", status).Error
+	if len(shareIdsToUpdate) > 0 {
+		err := db.Table("shares").Where("id IN ?", shareIdsToUpdate).UpdateColumn("status", status).Error
 		if err != nil {
 			return err
 		}

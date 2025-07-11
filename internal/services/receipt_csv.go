@@ -22,7 +22,7 @@ func NewReceiptCsvService() ReceiptCsvService {
 func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) (structs.ReceiptCsvResult, error) {
 	csvResult := structs.ReceiptCsvResult{}
 
-	items := make([]models.Share, 0)
+	shares := make([]models.Share, 0)
 
 	headers := []string{
 		"Id",
@@ -45,8 +45,8 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) (st
 			resolvedDateString = receipt.ResolvedDate.Format(dateFormat)
 		}
 
-		for _, item := range receipt.ReceiptShares {
-			items = append(items, item)
+		for _, share := range receipt.ReceiptShares {
+			shares = append(shares, share)
 		}
 		newRow := []string{
 			utils.UintToString(receipt.ID),
@@ -69,7 +69,7 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) (st
 	}
 	csvResult.ReceiptCsvBytes = buffer.Bytes()
 
-	csvResult.ReceiptShareCsvBytes, err = service.BuildShareCsv(items)
+	csvResult.ReceiptShareCsvBytes, err = service.BuildShareCsv(shares)
 	if err != nil {
 		return structs.ReceiptCsvResult{}, err
 	}

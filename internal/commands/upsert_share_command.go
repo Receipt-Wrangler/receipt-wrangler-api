@@ -17,37 +17,37 @@ type UpsertShareCommand struct {
 	Tags            []UpsertTagCommand      `json:"tags"`
 }
 
-func (item *UpsertShareCommand) Validate(receiptAmount decimal.Decimal, isCreate bool) structs.ValidatorError {
+func (share *UpsertShareCommand) Validate(receiptAmount decimal.Decimal, isCreate bool) structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
-	if item.Amount.IsZero() {
+	if share.Amount.IsZero() {
 		errors["amount"] = "Amount is required"
 	}
 
-	if item.Amount.GreaterThan(receiptAmount) {
+	if share.Amount.GreaterThan(receiptAmount) {
 		errors["amount"] = "Amount cannot be greater than receipt amount"
 	}
 
-	if item.Amount.LessThanOrEqual(decimal.Zero) {
+	if share.Amount.LessThanOrEqual(decimal.Zero) {
 		errors["amount"] = "Amount must be greater than zero"
 	}
 
-	if len(item.Name) == 0 {
+	if len(share.Name) == 0 {
 		errors["name"] = "Name is required"
 	}
 
 	if !isCreate {
-		if item.ReceiptId == 0 {
+		if share.ReceiptId == 0 {
 			errors["receiptId"] = "Receipt Id is required"
 		}
 	}
 
-	if item.ChargedToUserId == 0 {
+	if share.ChargedToUserId == 0 {
 		errors["chargedToUserId"] = "Charged To User Id is required"
 	}
 
-	if len(item.Status) == 0 {
+	if len(share.Status) == 0 {
 		errors["status"] = "Status is required"
 	}
 

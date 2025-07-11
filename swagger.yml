@@ -2937,7 +2937,7 @@ components:
           description: Is taxed (not used)
         amount:
           type: string
-          description: Amount the item costs
+          description: Amount the share costs
         chargedToUserId:
           type: integer
           description: User foreign key
@@ -2962,12 +2962,12 @@ components:
           $ref: "#/components/schemas/ShareStatus"
         categories:
           type: array
-          description: Categories associated to the item
+          description: Categories associated to the share
           items:
             $ref: "#/components/schemas/Category"
         tags:
           type: array
-          description: Tags associated to the item
+          description: Tags associated to the share
           items:
             $ref: "#/components/schemas/Tag"
         updatedAt:
@@ -4116,7 +4116,7 @@ components:
       properties:
         amount:
           type: string
-          description: Amount the item costs
+          description: Amount the share costs
         chargedToUserId:
           type: integer
           description: User foreign key
@@ -4130,12 +4130,12 @@ components:
           $ref: "#/components/schemas/ShareStatus"
         categories:
           type: array
-          description: Categories associated to item
+          description: Categories associated to share
           items:
             $ref: "#/components/schemas/UpsertCategoryCommand"
         tags:
           type: array
-          description: Tags associated to item
+          description: Tags associated to share
           items:
             $ref: "#/components/schemas/UpsertTagCommand"
     UpsertCommentCommand:

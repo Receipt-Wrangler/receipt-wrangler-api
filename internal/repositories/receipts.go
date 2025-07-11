@@ -218,7 +218,7 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 	return fullyLoadedReceipt, nil
 }
 
-// TODO: Delete categories/tags here associated with items before deleting the items mkay
+// TODO: Delete categories/tags here associated with shares before deleting the shares mkay
 func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.Receipt) error {
 	db := repository.GetDB()
 

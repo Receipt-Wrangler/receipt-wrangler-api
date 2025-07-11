@@ -20,7 +20,7 @@ func (self *ShareStatus) Scan(value string) error {
 
 func (self ShareStatus) Value() (driver.Value, error) {
 	if self != SHARE_OPEN && self != SHARE_RESOLVED && self != SHARE_DRAFT {
-		return nil, errors.New("invalid itemStatus")
+		return nil, errors.New("invalid shareStatus")
 	}
 	return string(self), nil
 }

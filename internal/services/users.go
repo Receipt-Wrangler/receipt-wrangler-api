@@ -36,7 +36,7 @@ func DeleteUser(userId string) error {
 			}
 		}
 
-		// Remove receipt items
+		// Remove receipt shares
 		txErr = tx.Where("charged_to_user_id = ?", userId).Delete(&models.Share{}).Error
 		if txErr != nil {
 			return txErr

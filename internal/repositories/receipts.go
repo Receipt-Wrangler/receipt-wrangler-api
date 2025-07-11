@@ -246,14 +246,14 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 	}
 
 	if updatedReceipt.Status == models.RESOLVED && updatedReceipt.ID > 0 {
-		err := repository.UpdateItemsToStatus(updatedReceipt, models.SHARE_RESOLVED)
+		err := repository.UpdateSharesToStatus(updatedReceipt, models.SHARE_RESOLVED)
 		if err != nil {
 			return err
 		}
 	}
 
 	if updatedReceipt.Status == models.DRAFT && updatedReceipt.ID > 0 {
-		err := repository.UpdateItemsToStatus(updatedReceipt, models.SHARE_DRAFT)
+		err := repository.UpdateSharesToStatus(updatedReceipt, models.SHARE_DRAFT)
 		if err != nil {
 			return err
 		}
@@ -262,7 +262,7 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 	return nil
 }
 
-func (repository ReceiptRepository) UpdateItemsToStatus(receipt *models.Receipt, status models.ShareStatus) error {
+func (repository ReceiptRepository) UpdateSharesToStatus(receipt *models.Receipt, status models.ShareStatus) error {
 	db := repository.GetDB()
 	var items []models.Share
 	var itemIdsToUpdate []uint

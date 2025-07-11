@@ -2972,7 +2972,7 @@ components:
             $ref: "#/components/schemas/Tag"
         updatedAt:
           type: string
-      description: Itemized item on a receipt
+      description: Itemized share on a receipt
       x-go-package: receipt-wrangler/api/internal/models
     Notification:
       required:
@@ -3085,7 +3085,7 @@ components:
           format: uint64
         receiptShares:
           type: array
-          description: Items associated to receipt
+          description: Shares associated to receipt
           items:
             $ref: "#/components/schemas/Share"
         resolvedDate:
@@ -3666,12 +3666,12 @@ components:
             hideReceiptTags:
               type: boolean
               description: Hide receipt tags
-            hideItemCategories:
+            hideShareCategories:
               type: boolean
-              description: Hide receipt item categories
-            hideItemTags:
+              description: Hide receipt share categories
+            hideShareTags:
               type: boolean
-              description: Hide receipt item tags
+              description: Hide receipt share tags
             hideComments:
               type: boolean
               description: Hide receipt comments
@@ -3687,12 +3687,12 @@ components:
         hideReceiptTags:
           type: boolean
           description: Hide receipt tags
-        hideItemCategories:
+        hideShareCategories:
           type: boolean
-          description: Hide receipt item categories
-        hideItemTags:
+          description: Hide receipt share categories
+        hideShareTags:
           type: boolean
-          description: Hide receipt item tags
+          description: Hide receipt share tags
         hideComments:
           type: boolean
           description: Hide receipt comments
@@ -4092,7 +4092,7 @@ components:
             $ref: "#/components/schemas/UpsertTagCommand"
         receiptShares:
           type: array
-          description: Items associated to receipt
+          description: Shares associated to receipt
           items:
             $ref: "#/components/schemas/UpsertShareCommand"
         comments:

@@ -69,7 +69,7 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) (st
 	}
 	csvResult.ReceiptCsvBytes = buffer.Bytes()
 
-	csvResult.ReceiptItemCsvBytes, err = service.BuildItemCsv(items)
+	csvResult.ReceiptShareCsvBytes, err = service.BuildShareCsv(items)
 	if err != nil {
 		return structs.ReceiptCsvResult{}, err
 	}
@@ -77,7 +77,7 @@ func (service *ReceiptCsvService) BuildReceiptCsv(receipts []models.Receipt) (st
 	return csvResult, nil
 }
 
-func (service *ReceiptCsvService) BuildItemCsv(items []models.Share) ([]byte, error) {
+func (service *ReceiptCsvService) BuildShareCsv(shares []models.Share) ([]byte, error) {
 	headers := []string{
 		"Id",
 		"Receipt Id",
@@ -90,21 +90,21 @@ func (service *ReceiptCsvService) BuildItemCsv(items []models.Share) ([]byte, er
 		"Categories",
 		"Tags",
 	}
-	rowData := make([][]string, 0, len(items))
+	rowData := make([][]string, 0, len(shares))
 	dateFormat := "2006-01-02"
 
-	for _, item := range items {
+	for _, share := range shares {
 		newRow := []string{
-			utils.UintToString(item.ID),
-			utils.UintToString(item.ReceiptId),
-			item.Receipt.Name,
-			item.Receipt.Date.Format(dateFormat),
-			item.Name,
-			item.ChargedToUser.DisplayName,
-			item.Amount.String(),
-			string(item.Status),
-			service.BuildCategoryString(item.Categories),
-			service.BuildTagString(item.Tags),
+			utils.UintToString(share.ID),
+			utils.UintToString(share.ReceiptId),
+			share.Receipt.Name,
+			share.Receipt.Date.Format(dateFormat),
+			share.Name,
+			share.ChargedToUser.DisplayName,
+			share.Amount.String(),
+			string(share.Status),
+			service.BuildCategoryString(share.Categories),
+			service.BuildTagString(share.Tags),
 		}
 		rowData = append(rowData, newRow)
 	}
@@ -144,8 +144,8 @@ func (service *ReceiptCsvService) GetZippedCsvFiles(receipts []models.Receipt) (
 
 	fileRepository := repositories.NewFileRepository(nil)
 	zip, err := fileRepository.ZipFiles(
-		[]string{"receipts.csv", "items.csv"},
-		[][]byte{csvResult.ReceiptCsvBytes, csvResult.ReceiptItemCsvBytes},
+		[]string{"receipts.csv", "shares.csv"},
+		[][]byte{csvResult.ReceiptCsvBytes, csvResult.ReceiptShareCsvBytes},
 	)
 	if err != nil {
 		return nil, err

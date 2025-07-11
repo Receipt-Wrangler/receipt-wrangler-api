@@ -6,7 +6,7 @@ type GroupReceiptSettings struct {
 	HideImages            bool `gorm:"not null" json:"hideImages"`
 	HideReceiptCategories bool `gorm:"not null" json:"hideReceiptCategories"`
 	HideReceiptTags       bool `gorm:"not null" json:"hideReceiptTags"`
-	HideItemCategories    bool `gorm:"not null" json:"hideItemCategories"`
-	HideItemTags          bool `gorm:"not null" json:"hideItemTags"`
+	HideShareCategories   bool `gorm:"not null" json:"hideShareCategories"`
+	HideShareTags         bool `gorm:"not null" json:"hideShareTags"`
 	HideComments          bool `gorm:"not null" json:"hideComments"`
 }

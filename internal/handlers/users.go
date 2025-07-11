@@ -16,12 +16,12 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type ItemView struct {
-	ItemId          uint `json:"id"`
+type ShareView struct {
+	ShareId         uint `json:"id"`
 	ReceiptId       uint
 	PaidByUserId    uint
 	ChargedToUserId uint
-	ItemAmount      decimal.Decimal
+	ShareAmount     decimal.Decimal
 }
 
 func GetAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -135,8 +135,8 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			}
 
 			db := repositories.GetDB()
-			var itemsOwed []ItemView
-			var itemsOthersOwe []ItemView
+			var sharesOwed []ShareView
+			var sharesOthersOwe []ShareView
 			total := decimal.NewFromInt(0)
 			token := structs.GetJWT(r)
 			id := token.UserId
@@ -193,39 +193,39 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.id IN ? AND items.status=?", id, id, totalReceiptIds, models.SHARE_OPEN).Scan(&itemsOwed).Error
+			err = db.Table("shares").Select("shares.id as share_id, shares.receipt_id as receipt_id, shares.amount as share_amount, shares.charged_to_user_id, receipts.id, shares.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=shares.receipt_id").Where("shares.charged_to_user_id=? AND receipts.paid_by_user_id !=? AND receipts.id IN ? AND shares.status=?", id, id, totalReceiptIds, models.SHARE_OPEN).Scan(&sharesOwed).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			err = db.Table("items").Select("items.id as item_id, items.receipt_id as receipt_id, items.amount as item_amount, items.charged_to_user_id, receipts.id, items.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=items.receipt_id").Where("items.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.id IN ? AND items.status=?", id, id, totalReceiptIds, models.SHARE_OPEN).Scan(&itemsOthersOwe).Error
+			err = db.Table("shares").Select("shares.id as share_id, shares.receipt_id as receipt_id, shares.amount as share_amount, shares.charged_to_user_id, receipts.id, shares.status, receipts.paid_by_user_id").Joins("inner join receipts on receipts.id=shares.receipt_id").Where("shares.charged_to_user_id !=? AND receipts.paid_by_user_id =? AND receipts.id IN ? AND shares.status=?", id, id, totalReceiptIds, models.SHARE_OPEN).Scan(&sharesOthersOwe).Error
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}
 
-			// These are items from receipts that I did not pay for, so I owe these
-			for i := 0; i < len(itemsOwed); i++ {
-				item := itemsOwed[i]
-				total = total.Add(item.ItemAmount)
-				amount, ok := resultMap[item.PaidByUserId]
+			// These are shares from receipts that I did not pay for, so I owe these
+			for i := 0; i < len(sharesOwed); i++ {
+				share := sharesOwed[i]
+				total = total.Add(share.ShareAmount)
+				amount, ok := resultMap[share.PaidByUserId]
 
 				if ok {
-					resultMap[item.PaidByUserId] = amount.Add(item.ItemAmount)
+					resultMap[share.PaidByUserId] = amount.Add(share.ShareAmount)
 				} else {
-					resultMap[item.PaidByUserId] = item.ItemAmount
+					resultMap[share.PaidByUserId] = share.ShareAmount
 				}
 			}
 
-			// These are items from receipts that I paid for, so they owe me
-			for i := 0; i < len(itemsOthersOwe); i++ {
-				item := itemsOthersOwe[i]
-				total = total.Sub(item.ItemAmount)
-				amount, ok := resultMap[item.ChargedToUserId]
+			// These are shares from receipts that I paid for, so they owe me
+			for i := 0; i < len(sharesOthersOwe); i++ {
+				share := sharesOthersOwe[i]
+				total = total.Sub(share.ShareAmount)
+				amount, ok := resultMap[share.ChargedToUserId]
 
 				if ok {
-					resultMap[item.ChargedToUserId] = amount.Sub(item.ItemAmount)
+					resultMap[share.ChargedToUserId] = amount.Sub(share.ShareAmount)
 				} else {
-					resultMap[item.ChargedToUserId] = item.ItemAmount.Mul(decimal.NewFromInt(-1))
+					resultMap[share.ChargedToUserId] = share.ShareAmount.Mul(decimal.NewFromInt(-1))
 				}
 			}
 

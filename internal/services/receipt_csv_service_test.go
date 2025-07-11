@@ -50,7 +50,7 @@ func TestShouldBuildReceiptCsv(t *testing.T) {
 	}
 }
 
-func TestShouldBuildItemCsv(t *testing.T) {
+func TestShouldBuildShareCsv(t *testing.T) {
 	expected :=
 		"Id,Receipt Id,Receipt Name,Receipt Date,Name,Charged to User,Amount,Status,Categories,Tags\n" +
 			"1,2,Test Receipt,2025-01-01,Test Share,John,25.5,OPEN,\"Groceries,Food\",\"Essential,Bill\"\n" +
@@ -60,7 +60,7 @@ func TestShouldBuildItemCsv(t *testing.T) {
 	date2 := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
 
 	service := NewReceiptCsvService()
-	items := []models.Share{
+	shares := []models.Share{
 		{
 			BaseModel: models.BaseModel{ID: 1},
 			ReceiptId: 2,
@@ -101,7 +101,7 @@ func TestShouldBuildItemCsv(t *testing.T) {
 		},
 	}
 
-	result, err := service.BuildItemCsv(items)
+	result, err := service.BuildShareCsv(shares)
 	if err != nil {
 		utils.PrintTestError(t, err, nil)
 	}

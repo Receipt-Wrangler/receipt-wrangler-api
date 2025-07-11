@@ -50,8 +50,8 @@ func (repository GroupReceiptSettingsRepository) UpdateGroupReceiptSettings(
 	groupReceiptSettings.HideImages = command.HideImages
 	groupReceiptSettings.HideReceiptCategories = command.HideReceiptCategories
 	groupReceiptSettings.HideReceiptTags = command.HideReceiptTags
-	groupReceiptSettings.HideItemCategories = command.HideItemCategories
-	groupReceiptSettings.HideItemTags = command.HideItemTags
+	groupReceiptSettings.HideShareCategories = command.HideShareCategories
+	groupReceiptSettings.HideShareTags = command.HideShareTags
 	groupReceiptSettings.HideComments = command.HideComments
 
 	err = db.Select("*").Model(*&groupReceiptSettings).Updates(groupReceiptSettings).Error

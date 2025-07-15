@@ -6,7 +6,6 @@ import (
 	"receipt-wrangler/api/internal/corspolicy"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
-	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/services"
 )
 
@@ -76,8 +75,7 @@ func BuildRootRouter() *chi.Mux {
 	rootRouter.Mount("/api/featureConfig", featureConfigRouter)
 
 	// Migration router
-	migrationRouter := chi.NewRouter()
-	migrationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
+	migrationRouter := BuildMigrationRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/migrate", migrationRouter)
 
 	// Search router

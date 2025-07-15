@@ -138,6 +138,22 @@ func createTestItemCategories() {
 	db.Table("item_categories").Create(&itemCategories)
 }
 
+func createTestItemCategoriesWithEdgeCases() {
+	db := repositories.GetDB()
+
+	itemCategories := []ItemCategoryData{
+		{ReceiptId: "1", CategoryId: "1"},
+		{ReceiptId: "1", CategoryId: "2"},
+		{ReceiptId: "2", CategoryId: "1"},
+		{ReceiptId: "3", CategoryId: "1"},
+		{ReceiptId: "3", CategoryId: "2"},
+		{ReceiptId: "4", CategoryId: "1"},
+		{ReceiptId: "5", CategoryId: "2"},
+	}
+
+	db.Table("item_categories").Create(&itemCategories)
+}
+
 func createTestItemTags() {
 	db := repositories.GetDB()
 
@@ -145,6 +161,24 @@ func createTestItemTags() {
 		{ReceiptId: "1", TagId: "1"},
 		{ReceiptId: "1", TagId: "2"},
 		{ReceiptId: "2", TagId: "3"},
+	}
+
+	db.Table("item_tags").Create(&itemTags)
+}
+
+func createTestItemTagsWithEdgeCases() {
+	db := repositories.GetDB()
+
+	itemTags := []ItemTagData{
+		{ReceiptId: "1", TagId: "1"},
+		{ReceiptId: "1", TagId: "2"},
+		{ReceiptId: "2", TagId: "3"},
+		{ReceiptId: "3", TagId: "1"},
+		{ReceiptId: "4", TagId: "2"},
+		{ReceiptId: "4", TagId: "3"},
+		{ReceiptId: "5", TagId: "1"},
+		{ReceiptId: "5", TagId: "2"},
+		{ReceiptId: "5", TagId: "3"},
 	}
 
 	db.Table("item_tags").Create(&itemTags)
@@ -735,6 +769,8 @@ func TestMigrateItemsToShares_EdgeCases(t *testing.T) {
 	createTestReceipts()
 	createOldTables()
 	createTestItemsWithEdgeCases()
+	createTestItemCategoriesWithEdgeCases()
+	createTestItemTagsWithEdgeCases()
 
 	err := MigrateItemsToShares()
 	if err != nil {
@@ -744,6 +780,8 @@ func TestMigrateItemsToShares_EdgeCases(t *testing.T) {
 
 	db := repositories.GetDB()
 	validateSharesMatchItems(t, db)
+	validateShareCategoriesMatchItemCategories(t, db)
+	validateShareTagsMatchItemTags(t, db)
 
 	var shares []models.Share
 	db.Find(&shares)
@@ -785,6 +823,20 @@ func TestMigrateItemsToShares_EdgeCases(t *testing.T) {
 				utils.PrintTestError(t, "Very large decimal not preserved", share.Amount.String())
 			}
 		}
+	}
+
+	// Verify specific association counts for edge case test
+	var shareCategoriesCount int64
+	var shareTagsCount int64
+	db.Table("share_categories").Count(&shareCategoriesCount)
+	db.Table("share_tags").Count(&shareTagsCount)
+
+	if shareCategoriesCount != 7 {
+		utils.PrintTestError(t, "Expected 7 share categories for edge case test", shareCategoriesCount)
+	}
+
+	if shareTagsCount != 9 {
+		utils.PrintTestError(t, "Expected 9 share tags for edge case test", shareTagsCount)
 	}
 }
 

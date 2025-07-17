@@ -2926,7 +2926,6 @@ components:
     Item:
       required:
         - amount
-        - chargedToUserId
         - name
         - receiptId
         - status
@@ -4109,7 +4108,6 @@ components:
       type: object
       required:
         - amount
-        - chargedToUserId
         - name
         - receiptId
         - status

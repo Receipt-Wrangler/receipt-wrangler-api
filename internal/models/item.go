@@ -6,7 +6,7 @@ type Item struct {
 	BaseModel
 	Amount          decimal.Decimal `gorm:"not null" json:"amount" sql:"type:decimal(20,3);"`
 	ChargedToUser   User            `json:"-"`
-	ChargedToUserId uint            `json:"chargedToUserId" gorm:"not null"`
+	ChargedToUserId *uint           `json:"chargedToUserId"`
 	IsTaxed         bool            `gorm:"not null"`
 	Name            string          `json:"name" gorm:"not null"`
 	Receipt         Receipt         `json:"-"`

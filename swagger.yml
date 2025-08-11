@@ -3674,6 +3674,12 @@ components:
             hideComments:
               type: boolean
               description: Hide receipt comments
+            hideShareCategories:
+              type: boolean
+              description: Hide share categories
+            hideShareTags:
+              type: boolean
+              description: Hide share tags
     UpdateGroupReceiptSettingsCommand:
       type: object
       properties:
@@ -3695,6 +3701,12 @@ components:
         hideComments:
           type: boolean
           description: Hide receipt comments
+        hideShareCategories:
+          type: boolean
+          description: Hide share categories
+        hideShareTags:
+          type: boolean
+          description: Hide share tags
     GroupSettings:
       type: object
       required:

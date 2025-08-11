@@ -13,6 +13,8 @@ type UpdateGroupReceiptSettingsCommand struct {
 	HideItemCategories    bool `json:"hideItemCategories"`
 	HideItemTags          bool `json:"hideItemTags"`
 	HideComments          bool `json:"hideComments"`
+	HideShareCategories   bool `json:"hideShareCategories"`
+	HideShareTags         bool `json:"hideShareTags"`
 }
 
 func (command *UpdateGroupReceiptSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

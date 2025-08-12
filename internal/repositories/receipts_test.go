@@ -334,12 +334,15 @@ func TestShouldBuildGormFilterQuery(t *testing.T) {
 func createTestItems() {
 	db := GetDB()
 
+	var two = uint(2)
+	var three = uint(3)
+
 	// Create items for receipt 1
 	item1 := models.Item{
 		Name:            "Item 1",
 		Amount:          decimal.NewFromFloat(50.00),
 		ReceiptId:       1,
-		ChargedToUserId: 2,
+		ChargedToUserId: &two,
 		Status:          models.ITEM_OPEN,
 	}
 	db.Create(&item1)
@@ -348,7 +351,7 @@ func createTestItems() {
 		Name:            "Item 2",
 		Amount:          decimal.NewFromFloat(50.00),
 		ReceiptId:       1,
-		ChargedToUserId: 3,
+		ChargedToUserId: &three,
 		Status:          models.ITEM_OPEN,
 	}
 	db.Create(&item2)

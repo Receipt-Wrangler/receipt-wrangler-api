@@ -14,4 +14,6 @@ type Item struct {
 	Status          ItemStatus      `gorm:"default:'OPEN'; not null" json:"status"`
 	Categories      []Category      `gorm:"many2many:item_categories" json:"categories"`
 	Tags            []Tag           `gorm:"many2many:item_tags" json:"tags"`
+	LinkedItemId    *uint           `json:"linkedItemId"`
+	LinkedItem      *Item           `json:"-"`
 }

@@ -261,6 +261,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 	HandleRequest(handler)
 }
 
+// TODO: move to repository call
 func GetReceipt(w http.ResponseWriter, r *http.Request) {
 	receiptId := chi.URLParam(r, "id")
 
@@ -282,6 +283,7 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 				Preload("Comments.Replies").
 				Preload("ReceiptItems.Categories").
 				Preload("ReceiptItems.Tags").
+				Preload("ReceiptItems.LinkedItems").
 				Find(&receipt).Error
 			if err != nil {
 				return http.StatusInternalServerError, err

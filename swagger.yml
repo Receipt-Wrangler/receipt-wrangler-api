@@ -2959,10 +2959,11 @@ components:
         status:
           type: string
           $ref: "#/components/schemas/ItemStatus"
-        linkedItemId:
-          type: integer
-          description: Foreign key to link this item to another item (for sharing)
-          format: uint64
+        linkedItems:
+          type: array
+          description: Items linked to this item (for sharing)
+          items:
+            $ref: "#/components/schemas/Item"
         categories:
           type: array
           description: Categories associated to the item
@@ -4142,9 +4143,6 @@ components:
           description: Receipt foreign key
         status:
           $ref: "#/components/schemas/ItemStatus"
-        linkedItemId:
-          type: integer
-          description: Foreign key to link this item to another item (for sharing)
         categories:
           type: array
           description: Categories associated to item

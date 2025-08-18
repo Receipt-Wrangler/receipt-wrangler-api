@@ -273,18 +273,10 @@ func GetReceipt(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.VIEWER,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			db := repositories.GetDB()
-			var receipt models.Receipt
 			id := chi.URLParam(r, "id")
+			receiptRepository := repositories.NewReceiptRepository(nil)
 
-			err := db.Model(models.Receipt{}).
-				Where("id = ?", id).
-				Preload(clause.Associations).
-				Preload("Comments.Replies").
-				Preload("ReceiptItems.Categories").
-				Preload("ReceiptItems.Tags").
-				Preload("ReceiptItems.LinkedItems").
-				Find(&receipt).Error
+			receipt, err := receiptRepository.GetFullyLoadedReceiptById(id)
 			if err != nil {
 				return http.StatusInternalServerError, err
 			}

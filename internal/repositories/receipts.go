@@ -227,18 +227,21 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.Receipt) error {
 	db := repository.GetDB()
 
+	// TODO: Move this  to a scheduled job
 	err := db.Table("item_categories").Where("item_id IN (?)",
 		db.Table("items").Select("id").Where("receipt_id IS NULL"),
 	).Delete(&struct{}{}).Error
 
+	// TODO: Move this  to a scheduled job
 	err = db.Table("item_tags").Where("item_id IN (?)",
 		db.Table("items").Select("id").Where("receipt_id IS NULL"),
 	).Delete(&struct{}{}).Error
 
-	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Debug().Error
-	if err != nil {
-		return err
-	}
+	// TODO: Move this  to a scheduled job
+	/*	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Debug().Error
+		if err != nil {
+			return err
+		}*/
 
 	if updatedReceipt.ID > 0 && updatedReceipt.Status == models.RESOLVED && updatedReceipt.ResolvedDate == nil {
 		now := time.Now().UTC()
@@ -650,6 +653,30 @@ func (repository ReceiptRepository) GetReceiptGroupIdByReceiptId(id string) (uin
 	return receipt.GroupId, nil
 }
 
+func (repository ReceiptRepository) FilterLinkedItemsFromReceiptItems(receipt *models.Receipt) {
+	if len(receipt.ReceiptItems) == 0 {
+		return
+	}
+
+	// Collect all linked item IDs
+	linkedItemIds := make(map[uint]bool)
+	for _, item := range receipt.ReceiptItems {
+		for _, linkedItem := range item.LinkedItems {
+			linkedItemIds[linkedItem.ID] = true
+		}
+	}
+
+	// Filter out linked items from ReceiptItems
+	var filteredItems []models.Item
+	for _, item := range receipt.ReceiptItems {
+		if !linkedItemIds[item.ID] {
+			filteredItems = append(filteredItems, item)
+		}
+	}
+
+	receipt.ReceiptItems = filteredItems
+}
+
 func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
 	db := repository.GetDB()
 	var receipt models.Receipt
@@ -665,6 +692,8 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 	if err != nil {
 		return models.Receipt{}, err
 	}
+
+	repository.FilterLinkedItemsFromReceiptItems(&receipt)
 
 	return receipt, nil
 }
@@ -689,9 +718,13 @@ func (repository ReceiptRepository) GetReceiptsByGroupIds(groupIds []string, que
 func (repository ReceiptRepository) GetReceiptsByIds(ids []string, associations []string) ([]models.Receipt, error) {
 	query := repository.GetDB().Model(models.Receipt{}).Where("id IN ?", ids)
 
+	hasLinkedItems := false
 	if associations != nil {
 		for _, association := range associations {
 			query = query.Preload(association)
+			if association == "ReceiptItems.LinkedItems" {
+				hasLinkedItems = true
+			}
 		}
 	}
 
@@ -699,6 +732,13 @@ func (repository ReceiptRepository) GetReceiptsByIds(ids []string, associations 
 	err := query.Find(&receipts).Error
 	if err != nil {
 		return nil, err
+	}
+
+	// Filter linked items if they were loaded
+	if hasLinkedItems {
+		for i := range receipts {
+			repository.FilterLinkedItemsFromReceiptItems(&receipts[i])
+		}
 	}
 
 	return receipts, nil

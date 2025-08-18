@@ -15,6 +15,7 @@ type UpsertItemCommand struct {
 	Status          models.ItemStatus       `json:"status"`
 	Categories      []UpsertCategoryCommand `json:"categories"`
 	Tags            []UpsertTagCommand      `json:"tags"`
+	LinkedItems     []UpsertItemCommand     `json:"linkedItems"`
 }
 
 func (item *UpsertItemCommand) Validate(receiptAmount decimal.Decimal, isCreate bool) structs.ValidatorError {

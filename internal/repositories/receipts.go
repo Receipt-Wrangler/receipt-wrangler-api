@@ -170,6 +170,11 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 			if txErr != nil {
 				return txErr
 			}
+
+			txErr = tx.Model(&item).Association("LinkedItems").Replace(&item.LinkedItems)
+			if txErr != nil {
+				return txErr
+			}
 		}
 
 		err = repository.AfterReceiptUpdated(&updatedReceipt)

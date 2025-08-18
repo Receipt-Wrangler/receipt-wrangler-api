@@ -4153,6 +4153,11 @@ components:
           description: Tags associated to item
           items:
             $ref: "#/components/schemas/UpsertTagCommand"
+        linkedItems:
+          type: array
+          description: Items linked to this item (for sharing) - one level deep only
+          items:
+            $ref: "#/components/schemas/UpsertItemCommand"
     UpsertCommentCommand:
       type: object
       required:

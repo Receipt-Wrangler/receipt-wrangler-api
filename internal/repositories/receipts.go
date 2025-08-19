@@ -175,6 +175,19 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 			if txErr != nil {
 				return txErr
 			}
+
+			// Update categories and tags for linked items
+			for _, linkedItem := range item.LinkedItems {
+				txErr = tx.Model(&linkedItem).Association("Categories").Replace(&linkedItem.Categories)
+				if txErr != nil {
+					return txErr
+				}
+
+				txErr = tx.Model(&linkedItem).Association("Tags").Replace(&linkedItem.Tags)
+				if txErr != nil {
+					return txErr
+				}
+			}
 		}
 
 		err = repository.AfterReceiptUpdated(&updatedReceipt)
@@ -326,6 +339,24 @@ func (repository ReceiptRepository) CreateReceipt(
 		err := tx.Model(models.Receipt{}).Select("*").Create(&receipt).Error
 		if err != nil {
 			return err
+		}
+
+		// Handle linked items' categories and tags
+		for _, item := range receipt.ReceiptItems {
+			for _, linkedItem := range item.LinkedItems {
+				if len(linkedItem.Categories) > 0 {
+					err = tx.Model(&linkedItem).Association("Categories").Replace(&linkedItem.Categories)
+					if err != nil {
+						return err
+					}
+				}
+				if len(linkedItem.Tags) > 0 {
+					err = tx.Model(&linkedItem).Association("Tags").Replace(&linkedItem.Tags)
+					if err != nil {
+						return err
+					}
+				}
+			}
 		}
 
 		var userIdsToOmit []interface{} = make([]interface{}, 1)

@@ -333,29 +333,82 @@ func (repository ReceiptRepository) CreateReceipt(
 		RanByUserId:          &createdByUserID,
 	}
 
+	// Extract linked items before creating receipt
+	type LinkedItemData struct {
+		ParentItemIndex int
+		LinkedItem      models.Item
+	}
+	var linkedItemsData []LinkedItemData
+
+	for i := range receipt.ReceiptItems {
+		if len(receipt.ReceiptItems[i].LinkedItems) > 0 {
+			for _, linkedItem := range receipt.ReceiptItems[i].LinkedItems {
+				linkedItemsData = append(linkedItemsData, LinkedItemData{
+					ParentItemIndex: i,
+					LinkedItem:      linkedItem,
+				})
+			}
+			// Clear linked items from the receipt item for initial creation
+			receipt.ReceiptItems[i].LinkedItems = []models.Item{}
+		}
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
 		notificationRepository.SetTransaction(tx)
-		err := tx.Model(models.Receipt{}).Select("*").Create(&receipt).Error
+
+		// First nested transaction: Create receipt without linked items
+		err := tx.Transaction(func(tx2 *gorm.DB) error {
+			err := tx2.Model(models.Receipt{}).Select("*").Create(&receipt).Error
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
 
-		// Handle linked items' categories and tags
-		for _, item := range receipt.ReceiptItems {
-			for _, linkedItem := range item.LinkedItems {
-				if len(linkedItem.Categories) > 0 {
-					err = tx.Model(&linkedItem).Association("Categories").Replace(&linkedItem.Categories)
+		// Second nested transaction: Handle linked items
+		if len(linkedItemsData) > 0 {
+			err = tx.Transaction(func(tx3 *gorm.DB) error {
+				for _, linkedData := range linkedItemsData {
+					// Set the receipt ID for the linked item
+					linkedData.LinkedItem.ReceiptId = receipt.ID
+
+					// Create the linked item
+					err := tx3.Model(models.Item{}).Create(&linkedData.LinkedItem).Error
+					if err != nil {
+						return err
+					}
+
+					// Handle linked item's categories
+					if len(linkedData.LinkedItem.Categories) > 0 {
+						err = tx3.Model(&linkedData.LinkedItem).Association("Categories").Replace(&linkedData.LinkedItem.Categories)
+						if err != nil {
+							return err
+						}
+					}
+
+					// Handle linked item's tags
+					if len(linkedData.LinkedItem.Tags) > 0 {
+						err = tx3.Model(&linkedData.LinkedItem).Association("Tags").Replace(&linkedData.LinkedItem.Tags)
+						if err != nil {
+							return err
+						}
+					}
+
+					// Update the parent item's LinkedItems association
+					parentItem := &receipt.ReceiptItems[linkedData.ParentItemIndex]
+					err = tx3.Model(parentItem).Association("LinkedItems").Append(&linkedData.LinkedItem)
 					if err != nil {
 						return err
 					}
 				}
-				if len(linkedItem.Tags) > 0 {
-					err = tx.Model(&linkedItem).Association("Tags").Replace(&linkedItem.Tags)
-					if err != nil {
-						return err
-					}
-				}
+				return nil
+			})
+			if err != nil {
+				return err
 			}
 		}
 

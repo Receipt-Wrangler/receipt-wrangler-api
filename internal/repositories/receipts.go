@@ -687,6 +687,8 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 		Preload("ReceiptItems.Categories").
 		Preload("ReceiptItems.Tags").
 		Preload("ReceiptItems.LinkedItems").
+		Preload("ReceiptItems.LinkedItems.Categories").
+		Preload("ReceiptItems.LinkedItems.Tags").
 		Find(&receipt).
 		Error
 	if err != nil {

@@ -76,6 +76,11 @@ func (service ReceiptService) DeleteReceipt(id string) error {
 			}
 		}
 
+		err = tx.Model(&receipt).Association("ReceiptItems").Clear()
+		if err != nil {
+			return err
+		}
+
 		err = tx.Select(clause.Associations).Delete(&receipt).Error
 		if err != nil {
 			return err

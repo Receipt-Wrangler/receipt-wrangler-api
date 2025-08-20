@@ -2,11 +2,12 @@ package ai
 
 import (
 	"encoding/json"
-	"github.com/sashabaranov/go-openai"
-	"golang.org/x/net/context"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"strings"
+
+	"github.com/sashabaranov/go-openai"
+	"golang.org/x/net/context"
 )
 
 type OpenAiClient struct {
@@ -95,6 +96,9 @@ func (openAi OpenAiClient) GetChatCompletion() (structs.ChatCompletionResult, er
 			Messages:    openAiMessages,
 			N:           1,
 			Temperature: 0,
+			ResponseFormat: &openai.ChatCompletionResponseFormat{
+				Type: openai.ChatCompletionResponseFormatTypeJSONObject,
+			},
 		},
 	)
 	if err != nil {

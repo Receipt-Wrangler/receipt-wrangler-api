@@ -8,7 +8,6 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
-	"receipt-wrangler/api/internal/utils"
 )
 
 type OllamaClient struct {
@@ -34,6 +33,7 @@ func (ollama OllamaClient) GetChatCompletion() (structs.ChatCompletionResult, er
 		"messages":    ollama.Options.Messages,
 		"temperature": 0,
 		"stream":      false,
+		"format":      "json",
 	}
 	httpClient := http.Client{}
 	httpClient.Timeout = constants.AiHttpTimeout
@@ -73,9 +73,7 @@ func (ollama OllamaClient) GetChatCompletion() (structs.ChatCompletionResult, er
 	}
 
 	if len(responseObject.Message.Content) >= 0 {
-		content := responseObject.Message.Content
-		content = utils.RemoveJsonFormat(content)
-		result.Response = content
+		result.Response = responseObject.Message.Content
 	}
 
 	responseBytes, err := json.Marshal(responseObject)

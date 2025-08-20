@@ -2959,6 +2959,11 @@ components:
         status:
           type: string
           $ref: "#/components/schemas/ItemStatus"
+        linkedItems:
+          type: array
+          description: Items linked to this item (for sharing)
+          items:
+            $ref: "#/components/schemas/Item"
         categories:
           type: array
           description: Categories associated to the item
@@ -4148,6 +4153,11 @@ components:
           description: Tags associated to item
           items:
             $ref: "#/components/schemas/UpsertTagCommand"
+        linkedItems:
+          type: array
+          description: Items linked to this item (for sharing) - one level deep only
+          items:
+            $ref: "#/components/schemas/UpsertItemCommand"
     UpsertCommentCommand:
       type: object
       required:

@@ -8,13 +8,14 @@ import (
 
 type UpsertItemCommand struct {
 	Amount          decimal.Decimal         `json:"amount"`
-	ChargedToUserId uint                    `json:"chargedToUserId"`
+	ChargedToUserId *uint                   `json:"chargedToUserId"`
 	IsTaxed         bool                    `json:"isTaxed"`
 	Name            string                  `json:"name"`
 	ReceiptId       uint                    `json:"receiptId"`
 	Status          models.ItemStatus       `json:"status"`
 	Categories      []UpsertCategoryCommand `json:"categories"`
 	Tags            []UpsertTagCommand      `json:"tags"`
+	LinkedItems     []UpsertItemCommand     `json:"linkedItems"`
 }
 
 func (item *UpsertItemCommand) Validate(receiptAmount decimal.Decimal, isCreate bool) structs.ValidatorError {
@@ -41,10 +42,6 @@ func (item *UpsertItemCommand) Validate(receiptAmount decimal.Decimal, isCreate 
 		if item.ReceiptId == 0 {
 			errors["receiptId"] = "Receipt Id is required"
 		}
-	}
-
-	if item.ChargedToUserId == 0 {
-		errors["chargedToUserId"] = "Charged To User Id is required"
 	}
 
 	if len(item.Status) == 0 {

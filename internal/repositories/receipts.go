@@ -170,6 +170,24 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 			if txErr != nil {
 				return txErr
 			}
+
+			txErr = tx.Model(&item).Association("LinkedItems").Replace(&item.LinkedItems)
+			if txErr != nil {
+				return txErr
+			}
+
+			// Update categories and tags for linked items
+			for _, linkedItem := range item.LinkedItems {
+				txErr = tx.Model(&linkedItem).Association("Categories").Replace(&linkedItem.Categories)
+				if txErr != nil {
+					return txErr
+				}
+
+				txErr = tx.Model(&linkedItem).Association("Tags").Replace(&linkedItem.Tags)
+				if txErr != nil {
+					return txErr
+				}
+			}
 		}
 
 		err = repository.AfterReceiptUpdated(&updatedReceipt)
@@ -222,18 +240,21 @@ func (repository ReceiptRepository) UpdateReceipt(id string, command commands.Up
 func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.Receipt) error {
 	db := repository.GetDB()
 
+	// TODO: Move this  to a scheduled job
 	err := db.Table("item_categories").Where("item_id IN (?)",
 		db.Table("items").Select("id").Where("receipt_id IS NULL"),
 	).Delete(&struct{}{}).Error
 
+	// TODO: Move this  to a scheduled job
 	err = db.Table("item_tags").Where("item_id IN (?)",
 		db.Table("items").Select("id").Where("receipt_id IS NULL"),
 	).Delete(&struct{}{}).Error
 
-	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Debug().Error
-	if err != nil {
-		return err
-	}
+	// TODO: Move this  to a scheduled job
+	/*	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Debug().Error
+		if err != nil {
+			return err
+		}*/
 
 	if updatedReceipt.ID > 0 && updatedReceipt.Status == models.RESOLVED && updatedReceipt.ResolvedDate == nil {
 		now := time.Now().UTC()
@@ -312,12 +333,83 @@ func (repository ReceiptRepository) CreateReceipt(
 		RanByUserId:          &createdByUserID,
 	}
 
+	// Extract linked items before creating receipt
+	type LinkedItemData struct {
+		ParentItemIndex int
+		LinkedItem      models.Item
+	}
+	var linkedItemsData []LinkedItemData
+
+	for i := range receipt.ReceiptItems {
+		if len(receipt.ReceiptItems[i].LinkedItems) > 0 {
+			for _, linkedItem := range receipt.ReceiptItems[i].LinkedItems {
+				linkedItemsData = append(linkedItemsData, LinkedItemData{
+					ParentItemIndex: i,
+					LinkedItem:      linkedItem,
+				})
+			}
+			// Clear linked items from the receipt item for initial creation
+			receipt.ReceiptItems[i].LinkedItems = []models.Item{}
+		}
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		repository.SetTransaction(tx)
 		notificationRepository.SetTransaction(tx)
-		err := tx.Model(models.Receipt{}).Select("*").Create(&receipt).Error
+
+		// First nested transaction: Create receipt without linked items
+		err := tx.Transaction(func(tx2 *gorm.DB) error {
+			err := tx2.Model(models.Receipt{}).Select("*").Create(&receipt).Error
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 		if err != nil {
 			return err
+		}
+
+		// Second nested transaction: Handle linked items
+		if len(linkedItemsData) > 0 {
+			err = tx.Transaction(func(tx3 *gorm.DB) error {
+				for _, linkedData := range linkedItemsData {
+					// Set the receipt ID for the linked item
+					linkedData.LinkedItem.ReceiptId = receipt.ID
+
+					// Create the linked item
+					err := tx3.Model(models.Item{}).Create(&linkedData.LinkedItem).Error
+					if err != nil {
+						return err
+					}
+
+					// Handle linked item's categories
+					if len(linkedData.LinkedItem.Categories) > 0 {
+						err = tx3.Model(&linkedData.LinkedItem).Association("Categories").Replace(&linkedData.LinkedItem.Categories)
+						if err != nil {
+							return err
+						}
+					}
+
+					// Handle linked item's tags
+					if len(linkedData.LinkedItem.Tags) > 0 {
+						err = tx3.Model(&linkedData.LinkedItem).Association("Tags").Replace(&linkedData.LinkedItem.Tags)
+						if err != nil {
+							return err
+						}
+					}
+
+					// Update the parent item's LinkedItems association
+					parentItem := &receipt.ReceiptItems[linkedData.ParentItemIndex]
+					err = tx3.Model(parentItem).Association("LinkedItems").Append(&linkedData.LinkedItem)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
 		}
 
 		var userIdsToOmit []interface{} = make([]interface{}, 1)
@@ -645,6 +737,30 @@ func (repository ReceiptRepository) GetReceiptGroupIdByReceiptId(id string) (uin
 	return receipt.GroupId, nil
 }
 
+func (repository ReceiptRepository) FilterLinkedItemsFromReceiptItems(receipt *models.Receipt) {
+	if len(receipt.ReceiptItems) == 0 {
+		return
+	}
+
+	// Collect all linked item IDs
+	linkedItemIds := make(map[uint]bool)
+	for _, item := range receipt.ReceiptItems {
+		for _, linkedItem := range item.LinkedItems {
+			linkedItemIds[linkedItem.ID] = true
+		}
+	}
+
+	// Filter out linked items from ReceiptItems
+	var filteredItems []models.Item
+	for _, item := range receipt.ReceiptItems {
+		if !linkedItemIds[item.ID] {
+			filteredItems = append(filteredItems, item)
+		}
+	}
+
+	receipt.ReceiptItems = filteredItems
+}
+
 func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models.Receipt, error) {
 	db := repository.GetDB()
 	var receipt models.Receipt
@@ -654,11 +770,16 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 		Preload(clause.Associations).
 		Preload("ReceiptItems.Categories").
 		Preload("ReceiptItems.Tags").
+		Preload("ReceiptItems.LinkedItems").
+		Preload("ReceiptItems.LinkedItems.Categories").
+		Preload("ReceiptItems.LinkedItems.Tags").
 		Find(&receipt).
 		Error
 	if err != nil {
 		return models.Receipt{}, err
 	}
+
+	repository.FilterLinkedItemsFromReceiptItems(&receipt)
 
 	return receipt, nil
 }
@@ -683,9 +804,13 @@ func (repository ReceiptRepository) GetReceiptsByGroupIds(groupIds []string, que
 func (repository ReceiptRepository) GetReceiptsByIds(ids []string, associations []string) ([]models.Receipt, error) {
 	query := repository.GetDB().Model(models.Receipt{}).Where("id IN ?", ids)
 
+	hasLinkedItems := false
 	if associations != nil {
 		for _, association := range associations {
 			query = query.Preload(association)
+			if association == "ReceiptItems.LinkedItems" {
+				hasLinkedItems = true
+			}
 		}
 	}
 
@@ -693,6 +818,13 @@ func (repository ReceiptRepository) GetReceiptsByIds(ids []string, associations 
 	err := query.Find(&receipts).Error
 	if err != nil {
 		return nil, err
+	}
+
+	// Filter linked items if they were loaded
+	if hasLinkedItems {
+		for i := range receipts {
+			repository.FilterLinkedItemsFromReceiptItems(&receipts[i])
+		}
 	}
 
 	return receipts, nil

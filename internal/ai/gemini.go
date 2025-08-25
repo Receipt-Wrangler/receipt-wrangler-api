@@ -3,12 +3,13 @@ package ai
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/generative-ai-go/genai"
-	"golang.org/x/net/context"
-	"google.golang.org/api/option"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+
+	"github.com/google/generative-ai-go/genai"
+	"golang.org/x/net/context"
+	"google.golang.org/api/option"
 )
 
 type GeminiClient struct {
@@ -43,6 +44,7 @@ func (gemini GeminiClient) GetChatCompletion() (structs.ChatCompletionResult, er
 	defer client.Close()
 
 	model := client.GenerativeModel(gemini.ReceiptProcessingSettings.Model)
+	model.GenerationConfig.ResponseMIMEType = "application/json"
 	parts := make([]genai.Part, 0)
 	for _, aiMessage := range gemini.Options.Messages {
 		parts = append(parts, genai.Text(aiMessage.Content))

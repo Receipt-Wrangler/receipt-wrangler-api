@@ -241,20 +241,40 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 	db := repository.GetDB()
 
 	// TODO: Move this  to a scheduled job
-	err := db.Table("item_categories").Where("item_id IN (?)",
-		db.Table("items").Select("id").Where("receipt_id IS NULL"),
-	).Delete(&struct{}{}).Error
+	// Clean up junction tables for orphaned items
+	orphanedItemsSubquery := db.Table("items").Select("id").Where("receipt_id IS NULL")
 
-	// TODO: Move this  to a scheduled job
+	// Clean up item_linked_items junction table - remove associations where either side is orphaned
+	err := db.Table("item_linked_items").Where("item_id IN (?) OR linked_item_id IN (?)",
+		orphanedItemsSubquery,
+		orphanedItemsSubquery,
+	).Delete(&struct{}{}).Error
+	if err != nil {
+		return err
+	}
+
+	// Clean up item_categories junction table
+	err = db.Table("item_categories").Where("item_id IN (?)",
+		orphanedItemsSubquery,
+	).Delete(&struct{}{}).Error
+	if err != nil {
+		return err
+	}
+
+	// Clean up item_tags junction table
 	err = db.Table("item_tags").Where("item_id IN (?)",
-		db.Table("items").Select("id").Where("receipt_id IS NULL"),
+		orphanedItemsSubquery,
 	).Delete(&struct{}{}).Error
+	if err != nil {
+		return err
+	}
 
 	// TODO: Move this  to a scheduled job
-	/*	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Debug().Error
-		if err != nil {
-			return err
-		}*/
+	// Delete the orphaned items themselves
+	err = db.Where("receipt_id IS NULL").Delete(&models.Item{}).Error
+	if err != nil {
+		return err
+	}
 
 	if updatedReceipt.ID > 0 && updatedReceipt.Status == models.RESOLVED && updatedReceipt.ResolvedDate == nil {
 		now := time.Now().UTC()

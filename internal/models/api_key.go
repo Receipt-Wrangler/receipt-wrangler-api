@@ -11,6 +11,7 @@ type ApiKey struct {
 	CreatedByString string     `json:"createdByString"`
 	Name            string     `json:"name"`
 	Description     string     `json:"description"`
+	Prefix          string     `json:"prefix"`
 	Hmac            string     `json:"hmac"` // Key format: <prefix>.<ver>.<id>.<secret>
 	Version         int        `json:"version"`
 	UserID          *uint      `json:"userId"`

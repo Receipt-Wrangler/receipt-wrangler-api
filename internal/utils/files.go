@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"encoding/base64"
 	"errors"
-	"github.com/gabriel-vasile/mimetype"
 	"os"
 	"path/filepath"
+
+	"github.com/gabriel-vasile/mimetype"
 )
 
 func WriteFile(path string, data []byte) error {

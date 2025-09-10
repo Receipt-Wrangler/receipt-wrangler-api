@@ -2,7 +2,9 @@ package services
 
 import (
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -23,5 +25,33 @@ func NewApiKeyService(tx *gorm.DB) ApiKeyService {
 }
 
 func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertApiKeyCommand) error {
+	prefix := "key_live"
+	version := 1
+
+	id, err := utils.GetRandomString(16)
+	if err != nil {
+		return err
+	}
+
+	b64Id, err := utils.Base64EncodeBytes([]byte(id))
+	if err != nil {
+		return err
+	}
+
+	secret, err := utils.GetRandomString(32)
+	if err != nil {
+		return err
+	}
+
+	apiKey := models.ApiKey{
+		ID:          b64Id,
+		UserID:      &userId,
+		Name:        command.Name,
+		Description: command.Description,
+		Scope:       command.Scope,
+		Prefix:      prefix,
+		Hmac:        "4",
+		Version:     version,
+	}
 	return nil
 }

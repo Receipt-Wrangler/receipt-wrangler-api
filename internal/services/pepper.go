@@ -12,8 +12,8 @@ type PepperService struct {
 	BaseService
 }
 
-func NewPepperService(tx *gorm.DB) ImportService {
-	service := ImportService{
+func NewPepperService(tx *gorm.DB) PepperService {
+	service := PepperService{
 		BaseService: BaseService{
 			DB: repositories.GetDB(),
 			TX: tx,

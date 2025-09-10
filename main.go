@@ -11,6 +11,7 @@ import (
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/wranglerasynq"
 	"syscall"
 	"time"
@@ -85,6 +86,13 @@ func main() {
 			logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 		}
 	}
+
+	pepperService := services.NewPepperService(nil)
+	cleartextPepper, err := pepperService.InitPepper()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+	}
+	config.SetPepper(cleartextPepper)
 
 	err = wranglerasynq.StartSystemCleanUpTasks()
 	if err != nil {

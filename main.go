@@ -90,7 +90,7 @@ func main() {
 	pepperService := services.NewPepperService(nil)
 	cleartextPepper, err := pepperService.InitPepper()
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
+		logging.LogStd(logging.LOG_LEVEL_FATAL, "Failed to initialize pepper: "+err.Error())
 	}
 	config.SetPepper(cleartextPepper)
 

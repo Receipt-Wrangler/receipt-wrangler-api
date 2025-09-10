@@ -139,3 +139,19 @@ func TestShouldEncodeValueToBase64(t *testing.T) {
 		PrintTestError(t, encodedValue, expected)
 	}
 }
+
+func TestSha256Hash128Bit(t *testing.T) {
+	value := "superSecretData"
+	expected := "4M2yAEADbol2mSGOXAMLNA=="
+
+	hashedValue := Sha256Hash128Bit(value)
+	hashedString := EncodeToBase64(hashedValue)
+
+	if hashedString != expected {
+		PrintTestError(t, hashedString, expected)
+	}
+
+	if len(hashedValue) != 16 {
+		PrintTestError(t, len(hashedValue), 16)
+	}
+}

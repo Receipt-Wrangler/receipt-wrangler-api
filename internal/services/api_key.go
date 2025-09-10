@@ -1,6 +1,7 @@
 package services
 
 import (
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/repositories"
 
 	"gorm.io/gorm"
@@ -21,6 +22,6 @@ func NewApiKeyService(tx *gorm.DB) ApiKeyService {
 	return service
 }
 
-func (service *ApiKeyService) CreateApiKey() error {
+func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertApiKeyCommand) error {
 	return nil
 }

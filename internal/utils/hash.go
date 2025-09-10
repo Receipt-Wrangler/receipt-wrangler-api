@@ -15,6 +15,8 @@ func Sha256Hash(data []byte) string {
 }
 
 func Sha256Hash128Bit(valueToHash string) []byte {
-	hashedValue := Sha256Hash([]byte(valueToHash))
-	return []byte(hashedValue[:16])
+	hasher := sha256.New()
+	hasher.Write([]byte(valueToHash))
+	hashBytes := hasher.Sum(nil)
+	return hashBytes[:16]
 }

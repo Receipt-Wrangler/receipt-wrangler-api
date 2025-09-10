@@ -18,7 +18,7 @@ func NewPepperRepository(tx *gorm.DB) PepperRepository {
 }
 
 func (repository *PepperRepository) CreatePepper(pepper models.Pepper) error {
-	return repository.GetDB().Model(&pepper).Create(pepper).Error
+	return repository.GetDB().Model(&pepper).Create(&pepper).Error
 }
 
 func (repository *PepperRepository) GetPepper() (*models.Pepper, error) {

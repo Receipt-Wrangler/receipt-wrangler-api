@@ -5,6 +5,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/utils"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -24,29 +25,25 @@ func NewApiKeyService(tx *gorm.DB) ApiKeyService {
 	return service
 }
 
-// return full api key for use
-func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertApiKeyCommand) error {
+func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertApiKeyCommand) (string, error) {
 	prefix := "key_live"
 	version := 1
 
 	id, err := utils.GetRandomString(16)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	b64Id, err := utils.Base64EncodeBytes([]byte(id))
-	if err != nil {
-		return err
-	}
+	b64Id := utils.Base64EncodeBytes([]byte(id))
 
 	secret, err := utils.GetRandomString(32)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	generatedHmac, err := service.GenerateApiKeyHmac(secret)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	apiKey := models.ApiKey{
@@ -59,7 +56,14 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		Hmac:        generatedHmac,
 		Version:     version,
 	}
-	return nil
+
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+	_, err = apiKeyRepository.CreateApiKey(apiKey)
+	if err != nil {
+		return "", err
+	}
+
+	return service.BuildV1ApiKey(prefix, version, id, secret), nil
 }
 
 func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) {
@@ -72,4 +76,14 @@ func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) 
 
 	hmac := utils.GenerateHmac([]byte(clearTextPepper), []byte(secret))
 	return utils.Base64EncodeBytes(hmac), nil
+}
+
+func (service *ApiKeyService) BuildV1ApiKey(
+	prefix string,
+	version int,
+	id string,
+	secret string,
+) string {
+	stringVersion := utils.UintToString(uint(version))
+	return strings.Join([]string{prefix, stringVersion, id, secret}, ".")
 }

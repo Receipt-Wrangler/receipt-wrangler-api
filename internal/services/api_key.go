@@ -26,17 +26,17 @@ func NewApiKeyService(tx *gorm.DB) ApiKeyService {
 }
 
 func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertApiKeyCommand) (string, error) {
-	prefix := "key_live"
+	prefix := "key"
 	version := 1
 
-	id, err := utils.GetRandomString(16)
+	id, err := utils.GetRandomString(32)
 	if err != nil {
 		return "", err
 	}
 
 	b64Id := utils.Base64EncodeBytes([]byte(id))
 
-	secret, err := utils.GetRandomString(32)
+	secret, err := utils.GetRandomString(64)
 	if err != nil {
 		return "", err
 	}

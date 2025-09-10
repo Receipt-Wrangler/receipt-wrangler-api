@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"io"
@@ -85,12 +84,6 @@ func DecryptB64EncodedData(key string, encodedCipherText string) (string, error)
 	}
 
 	return cleartext, nil
-}
-
-func Sha256Hash128Bit(valueToHash string) []byte {
-	bytesValue := []byte(valueToHash)
-	hashedValue := sha256.Sum256(bytesValue)
-	return hashedValue[:16]
 }
 
 func EncodeToBase64(value []byte) string {

@@ -13,3 +13,8 @@ func Sha256Hash(data []byte) string {
 
 	return hashString
 }
+
+func Sha256Hash128Bit(valueToHash string) []byte {
+	hashedValue := Sha256Hash([]byte(valueToHash))
+	return []byte(hashedValue[:16])
+}

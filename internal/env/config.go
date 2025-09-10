@@ -12,7 +12,6 @@ import (
 
 var basePath string
 var env string
-var pepper string
 
 func GetSecretKey() string {
 	if len(os.Getenv(string(constants.SecretKey))) == 0 && env != "test" {
@@ -67,14 +66,6 @@ func GetEncryptionKey() string {
 func CheckRequiredEnvironmentVariables() {
 	GetEncryptionKey()
 	GetSecretKey()
-}
-
-func SetPepper(cleartextPepper string) {
-	pepper = cleartextPepper
-}
-
-func GetPepper() string {
-	return pepper
 }
 
 func GetDeployEnv() string {

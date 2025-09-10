@@ -1,11 +1,12 @@
 package services
 
 import (
-	"gorm.io/gorm"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/utils"
+
+	"gorm.io/gorm"
 )
 
 type PepperService struct {
@@ -23,20 +24,20 @@ func NewPepperService(tx *gorm.DB) PepperService {
 	return service
 }
 
-func (service PepperService) InitPepper() (string, error) {
+func (service PepperService) InitPepper() error {
 	var pepperCount = int64(0)
 	err := service.GetDB().Model(models.Pepper{}).Count(&pepperCount).Error
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if pepperCount > 0 {
-		return service.GetDecryptedPepper()
+		return nil
 	}
 
-	cleartextPepper, encryptedPepper, err := service.CreatePepper()
+	_, encryptedPepper, err := service.CreatePepper()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	pepper := models.Pepper{
@@ -47,10 +48,10 @@ func (service PepperService) InitPepper() (string, error) {
 	pepperRepository := repositories.NewPepperRepository(service.TX)
 	err = pepperRepository.CreatePepper(pepper)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return cleartextPepper, nil
+	return nil
 }
 
 func (service PepperService) CreatePepper() (string, string, error) {

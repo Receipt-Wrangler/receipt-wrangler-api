@@ -61,8 +61,14 @@ func TestPepperService_InitPepper_NoPepperExists(t *testing.T) {
 	defer repositories.TruncateTestDb()
 
 	pepperService := NewPepperService(nil)
-	cleartextPepper, err := pepperService.InitPepper()
+	err := pepperService.InitPepper()
 
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify pepper was created by getting it
+	cleartextPepper, err := pepperService.GetDecryptedPepper()
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
 	}
@@ -98,7 +104,13 @@ func TestPepperService_InitPepper_PepperExists(t *testing.T) {
 	}
 
 	// Now, run InitPepper again
-	retrievedPepper, err := pepperService.InitPepper()
+	err = pepperService.InitPepper()
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Get the pepper to verify it's the same
+	retrievedPepper, err := pepperService.GetDecryptedPepper()
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
 	}
@@ -167,7 +179,7 @@ func TestPepperService_InitPepper_CreatePepperError(t *testing.T) {
 	defer repositories.TruncateTestDb()
 
 	pepperService := NewPepperService(nil)
-	_, err := pepperService.InitPepper()
+	err := pepperService.InitPepper()
 
 	if err == nil {
 		utils.PrintTestError(t, err, "an error")

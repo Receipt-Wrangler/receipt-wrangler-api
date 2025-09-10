@@ -88,11 +88,10 @@ func main() {
 	}
 
 	pepperService := services.NewPepperService(nil)
-	cleartextPepper, err := pepperService.InitPepper()
+	err = pepperService.InitPepper()
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_FATAL, "Failed to initialize pepper: "+err.Error())
 	}
-	config.SetPepper(cleartextPepper)
 
 	err = wranglerasynq.StartSystemCleanUpTasks()
 	if err != nil {

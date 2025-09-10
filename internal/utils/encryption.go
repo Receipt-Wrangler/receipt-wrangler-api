@@ -3,7 +3,6 @@ package utils
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -18,7 +17,7 @@ func EncryptData(key string, value []byte) ([]byte, error) {
 		return nil, errors.New("value cannot be empty")
 	}
 
-	aesBlock, err := aes.NewCipher([]byte(Md5Hash(key)))
+	aesBlock, err := aes.NewCipher(Sha256Hash128Bit(key))
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +53,7 @@ func DecryptData(key string, encryptedData []byte) (string, error) {
 		return "", errors.New("encryptedData cannot be empty")
 	}
 
-	aesBlock, err := aes.NewCipher([]byte(Md5Hash(key)))
+	aesBlock, err := aes.NewCipher(Sha256Hash128Bit(key))
 	if err != nil {
 		return "", err
 	}
@@ -85,12 +84,6 @@ func DecryptB64EncodedData(key string, encodedCipherText string) (string, error)
 	}
 
 	return cleartext, nil
-}
-
-func Md5Hash(valueToHash string) string {
-	bytesValue := []byte(valueToHash)
-	hashedValue := md5.Sum(bytesValue)
-	return string(hashedValue[:])
 }
 
 func EncodeToBase64(value []byte) string {

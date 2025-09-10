@@ -16,7 +16,7 @@ func TestShouldEncryptStringWithAES128(t *testing.T) {
 	encodedCipherText := EncodeToBase64(cipherText)
 
 	if len(encodedCipherText) != 60 {
-		PrintTestError(t, len(cipherText), 60)
+		PrintTestError(t, len(encodedCipherText), 60)
 	}
 }
 
@@ -66,10 +66,10 @@ func TestShouldDecryptStringWithAES128(t *testing.T) {
 	encodedCipherText := EncodeToBase64(cipherText)
 
 	if len(encodedCipherText) != 60 {
-		PrintTestError(t, len(cipherText), 60)
+		PrintTestError(t, len(encodedCipherText), 60)
 	}
 
-	clearText, err := DecryptData(key, []byte(cipherText))
+	clearText, err := DecryptData(key, cipherText)
 	if err != nil {
 		PrintTestError(t, err, nil)
 	}
@@ -126,22 +126,6 @@ func TestShouldReturnErrorDecryptingWithEmptyValue(t *testing.T) {
 	_, err := DecryptData(key, value)
 	if err == nil {
 		PrintTestError(t, nil, "error")
-	}
-}
-
-func TestShouldHashValueWithMD5(t *testing.T) {
-	value := "superSecretData"
-	expected := "jsaLbDi8qpWJ+C8rgZ7DfQ=="
-
-	hashedValue := Md5Hash(value)
-
-	hashedString := EncodeToBase64([]byte(hashedValue))
-
-	if hashedString != expected {
-		PrintTestError(t, hashedValue, expected)
-	}
-	if len(hashedValue) != 16 {
-		PrintTestError(t, len(hashedValue), 16)
 	}
 }
 

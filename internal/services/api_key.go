@@ -24,6 +24,7 @@ func NewApiKeyService(tx *gorm.DB) ApiKeyService {
 	return service
 }
 
+// return full api key for use
 func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertApiKeyCommand) error {
 	prefix := "key_live"
 	version := 1
@@ -43,6 +44,11 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		return err
 	}
 
+	generatedHmac, err := service.GenerateApiKeyHmac(secret)
+	if err != nil {
+		return err
+	}
+
 	apiKey := models.ApiKey{
 		ID:          b64Id,
 		UserID:      &userId,
@@ -50,8 +56,20 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		Description: command.Description,
 		Scope:       command.Scope,
 		Prefix:      prefix,
-		Hmac:        "4",
+		Hmac:        generatedHmac,
 		Version:     version,
 	}
 	return nil
+}
+
+func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) {
+	pepperService := NewPepperService(service.TX)
+
+	clearTextPepper, err := pepperService.GetDecryptedPepper()
+	if err != nil {
+		return "", err
+	}
+
+	hmac := utils.GenerateHmac([]byte(clearTextPepper), []byte(secret))
+	return utils.Base64EncodeBytes(hmac), nil
 }

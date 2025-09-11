@@ -2522,6 +2522,13 @@ components:
         - "RESOLVED"
         - "DRAFT"
         - ""
+    ApiKeyScope:
+      description: Scope/permissions for API keys
+      type: string
+      enum:
+        - "r"
+        - "w"
+        - "rw"
     ItemStatus:
       type: string
       enum:
@@ -4701,6 +4708,7 @@ components:
       type: object
       required:
         - name
+        - scope
       properties:
         name:
           type: string
@@ -4709,8 +4717,7 @@ components:
           type: string
           description: API key description
         scope:
-          type: string
-          description: API key scope/permissions
+          $ref: "#/components/schemas/ApiKeyScope"
     ApiKeyResult:
       type: object
       required:

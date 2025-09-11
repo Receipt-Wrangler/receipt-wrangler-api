@@ -3,6 +3,7 @@ package commands
 import (
 	"encoding/json"
 	"net/http"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 )
@@ -35,7 +36,11 @@ func (command *UpsertApiKeyCommand) Validate() structs.ValidatorError {
 		errors["name"] = "Name is required"
 	}
 
-	// TODO: Validate scope
+	if len(command.Scope) == 0 {
+		errors["scope"] = "Scope is required"
+	} else if !models.ApiKeyScope(command.Scope).IsValid() {
+		errors["scope"] = "Scope must be one of: r, w, rw"
+	}
 
 	vErr.Errors = errors
 	return vErr

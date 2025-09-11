@@ -128,5 +128,9 @@ func BuildRootRouter() *chi.Mux {
 	customFieldRouter := BuildCustomFieldRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/customField", customFieldRouter)
 
+	// API Key router
+	apiKeyRouter := BuildApiKeyRouter(tokenValidatorMiddleware)
+	rootRouter.Mount("/api/apiKey", apiKeyRouter)
+
 	return rootRouter
 }

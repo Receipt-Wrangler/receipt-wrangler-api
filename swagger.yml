@@ -2464,6 +2464,35 @@ paths:
           $ref: "#/components/responses/BadRequest"
         403:
           $ref: "#/components/responses/Forbidden"
+  /apiKey/:
+    post:
+      tags:
+        - ApiKey
+      summary: Create API key
+      description: Create a new API key for the authenticated user
+      operationId: createApiKey
+      requestBody:
+        description: API key details
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertApiKeyCommand"
+      responses:
+        200:
+          description: The created API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyResult"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -4668,7 +4697,28 @@ components:
         booleanValue:
           type: boolean
           description: Custom Field Boolean Value
-
+    UpsertApiKeyCommand:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: API key name
+        description:
+          type: string
+          description: API key description
+        scope:
+          type: string
+          description: API key scope/permissions
+    ApiKeyResult:
+      type: object
+      required:
+        - key
+      properties:
+        key:
+          type: string
+          description: The generated API key
     InternalErrorResponse:
       type: object
       required:

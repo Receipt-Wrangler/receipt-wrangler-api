@@ -13,13 +13,13 @@ type UpsertApiKeyCommand struct {
 	Scope       string `json:"scope"`
 }
 
-func (category *UpsertApiKeyCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
+func (command *UpsertApiKeyCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
 	bytes, err := utils.GetBodyData(w, r)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(bytes, &category)
+	err = json.Unmarshal(bytes, &command)
 	if err != nil {
 		return err
 	}
@@ -27,11 +27,11 @@ func (category *UpsertApiKeyCommand) LoadDataFromRequest(w http.ResponseWriter, 
 	return nil
 }
 
-func (category *UpsertApiKeyCommand) Validate() structs.ValidatorError {
+func (command *UpsertApiKeyCommand) Validate() structs.ValidatorError {
 	errors := make(map[string]string)
 	vErr := structs.ValidatorError{}
 
-	if len(category.Name) == 0 {
+	if len(command.Name) == 0 {
 		errors["name"] = "Name is required"
 	}
 

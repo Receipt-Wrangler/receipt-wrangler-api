@@ -7,9 +7,12 @@
 /temp/*
 ./api
 coverage.out
+*.coverage
 sqlite/*
 .idea/*
 **/__pycache__/
+*.pyc
+*.pyo
 api
 ./dev/mariadb/data
 ./dev/mariadb/data/*

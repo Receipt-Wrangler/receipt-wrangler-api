@@ -13,6 +13,7 @@ type Claims struct {
 	UserId             uint            `json:"userId"`
 	Username           string          `json:"username"`
 	UserRole           models.UserRole `json:"userRole"`
+	ApiKeyScope        string          `json:"apiKeyScope"`
 	jwt.RegisteredClaims
 }
 

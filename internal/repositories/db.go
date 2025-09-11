@@ -113,6 +113,7 @@ func MakeMigrations() error {
 		&models.Prompt{},
 		&models.GroupReceiptSettings{},
 		&models.Pepper{},
+		&models.ApiKey{},
 	)
 
 	return err

@@ -2464,6 +2464,35 @@ paths:
           $ref: "#/components/responses/BadRequest"
         403:
           $ref: "#/components/responses/Forbidden"
+  /apiKey/:
+    post:
+      tags:
+        - ApiKey
+      summary: Create API key
+      description: Create a new API key for the authenticated user
+      operationId: createApiKey
+      requestBody:
+        description: API key details
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertApiKeyCommand"
+      responses:
+        200:
+          description: The created API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyResult"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -2493,6 +2522,13 @@ components:
         - "RESOLVED"
         - "DRAFT"
         - ""
+    ApiKeyScope:
+      description: Scope/permissions for API keys
+      type: string
+      enum:
+        - "r"
+        - "w"
+        - "rw"
     ItemStatus:
       type: string
       enum:
@@ -4668,7 +4704,28 @@ components:
         booleanValue:
           type: boolean
           description: Custom Field Boolean Value
-
+    UpsertApiKeyCommand:
+      type: object
+      required:
+        - name
+        - scope
+      properties:
+        name:
+          type: string
+          description: API key name
+        description:
+          type: string
+          description: API key description
+        scope:
+          $ref: "#/components/schemas/ApiKeyScope"
+    ApiKeyResult:
+      type: object
+      required:
+        - key
+      properties:
+        key:
+          type: string
+          description: The generated API key
     InternalErrorResponse:
       type: object
       required:

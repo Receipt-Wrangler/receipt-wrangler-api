@@ -2,6 +2,7 @@ package services
 
 import (
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/utils"
@@ -26,7 +27,7 @@ func NewApiKeyService(tx *gorm.DB) ApiKeyService {
 }
 
 func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertApiKeyCommand) (string, error) {
-	prefix := "key"
+	prefix := constants.V1Prefix
 	version := 1
 
 	id, err := utils.GetRandomString(32)

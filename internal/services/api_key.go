@@ -5,6 +5,7 @@ import (
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 
@@ -113,6 +114,10 @@ func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, er
 	}
 
 	return apiKeyData, nil
+}
+
+func (service *ApiKeyService) GetClaimsFromApiKey(key models.ApiKey) (structs.Claims, error) {
+	return structs.Claims{}, nil
 }
 
 func (service *ApiKeyService) BuildV1ApiKey(

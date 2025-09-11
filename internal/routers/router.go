@@ -1,13 +1,14 @@
 package routers
 
 import (
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
-	"github.com/go-chi/chi/v5"
 	"receipt-wrangler/api/internal/corspolicy"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/middleware"
 	"receipt-wrangler/api/internal/services"
+
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
+	"github.com/go-chi/chi/v5"
 )
 
 func BuildRootRouter() *chi.Mux {

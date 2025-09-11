@@ -1,11 +1,15 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
+
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 )
 
 func UnifiedAuthMiddleware(next http.Handler) http.Handler {
@@ -22,13 +26,21 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 				utils.WriteCustomErrorResponse(w, unauthorized, http.StatusForbidden)
 				return
 			}
+
+			// add claims
+			next.ServeHTTP(w, r)
+			return
 		} else if len(jwt) != 0 {
-			err := validateJwt(*r)
+			claims, err := validateJwt(jwt)
 			if err != nil {
 				logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 				utils.WriteCustomErrorResponse(w, unauthorized, http.StatusForbidden)
 				return
 			}
+
+			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, claims))
+			next.ServeHTTP(w, r)
+			return
 		}
 
 		utils.WriteCustomErrorResponse(w, "Unauthorized", http.StatusForbidden)
@@ -36,8 +48,13 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func validateJwt(r http.Request) error {
-	return nil
+func validateJwt(jwt string) (interface{}, error) {
+	validator, err := services.InitTokenValidator()
+	if err != nil {
+		return nil, err
+	}
+
+	return validator.ValidateToken(context.Background(), jwt)
 }
 
 func validateApiKey(r http.Request) error {

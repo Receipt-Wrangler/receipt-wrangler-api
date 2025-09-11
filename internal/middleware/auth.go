@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/logging"
+	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
@@ -20,14 +21,22 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 		jwt := getJwt(*r)
 
 		if len(apiKey) != 0 {
-			err := validateApiKey(*r)
+			dbApiKey, err := validateApiKey(apiKey)
 			if err != nil {
 				logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
 				utils.WriteCustomErrorResponse(w, unauthorized, http.StatusForbidden)
 				return
 			}
 
-			// add claims
+			apiKeyService := services.NewApiKeyService(nil)
+			claims, err := apiKeyService.GetClaimsFromApiKey(dbApiKey)
+			if err != nil {
+				logging.LogStd(logging.LOG_LEVEL_ERROR, err.Error())
+				utils.WriteCustomErrorResponse(w, unauthorized, http.StatusForbidden)
+				return
+			}
+
+			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, claims))
 			next.ServeHTTP(w, r)
 			return
 		} else if len(jwt) != 0 {
@@ -57,8 +66,9 @@ func validateJwt(jwt string) (interface{}, error) {
 	return validator.ValidateToken(context.Background(), jwt)
 }
 
-func validateApiKey(r http.Request) error {
-	return nil
+func validateApiKey(apiKey string) (models.ApiKey, error) {
+	apiKeyService := services.NewApiKeyService(nil)
+	return apiKeyService.ValidateV1ApiKey(apiKey)
 }
 
 func getApiKey(r http.Request) string {

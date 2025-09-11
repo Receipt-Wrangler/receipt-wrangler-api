@@ -10,6 +10,8 @@ import (
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 
+	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
@@ -87,14 +89,10 @@ func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, er
 		return models.ApiKey{}, errors.New("invalid api key structure")
 	}
 
-	id := parts[2]
-	decodedId, err := utils.Base64Decode(id)
-	if err != nil {
-		return models.ApiKey{}, err
-	}
+	b64id := parts[2]
 
 	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
-	apiKeyData, err := apiKeyRepository.GetApiKeyById(string(decodedId))
+	apiKeyData, err := apiKeyRepository.GetApiKeyById(b64id)
 	if err != nil {
 		return models.ApiKey{}, err
 	}
@@ -117,9 +115,29 @@ func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, er
 	return apiKeyData, nil
 }
 
-// TODO: Implement get claims
-func (service *ApiKeyService) GetClaimsFromApiKey(key models.ApiKey) (structs.Claims, error) {
-	return structs.Claims{}, nil
+func (service *ApiKeyService) GetClaimsFromApiKey(key models.ApiKey) (validator.ValidatedClaims, error) {
+	userRepository := repositories.NewUserRepository(service.TX)
+	user, err := userRepository.GetUserById(*key.UserID)
+	if err != nil {
+		return validator.ValidatedClaims{}, err
+	}
+
+	claims := structs.Claims{
+		DefaultAvatarColor: user.DefaultAvatarColor,
+		UserId:             user.ID,
+		Username:           user.Username,
+		Displayname:        user.DisplayName,
+		UserRole:           user.UserRole,
+		ApiKeyScope:        key.Scope,
+		RegisteredClaims:   jwt.RegisteredClaims{},
+	}
+
+	result := validator.ValidatedClaims{
+		CustomClaims:     &claims,
+		RegisteredClaims: validator.RegisteredClaims{},
+	}
+
+	return result, nil
 }
 
 func (service *ApiKeyService) BuildV1ApiKey(

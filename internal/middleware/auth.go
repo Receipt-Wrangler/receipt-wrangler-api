@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/utils"
 	"strings"
 )
 
@@ -15,7 +16,8 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 			// validate jwt
 		}
 
-		next.ServeHTTP(w, r)
+		utils.WriteCustomErrorResponse(w, "Unauthorized", http.StatusForbidden)
+		return
 	})
 }
 

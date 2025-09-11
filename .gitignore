@@ -6,10 +6,10 @@
 /logs/*
 /temp/*
 ./api
-./coverage.out
+coverage.out
 sqlite/*
 .idea/*
-./imap-client/__pycache__
+**/__pycache__/
 api
 ./dev/mariadb/data
 ./dev/mariadb/data/*

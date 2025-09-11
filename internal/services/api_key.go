@@ -42,7 +42,7 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		return "", err
 	}
 
-	generatedHmac, err := service.GenerateApiKeyHmac(secret)
+	b64hmac, err := service.GenerateApiKeyHmac(secret)
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +54,7 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		Description: command.Description,
 		Scope:       command.Scope,
 		Prefix:      prefix,
-		Hmac:        generatedHmac,
+		Hmac:        b64hmac,
 		Version:     version,
 	}
 
@@ -77,6 +77,42 @@ func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) 
 
 	hmac := utils.GenerateHmac([]byte(clearTextPepper), []byte(secret))
 	return utils.Base64EncodeBytes(hmac), nil
+}
+
+func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, error) {
+	parts := strings.Split(apiKey, ".")
+	if len(parts) != constants.V1PartLength {
+		return models.ApiKey{}, nil
+	}
+
+	id := parts[2]
+	decodedId, err := utils.Base64Decode(id)
+	if err != nil {
+		return models.ApiKey{}, err
+	}
+
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+	apiKeyData, err := apiKeyRepository.GetApiKeyById(string(decodedId))
+	if err != nil {
+		return models.ApiKey{}, err
+	}
+
+	secret := parts[3]
+	decodedSecret, err := utils.Base64Decode(secret)
+	if err != nil {
+		return models.ApiKey{}, err
+	}
+
+	b64hmac, err := service.GenerateApiKeyHmac(string(decodedSecret))
+	if err != nil {
+		return models.ApiKey{}, err
+	}
+
+	if b64hmac != apiKeyData.Hmac {
+		return models.ApiKey{}, nil
+	}
+
+	return apiKeyData, nil
 }
 
 func (service *ApiKeyService) BuildV1ApiKey(

@@ -22,3 +22,9 @@ func (repository ApiKeyRepository) CreateApiKey(apiKey models.ApiKey) (models.Ap
 	err := repository.GetDB().Create(&apiKey).Error
 	return apiKey, err
 }
+
+func (repository ApiKeyRepository) GetApiKeyById(id string) (models.ApiKey, error) {
+	var apiKey models.ApiKey
+	err := repository.GetDB().Where("id = ?", id).First(&apiKey).Error
+	return apiKey, err
+}

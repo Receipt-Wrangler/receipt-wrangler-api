@@ -84,7 +84,7 @@ func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) 
 func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, error) {
 	parts := strings.Split(apiKey, ".")
 	if len(parts) != constants.V1PartLength {
-		return models.ApiKey{}, nil
+		return models.ApiKey{}, errors.New("invalid api key structure")
 	}
 
 	id := parts[2]

@@ -117,6 +117,7 @@ func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, er
 	return apiKeyData, nil
 }
 
+// TODO: Implement get claims
 func (service *ApiKeyService) GetClaimsFromApiKey(key models.ApiKey) (structs.Claims, error) {
 	return structs.Claims{}, nil
 }

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
@@ -110,7 +111,7 @@ func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, er
 	}
 
 	if b64hmac != apiKeyData.Hmac {
-		return models.ApiKey{}, nil
+		return models.ApiKey{}, errors.New("invalid api key secret")
 	}
 
 	return apiKeyData, nil

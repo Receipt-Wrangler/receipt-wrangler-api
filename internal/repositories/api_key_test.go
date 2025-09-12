@@ -514,3 +514,211 @@ func TestCreateApiKey_VerifyTimestamps(t *testing.T) {
 		utils.PrintTestError(t, savedApiKey.UpdatedAt, createdApiKey.UpdatedAt)
 	}
 }
+
+func TestGetApiKeyById_Success(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "test-get-key-id",
+		UserID:      &userId,
+		Name:        "Get Test API Key",
+		Description: "Test retrieving API key",
+		Prefix:      "key",
+		Hmac:        "test-get-hmac",
+		Version:     1,
+		Scope:       "read",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key first
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Retrieve the API key by ID
+	retrievedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify all fields match
+	if retrievedApiKey.ID != apiKey.ID {
+		utils.PrintTestError(t, retrievedApiKey.ID, apiKey.ID)
+	}
+
+	if retrievedApiKey.Name != apiKey.Name {
+		utils.PrintTestError(t, retrievedApiKey.Name, apiKey.Name)
+	}
+
+	if retrievedApiKey.Description != apiKey.Description {
+		utils.PrintTestError(t, retrievedApiKey.Description, apiKey.Description)
+	}
+
+	if *retrievedApiKey.UserID != *apiKey.UserID {
+		utils.PrintTestError(t, *retrievedApiKey.UserID, *apiKey.UserID)
+	}
+
+	if retrievedApiKey.Prefix != apiKey.Prefix {
+		utils.PrintTestError(t, retrievedApiKey.Prefix, apiKey.Prefix)
+	}
+
+	if retrievedApiKey.Hmac != apiKey.Hmac {
+		utils.PrintTestError(t, retrievedApiKey.Hmac, apiKey.Hmac)
+	}
+
+	if retrievedApiKey.Version != apiKey.Version {
+		utils.PrintTestError(t, retrievedApiKey.Version, apiKey.Version)
+	}
+
+	if retrievedApiKey.Scope != apiKey.Scope {
+		utils.PrintTestError(t, retrievedApiKey.Scope, apiKey.Scope)
+	}
+
+	// Verify timestamps are set
+	if retrievedApiKey.CreatedAt.IsZero() {
+		utils.PrintTestError(t, "CreatedAt should not be zero", "CreatedAt should be set")
+	}
+
+	if retrievedApiKey.UpdatedAt.IsZero() {
+		utils.PrintTestError(t, "UpdatedAt should not be zero", "UpdatedAt should be set")
+	}
+}
+
+func TestGetApiKeyById_NotFound(t *testing.T) {
+	defer TruncateTestDb()
+
+	repository := NewApiKeyRepository(nil)
+
+	// Try to retrieve non-existent API key
+	_, err := repository.GetApiKeyById("non-existent-id")
+	if err == nil {
+		utils.PrintTestError(t, err, "an error for non-existent API key")
+	}
+}
+
+func TestGetApiKeyById_EmptyId(t *testing.T) {
+	defer TruncateTestDb()
+
+	repository := NewApiKeyRepository(nil)
+
+	// Try to retrieve with empty ID
+	_, err := repository.GetApiKeyById("")
+	if err == nil {
+		utils.PrintTestError(t, err, "an error for empty ID")
+	}
+}
+
+func TestGetApiKeyById_WithTransaction(t *testing.T) {
+	defer TruncateTestDb()
+
+	db := GetDB()
+	tx := db.Begin()
+	defer tx.Rollback()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "transaction-get-key-id",
+		UserID:      &userId,
+		Name:        "Transaction Get Test",
+		Description: "Test retrieving with transaction",
+		Prefix:      "key",
+		Hmac:        "transaction-get-hmac",
+		Version:     1,
+		Scope:       "read",
+	}
+
+	repository := NewApiKeyRepository(tx)
+
+	// Create API key within transaction
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Retrieve API key within same transaction
+	retrievedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if retrievedApiKey.ID != apiKey.ID {
+		utils.PrintTestError(t, retrievedApiKey.ID, apiKey.ID)
+	}
+
+	if retrievedApiKey.Name != apiKey.Name {
+		utils.PrintTestError(t, retrievedApiKey.Name, apiKey.Name)
+	}
+
+	// Verify key is not visible outside transaction
+	repositoryOutside := NewApiKeyRepository(nil)
+	_, err = repositoryOutside.GetApiKeyById(apiKey.ID)
+	if err == nil {
+		utils.PrintTestError(t, err, "an error - key should not be visible outside transaction")
+	}
+}
+
+func TestGetApiKeyById_AfterUpdate(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "update-get-key-id",
+		UserID:      &userId,
+		Name:        "Original Name",
+		Description: "Original description",
+		Prefix:      "key",
+		Hmac:        "original-hmac",
+		Version:     1,
+		Scope:       "read",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create API key
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Update the API key directly in database
+	GetDB().Model(&models.ApiKey{}).Where("id = ?", apiKey.ID).Updates(map[string]interface{}{
+		"name":        "Updated Name",
+		"description": "Updated description",
+		"scope":       "write",
+	})
+
+	// Retrieve updated API key
+	retrievedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify updated values
+	if retrievedApiKey.Name != "Updated Name" {
+		utils.PrintTestError(t, retrievedApiKey.Name, "Updated Name")
+	}
+
+	if retrievedApiKey.Description != "Updated description" {
+		utils.PrintTestError(t, retrievedApiKey.Description, "Updated description")
+	}
+
+	if retrievedApiKey.Scope != "write" {
+		utils.PrintTestError(t, retrievedApiKey.Scope, "write")
+	}
+
+	// Verify unchanged values
+	if retrievedApiKey.ID != apiKey.ID {
+		utils.PrintTestError(t, retrievedApiKey.ID, apiKey.ID)
+	}
+
+	if retrievedApiKey.Prefix != apiKey.Prefix {
+		utils.PrintTestError(t, retrievedApiKey.Prefix, apiKey.Prefix)
+	}
+
+	if retrievedApiKey.Version != apiKey.Version {
+		utils.PrintTestError(t, retrievedApiKey.Version, apiKey.Version)
+	}
+}

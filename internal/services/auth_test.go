@@ -121,7 +121,13 @@ func TestGenerateRefreshTokenCorrectly(t *testing.T) {
 
 	rawRefreshTokenClaims, err := v.ValidateToken(context.Background(), refreshToken)
 	if err != nil {
-		utils.PrintTestError(t, rawRefreshTokenClaims, "claim object")
+		utils.PrintTestError(t, err, "no error")
+		return
+	}
+
+	if rawRefreshTokenClaims == nil {
+		utils.PrintTestError(t, rawRefreshTokenClaims, "non-nil claim object")
+		return
 	}
 
 	refreshTokenClaims := rawRefreshTokenClaims.(*validator.ValidatedClaims).CustomClaims.(*structs.Claims)

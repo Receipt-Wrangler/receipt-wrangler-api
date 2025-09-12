@@ -104,7 +104,7 @@ func TestUnifiedAuthMiddleware_ValidJWTCookie(t *testing.T) {
 	// Create request with JWT in cookie - since getJwt checks cookie first
 	r := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	r.AddCookie(&http.Cookie{
-		Name:  "receipt-wrangler-jwt",
+		Name:  "jwt",
 		Value: "valid.jwt.token",
 	})
 	w := httptest.NewRecorder()

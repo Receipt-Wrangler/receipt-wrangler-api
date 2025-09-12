@@ -130,7 +130,7 @@ func (repository UserRepository) GetAllUserViews() ([]structs.UserView, error) {
 func (repository UserRepository) GetUserById(userId uint) (structs.UserView, error) {
 	var user structs.UserView
 
-	err := repository.GetDB().Model(models.User{}).Where("id = ?", userId).Find(&user).Error
+	err := repository.GetDB().Model(models.User{}).Where("id = ?", userId).First(&user).Error
 	if err != nil {
 		return structs.UserView{}, err
 	}

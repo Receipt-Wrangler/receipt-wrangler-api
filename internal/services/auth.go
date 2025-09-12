@@ -134,7 +134,11 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 	}
 
 	refreshTokenClaims := structs.Claims{
-		UserId: user.ID,
+		DefaultAvatarColor: user.DefaultAvatarColor,
+		Displayname:        user.DisplayName,
+		UserId:             user.ID,
+		Username:           user.Username,
+		UserRole:           user.UserRole,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},

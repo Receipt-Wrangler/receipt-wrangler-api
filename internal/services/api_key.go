@@ -46,6 +46,8 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		return "", err
 	}
 
+	b64secret := utils.Base64EncodeBytes([]byte(secret))
+
 	b64hmac, err := service.GenerateApiKeyHmac(secret)
 	if err != nil {
 		return "", err
@@ -68,7 +70,7 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		return "", err
 	}
 
-	return service.BuildV1ApiKey(prefix, version, id, secret), nil
+	return service.BuildV1ApiKey(prefix, version, b64Id, b64secret), nil
 }
 
 func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) {

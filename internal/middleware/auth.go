@@ -36,7 +36,7 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, claims))
+			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &claims))
 			next.ServeHTTP(w, r)
 			return
 		} else if len(jwt) != 0 {
@@ -47,7 +47,7 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, claims))
+			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &claims))
 			next.ServeHTTP(w, r)
 			return
 		}

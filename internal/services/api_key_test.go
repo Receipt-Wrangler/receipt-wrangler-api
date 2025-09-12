@@ -230,10 +230,16 @@ func TestApiKeyService_CreateApiKey_VerifyHmacGeneration(t *testing.T) {
 	if len(parts) != 4 {
 		utils.PrintTestError(t, len(parts), 4)
 	}
-	secret := parts[3]
+	b64Secret := parts[3]
 
-	// Generate HMAC for the same secret and compare
-	expectedHmac, err := apiKeyService.GenerateApiKeyHmac(secret)
+	// Decode the base64 secret to get the raw secret
+	decodedSecret, err := utils.Base64Decode(b64Secret)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Generate HMAC for the raw secret and compare
+	expectedHmac, err := apiKeyService.GenerateApiKeyHmac(string(decodedSecret))
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
 	}
@@ -345,12 +351,14 @@ func TestApiKeyService_ValidateV1ApiKey_Success(t *testing.T) {
 	generatedKey, err := apiKeyService.CreateApiKey(userId, command)
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
+		return
 	}
 
-	// Validate the generated key
+	// Validate the generated key using the service
 	validatedKey, err := apiKeyService.ValidateV1ApiKey(generatedKey)
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
+		return
 	}
 
 	if validatedKey.Name != command.Name {
@@ -365,8 +373,8 @@ func TestApiKeyService_ValidateV1ApiKey_Success(t *testing.T) {
 		utils.PrintTestError(t, validatedKey.Scope, command.Scope)
 	}
 
-	if *validatedKey.UserID != userId {
-		utils.PrintTestError(t, *validatedKey.UserID, userId)
+	if validatedKey.UserID == nil || *validatedKey.UserID != userId {
+		utils.PrintTestError(t, validatedKey.UserID, userId)
 	}
 }
 
@@ -490,7 +498,7 @@ func TestApiKeyService_GetClaimsFromApiKey_Success(t *testing.T) {
 	command := commands.UpsertApiKeyCommand{
 		Name:        "Claims Test Key",
 		Description: "Test claims generation",
-		Scope:       "admin",
+		Scope:       "rw",
 	}
 
 	apiKeyService := NewApiKeyService(nil)

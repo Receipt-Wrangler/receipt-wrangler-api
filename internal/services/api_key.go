@@ -1,12 +1,17 @@
 package services
 
 import (
+	"errors"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 
+	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +31,7 @@ func NewApiKeyService(tx *gorm.DB) ApiKeyService {
 }
 
 func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertApiKeyCommand) (string, error) {
-	prefix := "key"
+	prefix := constants.V1Prefix
 	version := 1
 
 	id, err := utils.GetRandomString(32)
@@ -41,7 +46,9 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		return "", err
 	}
 
-	generatedHmac, err := service.GenerateApiKeyHmac(secret)
+	b64secret := utils.Base64EncodeBytes([]byte(secret))
+
+	b64hmac, err := service.GenerateApiKeyHmac(secret)
 	if err != nil {
 		return "", err
 	}
@@ -53,7 +60,7 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		Description: command.Description,
 		Scope:       command.Scope,
 		Prefix:      prefix,
-		Hmac:        generatedHmac,
+		Hmac:        b64hmac,
 		Version:     version,
 	}
 
@@ -63,7 +70,7 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		return "", err
 	}
 
-	return service.BuildV1ApiKey(prefix, version, id, secret), nil
+	return service.BuildV1ApiKey(prefix, version, b64Id, b64secret), nil
 }
 
 func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) {
@@ -76,6 +83,63 @@ func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) 
 
 	hmac := utils.GenerateHmac([]byte(clearTextPepper), []byte(secret))
 	return utils.Base64EncodeBytes(hmac), nil
+}
+
+func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, error) {
+	parts := strings.Split(apiKey, ".")
+	if len(parts) != constants.V1PartLength {
+		return models.ApiKey{}, errors.New("invalid api key structure")
+	}
+
+	b64id := parts[2]
+
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+	apiKeyData, err := apiKeyRepository.GetApiKeyById(b64id)
+	if err != nil {
+		return models.ApiKey{}, err
+	}
+
+	secret := parts[3]
+	decodedSecret, err := utils.Base64Decode(secret)
+	if err != nil {
+		return models.ApiKey{}, err
+	}
+
+	b64hmac, err := service.GenerateApiKeyHmac(string(decodedSecret))
+	if err != nil {
+		return models.ApiKey{}, err
+	}
+
+	if b64hmac != apiKeyData.Hmac {
+		return models.ApiKey{}, errors.New("invalid api key secret")
+	}
+
+	return apiKeyData, nil
+}
+
+func (service *ApiKeyService) GetClaimsFromApiKey(key models.ApiKey) (validator.ValidatedClaims, error) {
+	userRepository := repositories.NewUserRepository(service.TX)
+	user, err := userRepository.GetUserById(*key.UserID)
+	if err != nil {
+		return validator.ValidatedClaims{}, err
+	}
+
+	claims := structs.Claims{
+		DefaultAvatarColor: user.DefaultAvatarColor,
+		UserId:             user.ID,
+		Username:           user.Username,
+		Displayname:        user.DisplayName,
+		UserRole:           user.UserRole,
+		ApiKeyScope:        models.ApiKeyScope(key.Scope),
+		RegisteredClaims:   jwt.RegisteredClaims{},
+	}
+
+	result := validator.ValidatedClaims{
+		CustomClaims:     &claims,
+		RegisteredClaims: validator.RegisteredClaims{},
+	}
+
+	return result, nil
 }
 
 func (service *ApiKeyService) BuildV1ApiKey(

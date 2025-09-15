@@ -4,6 +4,7 @@ import (
 	"errors"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -57,6 +58,12 @@ func (repository ApiKeyRepository) GetPagedApiKeys(command commands.PagedApiKeyR
 	}
 
 	return results, count, nil
+}
+
+func (repository ApiKeyRepository) UpdateApiKeyLastUsedDate(id string) error {
+	now := time.Now()
+	err := repository.GetDB().Model(&models.ApiKey{}).Where("id = ?", id).Update("last_used_at", now).Error
+	return err
 }
 
 func (repository ApiKeyRepository) isValidColumn(orderBy string) bool {

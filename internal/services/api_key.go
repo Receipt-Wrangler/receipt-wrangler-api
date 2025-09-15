@@ -153,6 +153,11 @@ func (service *ApiKeyService) BuildV1ApiKey(
 	return strings.Join([]string{prefix, stringVersion, id, secret}, ".")
 }
 
+func (service *ApiKeyService) UpdateApiKeyLastUsedDate(id string) error {
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+	return apiKeyRepository.UpdateApiKeyLastUsedDate(id)
+}
+
 func (service *ApiKeyService) GetPagedApiKeys(command commands.PagedApiKeyRequestCommand, userId string) ([]models.ApiKeyView, int64, error) {
 	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
 

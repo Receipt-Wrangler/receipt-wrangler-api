@@ -431,7 +431,7 @@ func TestUnifiedAuthMiddleware_ContextPropagation(t *testing.T) {
 			utils.PrintTestError(t, claims, "claims should be present in context")
 		}
 
-		validatedClaims, ok := claims.(*validator.ValidatedClaims)
+		validatedClaims, ok := claims.(validator.ValidatedClaims)
 		if !ok {
 			utils.PrintTestError(t, "type assertion failed", "should be ValidatedClaims")
 		}

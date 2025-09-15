@@ -54,6 +54,7 @@ func createTestApiKeysForHandlerTests() {
 		{
 			ID:          "handler-key-1",
 			UserID:      &user1,
+			CreatedBy:   &user1,
 			Name:        "Alpha Handler Key",
 			Description: "First handler test key",
 			Prefix:      "key",
@@ -64,6 +65,7 @@ func createTestApiKeysForHandlerTests() {
 		{
 			ID:          "handler-key-2",
 			UserID:      &user1,
+			CreatedBy:   &user1,
 			Name:        "Beta Handler Key",
 			Description: "Second handler test key",
 			Prefix:      "key",
@@ -74,6 +76,7 @@ func createTestApiKeysForHandlerTests() {
 		{
 			ID:          "handler-key-3",
 			UserID:      &user2,
+			CreatedBy:   &user2,
 			Name:        "Gamma Handler Key",
 			Description: "Third handler test key",
 			Prefix:      "key",

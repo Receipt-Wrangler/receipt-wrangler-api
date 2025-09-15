@@ -62,6 +62,7 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		Prefix:      prefix,
 		Hmac:        b64hmac,
 		Version:     version,
+		CreatedBy:   &userId,
 	}
 
 	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)

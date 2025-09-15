@@ -87,6 +87,10 @@ func TestApiKeyService_CreateApiKey_Success(t *testing.T) {
 	if savedApiKey.Hmac == "" {
 		utils.PrintTestError(t, savedApiKey.Hmac, "a non-empty string")
 	}
+
+	if savedApiKey.CreatedBy == nil || *savedApiKey.CreatedBy != userId {
+		utils.PrintTestError(t, savedApiKey.CreatedBy, &userId)
+	}
 }
 
 func TestApiKeyService_CreateApiKey_HmacGenerationError(t *testing.T) {

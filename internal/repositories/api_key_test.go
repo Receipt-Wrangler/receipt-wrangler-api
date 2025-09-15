@@ -43,6 +43,7 @@ func TestCreateApiKey_Success(t *testing.T) {
 	apiKey := models.ApiKey{
 		ID:          "test-key-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "Test API Key",
 		Description: "Test description",
 		Prefix:      "key",
@@ -219,6 +220,7 @@ func TestCreateApiKey_DuplicateID(t *testing.T) {
 	apiKey1 := models.ApiKey{
 		ID:          "duplicate-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "First Key",
 		Description: "First key with duplicate ID",
 		Prefix:      "key",
@@ -230,6 +232,7 @@ func TestCreateApiKey_DuplicateID(t *testing.T) {
 	apiKey2 := models.ApiKey{
 		ID:          "duplicate-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "Second Key",
 		Description: "Second key with duplicate ID",
 		Prefix:      "key",
@@ -277,6 +280,7 @@ func TestCreateApiKey_WithTransaction(t *testing.T) {
 	apiKey := models.ApiKey{
 		ID:          "transaction-key-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "Transaction Test Key",
 		Description: "Key created within transaction",
 		Prefix:      "key",
@@ -323,6 +327,7 @@ func TestCreateApiKey_TransactionRollback(t *testing.T) {
 	apiKey := models.ApiKey{
 		ID:          "rollback-key-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "Rollback Test Key",
 		Description: "Key to be rolled back",
 		Prefix:      "key",
@@ -362,6 +367,7 @@ func TestCreateApiKey_MultipleKeys(t *testing.T) {
 	apiKey1 := models.ApiKey{
 		ID:          "multi-key-1",
 		UserID:      &userId1,
+		CreatedBy:   &userId1,
 		Name:        "First Multi Key",
 		Description: "First of multiple keys",
 		Prefix:      "key",
@@ -373,6 +379,7 @@ func TestCreateApiKey_MultipleKeys(t *testing.T) {
 	apiKey2 := models.ApiKey{
 		ID:          "multi-key-2",
 		UserID:      &userId2,
+		CreatedBy:   &userId2,
 		Name:        "Second Multi Key",
 		Description: "Second of multiple keys",
 		Prefix:      "key",
@@ -384,6 +391,7 @@ func TestCreateApiKey_MultipleKeys(t *testing.T) {
 	apiKey3 := models.ApiKey{
 		ID:          "multi-key-3",
 		UserID:      &userId1,
+		CreatedBy:   &userId1,
 		Name:        "Third Multi Key",
 		Description: "Third of multiple keys",
 		Prefix:      "key",
@@ -460,6 +468,7 @@ func TestCreateApiKey_VerifyTimestamps(t *testing.T) {
 	apiKey := models.ApiKey{
 		ID:          "timestamp-key-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "Timestamp Test Key",
 		Description: "Key to test timestamp behavior",
 		Prefix:      "key",
@@ -527,6 +536,7 @@ func createTestApiKeysForPagination() {
 		{
 			ID:          "key-1",
 			UserID:      &user1,
+			CreatedBy:   &user1,
 			Name:        "Alpha Key",
 			Description: "First key alphabetically",
 			Prefix:      "key",
@@ -539,6 +549,7 @@ func createTestApiKeysForPagination() {
 		{
 			ID:          "key-2",
 			UserID:      &user1,
+			CreatedBy:   &user1,
 			Name:        "Beta Key",
 			Description: "Second key alphabetically",
 			Prefix:      "key",
@@ -552,6 +563,7 @@ func createTestApiKeysForPagination() {
 		{
 			ID:          "key-3",
 			UserID:      &user2,
+			CreatedBy:   &user2,
 			Name:        "Gamma Key",
 			Description: "Third key alphabetically",
 			Prefix:      "key",
@@ -564,6 +576,7 @@ func createTestApiKeysForPagination() {
 		{
 			ID:          "key-4",
 			UserID:      &user2,
+			CreatedBy:   &user2,
 			Name:        "Delta Key",
 			Description: "Fourth key alphabetically",
 			Prefix:      "key",
@@ -576,6 +589,7 @@ func createTestApiKeysForPagination() {
 		{
 			ID:          "key-5",
 			UserID:      &user1,
+			CreatedBy:   &user1,
 			Name:        "Echo Key",
 			Description: "Fifth key alphabetically",
 			Prefix:      "key",
@@ -1013,6 +1027,7 @@ func TestGetPagedApiKeys_WithRevokedKeys(t *testing.T) {
 	revokedKey := models.ApiKey{
 		ID:          "revoked-key-1",
 		UserID:      &user1,
+		CreatedBy:   &user1,
 		Name:        "Revoked Key",
 		Description: "This key is revoked",
 		Prefix:      "key",
@@ -1073,6 +1088,7 @@ func TestGetPagedApiKeys_WithTransaction(t *testing.T) {
 	apiKey := models.ApiKey{
 		ID:          "tx-key-1",
 		UserID:      &user1,
+		CreatedBy:   &user1,
 		Name:        "Transaction Key",
 		Description: "Key created in transaction",
 		Prefix:      "key",
@@ -1238,6 +1254,7 @@ func TestGetApiKeyById_Success(t *testing.T) {
 	apiKey := models.ApiKey{
 		ID:          "test-get-key-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "Get Test API Key",
 		Description: "Test retrieving API key",
 		Prefix:      "key",
@@ -1338,6 +1355,7 @@ func TestGetApiKeyById_WithTransaction(t *testing.T) {
 	apiKey := models.ApiKey{
 		ID:          "transaction-get-key-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "Transaction Get Test",
 		Description: "Test retrieving with transaction",
 		Prefix:      "key",
@@ -1383,6 +1401,7 @@ func TestGetApiKeyById_AfterUpdate(t *testing.T) {
 	apiKey := models.ApiKey{
 		ID:          "update-get-key-id",
 		UserID:      &userId,
+		CreatedBy:   &userId,
 		Name:        "Original Name",
 		Description: "Original description",
 		Prefix:      "key",

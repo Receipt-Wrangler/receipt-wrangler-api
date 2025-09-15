@@ -1457,3 +1457,225 @@ func TestGetApiKeyById_AfterUpdate(t *testing.T) {
 		utils.PrintTestError(t, retrievedApiKey.Version, apiKey.Version)
 	}
 }
+
+func TestUpdateApiKeyLastUsedDate_Success(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "update-last-used-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Last Used Test Key",
+		Description: "Test updating last used date",
+		Prefix:      "key",
+		Hmac:        "last-used-hmac",
+		Version:     1,
+		Scope:       "read",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key first
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify LastUsedAt is initially nil
+	retrievedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if retrievedApiKey.LastUsedAt != nil {
+		utils.PrintTestError(t, retrievedApiKey.LastUsedAt, nil)
+	}
+
+	beforeUpdate := time.Now()
+
+	// Update the last used date
+	err = repository.UpdateApiKeyLastUsedDate(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	afterUpdate := time.Now()
+
+	// Verify the last used date was updated
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.LastUsedAt == nil {
+		utils.PrintTestError(t, "LastUsedAt should not be nil", "LastUsedAt should be set")
+	}
+
+	if updatedApiKey.LastUsedAt.Before(beforeUpdate) {
+		utils.PrintTestError(t, "LastUsedAt is before update started", "LastUsedAt should be after update started")
+	}
+
+	if updatedApiKey.LastUsedAt.After(afterUpdate) {
+		utils.PrintTestError(t, "LastUsedAt is after update completed", "LastUsedAt should be before update completed")
+	}
+}
+
+func TestUpdateApiKeyLastUsedDate_NonExistentKey(t *testing.T) {
+	defer TruncateTestDb()
+
+	repository := NewApiKeyRepository(nil)
+
+	// Try to update non-existent API key
+	err := repository.UpdateApiKeyLastUsedDate("non-existent-key")
+
+	// Should not return an error (GORM returns no error for UPDATE on non-existent records)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+}
+
+func TestUpdateApiKeyLastUsedDate_WithTransaction(t *testing.T) {
+	defer TruncateTestDb()
+
+	db := GetDB()
+	tx := db.Begin()
+	defer tx.Rollback()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "tx-update-last-used-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Transaction Last Used Test",
+		Description: "Test updating last used date within transaction",
+		Prefix:      "key",
+		Hmac:        "tx-last-used-hmac",
+		Version:     1,
+		Scope:       "read",
+	}
+
+	repository := NewApiKeyRepository(tx)
+
+	// Create API key within transaction
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Update last used date within transaction
+	err = repository.UpdateApiKeyLastUsedDate(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify update within transaction
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.LastUsedAt == nil {
+		utils.PrintTestError(t, "LastUsedAt should not be nil", "LastUsedAt should be set")
+	}
+
+	// Commit transaction
+	tx.Commit()
+
+	// Verify update persisted after commit
+	repositoryOutside := NewApiKeyRepository(nil)
+	persistedApiKey, err := repositoryOutside.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if persistedApiKey.LastUsedAt == nil {
+		utils.PrintTestError(t, "LastUsedAt should not be nil after commit", "LastUsedAt should be set")
+	}
+
+	if !persistedApiKey.LastUsedAt.Equal(*updatedApiKey.LastUsedAt) {
+		utils.PrintTestError(t, persistedApiKey.LastUsedAt, updatedApiKey.LastUsedAt)
+	}
+}
+
+func TestUpdateApiKeyLastUsedDate_VerifyTimestamp(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "timestamp-update-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Timestamp Update Test",
+		Description: "Test timestamp precision",
+		Prefix:      "key",
+		Hmac:        "timestamp-update-hmac",
+		Version:     1,
+		Scope:       "read",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Wait a small amount to ensure timestamp difference
+	time.Sleep(10 * time.Millisecond)
+
+	beforeUpdate := time.Now()
+
+	// Update last used date
+	err = repository.UpdateApiKeyLastUsedDate(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	afterUpdate := time.Now()
+
+	// Get the updated key
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify timestamp is after creation
+	if !updatedApiKey.LastUsedAt.After(updatedApiKey.CreatedAt) {
+		utils.PrintTestError(t, "LastUsedAt should be after CreatedAt", "LastUsedAt should be more recent")
+	}
+
+	// Verify timestamp is within expected range
+	if updatedApiKey.LastUsedAt.Before(beforeUpdate) {
+		utils.PrintTestError(t, "LastUsedAt is before update time", "LastUsedAt should be after update started")
+	}
+
+	if updatedApiKey.LastUsedAt.After(afterUpdate) {
+		utils.PrintTestError(t, "LastUsedAt is after update time", "LastUsedAt should be before update completed")
+	}
+
+	// Test multiple updates
+	time.Sleep(10 * time.Millisecond)
+	firstUpdateTime := *updatedApiKey.LastUsedAt
+
+	beforeSecondUpdate := time.Now()
+	err = repository.UpdateApiKeyLastUsedDate(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	secondUpdatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify second update is later than first
+	if !secondUpdatedApiKey.LastUsedAt.After(firstUpdateTime) {
+		utils.PrintTestError(t, "Second LastUsedAt should be after first", "Second update should be more recent")
+	}
+
+	if secondUpdatedApiKey.LastUsedAt.Before(beforeSecondUpdate) {
+		utils.PrintTestError(t, "Second LastUsedAt is before second update", "Second update should be recent")
+	}
+}

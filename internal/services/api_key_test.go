@@ -8,6 +8,7 @@ import (
 	"receipt-wrangler/api/internal/utils"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestApiKeyService_CreateApiKey_Success(t *testing.T) {
@@ -655,5 +656,192 @@ func TestApiKeyService_GetClaimsFromApiKey_AllFieldsPopulated(t *testing.T) {
 	// Verify registered claims exist but are empty (as expected)
 	if claims.RegisteredClaims.Issuer != "" {
 		utils.PrintTestError(t, "RegisteredClaims should be empty", "RegisteredClaims populated unexpectedly")
+	}
+}
+
+func TestApiKeyService_UpdateApiKeyLastUsedDate_Success(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer repositories.TruncateTestDb()
+
+	// Set up pepper for HMAC generation
+	pepperService := NewPepperService(nil)
+	err := pepperService.InitPepper()
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	userId := uint(1)
+	command := commands.UpsertApiKeyCommand{
+		Name:        "Last Used Test API Key",
+		Description: "Test updating last used date",
+		Scope:       "r",
+	}
+
+	apiKeyService := NewApiKeyService(nil)
+
+	// Create an API key first
+	generatedKey, err := apiKeyService.CreateApiKey(userId, command)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Extract the ID from the generated key
+	parts := strings.Split(generatedKey, ".")
+	if len(parts) != 4 {
+		utils.PrintTestError(t, len(parts), 4)
+	}
+	apiKeyId := parts[2]
+
+	// Verify initial LastUsedAt is nil
+	apiKeyRepo := repositories.NewApiKeyRepository(nil)
+	initialApiKey, err := apiKeyRepo.GetApiKeyById(apiKeyId)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if initialApiKey.LastUsedAt != nil {
+		utils.PrintTestError(t, initialApiKey.LastUsedAt, nil)
+	}
+
+	beforeUpdate := time.Now()
+
+	// Update the last used date using the service
+	err = apiKeyService.UpdateApiKeyLastUsedDate(apiKeyId)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	afterUpdate := time.Now()
+
+	// Verify the last used date was updated
+	updatedApiKey, err := apiKeyRepo.GetApiKeyById(apiKeyId)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.LastUsedAt == nil {
+		utils.PrintTestError(t, "LastUsedAt should not be nil", "LastUsedAt should be set")
+	}
+
+	if updatedApiKey.LastUsedAt.Before(beforeUpdate) {
+		utils.PrintTestError(t, "LastUsedAt is before update started", "LastUsedAt should be after update started")
+	}
+
+	if updatedApiKey.LastUsedAt.After(afterUpdate) {
+		utils.PrintTestError(t, "LastUsedAt is after update completed", "LastUsedAt should be before update completed")
+	}
+}
+
+func TestApiKeyService_UpdateApiKeyLastUsedDate_NonExistentKey(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer repositories.TruncateTestDb()
+
+	apiKeyService := NewApiKeyService(nil)
+
+	// Try to update a non-existent API key
+	err := apiKeyService.UpdateApiKeyLastUsedDate("non-existent-key-id")
+
+	// Should not return an error (GORM UPDATE on non-existent record doesn't error)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+}
+
+func TestApiKeyService_UpdateApiKeyLastUsedDate_WithTransaction(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer repositories.TruncateTestDb()
+
+	// Set up pepper for HMAC generation
+	pepperService := NewPepperService(nil)
+	err := pepperService.InitPepper()
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	db := repositories.GetDB()
+	tx := db.Begin()
+	defer tx.Rollback()
+
+	userId := uint(1)
+	command := commands.UpsertApiKeyCommand{
+		Name:        "Transaction Last Used Test",
+		Description: "Test updating last used date within transaction",
+		Scope:       "r",
+	}
+
+	// Create API key service with transaction
+	apiKeyServiceTx := NewApiKeyService(tx)
+
+	// Create an API key within the transaction
+	generatedKey, err := apiKeyServiceTx.CreateApiKey(userId, command)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Extract the ID from the generated key
+	parts := strings.Split(generatedKey, ".")
+	if len(parts) != 4 {
+		utils.PrintTestError(t, len(parts), 4)
+	}
+	apiKeyId := parts[2]
+
+	// Update last used date within the transaction
+	err = apiKeyServiceTx.UpdateApiKeyLastUsedDate(apiKeyId)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the update within the transaction
+	apiKeyRepoTx := repositories.NewApiKeyRepository(tx)
+	updatedApiKey, err := apiKeyRepoTx.GetApiKeyById(apiKeyId)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.LastUsedAt == nil {
+		utils.PrintTestError(t, "LastUsedAt should not be nil", "LastUsedAt should be set")
+	}
+
+	// Verify the key is not visible outside the transaction yet
+	apiKeyServiceOutside := NewApiKeyService(nil)
+	apiKeyRepoOutside := repositories.NewApiKeyRepository(nil)
+	_, err = apiKeyRepoOutside.GetApiKeyById(apiKeyId)
+	if err == nil {
+		utils.PrintTestError(t, err, "an error - key should not be visible outside transaction")
+	}
+
+	// Commit the transaction
+	tx.Commit()
+
+	// Now verify the update persisted after commit
+	persistedApiKey, err := apiKeyRepoOutside.GetApiKeyById(apiKeyId)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if persistedApiKey.LastUsedAt == nil {
+		utils.PrintTestError(t, "LastUsedAt should not be nil after commit", "LastUsedAt should be set")
+	}
+
+	// Test updating with service outside transaction
+	time.Sleep(10 * time.Millisecond) // Ensure timestamp difference
+	beforeSecondUpdate := time.Now()
+
+	err = apiKeyServiceOutside.UpdateApiKeyLastUsedDate(apiKeyId)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	secondUpdatedApiKey, err := apiKeyRepoOutside.GetApiKeyById(apiKeyId)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if !secondUpdatedApiKey.LastUsedAt.After(*persistedApiKey.LastUsedAt) {
+		utils.PrintTestError(t, "Second update should be after first", "Second LastUsedAt should be more recent")
+	}
+
+	if secondUpdatedApiKey.LastUsedAt.Before(beforeSecondUpdate) {
+		utils.PrintTestError(t, "Second LastUsedAt is before update", "Second update should be recent")
 	}
 }

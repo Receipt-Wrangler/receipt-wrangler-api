@@ -31,7 +31,7 @@ func (command *PagedGroupRequestCommand) LoadDataFromRequest(w http.ResponseWrit
 
 func (command *PagedGroupRequestCommand) Validate(r *http.Request) structs.ValidatorError {
 	vErrs := command.PagedRequestCommand.Validate()
-	token := structs.GetJWT(r)
+	token := structs.GetClaims(r)
 
 	if command.GroupFilter.AssociatedGroup == ASSOCIATED_GROUP_ALL &&
 		token.UserRole != models.ADMIN {

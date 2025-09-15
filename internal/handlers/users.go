@@ -138,7 +138,7 @@ func GetAmountOwedForUser(w http.ResponseWriter, r *http.Request) {
 			var itemsOwed []ItemView
 			var itemsOthersOwe []ItemView
 			total := decimal.NewFromInt(0)
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			id := token.UserId
 			resultMap := make(map[uint]decimal.Decimal)
 			totalReceiptIds := make([]uint, 0)
@@ -358,7 +358,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			if utils.UintToString(token.UserId) == id {
 				return 500, errors.New("user cannot delete itself")
 			}
@@ -383,7 +383,7 @@ func GetClaimsForLoggedInUser(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			services.PrepareAccessTokenClaims(*token)
 
 			bytes, err := utils.MarshalResponseData(token)
@@ -408,7 +408,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			db := repositories.GetDB()
 			updateProfileCommand := r.Context().Value("updateProfileCommand").(commands.UpdateProfileCommand)
 
@@ -437,7 +437,7 @@ func GetAppData(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			appData, err := services.GetAppData(token.UserId, r)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -471,9 +471,9 @@ func BulkDeleteUsers(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			currentUserId := utils.UintToString(token.UserId)
-			
+
 			// Check if the current user is trying to delete themselves
 			for _, userId := range command.UserIds {
 				if userId == currentUserId {

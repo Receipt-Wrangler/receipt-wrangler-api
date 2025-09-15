@@ -240,7 +240,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.Icons = structs.Icons
 
 	if r != nil {
-		claims := structs.GetJWT(r)
+		claims := structs.GetClaims(r)
 		PrepareAccessTokenClaims(*claims)
 		appData.Claims = *claims
 	}

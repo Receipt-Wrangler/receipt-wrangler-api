@@ -26,7 +26,7 @@ func Search(w http.ResponseWriter, r *http.Request) {
 
 				results := make([]structs.SearchResult, 0)
 
-				token := structs.GetJWT(r)
+				token := structs.GetClaims(r)
 				groupMemberRepository := repositories.NewGroupMemberRepository(nil)
 				groupIds, err := groupMemberRepository.GetGroupIdsByUserId(utils.UintToString(token.UserId))
 				if err != nil {

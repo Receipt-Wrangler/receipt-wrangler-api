@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hibiken/asynq"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,6 +16,8 @@ import (
 	"receipt-wrangler/api/internal/utils"
 	"receipt-wrangler/api/internal/wranglerasynq"
 	"strings"
+
+	"github.com/hibiken/asynq"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -40,7 +41,7 @@ func GetPagedGroups(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			userIdString := utils.UintToString(token.UserId)
 			groupRepository := repositories.NewGroupRepository(nil)
 
@@ -80,7 +81,7 @@ func GetGroupsForUser(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			groupService := services.NewGroupService(nil)
 
 			groups, err := groupService.GetGroupsForUser(utils.UintToString(token.UserId))
@@ -178,7 +179,7 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			command.IsAllGroup = false
 			groupRepository := repositories.NewGroupRepository(nil)
@@ -376,7 +377,7 @@ func PollGroupEmail(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if isAllGroup {
-				token := structs.GetJWT(r)
+				token := structs.GetClaims(r)
 				disabledEmailIntegrationCnt := 0
 				groupService := services.NewGroupService(nil)
 
@@ -486,7 +487,7 @@ func GetOcrTextForGroup(w http.ResponseWriter, r *http.Request) {
 		UserRole:     models.ADMIN,
 		ResponseType: constants.ApplicationZip,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			zipFilename := "results.zip"
 
 			ocrResults, err := services.ReadAllReceiptImagesForGroup(groupId, utils.UintToString(token.UserId))

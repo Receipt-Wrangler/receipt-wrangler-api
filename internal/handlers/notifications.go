@@ -18,7 +18,7 @@ func GetNotificationsForUser(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			notificationRepository := repositories.NewNotificationRepository(nil)
 
 			notifications, err := notificationRepository.GetNotificationsForUser(token.UserId)
@@ -48,7 +48,7 @@ func GetNotificationCountForUser(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			notificationRepository := repositories.NewNotificationRepository(nil)
 
 			result, err := notificationRepository.GetNotificationCountForUser(token.UserId)
@@ -78,7 +78,7 @@ func DeleteAllNotificationsForUser(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			notificationRepository := repositories.NewNotificationRepository(nil)
 
 			err := notificationRepository.DeleteAllNotificationsForUser(token.UserId)
@@ -103,7 +103,7 @@ func DeleteNotification(w http.ResponseWriter, r *http.Request) {
 		ResponseType: "",
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			notificationRepository := repositories.NewNotificationRepository(nil)
 
 			notification, err := notificationRepository.GetNotificationById(id)

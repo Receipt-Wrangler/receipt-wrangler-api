@@ -4,10 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/hibiken/asynq"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -18,6 +14,11 @@ import (
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"receipt-wrangler/api/internal/wranglerasynq"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/hibiken/asynq"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +38,7 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 			}
 
 			pagedData := structs.PagedData{}
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			receiptRepository := repositories.NewReceiptRepository(nil)
 			receipts, count, err := receiptRepository.GetPagedReceiptsByGroupId(
@@ -84,7 +85,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 			var receipts []models.Receipt
 			var groupIds []string
 
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			r.ParseForm()
 
@@ -138,7 +139,7 @@ func GetReceiptsForGroupIds(w http.ResponseWriter, r *http.Request) {
 
 func CreateReceipt(w http.ResponseWriter, r *http.Request) {
 	errMessage := "Error creating receipt"
-	token := structs.GetJWT(r)
+	token := structs.GetClaims(r)
 
 	command := commands.UpsertReceiptCommand{}
 	err := command.LoadDataFromRequest(w, r)
@@ -216,7 +217,7 @@ func QuickScan(w http.ResponseWriter, r *http.Request) {
 
 			fileRepository := repositories.NewFileRepository(nil)
 
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			for i := 0; i < len(quickScanCommand.Files); i++ {
 				fileBytes := make([]byte, quickScanCommand.FileHeaders[i].Size)
 
@@ -307,7 +308,7 @@ func UpdateReceipt(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.EDITOR,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			command := commands.UpsertReceiptCommand{}
 			receiptRepository := repositories.NewReceiptRepository(nil)
 			err := command.LoadDataFromRequest(w, r)
@@ -393,7 +394,7 @@ func BulkReceiptStatusUpdate(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if len(bulkCommand.Comment) > 0 {
-					token := structs.GetJWT(r)
+					token := structs.GetClaims(r)
 					comments := make([]models.Comment, len(bulkCommand.ReceiptIds))
 
 					for i := 0; i < len(bulkCommand.ReceiptIds); i++ {
@@ -451,7 +452,7 @@ func HasAccess(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			groupService := services.NewGroupService(nil)
 
 			receiptId := r.URL.Query().Get("receiptId")
@@ -531,7 +532,7 @@ func DuplicateReceipt(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.EDITOR,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			receiptService := services.NewReceiptService(nil)
 			newReceipt, err := receiptService.DuplicateReceipt(token.UserId, receiptId)

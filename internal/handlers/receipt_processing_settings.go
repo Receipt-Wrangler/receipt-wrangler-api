@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -10,6 +9,8 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func GetPagedReceiptProcessingSettings(w http.ResponseWriter, r *http.Request) {
@@ -211,7 +212,7 @@ func CheckReceiptProcessingSettingsConnectivity(w http.ResponseWriter, r *http.R
 		UserRole:     models.ADMIN,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			command := commands.CheckReceiptProcessingSettingsCommand{}
 			err := command.LoadDataFromRequest(w, r)
 			if err != nil {

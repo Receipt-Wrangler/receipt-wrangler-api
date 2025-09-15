@@ -17,7 +17,7 @@ func GetUserPreferences(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userPreferencesRepository := repositories.NewUserPreferencesRepository(nil)
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			userPreferences, err := userPreferencesRepository.GetUserPreferencesOrCreate(token.UserId)
 			if err != nil {
@@ -48,7 +48,7 @@ func UpdateUserPreferences(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			userPreferences := models.UserPrefernces{}
 			userPreferences.LoadDataFromRequest(w, r)
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			userPreferencesRepository := repositories.NewUserPreferencesRepository(nil)
 			updatedUserPreferences, err := userPreferencesRepository.UpdateUserPreferences(token.UserId, userPreferences)

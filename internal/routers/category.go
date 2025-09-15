@@ -4,14 +4,13 @@ import (
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/middleware"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/go-chi/chi/v5"
 )
 
-func BuildCategoryRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
+func BuildCategoryRouter() *chi.Mux {
 	categoryRouter := chi.NewRouter()
 
-	categoryRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
+	categoryRouter.Use(middleware.UnifiedAuthMiddleware)
 
 	categoryRouter.Get("/", handlers.GetAllCategories)
 	categoryRouter.Get("/{categoryName}", handlers.GetCategoryNameCount)

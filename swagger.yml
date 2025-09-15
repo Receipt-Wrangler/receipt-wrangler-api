@@ -12,6 +12,7 @@ servers:
   - url: /api
 security:
   - bearerAuth: [ ]
+  - apiKeyAuth: [ ]
 paths:
   /dashboard/{groupId}:
     parameters:
@@ -42,6 +43,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /dashboard/{dashboardId}:
     parameters:
       - in: path
@@ -78,6 +80,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - Dashboard
@@ -97,6 +100,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /dashboard/:
     post:
       tags:
@@ -122,6 +126,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /category/{categoryName}:
     parameters:
       - in: path
@@ -149,6 +154,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /category/getPagedCategories:
     post:
       tags:
@@ -174,6 +180,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /category/:
     get:
       tags:
@@ -194,6 +201,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     post:
       tags:
         - Category
@@ -218,6 +226,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /category/{categoryId}:
     parameters:
       - in: path
@@ -248,6 +257,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - Category
@@ -263,6 +273,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /comment/:
     post:
       tags:
@@ -288,6 +299,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /comment/{commentId}:
     delete:
       tags:
@@ -309,6 +321,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /customField/:
     post:
       tags:
@@ -336,6 +349,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /customField/{customFieldId}:
     parameters:
       - in: path
@@ -363,6 +377,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - CustomField
@@ -378,6 +393,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /customField/getPagedCustomFields:
     post:
       tags:
@@ -405,6 +421,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /export/{groupId}:
     post:
       tags:
@@ -444,6 +461,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /export:
     post:
       tags:
@@ -476,6 +494,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /featureConfig:
     get:
       tags:
@@ -492,8 +511,7 @@ paths:
                 $ref: "#/components/schemas/FeatureConfig"
         500:
           $ref: "#/components/responses/Internal"
-      security:
-        - bearerAuth: [ ]
+      security: []
   /group:
     get:
       tags:
@@ -514,6 +532,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     post:
       tags:
         - Groups
@@ -534,6 +553,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /group/{groupId}/ocrText:
     get:
       tags:
@@ -557,6 +577,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /group/{groupId}/pollGroupEmail:
     post:
       tags:
@@ -582,6 +603,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /group/{groupId}:
     parameters:
       - in: path
@@ -603,6 +625,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     put:
       tags:
         - Groups
@@ -625,6 +648,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - Groups
@@ -640,6 +664,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /group/{groupId}/groupSettings:
     put:
       tags:
@@ -674,6 +699,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /group/{groupId}/groupReceiptSettings:
     put:
       tags:
@@ -708,6 +734,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /group/getPagedGroups:
     post:
       tags:
@@ -735,6 +762,7 @@ paths:
           $ref: "#/components/responses/BadRequest"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
 
   /login/:
     post:
@@ -767,6 +795,7 @@ paths:
                 $ref: "#/components/schemas/AppData"
         500:
           $ref: "#/components/responses/Internal"
+      security: []
   /logout/:
     post:
       tags:
@@ -788,8 +817,7 @@ paths:
           $ref: "#/components/responses/Ok"
         500:
           $ref: "#/components/responses/Internal"
-      security:
-        - bearerAuth: [ ]
+      security: []
   /notifications/:
     get:
       tags:
@@ -812,6 +840,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - Notifications
@@ -825,6 +854,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /notifications/{notificationId}:
     delete:
       tags:
@@ -846,6 +876,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /notifications/notificationCount:
     get:
       tags:
@@ -866,6 +897,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receipt/:
     post:
       tags:
@@ -891,6 +923,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receipt/quickScan:
     post:
       tags:
@@ -912,6 +945,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receipt/hasAccess:
     get:
       tags:
@@ -943,6 +977,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receipt/{receiptId}:
     parameters:
       - in: path
@@ -968,6 +1003,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     put:
       tags:
         - Receipt
@@ -992,6 +1028,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - Receipt
@@ -1005,6 +1042,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receipt/{receiptId}/duplicate:
     post:
       tags:
@@ -1026,6 +1064,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receipt/bulkStatusUpdate:
     post:
       tags:
@@ -1055,6 +1094,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receipt/group/{groupId}:
     post:
       tags:
@@ -1088,6 +1128,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receiptImage/:
     post:
       tags:
@@ -1113,6 +1154,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receiptImage/convertToJpg:
     post:
       tags:
@@ -1145,6 +1187,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
 
   /receiptImage/magicFill:
     post:
@@ -1181,6 +1224,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
 
   /receiptImage/{receiptImageId}:
     parameters:
@@ -1207,6 +1251,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - ReceiptImage
@@ -1220,6 +1265,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receiptImage/{receiptImageId}/download:
     get:
       tags:
@@ -1248,6 +1294,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /search/:
     get:
       tags:
@@ -1275,6 +1322,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /signUp:
     post:
       tags:
@@ -1294,8 +1342,7 @@ paths:
           $ref: "#/components/responses/Ok"
         500:
           $ref: "#/components/responses/Internal"
-      security:
-        - bearerAuth: [ ]
+      security: []
   /tag/getPagedTags:
     post:
       tags:
@@ -1321,6 +1368,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /tag/{tagName}:
     parameters:
       - in: path
@@ -1346,6 +1394,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /tag/{tagId}:
     parameters:
       - in: path
@@ -1378,6 +1427,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - Tag
@@ -1391,6 +1441,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /tag/:
     get:
       tags:
@@ -1411,6 +1462,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     post:
       tags:
         - Tag
@@ -1435,6 +1487,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /token/:
     post:
       tags:
@@ -1460,8 +1513,7 @@ paths:
                   - $ref: "#/components/schemas/Claims"
         500:
           $ref: "#/components/responses/Internal"
-      security:
-        - bearerAuth: [ ]
+      security: []
   /user:
     get:
       tags:
@@ -1484,6 +1536,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     post:
       tags:
         - User
@@ -1504,6 +1557,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /user/{userId}:
     put:
       tags:
@@ -1532,6 +1586,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     delete:
       tags:
         - User
@@ -1552,6 +1607,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /user/{userId}/convertDummyUserToNormalUser:
     post:
       tags:
@@ -1582,6 +1638,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /user/{userId}/resetPassword:
     post:
       tags:
@@ -1610,6 +1667,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /user/{username}:
     get:
       tags:
@@ -1672,6 +1730,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /user/getUserClaims:
     get:
       tags:
@@ -1692,6 +1751,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /user/updateUserProfile:
     put:
       tags:
@@ -1713,6 +1773,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /user/appData:
     get:
       tags:
@@ -1735,6 +1796,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /user/bulk:
     delete:
       tags:
@@ -1760,6 +1822,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /userPreferences:
     get:
       tags:
@@ -1780,6 +1843,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
     put:
       tags:
         - UserPreferences
@@ -1806,6 +1870,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /systemEmail/:
     post:
       tags:
@@ -1978,6 +2043,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /systemTask/getPagedSystemTasks:
     post:
       tags:
@@ -2007,6 +2073,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /systemTask/getPagedActivities:
     post:
       tags:
@@ -2036,6 +2103,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /systemTask/rerunActivity/{id}:
     post:
       tags:
@@ -2061,6 +2129,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /prompt/:
     post:
       tags:
@@ -2199,6 +2268,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /prompt/createDefaultPrompt:
     post:
       tags:
@@ -2359,6 +2429,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /receiptProcessingSettings/checkConnectivity:
     post:
       tags:
@@ -2493,6 +2564,7 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /apiKey/paged:
     post:
       tags:
@@ -2522,12 +2594,18 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: API Key in format v1.xxx.xxx.xxx
   responses:
     Ok:
       description: Request was successfully processed

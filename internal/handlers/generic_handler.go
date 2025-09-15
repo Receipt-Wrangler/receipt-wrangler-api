@@ -50,7 +50,7 @@ func HandleRequest(handler structs.Handler) {
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupId) > 0 {
 		groupService := services.NewGroupService(nil)
-		token := structs.GetJWT(handler.Request)
+		token := structs.GetClaims(handler.Request)
 		err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), handler.GroupId, utils.UintToString(token.UserId))
 		hasOrUserRole := false
 
@@ -72,7 +72,7 @@ func HandleRequest(handler structs.Handler) {
 
 	if len(handler.GroupRole) > 0 && len(handler.GroupIds) > 0 {
 		groupService := services.NewGroupService(nil)
-		token := structs.GetJWT(handler.Request)
+		token := structs.GetClaims(handler.Request)
 
 		for _, groupId := range handler.GroupIds {
 			err := groupService.ValidateGroupRole(models.GroupRole(handler.GroupRole), groupId, utils.UintToString(token.UserId))
@@ -85,7 +85,7 @@ func HandleRequest(handler structs.Handler) {
 	}
 
 	if len(handler.UserRole) > 0 {
-		token := structs.GetJWT(handler.Request)
+		token := structs.GetClaims(handler.Request)
 		hasUserRole := models.HasRole(handler.UserRole, token.UserRole)
 		if !hasUserRole {
 			logging.LogStd(logging.LOG_LEVEL_ERROR, "User is unauthorized to perform this action.")

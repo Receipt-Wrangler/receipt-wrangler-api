@@ -28,7 +28,7 @@ func CreateApiKey(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			apiKeyService := services.NewApiKeyService(nil)
 
 			generatedKey, err := apiKeyService.CreateApiKey(token.UserId, command)

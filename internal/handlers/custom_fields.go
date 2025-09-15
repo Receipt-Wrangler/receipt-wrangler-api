@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -10,6 +9,8 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func GetPagedCustomFields(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +83,7 @@ func CreateCustomField(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			customFieldsRepository := repositories.NewCustomFieldRepository(nil)
 			customField, err := customFieldsRepository.CreateCustomField(command, &token.UserId)
 			if err != nil {

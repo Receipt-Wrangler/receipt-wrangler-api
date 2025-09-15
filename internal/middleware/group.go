@@ -31,7 +31,7 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 
 			if len(groupId) > 0 {
 				groupService := services.NewGroupService(nil)
-				token := structs.GetJWT(r)
+				token := structs.GetClaims(r)
 				err := groupService.ValidateGroupRole(role, groupId, utils.UintToString(token.UserId))
 
 				if err != nil {
@@ -48,7 +48,7 @@ func ValidateGroupRole(role models.GroupRole) (mw func(http.Handler) http.Handle
 
 func CanDeleteGroup(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := structs.GetJWT(r)
+		token := structs.GetClaims(r)
 		errMsg := "User must be a part of at least one group."
 
 		groupMemberRepository := repositories.NewGroupMemberRepository(nil)

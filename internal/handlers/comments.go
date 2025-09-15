@@ -13,7 +13,7 @@ import (
 )
 
 func AddComment(w http.ResponseWriter, r *http.Request) {
-	token := structs.GetJWT(r)
+	token := structs.GetClaims(r)
 	errMsg := "Error adding comment"
 
 	upsertCommentCommand := commands.UpsertCommentCommand{}
@@ -70,7 +70,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			commentId := chi.URLParam(r, "commentId")
 			commentRepository := repositories.NewCommentRepository(nil)
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			err := commentRepository.DeleteComment(commentId, token.UserId)
 			if err != nil {

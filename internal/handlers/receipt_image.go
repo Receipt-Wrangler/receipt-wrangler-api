@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"os"
 	"receipt-wrangler/api/internal/commands"
@@ -13,6 +12,8 @@ import (
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func UploadReceiptImage(w http.ResponseWriter, r *http.Request) {
@@ -248,7 +249,7 @@ func MagicFillFromImage(w http.ResponseWriter, r *http.Request) {
 			receiptImageId := r.URL.Query().Get("receiptImageId")
 			receiptCommand := commands.UpsertReceiptCommand{}
 			systemTaskService := services.NewSystemTaskService(nil)
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			var startTimer time.Time
 			var endTimer time.Time
@@ -403,7 +404,7 @@ func ConvertToJpg(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateReceiptImageAccess(r *http.Request, groupRole models.GroupRole, receiptImageId string) (int, error) {
-	token := structs.GetJWT(r)
+	token := structs.GetClaims(r)
 	groupService := services.NewGroupService(nil)
 
 	receiptImageIdUint, err := utils.StringToUint(receiptImageId)

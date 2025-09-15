@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -10,6 +9,8 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func GetAllSystemEmails(w http.ResponseWriter, r *http.Request) {
@@ -218,7 +219,7 @@ func CheckConnectivity(w http.ResponseWriter, r *http.Request) {
 		UserRole:     models.ADMIN,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			command := commands.CheckEmailConnectivityCommand{}
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			err := command.LoadDataFromRequest(w, r)
 			if err != nil {

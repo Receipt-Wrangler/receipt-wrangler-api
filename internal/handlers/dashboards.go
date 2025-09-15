@@ -34,7 +34,7 @@ func CreateDashboard(w http.ResponseWriter, r *http.Request) {
 			}
 
 			dashboardRepository := repositories.NewDashboardRepository(nil)
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			dashboard, err := dashboardRepository.CreateDashboard(command, token.UserId)
 			if err != nil {
@@ -68,7 +68,7 @@ func GetDashboardsForUser(w http.ResponseWriter, r *http.Request) {
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			dashboardRepository := repositories.NewDashboardRepository(nil)
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 			uintGroupId, err := utils.StringToUint(groupId)
 			if err != nil {
 				return http.StatusInternalServerError, err
@@ -119,7 +119,7 @@ func UpdateDashboard(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.VIEWER,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			if dashboard.UserID != token.UserId {
 				return http.StatusForbidden, nil
@@ -181,7 +181,7 @@ func DeleteDashboard(w http.ResponseWriter, r *http.Request) {
 		GroupRole:    models.VIEWER,
 		ResponseType: constants.ApplicationJson,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			if dashboard.UserID != token.UserId {
 				return http.StatusForbidden, nil

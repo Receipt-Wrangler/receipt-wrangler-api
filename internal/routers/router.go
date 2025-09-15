@@ -44,32 +44,32 @@ func BuildRootRouter() *chi.Mux {
 	rootRouter.Mount("/api/logout", logoutRouter)
 
 	// Receipt Router
-	receiptRouter := BuildReceiptRouter(tokenValidatorMiddleware)
+	receiptRouter := BuildReceiptRouter()
 	rootRouter.Mount("/api/receipt", receiptRouter)
 
 	// Receipt Image Router
-	receiptImageRouter := BuildReceiptImageRouter(tokenValidatorMiddleware)
+	receiptImageRouter := BuildReceiptImageRouter()
 	rootRouter.Mount("/api/receiptImage", receiptImageRouter)
 
 	// Comment Router
-	commentRouter := BuildCommentRouter(tokenValidatorMiddleware)
+	commentRouter := BuildCommentRouter()
 	rootRouter.Mount("/api/comment", commentRouter)
 
 	// Tag Router
-	tagRouter := BuildTagRouter(tokenValidatorMiddleware)
+	tagRouter := BuildTagRouter()
 	rootRouter.Mount("/api/tag", tagRouter)
 
 	// Category Router
-	categoryRouter := BuildCategoryRouter(tokenValidatorMiddleware)
+	categoryRouter := BuildCategoryRouter()
 	rootRouter.Mount("/api/category", categoryRouter)
 
 	// User Router
-	userRouter := BuildUserRouter(tokenValidatorMiddleware)
+	userRouter := BuildUserRouter()
 	rootRouter.Mount("/api/user", userRouter)
 
 	// Add validaiton on update group that at least one user has owner, and that must have at least 1 user
 	// Group Router
-	groupRouter := BuildGroupRouter(tokenValidatorMiddleware)
+	groupRouter := BuildGroupRouter()
 	rootRouter.Mount("/api/group", groupRouter)
 
 	// Feature Config Router
@@ -78,59 +78,59 @@ func BuildRootRouter() *chi.Mux {
 
 	// Migration router
 	migrationRouter := chi.NewRouter()
-	migrationRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidatorMiddleware.CheckJWT)
+	migrationRouter.Use(middleware.UnifiedAuthMiddleware)
 	rootRouter.Mount("/api/migrate", migrationRouter)
 
 	// Search router
-	searchRouter := BuildSearchRouter(tokenValidatorMiddleware)
+	searchRouter := BuildSearchRouter()
 	rootRouter.Mount("/api/search", searchRouter)
 
 	// Notification router
-	notificationRouter := BuildNotificationRouter(tokenValidatorMiddleware)
+	notificationRouter := BuildNotificationRouter()
 	rootRouter.Mount("/api/notifications", notificationRouter)
 
 	//User Preferences router
-	userPreferencesRouter := BuildUserPreferencesRouter(tokenValidatorMiddleware)
+	userPreferencesRouter := BuildUserPreferencesRouter()
 	rootRouter.Mount("/api/userPreferences", userPreferencesRouter)
 
 	// Dashboard router
-	dashboardRouter := BuildDashboardRouter(tokenValidatorMiddleware)
+	dashboardRouter := BuildDashboardRouter()
 	rootRouter.Mount("/api/dashboard", dashboardRouter)
 
 	// System email router
-	systemEmailRouter := BuildSystemEmailRouter(tokenValidatorMiddleware)
+	systemEmailRouter := BuildSystemEmailRouter()
 	rootRouter.Mount("/api/systemEmail", systemEmailRouter)
 
 	// System Task router
-	systemTaskRouter := BuildSystemTaskRouter(tokenValidatorMiddleware)
+	systemTaskRouter := BuildSystemTaskRouter()
 	rootRouter.Mount("/api/systemTask", systemTaskRouter)
 
 	// Receipt Processing Settings router
-	receiptProcessingSettingsRouter := BuildReceiptProcessingSettingsRouter(tokenValidatorMiddleware)
+	receiptProcessingSettingsRouter := BuildReceiptProcessingSettingsRouter()
 	rootRouter.Mount("/api/receiptProcessingSettings", receiptProcessingSettingsRouter)
 
 	// Prompt router
-	promptRouter := BuildPromptRouter(tokenValidatorMiddleware)
+	promptRouter := BuildPromptRouter()
 	rootRouter.Mount("/api/prompt", promptRouter)
 
 	// System Settings router
-	systemSettingsRouter := BuildSystemSettingsRouter(tokenValidatorMiddleware)
+	systemSettingsRouter := BuildSystemSettingsRouter()
 	rootRouter.Mount("/api/systemSettings", systemSettingsRouter)
 
 	// Import router
-	importRouter := BuildImportRouter(tokenValidatorMiddleware)
+	importRouter := BuildImportRouter()
 	rootRouter.Mount("/api/import", importRouter)
 
 	// Export router
-	exportRouter := BuildExportRouter(tokenValidatorMiddleware)
+	exportRouter := BuildExportRouter()
 	rootRouter.Mount("/api/export", exportRouter)
 
 	// Custom Field router
-	customFieldRouter := BuildCustomFieldRouter(tokenValidatorMiddleware)
+	customFieldRouter := BuildCustomFieldRouter()
 	rootRouter.Mount("/api/customField", customFieldRouter)
 
 	// API Key router
-	apiKeyRouter := BuildApiKeyRouter(tokenValidatorMiddleware)
+	apiKeyRouter := BuildApiKeyRouter()
 	rootRouter.Mount("/api/apiKey", apiKeyRouter)
 
 	return rootRouter

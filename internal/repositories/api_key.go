@@ -36,7 +36,7 @@ func (repository ApiKeyRepository) GetPagedApiKeys(command commands.PagedApiKeyR
 	var results []models.ApiKey
 	var count int64
 
-	query := db.Model(&models.ApiKey{}).Where("revoked_at IS NULL")
+	query := db.Model(&models.ApiKey{})
 
 	if !repository.isValidColumn(command.OrderBy) {
 		return nil, 0, errors.New("invalid column")

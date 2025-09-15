@@ -151,3 +151,31 @@ func (service *ApiKeyService) BuildV1ApiKey(
 	stringVersion := utils.UintToString(uint(version))
 	return strings.Join([]string{prefix, stringVersion, id, secret}, ".")
 }
+
+func (service *ApiKeyService) GetPagedApiKeys(command commands.PagedApiKeyRequestCommand, userId string) ([]models.ApiKeyView, int64, error) {
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+
+	apiKeys, count, err := apiKeyRepository.GetPagedApiKeys(command, userId)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	apiKeyViews := make([]models.ApiKeyView, len(apiKeys))
+	for i, apiKey := range apiKeys {
+		apiKeyViews[i] = models.ApiKeyView{
+			ID:              apiKey.ID,
+			CreatedAt:       apiKey.CreatedAt,
+			UpdatedAt:       apiKey.UpdatedAt,
+			CreatedBy:       apiKey.CreatedBy,
+			CreatedByString: apiKey.CreatedByString,
+			Name:            apiKey.Name,
+			Description:     apiKey.Description,
+			UserID:          apiKey.UserID,
+			Scope:           apiKey.Scope,
+			LastUsedAt:      apiKey.LastUsedAt,
+			RevokedAt:       apiKey.RevokedAt,
+		}
+	}
+
+	return apiKeyViews, count, nil
+}

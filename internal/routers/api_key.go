@@ -11,6 +11,7 @@ func BuildApiKeyRouter() *chi.Mux {
 
 	// Authenticated routes
 	apiKeyRouter.With(middleware.UnifiedAuthMiddleware).Post("/", handlers.CreateApiKey)
+	apiKeyRouter.With(middleware.UnifiedAuthMiddleware).Post("/paged", handlers.GetPagedApiKeys)
 
 	return apiKeyRouter
 }

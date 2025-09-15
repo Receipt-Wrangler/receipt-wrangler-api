@@ -2493,6 +2493,35 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
+  /apiKey/paged:
+    post:
+      tags:
+        - ApiKey
+      summary: Get paged API keys
+      description: This will return paged API keys for the authenticated user or all API keys for admins
+      operationId: getPagedApiKeys
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedApiKeyRequestCommand"
+      responses:
+        200:
+          description: Paged API keys
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -4726,6 +4755,63 @@ components:
         key:
           type: string
           description: The generated API key
+    PagedApiKeyRequestCommand:
+      allOf:
+        - $ref: "#/components/schemas/PagedRequestCommand"
+        - type: object
+          properties:
+            filter:
+              $ref: "#/components/schemas/ApiKeyFilter"
+    ApiKeyFilter:
+      type: object
+      properties:
+        associatedApiKeys:
+          $ref: "#/components/schemas/AssociatedApiKeys"
+    AssociatedApiKeys:
+      type: string
+      enum:
+        - "MINE"
+        - "ALL"
+    ApiKeyView:
+      type: object
+      properties:
+        id:
+          type: string
+          description: API key ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        createdBy:
+          type: integer
+          description: ID of the user who created this API key
+        createdByString:
+          type: string
+          description: String representation of the creator
+        name:
+          type: string
+          description: API key name
+        description:
+          type: string
+          description: API key description
+        userId:
+          type: integer
+          description: ID of the user who owns this API key
+        scope:
+          type: string
+          description: API key scope/permissions
+        lastUsedAt:
+          type: string
+          format: date-time
+          description: When the API key was last used
+        revokedAt:
+          type: string
+          format: date-time
+          description: When the API key was revoked
     InternalErrorResponse:
       type: object
       required:

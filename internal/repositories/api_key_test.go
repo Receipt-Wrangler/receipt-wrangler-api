@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"fmt"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
@@ -583,8 +584,8 @@ func createTestApiKeysForPagination() {
 			Hmac:        "hmac-4",
 			Version:     1,
 			Scope:       "read",
-			CreatedAt:   now.Add(-30*time.Minute),
-			UpdatedAt:   now.Add(-30*time.Minute),
+			CreatedAt:   now.Add(-30 * time.Minute),
+			UpdatedAt:   now.Add(-30 * time.Minute),
 		},
 		{
 			ID:          "key-5",
@@ -596,8 +597,8 @@ func createTestApiKeysForPagination() {
 			Hmac:        "hmac-5",
 			Version:     1,
 			Scope:       "read",
-			CreatedAt:   now.Add(-15*time.Minute),
-			UpdatedAt:   now.Add(-15*time.Minute),
+			CreatedAt:   now.Add(-15 * time.Minute),
+			UpdatedAt:   now.Add(-15 * time.Minute),
 			RevokedAt:   &now, // This one is revoked
 		},
 	}
@@ -1677,5 +1678,766 @@ func TestUpdateApiKeyLastUsedDate_VerifyTimestamp(t *testing.T) {
 
 	if secondUpdatedApiKey.LastUsedAt.Before(beforeSecondUpdate) {
 		utils.PrintTestError(t, "Second LastUsedAt is before second update", "Second update should be recent")
+	}
+}
+
+// UpdateApiKey Repository Tests
+
+func TestUpdateApiKey_Success(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "update-success-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Original Name",
+		Description: "Original description",
+		Prefix:      "key",
+		Hmac:        "original-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key first
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Update the API key
+	err = repository.UpdateApiKey(apiKey.ID, userId, "Updated Name", "Updated description", "rw")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the update
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.Name != "Updated Name" {
+		utils.PrintTestError(t, updatedApiKey.Name, "Updated Name")
+	}
+
+	if updatedApiKey.Description != "Updated description" {
+		utils.PrintTestError(t, updatedApiKey.Description, "Updated description")
+	}
+
+	if updatedApiKey.Scope != "rw" {
+		utils.PrintTestError(t, updatedApiKey.Scope, "rw")
+	}
+
+	// Verify other fields remain unchanged
+	if updatedApiKey.ID != apiKey.ID {
+		utils.PrintTestError(t, updatedApiKey.ID, apiKey.ID)
+	}
+
+	if updatedApiKey.Prefix != apiKey.Prefix {
+		utils.PrintTestError(t, updatedApiKey.Prefix, apiKey.Prefix)
+	}
+
+	if updatedApiKey.Hmac != apiKey.Hmac {
+		utils.PrintTestError(t, updatedApiKey.Hmac, apiKey.Hmac)
+	}
+
+	if updatedApiKey.Version != apiKey.Version {
+		utils.PrintTestError(t, updatedApiKey.Version, apiKey.Version)
+	}
+
+	if *updatedApiKey.UserID != *apiKey.UserID {
+		utils.PrintTestError(t, *updatedApiKey.UserID, *apiKey.UserID)
+	}
+}
+
+func TestUpdateApiKey_OnlyName(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "update-name-only-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Original Name",
+		Description: "Original description",
+		Prefix:      "key",
+		Hmac:        "original-hmac",
+		Version:     1,
+		Scope:       "w",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key first
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Update only the name
+	err = repository.UpdateApiKey(apiKey.ID, userId, "New Name Only", apiKey.Description, apiKey.Scope)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the update
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.Name != "New Name Only" {
+		utils.PrintTestError(t, updatedApiKey.Name, "New Name Only")
+	}
+
+	// Verify other fields remain unchanged
+	if updatedApiKey.Description != apiKey.Description {
+		utils.PrintTestError(t, updatedApiKey.Description, apiKey.Description)
+	}
+
+	if updatedApiKey.Scope != apiKey.Scope {
+		utils.PrintTestError(t, updatedApiKey.Scope, apiKey.Scope)
+	}
+}
+
+func TestUpdateApiKey_OnlyDescription(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "update-desc-only-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Test Name",
+		Description: "Original description",
+		Prefix:      "key",
+		Hmac:        "original-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key first
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Update only the description
+	err = repository.UpdateApiKey(apiKey.ID, userId, apiKey.Name, "New Description Only", apiKey.Scope)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the update
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.Description != "New Description Only" {
+		utils.PrintTestError(t, updatedApiKey.Description, "New Description Only")
+	}
+
+	// Verify other fields remain unchanged
+	if updatedApiKey.Name != apiKey.Name {
+		utils.PrintTestError(t, updatedApiKey.Name, apiKey.Name)
+	}
+
+	if updatedApiKey.Scope != apiKey.Scope {
+		utils.PrintTestError(t, updatedApiKey.Scope, apiKey.Scope)
+	}
+}
+
+func TestUpdateApiKey_OnlyScope(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "update-scope-only-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Test Name",
+		Description: "Test description",
+		Prefix:      "key",
+		Hmac:        "original-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key first
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Update only the scope
+	err = repository.UpdateApiKey(apiKey.ID, userId, apiKey.Name, apiKey.Description, "w")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the update
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.Scope != "w" {
+		utils.PrintTestError(t, updatedApiKey.Scope, "w")
+	}
+
+	// Verify other fields remain unchanged
+	if updatedApiKey.Name != apiKey.Name {
+		utils.PrintTestError(t, updatedApiKey.Name, apiKey.Name)
+	}
+
+	if updatedApiKey.Description != apiKey.Description {
+		utils.PrintTestError(t, updatedApiKey.Description, apiKey.Description)
+	}
+}
+
+func TestUpdateApiKey_AllValidScopes(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	validScopes := []string{"r", "w", "rw"}
+
+	for i, scope := range validScopes {
+		keyId := fmt.Sprintf("scope-test-key-%d", i)
+		apiKey := models.ApiKey{
+			ID:          keyId,
+			UserID:      &userId,
+			CreatedBy:   &userId,
+			Name:        fmt.Sprintf("Scope Test Key %d", i),
+			Description: fmt.Sprintf("Testing scope %s", scope),
+			Prefix:      "key",
+			Hmac:        fmt.Sprintf("scope-hmac-%d", i),
+			Version:     1,
+			Scope:       "r", // Start with read scope
+		}
+
+		repository := NewApiKeyRepository(nil)
+
+		// Create the API key
+		_, err := repository.CreateApiKey(apiKey)
+		if err != nil {
+			utils.PrintTestError(t, err, "no error")
+		}
+
+		// Update to the test scope
+		err = repository.UpdateApiKey(keyId, userId, apiKey.Name, apiKey.Description, scope)
+		if err != nil {
+			utils.PrintTestError(t, err, fmt.Sprintf("no error for scope %s", scope))
+		}
+
+		// Verify the scope was updated
+		updatedApiKey, err := repository.GetApiKeyById(keyId)
+		if err != nil {
+			utils.PrintTestError(t, err, "no error")
+		}
+
+		if updatedApiKey.Scope != scope {
+			utils.PrintTestError(t, updatedApiKey.Scope, scope)
+		}
+	}
+}
+
+func TestUpdateApiKey_WrongUser(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId1 := uint(1)
+	userId2 := uint(2)
+	apiKey := models.ApiKey{
+		ID:          "wrong-user-key",
+		UserID:      &userId1,
+		CreatedBy:   &userId1,
+		Name:        "User 1 Key",
+		Description: "Belongs to user 1",
+		Prefix:      "key",
+		Hmac:        "wrong-user-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key for user 1
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Try to update with user 2 (should not update anything)
+	err = repository.UpdateApiKey(apiKey.ID, userId2, "Hacked Name", "Hacked description", "rw")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the API key was NOT updated
+	unchangedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if unchangedApiKey.Name != apiKey.Name {
+		utils.PrintTestError(t, unchangedApiKey.Name, apiKey.Name)
+	}
+
+	if unchangedApiKey.Description != apiKey.Description {
+		utils.PrintTestError(t, unchangedApiKey.Description, apiKey.Description)
+	}
+
+	if unchangedApiKey.Scope != apiKey.Scope {
+		utils.PrintTestError(t, unchangedApiKey.Scope, apiKey.Scope)
+	}
+}
+
+func TestUpdateApiKey_NonExistentKey(t *testing.T) {
+	defer TruncateTestDb()
+
+	repository := NewApiKeyRepository(nil)
+
+	// Try to update non-existent API key
+	err := repository.UpdateApiKey("non-existent-key", 1, "New Name", "New description", "rw")
+
+	// Should not return an error (GORM returns no error for UPDATE on non-existent records)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+}
+
+func TestUpdateApiKey_EmptyId(t *testing.T) {
+	defer TruncateTestDb()
+
+	repository := NewApiKeyRepository(nil)
+
+	// Try to update with empty ID
+	err := repository.UpdateApiKey("", 1, "New Name", "New description", "rw")
+
+	// Should not return an error (GORM returns no error for UPDATE on non-existent records)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+}
+
+func TestUpdateApiKey_EmptyFields(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "empty-fields-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Original Name",
+		Description: "Original description",
+		Prefix:      "key",
+		Hmac:        "empty-fields-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key first
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Update with empty values
+	err = repository.UpdateApiKey(apiKey.ID, userId, "", "", "")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the fields were updated to empty values
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.Name != "" {
+		utils.PrintTestError(t, updatedApiKey.Name, "")
+	}
+
+	if updatedApiKey.Description != "" {
+		utils.PrintTestError(t, updatedApiKey.Description, "")
+	}
+
+	if updatedApiKey.Scope != "" {
+		utils.PrintTestError(t, updatedApiKey.Scope, "")
+	}
+}
+
+func TestUpdateApiKey_InvalidUserId(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "invalid-user-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Valid User Key",
+		Description: "Belongs to valid user",
+		Prefix:      "key",
+		Hmac:        "invalid-user-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Try to update with invalid user ID (0)
+	err = repository.UpdateApiKey(apiKey.ID, 0, "Invalid Update", "Invalid description", "w")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the API key was NOT updated
+	unchangedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if unchangedApiKey.Name != apiKey.Name {
+		utils.PrintTestError(t, unchangedApiKey.Name, apiKey.Name)
+	}
+
+	// Try to update with very large user ID
+	err = repository.UpdateApiKey(apiKey.ID, 999999, "Invalid Update", "Invalid description", "w")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify the API key was still NOT updated
+	stillUnchangedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if stillUnchangedApiKey.Name != apiKey.Name {
+		utils.PrintTestError(t, stillUnchangedApiKey.Name, apiKey.Name)
+	}
+}
+
+func TestUpdateApiKey_WithTransaction(t *testing.T) {
+	defer TruncateTestDb()
+
+	db := GetDB()
+	tx := db.Begin()
+	defer tx.Rollback()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "transaction-update-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Transaction Test Key",
+		Description: "Test updating within transaction",
+		Prefix:      "key",
+		Hmac:        "transaction-update-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	repository := NewApiKeyRepository(tx)
+
+	// Create API key within transaction
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Update API key within transaction
+	err = repository.UpdateApiKey(apiKey.ID, userId, "Updated in TX", "Updated description in TX", "w")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify update within transaction
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.Name != "Updated in TX" {
+		utils.PrintTestError(t, updatedApiKey.Name, "Updated in TX")
+	}
+
+	if updatedApiKey.Description != "Updated description in TX" {
+		utils.PrintTestError(t, updatedApiKey.Description, "Updated description in TX")
+	}
+
+	if updatedApiKey.Scope != "w" {
+		utils.PrintTestError(t, updatedApiKey.Scope, "w")
+	}
+
+	// Commit transaction
+	tx.Commit()
+
+	// Verify update persisted after commit
+	repositoryOutside := NewApiKeyRepository(nil)
+	persistedApiKey, err := repositoryOutside.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if persistedApiKey.Name != "Updated in TX" {
+		utils.PrintTestError(t, persistedApiKey.Name, "Updated in TX")
+	}
+
+	if persistedApiKey.Description != "Updated description in TX" {
+		utils.PrintTestError(t, persistedApiKey.Description, "Updated description in TX")
+	}
+
+	if persistedApiKey.Scope != "w" {
+		utils.PrintTestError(t, persistedApiKey.Scope, "w")
+	}
+}
+
+func TestUpdateApiKey_TransactionRollback(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "rollback-update-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Rollback Test Key",
+		Description: "Test rollback of update",
+		Prefix:      "key",
+		Hmac:        "rollback-update-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	// First create the key outside of transaction
+	repository := NewApiKeyRepository(nil)
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	db := GetDB()
+	tx := db.Begin()
+
+	repositoryTx := NewApiKeyRepository(tx)
+
+	// Update API key within transaction
+	err = repositoryTx.UpdateApiKey(apiKey.ID, userId, "Updated in TX", "Updated description in TX", "w")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify update within transaction
+	updatedApiKey, err := repositoryTx.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedApiKey.Name != "Updated in TX" {
+		utils.PrintTestError(t, updatedApiKey.Name, "Updated in TX")
+	}
+
+	// Rollback transaction
+	tx.Rollback()
+
+	// Verify update was rolled back
+	unchangedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if unchangedApiKey.Name != apiKey.Name {
+		utils.PrintTestError(t, unchangedApiKey.Name, apiKey.Name)
+	}
+
+	if unchangedApiKey.Description != apiKey.Description {
+		utils.PrintTestError(t, unchangedApiKey.Description, apiKey.Description)
+	}
+
+	if unchangedApiKey.Scope != apiKey.Scope {
+		utils.PrintTestError(t, unchangedApiKey.Scope, apiKey.Scope)
+	}
+}
+
+func TestUpdateApiKey_VerifyTimestampUpdate(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId := uint(1)
+	apiKey := models.ApiKey{
+		ID:          "timestamp-update-key",
+		UserID:      &userId,
+		CreatedBy:   &userId,
+		Name:        "Timestamp Test Key",
+		Description: "Test timestamp update",
+		Prefix:      "key",
+		Hmac:        "timestamp-update-hmac",
+		Version:     1,
+		Scope:       "r",
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create the API key
+	_, err := repository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Get initial timestamps
+	initialApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	initialUpdatedAt := initialApiKey.UpdatedAt
+
+	// Wait a small amount to ensure timestamp difference
+	time.Sleep(10 * time.Millisecond)
+
+	beforeUpdate := time.Now()
+
+	// Update the API key
+	err = repository.UpdateApiKey(apiKey.ID, userId, "Updated Name", "Updated description", "w")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	afterUpdate := time.Now()
+
+	// Get updated API key
+	updatedApiKey, err := repository.GetApiKeyById(apiKey.ID)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify UpdatedAt was changed
+	if updatedApiKey.UpdatedAt.Equal(initialUpdatedAt) {
+		utils.PrintTestError(t, "UpdatedAt should be different", "UpdatedAt should be updated")
+	}
+
+	// Verify UpdatedAt is after the update time
+	if updatedApiKey.UpdatedAt.Before(beforeUpdate) {
+		utils.PrintTestError(t, "UpdatedAt is before update time", "UpdatedAt should be after update started")
+	}
+
+	if updatedApiKey.UpdatedAt.After(afterUpdate) {
+		utils.PrintTestError(t, "UpdatedAt is after update time", "UpdatedAt should be before update completed")
+	}
+
+	// Verify CreatedAt was not changed
+	if !updatedApiKey.CreatedAt.Equal(initialApiKey.CreatedAt) {
+		utils.PrintTestError(t, updatedApiKey.CreatedAt, initialApiKey.CreatedAt)
+	}
+}
+
+func TestUpdateApiKey_MultipleKeys(t *testing.T) {
+	defer TruncateTestDb()
+
+	userId1 := uint(1)
+	userId2 := uint(2)
+
+	// Create multiple API keys for different users
+	apiKeys := []models.ApiKey{
+		{
+			ID:          "multi-key-1",
+			UserID:      &userId1,
+			CreatedBy:   &userId1,
+			Name:        "User 1 Key A",
+			Description: "First key for user 1",
+			Prefix:      "key",
+			Hmac:        "multi-hmac-1",
+			Version:     1,
+			Scope:       "r",
+		},
+		{
+			ID:          "multi-key-2",
+			UserID:      &userId1,
+			CreatedBy:   &userId1,
+			Name:        "User 1 Key B",
+			Description: "Second key for user 1",
+			Prefix:      "key",
+			Hmac:        "multi-hmac-2",
+			Version:     1,
+			Scope:       "w",
+		},
+		{
+			ID:          "multi-key-3",
+			UserID:      &userId2,
+			CreatedBy:   &userId2,
+			Name:        "User 2 Key A",
+			Description: "First key for user 2",
+			Prefix:      "key",
+			Hmac:        "multi-hmac-3",
+			Version:     1,
+			Scope:       "rw",
+		},
+	}
+
+	repository := NewApiKeyRepository(nil)
+
+	// Create all API keys
+	for _, apiKey := range apiKeys {
+		_, err := repository.CreateApiKey(apiKey)
+		if err != nil {
+			utils.PrintTestError(t, err, "no error")
+		}
+	}
+
+	// Update one specific key
+	err := repository.UpdateApiKey("multi-key-2", userId1, "Updated User 1 Key B", "Updated second key", "rw")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// Verify only the targeted key was updated
+	updatedKey, err := repository.GetApiKeyById("multi-key-2")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if updatedKey.Name != "Updated User 1 Key B" {
+		utils.PrintTestError(t, updatedKey.Name, "Updated User 1 Key B")
+	}
+
+	if updatedKey.Description != "Updated second key" {
+		utils.PrintTestError(t, updatedKey.Description, "Updated second key")
+	}
+
+	if updatedKey.Scope != "rw" {
+		utils.PrintTestError(t, updatedKey.Scope, "rw")
+	}
+
+	// Verify other keys remain unchanged
+	unchangedKey1, err := repository.GetApiKeyById("multi-key-1")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if unchangedKey1.Name != "User 1 Key A" {
+		utils.PrintTestError(t, unchangedKey1.Name, "User 1 Key A")
+	}
+
+	unchangedKey3, err := repository.GetApiKeyById("multi-key-3")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	if unchangedKey3.Name != "User 2 Key A" {
+		utils.PrintTestError(t, unchangedKey3.Name, "User 2 Key A")
 	}
 }

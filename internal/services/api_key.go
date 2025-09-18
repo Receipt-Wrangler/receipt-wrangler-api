@@ -62,6 +62,7 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		Prefix:      prefix,
 		Hmac:        b64hmac,
 		Version:     version,
+		CreatedBy:   &userId,
 	}
 
 	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
@@ -150,6 +151,31 @@ func (service *ApiKeyService) BuildV1ApiKey(
 ) string {
 	stringVersion := utils.UintToString(uint(version))
 	return strings.Join([]string{prefix, stringVersion, id, secret}, ".")
+}
+
+func (service *ApiKeyService) UpdateApiKeyLastUsedDate(id string) error {
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+	return apiKeyRepository.UpdateApiKeyLastUsedDate(id)
+}
+
+func (service *ApiKeyService) UpdateApiKey(apiKeyId string, userId uint, command commands.UpsertApiKeyCommand) error {
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+
+	// First verify the API key exists and belongs to the user
+	existingKey, err := apiKeyRepository.GetApiKeyById(apiKeyId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("API key not found")
+		}
+		return err
+	}
+
+	if existingKey.UserID == nil || *existingKey.UserID != userId {
+		return errors.New("API key not found")
+	}
+
+	// Update the API key
+	return apiKeyRepository.UpdateApiKey(apiKeyId, userId, command.Name, command.Description, command.Scope)
 }
 
 func (service *ApiKeyService) GetPagedApiKeys(command commands.PagedApiKeyRequestCommand, userId string) ([]models.ApiKeyView, int64, error) {

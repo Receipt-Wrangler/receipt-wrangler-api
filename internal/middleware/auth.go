@@ -36,7 +36,14 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
-			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, claims))
+			go func() {
+				err := apiKeyService.UpdateApiKeyLastUsedDate(dbApiKey.ID)
+				if err != nil {
+					logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to update API key last used date: "+err.Error())
+				}
+			}()
+
+			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &claims))
 			next.ServeHTTP(w, r)
 			return
 		} else if len(jwt) != 0 {

@@ -17,6 +17,7 @@ import (
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/auth0/go-jwt-middleware/v2/validator"
+	"github.com/go-chi/chi/v5"
 )
 
 func tearDownApiKeyHandlerTests() {
@@ -26,7 +27,10 @@ func tearDownApiKeyHandlerTests() {
 // Helper function to create test pepper for API key creation
 func createTestPepper() {
 	pepperService := services.NewPepperService(nil)
-	pepperService.InitPepper()
+	err := pepperService.InitPepper()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize pepper: %v", err))
+	}
 }
 
 // Helper function to create JWT context for tests
@@ -54,6 +58,7 @@ func createTestApiKeysForHandlerTests() {
 		{
 			ID:          "handler-key-1",
 			UserID:      &user1,
+			CreatedBy:   &user1,
 			Name:        "Alpha Handler Key",
 			Description: "First handler test key",
 			Prefix:      "key",
@@ -64,6 +69,7 @@ func createTestApiKeysForHandlerTests() {
 		{
 			ID:          "handler-key-2",
 			UserID:      &user1,
+			CreatedBy:   &user1,
 			Name:        "Beta Handler Key",
 			Description: "Second handler test key",
 			Prefix:      "key",
@@ -74,6 +80,7 @@ func createTestApiKeysForHandlerTests() {
 		{
 			ID:          "handler-key-3",
 			UserID:      &user2,
+			CreatedBy:   &user2,
 			Name:        "Gamma Handler Key",
 			Description: "Third handler test key",
 			Prefix:      "key",
@@ -91,6 +98,7 @@ func createTestApiKeysForHandlerTests() {
 // CreateApiKey Handler Tests
 
 func TestCreateApiKey_Success(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer tearDownApiKeyHandlerTests()
 	createTestPepper()
 
@@ -139,6 +147,7 @@ func TestCreateApiKey_Success(t *testing.T) {
 }
 
 func TestCreateApiKey_MinimalFields(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer tearDownApiKeyHandlerTests()
 	createTestPepper()
 
@@ -161,6 +170,7 @@ func TestCreateApiKey_MinimalFields(t *testing.T) {
 }
 
 func TestCreateApiKey_AllValidScopes(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer tearDownApiKeyHandlerTests()
 	createTestPepper()
 
@@ -280,6 +290,7 @@ func TestCreateApiKey_EmptyBody(t *testing.T) {
 }
 
 func TestCreateApiKey_AsAdmin(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer tearDownApiKeyHandlerTests()
 	createTestPepper()
 
@@ -745,5 +756,373 @@ func TestGetPagedApiKeys_DifferentUsers(t *testing.T) {
 
 	if response2.TotalCount != 1 {
 		utils.PrintTestError(t, response2.TotalCount, int64(1))
+	}
+}
+
+// UpdateApiKey Handler Tests
+
+func TestUpdateApiKey_Success(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	command := commands.UpsertApiKeyCommand{
+		Name:        "Updated Test API Key",
+		Description: "Updated test description",
+		Scope:       "rw",
+	}
+
+	bytes, _ := json.Marshal(command)
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/handler-key-1", reader)
+	r = createJWTContext(r, 1, models.USER)
+
+	// Add URL parameter for key ID
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-1")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestUpdateApiKey_MinimalFields(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	command := commands.UpsertApiKeyCommand{
+		Name:  "Minimal Update",
+		Scope: "r",
+	}
+
+	bytes, _ := json.Marshal(command)
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/handler-key-1", reader)
+	r = createJWTContext(r, 1, models.USER)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-1")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestUpdateApiKey_AllValidScopes(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	scopes := []string{"r", "w", "rw"}
+
+	for i, scope := range scopes {
+		keyId := fmt.Sprintf("handler-key-%d", (i%2)+1) // Alternate between key-1 and key-2
+
+		command := commands.UpsertApiKeyCommand{
+			Name:        fmt.Sprintf("Key with scope %s", scope),
+			Description: fmt.Sprintf("Testing scope %s", scope),
+			Scope:       scope,
+		}
+
+		bytes, _ := json.Marshal(command)
+		reader := strings.NewReader(string(bytes))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("PUT", fmt.Sprintf("/api/api-keys/%s", keyId), reader)
+		r = createJWTContext(r, 1, models.USER)
+
+		ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+		r = r.WithContext(ctx)
+		chi.URLParam(r, "id")
+		rctx := chi.RouteContext(r.Context())
+		rctx.URLParams.Add("id", keyId)
+
+		UpdateApiKey(w, r)
+
+		if w.Result().StatusCode != http.StatusOK {
+			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("http.StatusOK for scope %s", scope))
+		}
+	}
+}
+
+func TestUpdateApiKey_ValidationErrors(t *testing.T) {
+	defer tearDownApiKeyHandlerTests()
+	createTestApiKeysForHandlerTests()
+
+	tests := map[string]struct {
+		input  commands.UpsertApiKeyCommand
+		expect int
+	}{
+		"missing name": {
+			input: commands.UpsertApiKeyCommand{
+				Description: "Missing name",
+				Scope:       "r",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"missing scope": {
+			input: commands.UpsertApiKeyCommand{
+				Name:        "Missing scope",
+				Description: "No scope provided",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"invalid scope": {
+			input: commands.UpsertApiKeyCommand{
+				Name:        "Invalid scope",
+				Description: "Bad scope value",
+				Scope:       "invalid",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"empty name": {
+			input: commands.UpsertApiKeyCommand{
+				Name:        "",
+				Description: "Empty name",
+				Scope:       "r",
+			},
+			expect: http.StatusBadRequest,
+		},
+		"empty scope": {
+			input: commands.UpsertApiKeyCommand{
+				Name:        "Empty scope",
+				Description: "Empty scope value",
+				Scope:       "",
+			},
+			expect: http.StatusBadRequest,
+		},
+	}
+
+	for name, test := range tests {
+		bytes, _ := json.Marshal(test.input)
+		reader := strings.NewReader(string(bytes))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("PUT", "/api/api-keys/handler-key-1", reader)
+		r = createJWTContext(r, 1, models.USER)
+
+		ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+		r = r.WithContext(ctx)
+		chi.URLParam(r, "id")
+		rctx := chi.RouteContext(r.Context())
+		rctx.URLParams.Add("id", "handler-key-1")
+
+		UpdateApiKey(w, r)
+
+		if w.Result().StatusCode != test.expect {
+			utils.PrintTestError(t, w.Result().StatusCode, fmt.Sprintf("%s expected %d", name, test.expect))
+		}
+	}
+}
+
+func TestUpdateApiKey_MalformedJSON(t *testing.T) {
+	defer tearDownApiKeyHandlerTests()
+	createTestApiKeysForHandlerTests()
+
+	reader := strings.NewReader("{invalid json")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/handler-key-1", reader)
+	r = createJWTContext(r, 1, models.USER)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-1")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestUpdateApiKey_EmptyBody(t *testing.T) {
+	defer tearDownApiKeyHandlerTests()
+	createTestApiKeysForHandlerTests()
+
+	reader := strings.NewReader("")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/handler-key-1", reader)
+	r = createJWTContext(r, 1, models.USER)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-1")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestUpdateApiKey_NonExistentKey(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+
+	command := commands.UpsertApiKeyCommand{
+		Name:        "Update Non-existent",
+		Description: "Trying to update a key that doesn't exist",
+		Scope:       "r",
+	}
+
+	bytes, _ := json.Marshal(command)
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/non-existent-key", reader)
+	r = createJWTContext(r, 1, models.USER)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "non-existent-key")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestUpdateApiKey_WrongUser(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	command := commands.UpsertApiKeyCommand{
+		Name:        "Unauthorized Update",
+		Description: "User 1 trying to update User 2's key",
+		Scope:       "r",
+	}
+
+	bytes, _ := json.Marshal(command)
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/handler-key-3", reader) // handler-key-3 belongs to user 2
+	r = createJWTContext(r, 1, models.USER)                                // But user 1 is making the request
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-3")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestUpdateApiKey_AsAdmin(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	command := commands.UpsertApiKeyCommand{
+		Name:        "Admin Updated Key",
+		Description: "Updated by admin user",
+		Scope:       "rw",
+	}
+
+	bytes, _ := json.Marshal(command)
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/handler-key-1", reader)
+	r = createJWTContext(r, 1, models.ADMIN)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-1")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestUpdateApiKey_UserUpdatingOwnKey(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	// User 2 updating their own key (handler-key-3)
+	command := commands.UpsertApiKeyCommand{
+		Name:        "My Updated Key",
+		Description: "User updating their own key",
+		Scope:       "rw",
+	}
+
+	bytes, _ := json.Marshal(command)
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/handler-key-3", reader)
+	r = createJWTContext(r, 2, models.USER) // User 2 updating their own key
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-3")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestUpdateApiKey_EmptyKeyId(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+
+	command := commands.UpsertApiKeyCommand{
+		Name:        "Empty Key ID Test",
+		Description: "Testing with empty key ID",
+		Scope:       "r",
+	}
+
+	bytes, _ := json.Marshal(command)
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("PUT", "/api/api-keys/", reader)
+	r = createJWTContext(r, 1, models.USER)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "")
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
 	}
 }

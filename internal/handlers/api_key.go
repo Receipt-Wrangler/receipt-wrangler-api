@@ -7,6 +7,8 @@ import (
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func CreateApiKey(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +101,41 @@ func GetPagedApiKeys(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write(bytes)
 
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}
+
+func UpdateApiKey(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error updating API key",
+		Writer:       w,
+		Request:      r,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			command := commands.UpsertApiKeyCommand{}
+			err := command.LoadDataFromRequest(w, r)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			vErrs := command.Validate()
+			if len(vErrs.Errors) > 0 {
+				structs.WriteValidatorErrorResponse(w, vErrs, http.StatusBadRequest)
+				return 0, nil
+			}
+
+			token := structs.GetClaims(r)
+			apiKeyService := services.NewApiKeyService(nil)
+
+			err = apiKeyService.UpdateApiKey(id, token.UserId, command)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
 			return 0, nil
 		},
 	}

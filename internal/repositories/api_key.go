@@ -66,6 +66,17 @@ func (repository ApiKeyRepository) UpdateApiKeyLastUsedDate(id string) error {
 	return err
 }
 
+func (repository ApiKeyRepository) UpdateApiKey(id string, userId uint, name, description, scope string) error {
+	err := repository.GetDB().Model(&models.ApiKey{}).
+		Where("id = ? AND user_id = ?", id, userId).
+		Updates(map[string]interface{}{
+			"name":        name,
+			"description": description,
+			"scope":       scope,
+		}).Error
+	return err
+}
+
 func (repository ApiKeyRepository) isValidColumn(orderBy string) bool {
 	return orderBy == "name" ||
 		orderBy == "description" ||

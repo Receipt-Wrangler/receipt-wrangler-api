@@ -158,6 +158,26 @@ func (service *ApiKeyService) UpdateApiKeyLastUsedDate(id string) error {
 	return apiKeyRepository.UpdateApiKeyLastUsedDate(id)
 }
 
+func (service *ApiKeyService) UpdateApiKey(apiKeyId string, userId uint, command commands.UpsertApiKeyCommand) error {
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+
+	// First verify the API key exists and belongs to the user
+	existingKey, err := apiKeyRepository.GetApiKeyById(apiKeyId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("API key not found")
+		}
+		return err
+	}
+
+	if existingKey.UserID == nil || *existingKey.UserID != userId {
+		return errors.New("API key not found")
+	}
+
+	// Update the API key
+	return apiKeyRepository.UpdateApiKey(apiKeyId, userId, command.Name, command.Description, command.Scope)
+}
+
 func (service *ApiKeyService) GetPagedApiKeys(command commands.PagedApiKeyRequestCommand, userId string) ([]models.ApiKeyView, int64, error) {
 	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
 

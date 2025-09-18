@@ -93,6 +93,10 @@ func Base64EncodeBytes(data []byte) string {
 	return base64.StdEncoding.EncodeToString(data)
 }
 
+func Base64URLEncodeBytes(data []byte) string {
+	return base64.URLEncoding.EncodeToString(data)
+}
+
 func BuildGroupPathString(groupId string, groupName string) (string, error) {
 	basePath, err := os.Getwd()
 	if err != nil {

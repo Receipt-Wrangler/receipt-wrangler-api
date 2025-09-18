@@ -98,3 +98,16 @@ func Base64Decode(b64EncodedValue string) ([]byte, error) {
 
 	return result, nil
 }
+
+func EncodeToBase64URL(value []byte) string {
+	return base64.URLEncoding.EncodeToString(value)
+}
+
+func Base64URLDecode(b64EncodedValue string) ([]byte, error) {
+	result, err := base64.URLEncoding.DecodeString(b64EncodedValue)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

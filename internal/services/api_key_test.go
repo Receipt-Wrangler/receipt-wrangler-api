@@ -238,7 +238,7 @@ func TestApiKeyService_CreateApiKey_VerifyHmacGeneration(t *testing.T) {
 	b64Secret := parts[3]
 
 	// Decode the base64 secret to get the raw secret
-	decodedSecret, err := utils.Base64Decode(b64Secret)
+	decodedSecret, err := utils.Base64URLDecode(b64Secret)
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
 	}

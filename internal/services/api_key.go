@@ -39,7 +39,7 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		return "", err
 	}
 
-	b64Id := utils.Base64EncodeBytes([]byte(id))
+	b64Id := utils.Base64URLEncodeBytes([]byte(id))
 
 	secret, err := utils.GetRandomString(64)
 	if err != nil {
@@ -101,7 +101,7 @@ func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, er
 	}
 
 	secret := parts[3]
-	decodedSecret, err := utils.Base64Decode(secret)
+	decodedSecret, err := utils.Base64URLDecode(secret)
 	if err != nil {
 		return models.ApiKey{}, err
 	}

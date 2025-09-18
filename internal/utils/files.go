@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bufio"
-	"encoding/base64"
 	"errors"
 	"os"
 	"path/filepath"
@@ -87,14 +86,6 @@ func ReadLastFileLine(filePath string) (string, error) {
 	}
 
 	return fileLines[len(fileLines)-1], nil
-}
-
-func Base64EncodeBytes(data []byte) string {
-	return base64.StdEncoding.EncodeToString(data)
-}
-
-func Base64URLEncodeBytes(data []byte) string {
-	return base64.URLEncoding.EncodeToString(data)
 }
 
 func BuildGroupPathString(groupId string, groupName string) (string, error) {

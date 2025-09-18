@@ -39,14 +39,14 @@ func (service *ApiKeyService) CreateApiKey(userId uint, command commands.UpsertA
 		return "", err
 	}
 
-	b64Id := utils.Base64URLEncodeBytes([]byte(id))
+	b64Id := utils.Base64URLEncode([]byte(id))
 
 	secret, err := utils.GetRandomString(64)
 	if err != nil {
 		return "", err
 	}
 
-	b64secret := utils.Base64EncodeBytes([]byte(secret))
+	b64secret := utils.Base64Encode([]byte(secret))
 
 	b64hmac, err := service.GenerateApiKeyHmac(secret)
 	if err != nil {
@@ -83,7 +83,7 @@ func (service *ApiKeyService) GenerateApiKeyHmac(secret string) (string, error) 
 	}
 
 	hmac := utils.GenerateHmac([]byte(clearTextPepper), []byte(secret))
-	return utils.Base64EncodeBytes(hmac), nil
+	return utils.Base64Encode(hmac), nil
 }
 
 func (service *ApiKeyService) ValidateV1ApiKey(apiKey string) (models.ApiKey, error) {

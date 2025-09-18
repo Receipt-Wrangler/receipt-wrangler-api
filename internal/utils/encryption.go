@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"io"
 )
@@ -42,7 +41,7 @@ func EncryptAndEncodeToBase64(key string, value string) (string, error) {
 		return "", err
 	}
 
-	return EncodeToBase64(encryptedData), nil
+	return Base64Encode(encryptedData), nil
 }
 
 func DecryptData(key string, encryptedData []byte) (string, error) {
@@ -84,30 +83,4 @@ func DecryptB64EncodedData(key string, encodedCipherText string) (string, error)
 	}
 
 	return cleartext, nil
-}
-
-func EncodeToBase64(value []byte) string {
-	return base64.StdEncoding.EncodeToString(value)
-}
-
-func Base64Decode(b64EncodedValue string) ([]byte, error) {
-	result, err := base64.StdEncoding.DecodeString(b64EncodedValue)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func EncodeToBase64URL(value []byte) string {
-	return base64.URLEncoding.EncodeToString(value)
-}
-
-func Base64URLDecode(b64EncodedValue string) ([]byte, error) {
-	result, err := base64.URLEncoding.DecodeString(b64EncodedValue)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
 }

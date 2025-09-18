@@ -543,7 +543,7 @@ func TestUnifiedAuthMiddleware_UserNotFoundError(t *testing.T) {
 	}
 
 	// Create valid API key format with proper secret
-	validKey := apiKeyService.BuildV1ApiKey("key", 1, "test-id", utils.Base64EncodeBytes([]byte(secret)))
+	validKey := apiKeyService.BuildV1ApiKey("key", 1, "test-id", utils.Base64Encode([]byte(secret)))
 
 	r := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	r.Header.Set("Authorization", validKey)

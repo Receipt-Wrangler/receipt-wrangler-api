@@ -430,28 +430,38 @@ func TestUnifiedAuthMiddleware_ContextPropagation(t *testing.T) {
 		claims := r.Context().Value(jwtmiddleware.ContextKey{})
 		if claims == nil {
 			utils.PrintTestError(t, claims, "claims should be present in context")
+			return
 		}
 
-		validatedClaims, ok := claims.(validator.ValidatedClaims)
-		if !ok {
-			utils.PrintTestError(t, "type assertion failed", "should be ValidatedClaims")
-		}
+		// Check what type we actually have
+		switch claimsType := claims.(type) {
+		case *validator.ValidatedClaims:
+			validatedClaims := claimsType
+			if validatedClaims.CustomClaims == nil {
+				utils.PrintTestError(t, "CustomClaims is nil", "should not be nil")
+				return
+			}
 
-		customClaims, ok := validatedClaims.CustomClaims.(*structs.Claims)
-		if !ok {
-			utils.PrintTestError(t, "custom claims type assertion failed", "should be Claims")
-		}
+			customClaims, ok := validatedClaims.CustomClaims.(*structs.Claims)
+			if !ok {
+				utils.PrintTestError(t, "custom claims type assertion failed", "should be Claims")
+				return
+			}
 
-		if customClaims.UserId != user.ID {
-			utils.PrintTestError(t, customClaims.UserId, user.ID)
-		}
+			if customClaims.UserId != user.ID {
+				utils.PrintTestError(t, customClaims.UserId, user.ID)
+			}
 
-		if customClaims.Username != user.Username {
-			utils.PrintTestError(t, customClaims.Username, user.Username)
-		}
+			if customClaims.Username != user.Username {
+				utils.PrintTestError(t, customClaims.Username, user.Username)
+			}
 
-		if customClaims.ApiKeyScope != "r" {
-			utils.PrintTestError(t, customClaims.ApiKeyScope, "r")
+			if customClaims.ApiKeyScope != "r" {
+				utils.PrintTestError(t, customClaims.ApiKeyScope, "r")
+			}
+		default:
+			utils.PrintTestError(t, "unexpected claims type", "should be *ValidatedClaims")
+			return
 		}
 
 		w.WriteHeader(http.StatusOK)

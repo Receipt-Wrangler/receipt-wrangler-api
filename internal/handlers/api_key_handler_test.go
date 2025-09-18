@@ -26,7 +26,10 @@ func tearDownApiKeyHandlerTests() {
 // Helper function to create test pepper for API key creation
 func createTestPepper() {
 	pepperService := services.NewPepperService(nil)
-	pepperService.InitPepper()
+	err := pepperService.InitPepper()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize pepper: %v", err))
+	}
 }
 
 // Helper function to create JWT context for tests
@@ -94,6 +97,7 @@ func createTestApiKeysForHandlerTests() {
 // CreateApiKey Handler Tests
 
 func TestCreateApiKey_Success(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer tearDownApiKeyHandlerTests()
 	createTestPepper()
 
@@ -142,6 +146,7 @@ func TestCreateApiKey_Success(t *testing.T) {
 }
 
 func TestCreateApiKey_MinimalFields(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer tearDownApiKeyHandlerTests()
 	createTestPepper()
 
@@ -164,6 +169,7 @@ func TestCreateApiKey_MinimalFields(t *testing.T) {
 }
 
 func TestCreateApiKey_AllValidScopes(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer tearDownApiKeyHandlerTests()
 	createTestPepper()
 
@@ -283,6 +289,7 @@ func TestCreateApiKey_EmptyBody(t *testing.T) {
 }
 
 func TestCreateApiKey_AsAdmin(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer tearDownApiKeyHandlerTests()
 	createTestPepper()
 

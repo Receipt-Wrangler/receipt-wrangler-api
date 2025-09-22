@@ -84,6 +84,7 @@ func (repository ApiKeyRepository) DeleteApiKey(id string) error {
 
 func (repository ApiKeyRepository) isValidColumn(orderBy string) bool {
 	return orderBy == "name" ||
+		orderBy == "created_by" ||
 		orderBy == "description" ||
 		orderBy == "created_at" ||
 		orderBy == "updated_at" ||

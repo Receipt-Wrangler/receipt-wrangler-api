@@ -2,11 +2,11 @@ package utils
 
 import (
 	"bufio"
-	"encoding/base64"
 	"errors"
-	"github.com/gabriel-vasile/mimetype"
 	"os"
 	"path/filepath"
+
+	"github.com/gabriel-vasile/mimetype"
 )
 
 func WriteFile(path string, data []byte) error {
@@ -86,10 +86,6 @@ func ReadLastFileLine(filePath string) (string, error) {
 	}
 
 	return fileLines[len(fileLines)-1], nil
-}
-
-func Base64EncodeBytes(data []byte) string {
-	return base64.StdEncoding.EncodeToString(data)
 }
 
 func BuildGroupPathString(groupId string, groupName string) (string, error) {

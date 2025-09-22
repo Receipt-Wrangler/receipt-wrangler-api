@@ -134,7 +134,11 @@ func GenerateJWT(userId uint) (string, string, structs.Claims, error) {
 	}
 
 	refreshTokenClaims := structs.Claims{
-		UserId: user.ID,
+		DefaultAvatarColor: user.DefaultAvatarColor,
+		Displayname:        user.DisplayName,
+		UserId:             user.ID,
+		Username:           user.Username,
+		UserRole:           user.UserRole,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "https://receiptWrangler.io",
 			Audience:  []string{"https://receiptWrangler.io"},
@@ -236,7 +240,7 @@ func GetAppData(userId uint, r *http.Request) (structs.AppData, error) {
 	appData.Icons = structs.Icons
 
 	if r != nil {
-		claims := structs.GetJWT(r)
+		claims := structs.GetClaims(r)
 		PrepareAccessTokenClaims(*claims)
 		appData.Claims = *claims
 	}

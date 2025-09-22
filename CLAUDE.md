@@ -68,6 +68,29 @@ Each package typically has:
 
 Tests use dependency injection patterns and mock implementations for external services.
 
+## Testing Guidelines for Claude
+
+When working with tests in this codebase, follow these critical requirements:
+
+### Test Execution Requirements
+- **ALWAYS run tests after writing them** - When asked to write tests, you MUST run them to verify they pass
+- **Report coverage** - Always report the coverage of files impacted by the tests using `go test -coverprofile=coverage.out -covermode=atomic`
+- **Verify all tests pass** - Never consider test writing complete until all tests are verified to pass
+
+### Test Database Cleanup
+- **Failed tests may leave behind `app.db` files** in test directories (e.g., `services/app.db`, `handlers/app.db`)
+- **These MUST be removed** before rerunning tests to avoid conflicts
+- **CRITICAL**: Only remove `app.db` files from test directories, NEVER delete anything from the `sqlite/` directory
+- Example cleanup locations: `internal/services/app.db`, `internal/handlers/app.db`, etc.
+
+### Test Workflow
+1. Write tests following existing patterns in the codebase
+2. Run tests to verify they pass: `go test -v ./...`
+3. Generate and report coverage: `go test -coverprofile=coverage.out -covermode=atomic -v ./...`
+4. If tests fail, check for and remove any `app.db` files in test directories
+5. Re-run tests until all pass
+6. Report final coverage results for impacted files
+
 ## OCR and Image Processing
 
 - Tesseract OCR integration via `otiai10/gosseract`

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
@@ -9,6 +8,8 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +34,7 @@ func ExportAllReceiptsFromGroup(w http.ResponseWriter, r *http.Request) {
 				return 0, nil
 			}
 
-			token := structs.GetJWT(r)
+			token := structs.GetClaims(r)
 
 			receiptRepository := repositories.NewReceiptRepository(nil)
 			receipts, _, err := receiptRepository.

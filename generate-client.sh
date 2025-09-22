@@ -5,7 +5,7 @@ show_usage() {
     echo "Usage: $0 <platform> <output-dir>"
     echo ""
     echo "Arguments:"
-    echo "  platform     Either 'desktop' or 'mobile'"
+    echo "  platform     Either 'desktop', 'mobile', or 'mcp'"
     echo "  output-dir   Directory path for generated code output"
     echo ""
     echo "Example:"
@@ -23,14 +23,16 @@ platform=$1
 output_dir=$2
 
 # Validate platform argument
-if [ "$platform" != "desktop" ] && [ "$platform" != "mobile" ]; then
-    echo "Error: Platform must be either 'desktop' or 'mobile'"
+if [ "$platform" != "desktop" ] && [ "$platform" != "mobile" ] && [ "$platform" != "mcp" ]; then
+    echo "Error: Platform must be either 'desktop', 'mobile', or 'mcp'"
     show_usage
 fi
 
 # Set generator based on platform
 if [ "$platform" = "desktop" ]; then
     generator="typescript-angular"
+elif [ "$platform" = "mcp" ]; then
+    generator="typescript"
 else
     generator="dart-dio"
 fi

@@ -66,7 +66,7 @@ func (repository SystemEmailRepository) AddSystemEmail(command commands.UpsertSy
 		Host:        command.Host,
 		Port:        command.Port,
 		Username:    command.Username,
-		Password:    utils.EncodeToBase64(rawEncryptedPassword),
+		Password:    utils.Base64Encode(rawEncryptedPassword),
 		UseStartTLS: command.UseStartTLS,
 	}
 

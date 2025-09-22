@@ -127,6 +127,17 @@ func (repository UserRepository) GetAllUserViews() ([]structs.UserView, error) {
 	return users, nil
 }
 
+func (repository UserRepository) GetUserById(userId uint) (structs.UserView, error) {
+	var user structs.UserView
+
+	err := repository.GetDB().Model(models.User{}).Where("id = ?", userId).First(&user).Error
+	if err != nil {
+		return structs.UserView{}, err
+	}
+
+	return user, nil
+}
+
 func (repository UserRepository) UpdateUserLastLoginDate(userId uint) (time.Time, error) {
 	now := time.Now()
 	err := repository.GetDB().Model(models.User{}).Where("id = ?", userId).Update("last_login_date", now).Error

@@ -1,16 +1,15 @@
 package routers
 
 import (
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/go-chi/chi/v5"
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/middleware"
 )
 
-func BuildReceiptImageRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
+func BuildReceiptImageRouter() *chi.Mux {
 	receiptImageRouter := chi.NewRouter()
 
-	receiptImageRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
+	receiptImageRouter.Use(middleware.UnifiedAuthMiddleware)
 	receiptImageRouter.Get("/{id}", handlers.GetReceiptImage)
 	receiptImageRouter.Get("/{id}/download", handlers.DownloadReceiptImage)
 	receiptImageRouter.Post("/magicFill", handlers.MagicFillFromImage)

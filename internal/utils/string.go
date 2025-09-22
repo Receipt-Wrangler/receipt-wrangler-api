@@ -2,7 +2,6 @@ package utils
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"strings"
 )
 
@@ -14,7 +13,7 @@ func GetRandomString(length int) (string, error) {
 		return "", err
 	}
 
-	return base64.URLEncoding.EncodeToString(bytes), nil
+	return Base64URLEncode(bytes), nil
 }
 
 func RemoveJsonFormat(input string) string {

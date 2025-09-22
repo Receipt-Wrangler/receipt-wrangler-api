@@ -4,14 +4,13 @@ import (
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/middleware"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/go-chi/chi/v5"
 )
 
-func BuildTagRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
+func BuildTagRouter() *chi.Mux {
 	tagRouter := chi.NewRouter()
 
-	tagRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
+	tagRouter.Use(middleware.UnifiedAuthMiddleware)
 	tagRouter.Get("/", handlers.GetAllTags)
 	tagRouter.Post("/", handlers.CreateTag)
 	tagRouter.Post("/getPagedTags", handlers.GetPagedTags)

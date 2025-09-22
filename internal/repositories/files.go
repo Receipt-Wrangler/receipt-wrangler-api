@@ -3,7 +3,6 @@ package repositories
 import (
 	"archive/zip"
 	"bytes"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -329,8 +328,7 @@ func (repository FileRepository) BuildEncodedImageString(bytes []byte) (string, 
 		return "", err
 	}
 
-	imageData := "data:" + fileType + ";base64," + base64.StdEncoding.EncodeToString(bytes)
-	return imageData, nil
+	return utils.BuildDataURI(fileType, bytes), nil
 }
 
 func (repository FileRepository) CreateZipFromTempFiles(zipFilename string, filenames []string) (string, error) {

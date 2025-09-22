@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/net/context"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,9 +10,12 @@ import (
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/routers"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/wranglerasynq"
 	"syscall"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"github.com/go-chi/chi/v5"
 	"gopkg.in/gographics/imagick.v3/imagick"
@@ -84,6 +86,12 @@ func main() {
 		if err != nil {
 			logging.LogStd(logging.LOG_LEVEL_FATAL, err.Error())
 		}
+	}
+
+	pepperService := services.NewPepperService(nil)
+	err = pepperService.InitPepper()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_FATAL, "Failed to initialize pepper: "+err.Error())
 	}
 
 	err = wranglerasynq.StartSystemCleanUpTasks()

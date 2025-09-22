@@ -1,16 +1,15 @@
 package routers
 
 import (
-	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
 	"github.com/go-chi/chi/v5"
 	"receipt-wrangler/api/internal/handlers"
 	"receipt-wrangler/api/internal/middleware"
 )
 
-func BuildGroupRouter(tokenValidator *jwtmiddleware.JWTMiddleware) *chi.Mux {
+func BuildGroupRouter() *chi.Mux {
 	groupRouter := chi.NewRouter()
 
-	groupRouter.Use(middleware.MoveJWTCookieToHeader, tokenValidator.CheckJWT)
+	groupRouter.Use(middleware.UnifiedAuthMiddleware)
 	groupRouter.Get("/", handlers.GetGroupsForUser)
 	groupRouter.Get("/{groupId}", handlers.GetGroupById)
 	groupRouter.Post("/", handlers.CreateGroup)

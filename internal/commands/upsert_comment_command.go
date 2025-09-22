@@ -25,7 +25,7 @@ func (comment *UpsertCommentCommand) LoadDataFromRequest(w http.ResponseWriter, 
 	}
 
 	if isCreate {
-		token := structs.GetJWT(r)
+		token := structs.GetClaims(r)
 		comment.UserId = &token.UserId
 	}
 

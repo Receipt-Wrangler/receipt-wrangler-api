@@ -112,6 +112,8 @@ func MakeMigrations() error {
 		&models.ReceiptProcessingSettings{},
 		&models.Prompt{},
 		&models.GroupReceiptSettings{},
+		&models.Pepper{},
+		&models.ApiKey{},
 	)
 
 	return err

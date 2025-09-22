@@ -237,7 +237,7 @@ func (service ReceiptProcessingService) getOllamaBase64Image(imagePath string) (
 		return "", err
 	}
 
-	return utils.Base64EncodeBytes(fileBytes), nil
+	return utils.Base64Encode(fileBytes), nil
 }
 
 func (service ReceiptProcessingService) getOpenAiBase64Image(imagePath string) (string, error) {
@@ -261,7 +261,7 @@ func (service ReceiptProcessingService) getGeminiImage(imagePath string) (string
 		return "", err
 	}
 
-	return utils.Base64EncodeBytes(fileBytes), nil
+	return utils.Base64Encode(fileBytes), nil
 }
 
 func (service ReceiptProcessingService) buildPrompt(

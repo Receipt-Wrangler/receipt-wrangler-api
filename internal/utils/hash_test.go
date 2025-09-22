@@ -7,7 +7,7 @@ func TestSha256Hash128Bit(t *testing.T) {
 	expected := "4M2yAEADbol2mSGOXAMLNA=="
 
 	hashedValue := Sha256Hash128Bit(value)
-	hashedString := EncodeToBase64(hashedValue)
+	hashedString := Base64Encode(hashedValue)
 
 	if hashedString != expected {
 		PrintTestError(t, hashedString, expected)

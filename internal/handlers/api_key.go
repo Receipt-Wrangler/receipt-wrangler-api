@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"net/url"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/services"
@@ -115,6 +116,10 @@ func UpdateApiKey(w http.ResponseWriter, r *http.Request) {
 		Request:      r,
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			id := chi.URLParam(r, "id")
+			// URL decode the ID parameter in case it was encoded by the frontend
+			if decodedId, err := url.QueryUnescape(id); err == nil {
+				id = decodedId
+			}
 			command := commands.UpsertApiKeyCommand{}
 			err := command.LoadDataFromRequest(w, r)
 			if err != nil {

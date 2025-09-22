@@ -13,7 +13,7 @@ func TestShouldEncryptStringWithAES128(t *testing.T) {
 		PrintTestError(t, err, nil)
 	}
 
-	encodedCipherText := EncodeToBase64(cipherText)
+	encodedCipherText := Base64Encode(cipherText)
 
 	if len(encodedCipherText) != 60 {
 		PrintTestError(t, len(encodedCipherText), 60)
@@ -63,7 +63,7 @@ func TestShouldDecryptStringWithAES128(t *testing.T) {
 		PrintTestError(t, err, nil)
 	}
 
-	encodedCipherText := EncodeToBase64(cipherText)
+	encodedCipherText := Base64Encode(cipherText)
 
 	if len(encodedCipherText) != 60 {
 		PrintTestError(t, len(encodedCipherText), 60)
@@ -91,7 +91,7 @@ func TestShouldDecryptB64EncodedData(t *testing.T) {
 		return
 	}
 
-	encodedCipherText := EncodeToBase64(encryptedData)
+	encodedCipherText := Base64Encode(encryptedData)
 	if len(encodedCipherText) != 60 {
 		PrintTestError(t, len(encodedCipherText), 60)
 		return
@@ -133,7 +133,7 @@ func TestShouldEncodeValueToBase64(t *testing.T) {
 	value := []byte("superSecretData")
 	expected := "c3VwZXJTZWNyZXREYXRh"
 
-	encodedValue := EncodeToBase64(value)
+	encodedValue := Base64Encode(value)
 
 	if encodedValue != expected {
 		PrintTestError(t, encodedValue, expected)

@@ -1126,3 +1126,60 @@ func TestUpdateApiKey_EmptyKeyId(t *testing.T) {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
 	}
 }
+
+func TestUpdateApiKey_URLEncodedId(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	// Create an API key with special characters that would be URL encoded
+	keyId := "cFU4ckxyWWI3UEVYbDFvVUczTWJDLU5sWlFkUTltR1ZNcE9DOUpNZ1pSZz0="
+
+	// Create the API key first
+	apiKey := models.ApiKey{
+		ID:          keyId,
+		UserID:      &[]uint{1}[0],
+		Name:        "Test API Key with Special Chars",
+		Description: "Test description",
+		Scope:       "rw",
+		Prefix:      "rw-v1",
+		Hmac:        "test-hmac",
+		Version:     1,
+		CreatedBy:   &[]uint{1}[0],
+	}
+
+	apiKeyRepository := repositories.NewApiKeyRepository(nil)
+	_, err := apiKeyRepository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error creating test key")
+		return
+	}
+
+	command := commands.UpsertApiKeyCommand{
+		Name:        "Updated Test API Key",
+		Description: "Updated test description",
+		Scope:       "r",
+	}
+
+	bytes, _ := json.Marshal(command)
+	reader := strings.NewReader(string(bytes))
+	w := httptest.NewRecorder()
+
+	// URL encode the key ID as the frontend would do
+	encodedKeyId := "cFU4ckxyWWI3UEVYbDFvVUczTWJDLU5sWlFkUTltR1ZNcE9DOUpNZ1pSZz0%3D"
+	r := httptest.NewRequest("PUT", "/api/api-keys/"+encodedKeyId, reader)
+	r = createJWTContext(r, 1, models.USER)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", encodedKeyId)
+
+	UpdateApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}

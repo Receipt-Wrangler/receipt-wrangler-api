@@ -4940,10 +4940,6 @@ components:
           type: string
           format: date-time
           description: When the API key was last used
-        revokedAt:
-          type: string
-          format: date-time
-          description: When the API key was revoked
     InternalErrorResponse:
       type: object
       required:

@@ -86,7 +86,6 @@ func (repository ApiKeyRepository) isValidColumn(orderBy string) bool {
 	return orderBy == "name" ||
 		orderBy == "description" ||
 		orderBy == "created_at" ||
-		orderBy == "revoked_at" ||
 		orderBy == "updated_at" ||
 		orderBy == "last_used_at"
 }

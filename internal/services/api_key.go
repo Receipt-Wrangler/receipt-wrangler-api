@@ -202,7 +202,6 @@ func (service *ApiKeyService) GetPagedApiKeys(command commands.PagedApiKeyReques
 			UserID:          apiKey.UserID,
 			Scope:           apiKey.Scope,
 			LastUsedAt:      apiKey.LastUsedAt,
-			RevokedAt:       apiKey.RevokedAt,
 		}
 	}
 

@@ -205,3 +205,26 @@ func (service *ApiKeyService) GetPagedApiKeys(command commands.PagedApiKeyReques
 
 	return apiKeyViews, count, nil
 }
+
+func (service *ApiKeyService) DeleteApiKey(apiKeyId string, userId uint, isAdmin bool) error {
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+
+	// First verify the API key exists
+	existingKey, err := apiKeyRepository.GetApiKeyById(apiKeyId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("API key not found")
+		}
+		return err
+	}
+
+	// Check authorization: admin can delete any key, non-admin can only delete their own
+	if !isAdmin {
+		if existingKey.UserID == nil || *existingKey.UserID != userId {
+			return errors.New("API key not found")
+		}
+	}
+
+	// Delete the API key
+	return apiKeyRepository.DeleteApiKey(apiKeyId)
+}

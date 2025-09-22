@@ -1183,3 +1183,141 @@ func TestUpdateApiKey_URLEncodedId(t *testing.T) {
 		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
 	}
 }
+
+func TestDeleteApiKey_Success(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", "/api/api-keys/handler-key-1", nil)
+	r = createJWTContext(r, 1, models.USER) // User 1 deleting their own key
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-1")
+
+	DeleteApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestDeleteApiKey_AdminCanDeleteAnyKey(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", "/api/api-keys/handler-key-3", nil)
+	r = createJWTContext(r, 1, models.ADMIN) // Admin deleting another user's key
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-3")
+
+	DeleteApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}
+
+func TestDeleteApiKey_UserCannotDeleteOtherUsersKey(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+	createTestApiKeysForHandlerTests()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", "/api/api-keys/handler-key-3", nil)
+	r = createJWTContext(r, 1, models.USER) // User 1 trying to delete User 2's key
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "handler-key-3")
+
+	DeleteApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestDeleteApiKey_NonExistentKey(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", "/api/api-keys/non-existent-key", nil)
+	r = createJWTContext(r, 1, models.USER)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", "non-existent-key")
+
+	DeleteApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusInternalServerError {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusInternalServerError)
+	}
+}
+
+func TestDeleteApiKey_URLEncodedId(t *testing.T) {
+	t.Setenv("ENCRYPTION_KEY", "test-key")
+	defer tearDownApiKeyHandlerTests()
+	createTestPepper()
+
+	// Create an API key with special characters that would be URL encoded
+	keyId := "cFU4ckxyWWI3UEVYbDFvVUczTWJDLU5sWlFkUTltR1ZNcE9DOUpNZ1pSZz0="
+
+	apiKey := models.ApiKey{
+		ID:          keyId,
+		UserID:      &[]uint{1}[0],
+		Name:        "Test API Key for Delete",
+		Description: "Test description",
+		Scope:       "rw",
+		Prefix:      "rw-v1",
+		Hmac:        "test-hmac",
+		Version:     1,
+		CreatedBy:   &[]uint{1}[0],
+	}
+
+	apiKeyRepository := repositories.NewApiKeyRepository(nil)
+	_, err := apiKeyRepository.CreateApiKey(apiKey)
+	if err != nil {
+		utils.PrintTestError(t, err, "no error creating test key")
+		return
+	}
+
+	w := httptest.NewRecorder()
+
+	// URL encode the key ID as the frontend would do
+	encodedKeyId := "cFU4ckxyWWI3UEVYbDFvVUczTWJDLU5sWlFkUTltR1ZNcE9DOUpNZ1pSZz0%3D"
+	r := httptest.NewRequest("DELETE", "/api/api-keys/"+encodedKeyId, nil)
+	r = createJWTContext(r, 1, models.USER)
+
+	ctx := context.WithValue(r.Context(), chi.RouteCtxKey, chi.NewRouteContext())
+	r = r.WithContext(ctx)
+	chi.URLParam(r, "id")
+	rctx := chi.RouteContext(r.Context())
+	rctx.URLParams.Add("id", encodedKeyId)
+
+	DeleteApiKey(w, r)
+
+	if w.Result().StatusCode != http.StatusOK {
+		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	}
+}

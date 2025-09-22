@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/net/context"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +14,8 @@ import (
 	"receipt-wrangler/api/internal/wranglerasynq"
 	"syscall"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"github.com/go-chi/chi/v5"
 	"gopkg.in/gographics/imagick.v3/imagick"

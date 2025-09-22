@@ -17,5 +17,4 @@ type ApiKey struct {
 	UserID          *uint      `json:"userId"`
 	Scope           string     `json:"scope"`
 	LastUsedAt      *time.Time `json:"lastUsedAt"`
-	RevokedAt       *time.Time `json:"revokedAt"`
 }

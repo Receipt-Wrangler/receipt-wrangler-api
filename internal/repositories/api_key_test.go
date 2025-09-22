@@ -114,7 +114,6 @@ func TestCreateApiKey_AllFields(t *testing.T) {
 	userId := uint(1)
 	createdBy := uint(2)
 	lastUsedAt := time.Now()
-	revokedAt := time.Now().Add(time.Hour)
 
 	apiKey := models.ApiKey{
 		ID:              "full-test-key-id",
@@ -128,7 +127,6 @@ func TestCreateApiKey_AllFields(t *testing.T) {
 		Version:         2,
 		Scope:           "read,write",
 		LastUsedAt:      &lastUsedAt,
-		RevokedAt:       &revokedAt,
 	}
 
 	repository := NewApiKeyRepository(nil)
@@ -152,10 +150,6 @@ func TestCreateApiKey_AllFields(t *testing.T) {
 
 	if createdApiKey.LastUsedAt.IsZero() {
 		utils.PrintTestError(t, "LastUsedAt should not be zero", "LastUsedAt should be set")
-	}
-
-	if createdApiKey.RevokedAt.IsZero() {
-		utils.PrintTestError(t, "RevokedAt should not be zero", "RevokedAt should be set")
 	}
 
 	// Verify in database
@@ -207,10 +201,6 @@ func TestCreateApiKey_MinimalFields(t *testing.T) {
 
 	if createdApiKey.LastUsedAt != nil {
 		utils.PrintTestError(t, createdApiKey.LastUsedAt, nil)
-	}
-
-	if createdApiKey.RevokedAt != nil {
-		utils.PrintTestError(t, createdApiKey.RevokedAt, nil)
 	}
 }
 
@@ -599,7 +589,6 @@ func createTestApiKeysForPagination() {
 			Scope:       "read",
 			CreatedAt:   now.Add(-15 * time.Minute),
 			UpdatedAt:   now.Add(-15 * time.Minute),
-			RevokedAt:   &now, // This one is revoked
 		},
 	}
 
@@ -637,7 +626,7 @@ func TestGetPagedApiKeys_BasicPagination(t *testing.T) {
 		utils.PrintTestError(t, len(results), 2)
 	}
 
-	// Count should be 5 (including the revoked key)
+	// Count should be 5
 	if count != 5 {
 		utils.PrintTestError(t, count, int64(5))
 	}
@@ -680,7 +669,7 @@ func TestGetPagedApiKeys_SecondPage(t *testing.T) {
 		utils.PrintTestError(t, len(results), 2)
 	}
 
-	// Count should be 5 (including the revoked key)
+	// Count should be 5
 	if count != 5 {
 		utils.PrintTestError(t, count, int64(5))
 	}
@@ -718,7 +707,7 @@ func TestGetPagedApiKeys_NoLimit(t *testing.T) {
 		utils.PrintTestError(t, err, "no error")
 	}
 
-	// Should return all results including revoked
+	// Should return all results
 	if len(results) != 5 {
 		utils.PrintTestError(t, len(results), 5)
 	}
@@ -752,7 +741,7 @@ func TestGetPagedApiKeys_FilterMineOnly(t *testing.T) {
 		utils.PrintTestError(t, err, "no error")
 	}
 
-	// Should return 3 results (user 1 has 3 keys including 1 revoked)
+	// Should return 3 results (user 1 has 3 keys)
 	if len(results) != 3 {
 		utils.PrintTestError(t, len(results), 3)
 	}
@@ -806,7 +795,7 @@ func TestGetPagedApiKeys_FilterMineOnlyUser2(t *testing.T) {
 		utils.PrintTestError(t, err, "no error")
 	}
 
-	// Should return 2 results (user 2 has 2 keys, none revoked)
+	// Should return 2 results (user 2 has 2 keys)
 	if len(results) != 2 {
 		utils.PrintTestError(t, len(results), 2)
 	}
@@ -1018,27 +1007,25 @@ func TestGetPagedApiKeys_EmptyDatabase(t *testing.T) {
 	}
 }
 
-func TestGetPagedApiKeys_WithRevokedKeys(t *testing.T) {
+func TestGetPagedApiKeys_WithTestKeys(t *testing.T) {
 	defer TruncateTestDb()
 
 	user1 := uint(1)
-	now := time.Now()
 
-	// Create only revoked keys
-	revokedKey := models.ApiKey{
-		ID:          "revoked-key-1",
+	// Create test key
+	testKey := models.ApiKey{
+		ID:          "test-key-1",
 		UserID:      &user1,
 		CreatedBy:   &user1,
 		Name:        "Revoked Key",
-		Description: "This key is revoked",
+		Description: "This is a test key",
 		Prefix:      "key",
 		Hmac:        "revoked-hmac-1",
 		Version:     1,
 		Scope:       "read",
-		RevokedAt:   &now,
 	}
 
-	GetDB().Create(&revokedKey)
+	GetDB().Create(&testKey)
 
 	repository := NewApiKeyRepository(nil)
 	command := commands.PagedApiKeyRequestCommand{
@@ -1059,7 +1046,7 @@ func TestGetPagedApiKeys_WithRevokedKeys(t *testing.T) {
 		utils.PrintTestError(t, err, "no error")
 	}
 
-	// Should return 1 result (the revoked key is now included)
+	// Should return 1 result
 	if len(results) != 1 {
 		utils.PrintTestError(t, len(results), 1)
 	}
@@ -1068,13 +1055,9 @@ func TestGetPagedApiKeys_WithRevokedKeys(t *testing.T) {
 		utils.PrintTestError(t, count, int64(1))
 	}
 
-	// Verify it's the revoked key
+	// Verify it's the test key
 	if results[0].Name != "Revoked Key" {
 		utils.PrintTestError(t, results[0].Name, "Revoked Key")
-	}
-
-	if results[0].RevokedAt == nil {
-		utils.PrintTestError(t, "RevokedAt should not be nil", "RevokedAt should be set")
 	}
 }
 
@@ -1173,7 +1156,7 @@ func TestGetPagedApiKeys_LargePageSize(t *testing.T) {
 		utils.PrintTestError(t, err, "no error")
 	}
 
-	// Should return all 5 keys including revoked (since we have fewer than 100)
+	// Should return all 5 keys (since we have fewer than 100)
 	if len(results) != 5 {
 		utils.PrintTestError(t, len(results), 5)
 	}
@@ -1225,7 +1208,7 @@ func TestGetPagedApiKeys_AllValidColumns(t *testing.T) {
 	createTestApiKeysForPagination()
 
 	repository := NewApiKeyRepository(nil)
-	validColumns := []string{"name", "description", "created_at", "revoked_at", "updated_at", "last_used_at"}
+	validColumns := []string{"name", "description", "created_at", "updated_at", "last_used_at"}
 
 	for _, column := range validColumns {
 		command := commands.PagedApiKeyRequestCommand{

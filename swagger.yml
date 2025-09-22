@@ -2628,6 +2628,22 @@ paths:
       security:
         - bearerAuth: [ ]
         - apiKeyAuth: [ ]
+    delete:
+      tags:
+        - ApiKey
+      summary: Delete API key
+      description: Delete an API key. Admins can delete any API key, non-admins can only delete their own API keys.
+      operationId: deleteApiKey
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
 components:
   securitySchemes:
     bearerAuth:
@@ -2744,6 +2760,7 @@ components:
         - "RECEIPT_UPLOADED"
         - "RECEIPT_UPDATED"
         - "PROMPT_GENERATED"
+        - "API_KEY_DELETED"
     AssociatedEntityType:
       type: string
       enum:
@@ -2752,6 +2769,7 @@ components:
         - "SYSTEM_EMAIL"
         - "RECEIPT_PROCESSING_SETTINGS"
         - "PROMPT"
+        - "API_KEY"
     AssociatedGroup:
       type: string
       enum:
@@ -4553,6 +4571,9 @@ components:
               format: uint64
             resultDescription:
               type: string
+            apiKeyId:
+              type: string
+              nullable: true
             childSystemTasks:
               type: array
               items:
@@ -4919,10 +4940,6 @@ components:
           type: string
           format: date-time
           description: When the API key was last used
-        revokedAt:
-          type: string
-          format: date-time
-          description: When the API key was revoked
     InternalErrorResponse:
       type: object
       required:

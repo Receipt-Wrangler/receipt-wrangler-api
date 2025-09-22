@@ -147,3 +147,32 @@ func UpdateApiKey(w http.ResponseWriter, r *http.Request) {
 
 	HandleRequest(handler)
 }
+
+func DeleteApiKey(w http.ResponseWriter, r *http.Request) {
+	handler := structs.Handler{
+		ErrorMessage: "Error deleting API key",
+		Writer:       w,
+		Request:      r,
+		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
+			id := chi.URLParam(r, "id")
+			// URL decode the ID parameter in case it was encoded by the frontend
+			if decodedId, err := url.QueryUnescape(id); err == nil {
+				id = decodedId
+			}
+
+			token := structs.GetClaims(r)
+			apiKeyService := services.NewApiKeyService(nil)
+
+			isAdmin := token.UserRole == "ADMIN"
+			err := apiKeyService.DeleteApiKey(id, token.UserId, isAdmin)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			w.WriteHeader(http.StatusOK)
+			return 0, nil
+		},
+	}
+
+	HandleRequest(handler)
+}

@@ -2,13 +2,16 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/constants"
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
 	"strings"
+	"time"
 
 	"github.com/auth0/go-jwt-middleware/v2/validator"
 	"github.com/golang-jwt/jwt/v5"
@@ -199,9 +202,65 @@ func (service *ApiKeyService) GetPagedApiKeys(command commands.PagedApiKeyReques
 			UserID:          apiKey.UserID,
 			Scope:           apiKey.Scope,
 			LastUsedAt:      apiKey.LastUsedAt,
-			RevokedAt:       apiKey.RevokedAt,
 		}
 	}
 
 	return apiKeyViews, count, nil
+}
+
+func (service *ApiKeyService) DeleteApiKey(apiKeyId string, userId uint, isAdmin bool) error {
+	startTime := time.Now()
+	apiKeyRepository := repositories.NewApiKeyRepository(service.TX)
+
+	// First verify the API key exists
+	existingKey, err := apiKeyRepository.GetApiKeyById(apiKeyId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("API key not found")
+		}
+		return err
+	}
+
+	// Check authorization: admin can delete any key, non-admin can only delete their own
+	if !isAdmin {
+		if existingKey.UserID == nil || *existingKey.UserID != userId {
+			return errors.New("API key not found")
+		}
+	}
+
+	// Delete the API key
+	deleteErr := apiKeyRepository.DeleteApiKey(apiKeyId)
+
+	// Create system task to track the deletion
+	endTime := time.Now()
+	systemTaskService := NewSystemTaskService(service.TX)
+
+	resultDescription := fmt.Sprintf("Deleted API key '%s' (ID: %s)", existingKey.Name, apiKeyId)
+	if existingKey.UserID != nil {
+		resultDescription += fmt.Sprintf(" owned by user %d", *existingKey.UserID)
+	}
+
+	systemTaskCommand := commands.UpsertSystemTaskCommand{
+		Type:                 models.API_KEY_DELETED,
+		Status:               models.SYSTEM_TASK_SUCCEEDED,
+		AssociatedEntityType: models.API_KEY,
+		AssociatedEntityId:   0, // Not used for API keys
+		ApiKeyId:             &apiKeyId,
+		StartedAt:            startTime,
+		EndedAt:              &endTime,
+		ResultDescription:    resultDescription,
+		RanByUserId:          &userId,
+	}
+
+	if deleteErr != nil {
+		systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
+		systemTaskCommand.ResultDescription = deleteErr.Error()
+	}
+
+	_, taskErr := systemTaskService.CreateSystemTaskFromError(systemTaskCommand, deleteErr)
+	if taskErr != nil {
+		logging.LogStd(logging.LOG_LEVEL_INFO, taskErr.Error())
+	}
+
+	return deleteErr
 }

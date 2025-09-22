@@ -22,6 +22,7 @@ type SystemTask struct {
 	AssociatedSystemTaskId *uint                `json:"associatedSystemTaskId"`
 	ChildSystemTasks       []*SystemTask        `gorm:"foreignKey:AssociatedSystemTaskId" json:"childSystemTasks"`
 	AsynqTaskId            string               `json:"asynqTaskId"`
+	ApiKeyId               *string              `json:"apiKeyId"`
 }
 
 type SystemTaskStatus string
@@ -57,6 +58,7 @@ const (
 	RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK SystemTaskType = "RECEIPT_PROCESSING_SETTINGS_CONNECTIVITY_CHECK"
 	PROMPT_GENERATED                               SystemTaskType = "PROMPT_GENERATED"
 	RECEIPT_UPDATED                                SystemTaskType = "RECEIPT_UPDATED"
+	API_KEY_DELETED                                SystemTaskType = "API_KEY_DELETED"
 )
 
 func (self *SystemTaskType) Scan(value string) error {
@@ -75,7 +77,8 @@ func (self SystemTaskType) Value() (driver.Value, error) {
 		self != OCR_PROCESSING &&
 		self != RECEIPT_UPLOADED &&
 		self != PROMPT_GENERATED &&
-		self != RECEIPT_UPDATED {
+		self != RECEIPT_UPDATED &&
+		self != API_KEY_DELETED {
 		return nil, errors.New("invalid SystemTaskType")
 	}
 	return string(self), nil
@@ -89,6 +92,7 @@ const (
 	PROMPT                      AssociatedEntityType = "PROMPT"
 	RECEIPT_PROCESSING_SETTINGS AssociatedEntityType = "RECEIPT_PROCESSING_SETTINGS"
 	NOOP_ENTITY_TYPE            AssociatedEntityType = "NOOP_ENTITY_TYPE"
+	API_KEY                     AssociatedEntityType = "API_KEY"
 )
 
 func (self *AssociatedEntityType) Scan(value string) error {
@@ -101,7 +105,8 @@ func (self AssociatedEntityType) Value() (driver.Value, error) {
 		self != NOOP_ENTITY_TYPE &&
 		self != RECEIPT_PROCESSING_SETTINGS &&
 		self != RECEIPT &&
-		self != PROMPT {
+		self != PROMPT &&
+		self != API_KEY {
 		return nil, errors.New("invalid AssociatedEntityType")
 	}
 	return string(self), nil

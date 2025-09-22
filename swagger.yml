@@ -2760,6 +2760,7 @@ components:
         - "RECEIPT_UPLOADED"
         - "RECEIPT_UPDATED"
         - "PROMPT_GENERATED"
+        - "API_KEY_DELETED"
     AssociatedEntityType:
       type: string
       enum:
@@ -2768,6 +2769,7 @@ components:
         - "SYSTEM_EMAIL"
         - "RECEIPT_PROCESSING_SETTINGS"
         - "PROMPT"
+        - "API_KEY"
     AssociatedGroup:
       type: string
       enum:
@@ -4569,6 +4571,9 @@ components:
               format: uint64
             resultDescription:
               type: string
+            apiKeyId:
+              type: string
+              nullable: true
             childSystemTasks:
               type: array
               items:

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
 	"time"
@@ -785,16 +786,13 @@ func (repository ReceiptRepository) GetFullyLoadedReceiptById(id string) (models
 	db := repository.GetDB()
 	var receipt models.Receipt
 
-	err := db.Model(models.Receipt{}).
-		Where("id = ?", id).
-		Preload(clause.Associations).
-		Preload("ReceiptItems.Categories").
-		Preload("ReceiptItems.Tags").
-		Preload("ReceiptItems.LinkedItems").
-		Preload("ReceiptItems.LinkedItems.Categories").
-		Preload("ReceiptItems.LinkedItems.Tags").
-		Find(&receipt).
-		Error
+	query := db.Model(models.Receipt{}).Where("id = ?", id).Preload(clause.Associations)
+
+	for _, association := range constants.FULL_RECEIPT_ASSOCIATIONS {
+		query = query.Preload(association)
+	}
+
+	err := query.Find(&receipt).Error
 	if err != nil {
 		return models.Receipt{}, err
 	}

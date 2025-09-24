@@ -40,12 +40,17 @@ func GetPagedReceiptsForGroup(w http.ResponseWriter, r *http.Request) {
 			pagedData := structs.PagedData{}
 			token := structs.GetClaims(r)
 
+			var associations []string
+			if pagedRequest.FullReceipts {
+				associations = constants.FULL_RECEIPT_ASSOCIATIONS
+			}
+
 			receiptRepository := repositories.NewReceiptRepository(nil)
 			receipts, count, err := receiptRepository.GetPagedReceiptsByGroupId(
 				token.UserId,
 				groupId,
 				pagedRequest,
-				nil,
+				associations,
 			)
 			if err != nil {
 				return http.StatusInternalServerError, err

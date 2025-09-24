@@ -83,7 +83,8 @@ func (command *PagedRequestCommand) Validate() structs.ValidatorError {
 
 type ReceiptPagedRequestCommand struct {
 	PagedRequestCommand
-	Filter ReceiptPagedRequestFilter `json:"filter"`
+	Filter       ReceiptPagedRequestFilter `json:"filter"`
+	FullReceipts bool                      `json:"fullReceipts"`
 }
 
 func (command *ReceiptPagedRequestCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {

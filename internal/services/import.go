@@ -92,10 +92,6 @@ func (service ImportService) importAiSettings(tx *gorm.DB, aiSettings structs.Ai
 		ocrEngine = models.TESSERACT_NEW
 	}
 
-	if aiSettings.OcrEngine == models.EASY_OCR {
-		ocrEngine = models.EASY_OCR_NEW
-	}
-
 	if len(aiSettings.OcrEngine) == 0 {
 		ocrEngine = models.TESSERACT_NEW
 	}

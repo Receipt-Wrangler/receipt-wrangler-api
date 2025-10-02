@@ -144,6 +144,33 @@ func InitDB() error {
 		}
 	}
 
+	// Migrate any EasyOCR settings to Tesseract
+	err := migrateEasyOcrToTesseract()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func migrateEasyOcrToTesseract() error {
+	var settings []models.ReceiptProcessingSettings
+	tesseractEngine := models.TESSERACT_NEW
+
+	// Find all settings using EasyOCR (both old and new constants using string literals)
+	err := db.Where("ocr_engine = ? OR ocr_engine = ?", "easyOcr", "EASY_OCR").Find(&settings).Error
+	if err != nil {
+		return err
+	}
+
+	// Update each setting to use Tesseract
+	for _, setting := range settings {
+		err = db.Model(&setting).Update("ocr_engine", tesseractEngine).Error
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

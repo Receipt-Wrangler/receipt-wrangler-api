@@ -8,9 +8,7 @@ import (
 	"gorm.io/gorm"
 	"image"
 	"image/jpeg"
-	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/logging"
@@ -64,15 +62,6 @@ func (service OcrService) ReadImage(path string) (string, commands.UpsertSystemT
 			return "", systemTaskCommand, err
 		}
 	}
-
-	if service.ReceiptProcessingSettings.OcrEngine != nil && *service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
-		text, err = service.ReadImageWithEasyOcr(imageBytes)
-		if err != nil {
-			systemTaskCommand.Status = models.SYSTEM_TASK_FAILED
-			systemTaskCommand.ResultDescription = err.Error()
-			return "", systemTaskCommand, err
-		}
-	}
 	endTime := time.Now()
 	elapsedTime := endTime.Sub(startTime)
 	logging.LogStd(logging.LOG_LEVEL_INFO, "OCR and Image processing took: ", elapsedTime)
@@ -117,29 +106,6 @@ func (service OcrService) ReadImageWithTesseract(preparedImageBytes []byte) (str
 	if err != nil {
 		return "", err
 	}
-
-	return text, nil
-}
-
-func (service OcrService) ReadImageWithEasyOcr(preparedImageBytes []byte) (string, error) {
-	fileRepository := repositories.NewFileRepository(nil)
-	tempPath, err := fileRepository.WriteTempFile(preparedImageBytes)
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(tempPath)
-
-	var textBuffer bytes.Buffer
-	var text string
-	cmd := exec.Command("easyocr", "-l", "en", "-f", tempPath, "--detail", "0", "--gpu", "0", "--verbose", "0")
-	cmd.Stdout = &textBuffer
-	cmd.Stderr = io.Discard
-
-	err = cmd.Run()
-	if err != nil {
-		return "", err
-	}
-	text = textBuffer.String()
 
 	return text, nil
 }
@@ -230,14 +196,6 @@ func (service OcrService) prepareImage(path string) ([]byte, error) {
 	err = mw.DeskewImage(.40)
 	if err != nil {
 		return nil, err
-	}
-
-	if service.ReceiptProcessingSettings.OcrEngine != nil &&
-		*service.ReceiptProcessingSettings.OcrEngine == models.EASY_OCR_NEW {
-		err = mw.ScaleImage(mw.GetImageWidth()/2, mw.GetImageHeight()/2)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return mw.GetImageBlob()

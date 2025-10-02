@@ -2740,7 +2740,6 @@ components:
       type: string
       enum:
         - "TESSERACT"
-        - "EASY_OCR"
     SystemTaskStatus:
       type: string
       enum:

@@ -109,7 +109,7 @@ func getJwt(r http.Request) string {
 		return ""
 	}
 
-	if strings.Contains(authHeader, "Bearer") {
+	if strings.HasPrefix(authHeader, "Bearer") {
 		split := strings.Split(authHeader, "Bearer")
 		if len(split) == 2 {
 			authHeader = strings.TrimSpace(split[1])

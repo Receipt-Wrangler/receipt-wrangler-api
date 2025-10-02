@@ -946,15 +946,48 @@ func TestGetJwt_BearerTokenOnlySpaces(t *testing.T) {
 	}
 }
 
-// Test Bearer Token Parsing - Bearer in middle of header
-func TestGetJwt_BearerInMiddle(t *testing.T) {
+// Test Bearer Token Parsing - Bearer not at start (should not be processed)
+func TestGetJwt_BearerNotAtStart(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	r.Header.Set("Authorization", "Token Bearer jwt.token")
 
 	jwt := getJwt(*r)
-	// Should extract everything after "Bearer" and trim spaces
-	expected := "jwt.token"
+	// Should return the full header unchanged since Bearer is not at the start
+	expected := "Token Bearer jwt.token"
 	if jwt != expected {
 		utils.PrintTestError(t, jwt, expected)
+	}
+}
+
+// Test Bearer Token Parsing - Proper Bearer prefix handling
+func TestGetJwt_BearerPrefixHandling(t *testing.T) {
+	// Test with proper Bearer prefix
+	r1 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	r1.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9")
+
+	jwt1 := getJwt(*r1)
+	expected1 := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+	if jwt1 != expected1 {
+		utils.PrintTestError(t, jwt1, expected1)
+	}
+
+	// Test with Bearer at start but no space (should still work with Contains logic)
+	r2 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	r2.Header.Set("Authorization", "Bearertoken123")
+
+	jwt2 := getJwt(*r2)
+	expected2 := "token123"
+	if jwt2 != expected2 {
+		utils.PrintTestError(t, jwt2, expected2)
+	}
+
+	// Test with "Bearer" as part of token but not at start
+	r3 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	r3.Header.Set("Authorization", "MyBearer token123")
+
+	jwt3 := getJwt(*r3)
+	expected3 := "MyBearer token123" // Should not be processed
+	if jwt3 != expected3 {
+		utils.PrintTestError(t, jwt3, expected3)
 	}
 }

@@ -31,7 +31,7 @@ func GetAsynqRedisClientConnectionOptions() (asynq.RedisClientOpt, error) {
 func GetRedisConfig() (structs.RedisConfig, error) {
 	port, err := utils.StringToInt(os.Getenv(string(constants.RedisPort)))
 	if err != nil {
-		return structs.RedisConfig{}, fmt.Errorf("invalid REDIS_PORT environment variable: " + err.Error())
+		return structs.RedisConfig{}, fmt.Errorf("invalid REDIS_PORT environment variable: %w", err)
 	}
 
 	username := os.Getenv(string(constants.RedisUser))

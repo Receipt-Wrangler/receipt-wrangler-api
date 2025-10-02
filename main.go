@@ -54,19 +54,19 @@ func main() {
 
 	err = repositories.ConnectToRedis()
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("redis connection error: "+err.Error()))
+		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("redis connection error: %w", err))
 	}
 	defer repositories.ShutdownAsynqClient()
 
 	err = wranglerasynq.StartEmbeddedAsynqServer()
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq worker error: "+err.Error()))
+		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq worker error: %w", err))
 	}
 	defer wranglerasynq.ShutDownEmbeddedAsynqServer()
 
 	err = wranglerasynq.StartEmbeddedAsynqScheduler()
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq server error: "+err.Error()))
+		logging.LogStd(logging.LOG_LEVEL_FATAL, fmt.Errorf("asynq server error: %w", err))
 	}
 	defer wranglerasynq.ShutDownEmbeddedAsynqScheduler()
 

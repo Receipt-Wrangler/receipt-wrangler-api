@@ -10,8 +10,7 @@ import (
 func GetTaskIdFromContext(ctx context.Context) (string, error) {
 	taskId, ok := asynq.GetTaskID(ctx)
 	if ok == false {
-		errMessage := "taskId not found"
-		return "", fmt.Errorf(errMessage)
+		return "", fmt.Errorf("taskId not found")
 	}
 
 	return taskId, nil

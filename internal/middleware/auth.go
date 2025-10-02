@@ -112,7 +112,7 @@ func getJwt(r http.Request) string {
 	if strings.Contains(authHeader, "Bearer") {
 		split := strings.Split(authHeader, "Bearer")
 		if len(split) == 2 {
-			authHeader = split[1]
+			authHeader = strings.TrimSpace(split[1])
 		} else {
 			logging.LogStd(logging.LOG_LEVEL_ERROR, errors.New("malformed auth header found"+authHeader))
 		}

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/logging"
@@ -106,6 +107,15 @@ func getJwt(r http.Request) string {
 	authHeader := r.Header.Get("Authorization")
 	if len(authHeader) == 0 {
 		return ""
+	}
+
+	if strings.Contains(authHeader, "Bearer") {
+		split := strings.Split(authHeader, "Bearer")
+		if len(split) == 2 {
+			authHeader = split[1]
+		} else {
+			logging.LogStd(logging.LOG_LEVEL_ERROR, errors.New("malformed auth header found"+authHeader))
+		}
 	}
 
 	return authHeader

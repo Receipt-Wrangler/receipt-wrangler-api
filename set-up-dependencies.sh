@@ -3,7 +3,7 @@ apt-get install -y build-essential
 # Install pip
 apt-get update
 apt-get install python3-pip -y
-apt-get install python3.11-venv -y
+apt-get install python3.13-venv -y
 # Set up venv
 python3 -m venv wranglervenv
 source wranglervenv/bin/activate

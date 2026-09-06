@@ -171,6 +171,79 @@ do not undo them without re-checking `npm audit`:
 - Stay on the Angular `21.2.x` patch line for security fixes; a jump to Angular 22 is a separate,
   breaking upgrade and out of scope for audit hygiene.
 
+**Never regenerate `package-lock.json` from scratch to fix an audit finding.** Deleting the lockfile
+and reinstalling re-resolves *every* package to the newest version its range allows, which breaks CI
+in two ways that `npm install` and `npm audit` both report as clean:
+
+1. **`npm ci` refuses the result (`EUSAGE`).** A fresh resolve can *hoist* a package that the
+   committed tree deliberately keeps nested. The real case: `pkijs` (via `selfsigned` ←
+   `webpack-dev-server`) hard-depends on `@noble/hashes@1.4.0`, while `@exodus/bytes` (via `jsdom`)
+   declares an *optional* peer `@noble/hashes@^1.8.0 || ^2.0.0`. The committed tree keeps 1.4.0 at
+   `node_modules/pkijs/node_modules/@noble/hashes` and installs nothing at the root. A from-scratch
+   install hoisted 1.4.0 to the root, where the optional peer then wants 2.4.0 — so `npm ci` fails
+   with `Invalid: lock file's @noble/hashes@1.4.0 does not satisfy @noble/hashes@2.4.0` /
+   `Missing: @noble/hashes@1.4.0 from lock file`. `npm install` accepts that lockfile happily; only
+   `npm ci` rejects it.
+2. **It drifts the tree past CI's Node floor.** CI pins Node **20.19.6** (`ci.yml`, `release.yml`,
+   `e2e.yml`). A fresh resolve pulled `jsdom` 29→30, `whatwg-url` 16→17 and `@asamuzakjp/*`, all of
+   which declare `node: ^22.x || >=24` and emit `EBADENGINE` on Node 20.
+
+**Do this instead** — update the lockfile incrementally, and when npm refuses to move a
+peer-coupled family in place (the Angular packages are one), delete just those entries and let it
+re-resolve that subtree only:
+
+```bash
+# 1. start from the committed lockfile; edit package.json pins/overrides as needed
+# 2. drop the entries npm will not move on its own: the peer-coupled family it
+#    ERESOLVEs on, AND every `overrides` target (an override is ignored unless its
+#    entry is re-resolved), at any nesting depth
+python3 - <<'EOF'
+import json, re
+NAMESPACES = ('@angular/', '@angular-devkit/', '@ngtools/')   # the peer-coupled family
+OVERRIDES  = ('@babel/core', 'esbuild', 'http-proxy-middleware',
+              'qs', 'undici', 'uuid')                          # keep in sync with package.json
+pat = re.compile(
+    r'(^|/)node_modules/(?:' + '|'.join(map(re.escape, NAMESPACES)) + r')[^/]+$'
+    r'|(^|/)node_modules/(?:' + '|'.join(map(re.escape, OVERRIDES)) + r')$')
+d = json.load(open('package-lock.json'))
+gone = [k for k in d['packages'] if pat.search(k)]
+for k in gone:
+    del d['packages'][k]
+json.dump(d, open('package-lock.json', 'w'), indent=2)
+open('package-lock.json', 'a').write('\n')
+print(f'dropped {len(gone)} entries')
+EOF
+# 3. rebuild; npm re-resolves only what was dropped and leaves the rest of the tree pinned
+rm -rf node_modules && npm install
+```
+
+**Always gate on `npm ci`, not `npm install`.** `npm ci` applies a stricter sync check, so a lockfile
+that installs fine locally can still fail the build. Run the full gate before pushing any dependency
+change — a lockfile can satisfy `npm ci` and still break the app, so the build and tests are part of
+it, not an afterthought:
+
+```bash
+npm ci                    # real install, exactly what CI runs — must exit 0
+npm audit                 # must report 0 vulnerabilities
+npm run test:ci           # must pass
+npm run build             # must succeed
+
+# Every package's engines.node must admit the Node version CI pins (`node-version`
+# in .github/workflows/ci.yml). semver is NOT a direct dependency — it resolves out
+# of the tree the `npm ci` above installed, so this step must come last. After
+# `npm ci --dry-run`, which writes nothing, it fails with MODULE_NOT_FOUND.
+node -e '
+const semver = require("semver");
+const lock = require("./package-lock.json");
+const NODE = "20.19.6";
+const bad = Object.entries(lock.packages)
+  .filter(([, p]) => p.engines?.node && !semver.satisfies(NODE, p.engines.node))
+  .map(([k, p]) => k.replace("node_modules/", "") + "@" + p.version + " needs " + p.engines.node);
+console.log(bad.length ? "INCOMPATIBLE:\n  " + bad.join("\n  ") : "engines OK for Node " + NODE);
+process.exit(bad.length ? 1 : 0);
+'
+```
+
 ### API Integration
 - Backend API proxied through development server
 - OpenAPI client generated from backend specification

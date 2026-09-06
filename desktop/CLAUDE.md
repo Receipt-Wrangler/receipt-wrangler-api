@@ -193,29 +193,55 @@ peer-coupled family in place (the Angular packages are one), delete just those e
 re-resolve that subtree only:
 
 ```bash
-# 1. start from the committed lockfile, edit package.json pins/overrides as needed
-# 2. if `npm install` ERESOLVEs on a peer-coupled family, drop only its lock entries:
+# 1. start from the committed lockfile; edit package.json pins/overrides as needed
+# 2. drop the entries npm will not move on its own: the peer-coupled family it
+#    ERESOLVEs on, AND every `overrides` target (an override is ignored unless its
+#    entry is re-resolved), at any nesting depth
 python3 - <<'EOF'
 import json, re
+NAMESPACES = ('@angular/', '@angular-devkit/', '@ngtools/')   # the peer-coupled family
+OVERRIDES  = ('@babel/core', 'esbuild', 'http-proxy-middleware',
+              'qs', 'undici', 'uuid')                          # keep in sync with package.json
+pat = re.compile(
+    r'(^|/)node_modules/(?:' + '|'.join(map(re.escape, NAMESPACES)) + r')'
+    r'|(^|/)node_modules/(?:' + '|'.join(map(re.escape, OVERRIDES)) + r')$')
 d = json.load(open('package-lock.json'))
-pat = re.compile(r'(^|/)node_modules/(@angular/|@angular-devkit/|@ngtools/)')
-for k in [k for k in d['packages'] if pat.search(k)]:
+gone = [k for k in d['packages'] if pat.search(k)]
+for k in gone:
     del d['packages'][k]
 json.dump(d, open('package-lock.json', 'w'), indent=2)
+open('package-lock.json', 'a').write('\n')
+print(f'dropped {len(gone)} entries')
 EOF
-# 3. overrides only take effect once their targets are re-resolved too — drop those entries as well
-npm install
+# 3. rebuild; npm re-resolves only what was dropped and leaves the rest of the tree pinned
+rm -rf node_modules && npm install
 ```
 
 **Always gate on `npm ci`, not `npm install`.** `npm ci` applies a stricter sync check, so a lockfile
-that installs fine locally can still fail the build. Before pushing any dependency change:
+that installs fine locally can still fail the build. Run the full gate before pushing any dependency
+change — a lockfile can satisfy `npm ci` and still break the app, so the build and tests are part of
+it, not an afterthought:
 
 ```bash
-npm ci --dry-run          # must exit 0 — this is what CI runs
+npm ci                    # real install, exactly what CI runs — must exit 0
 npm audit                 # must report 0 vulnerabilities
-node -e "const s=require('semver'),l=require('./package-lock.json');
-  const bad=Object.entries(l.packages).filter(([,p])=>p.engines?.node&&!s.satisfies('20.19.6',p.engines.node));
-  console.log('Node-20 incompatible:',bad.length)"   # must be 0
+npm run test:ci           # must pass
+npm run build             # must succeed
+
+# Every package's engines.node must admit the Node version CI pins (`node-version`
+# in .github/workflows/ci.yml). semver is NOT a direct dependency — it resolves out
+# of the tree the `npm ci` above installed, so this step must come last. After
+# `npm ci --dry-run`, which writes nothing, it fails with MODULE_NOT_FOUND.
+node -e '
+const semver = require("semver");
+const lock = require("./package-lock.json");
+const NODE = "20.19.6";
+const bad = Object.entries(lock.packages)
+  .filter(([, p]) => p.engines?.node && !semver.satisfies(NODE, p.engines.node))
+  .map(([k, p]) => k.replace("node_modules/", "") + "@" + p.version + " needs " + p.engines.node);
+console.log(bad.length ? "INCOMPATIBLE:\n  " + bad.join("\n  ") : "engines OK for Node " + NODE);
+process.exit(bad.length ? 1 : 0);
+'
 ```
 
 ### API Integration

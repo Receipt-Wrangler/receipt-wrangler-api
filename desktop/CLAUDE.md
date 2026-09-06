@@ -203,7 +203,7 @@ NAMESPACES = ('@angular/', '@angular-devkit/', '@ngtools/')   # the peer-coupled
 OVERRIDES  = ('@babel/core', 'esbuild', 'http-proxy-middleware',
               'qs', 'undici', 'uuid')                          # keep in sync with package.json
 pat = re.compile(
-    r'(^|/)node_modules/(?:' + '|'.join(map(re.escape, NAMESPACES)) + r')'
+    r'(^|/)node_modules/(?:' + '|'.join(map(re.escape, NAMESPACES)) + r')[^/]+$'
     r'|(^|/)node_modules/(?:' + '|'.join(map(re.escape, OVERRIDES)) + r')$')
 d = json.load(open('package-lock.json'))
 gone = [k for k in d['packages'] if pat.search(k)]

@@ -171,6 +171,53 @@ do not undo them without re-checking `npm audit`:
 - Stay on the Angular `21.2.x` patch line for security fixes; a jump to Angular 22 is a separate,
   breaking upgrade and out of scope for audit hygiene.
 
+**Never regenerate `package-lock.json` from scratch to fix an audit finding.** Deleting the lockfile
+and reinstalling re-resolves *every* package to the newest version its range allows, which breaks CI
+in two ways that `npm install` and `npm audit` both report as clean:
+
+1. **`npm ci` refuses the result (`EUSAGE`).** A fresh resolve can *hoist* a package that the
+   committed tree deliberately keeps nested. The real case: `pkijs` (via `selfsigned` ←
+   `webpack-dev-server`) hard-depends on `@noble/hashes@1.4.0`, while `@exodus/bytes` (via `jsdom`)
+   declares an *optional* peer `@noble/hashes@^1.8.0 || ^2.0.0`. The committed tree keeps 1.4.0 at
+   `node_modules/pkijs/node_modules/@noble/hashes` and installs nothing at the root. A from-scratch
+   install hoisted 1.4.0 to the root, where the optional peer then wants 2.4.0 — so `npm ci` fails
+   with `Invalid: lock file's @noble/hashes@1.4.0 does not satisfy @noble/hashes@2.4.0` /
+   `Missing: @noble/hashes@1.4.0 from lock file`. `npm install` accepts that lockfile happily; only
+   `npm ci` rejects it.
+2. **It drifts the tree past CI's Node floor.** CI pins Node **20.19.6** (`ci.yml`, `release.yml`,
+   `e2e.yml`). A fresh resolve pulled `jsdom` 29→30, `whatwg-url` 16→17 and `@asamuzakjp/*`, all of
+   which declare `node: ^22.x || >=24` and emit `EBADENGINE` on Node 20.
+
+**Do this instead** — update the lockfile incrementally, and when npm refuses to move a
+peer-coupled family in place (the Angular packages are one), delete just those entries and let it
+re-resolve that subtree only:
+
+```bash
+# 1. start from the committed lockfile, edit package.json pins/overrides as needed
+# 2. if `npm install` ERESOLVEs on a peer-coupled family, drop only its lock entries:
+python3 - <<'EOF'
+import json, re
+d = json.load(open('package-lock.json'))
+pat = re.compile(r'(^|/)node_modules/(@angular/|@angular-devkit/|@ngtools/)')
+for k in [k for k in d['packages'] if pat.search(k)]:
+    del d['packages'][k]
+json.dump(d, open('package-lock.json', 'w'), indent=2)
+EOF
+# 3. overrides only take effect once their targets are re-resolved too — drop those entries as well
+npm install
+```
+
+**Always gate on `npm ci`, not `npm install`.** `npm ci` applies a stricter sync check, so a lockfile
+that installs fine locally can still fail the build. Before pushing any dependency change:
+
+```bash
+npm ci --dry-run          # must exit 0 — this is what CI runs
+npm audit                 # must report 0 vulnerabilities
+node -e "const s=require('semver'),l=require('./package-lock.json');
+  const bad=Object.entries(l.packages).filter(([,p])=>p.engines?.node&&!s.satisfies('20.19.6',p.engines.node));
+  console.log('Node-20 incompatible:',bad.length)"   # must be 0
+```
+
 ### API Integration
 - Backend API proxied through development server
 - OpenAPI client generated from backend specification

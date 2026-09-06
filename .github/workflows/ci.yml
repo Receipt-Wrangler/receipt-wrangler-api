@@ -46,7 +46,7 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.api == 'true'
     runs-on: ubuntu-latest
-    container: golang:1.25-trixie
+    container: golang:1.26-trixie
     steps:
       - uses: actions/checkout@v4
       - name: Mark workspace as safe directory
@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.18.0"
+          node-version: "20.19.6"
       - name: Install dependencies
         run: npm ci --verbose
         working-directory: ./desktop

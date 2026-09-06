@@ -20,7 +20,7 @@ Receipt Wrangler API is a Go-based backend service for a receipt management and 
 > re-run every time. Follow them top-to-bottom and the server comes up on `:8081` in ~2 min.
 
 **Why the normal path doesn't just work.** The sandbox base image is **Ubuntu 24.04 (Noble)**, but
-the project's Docker images (and `set-up-dependencies.sh`) assume **Debian** (`golang:1.25-trixie` /
+the project's Docker images (and `set-up-dependencies.sh`) assume **Debian** (`golang:1.26-trixie` /
 `bullseye`). Two consequences:
 - The CGO binding `gopkg.in/gographics/imagick.v3` needs **ImageMagick 7**'s MagickWand API. Ubuntu's
   repos only ship ImageMagick **6** (`libmagickwand-dev` = IM6) and have no IM7 package, so
@@ -64,6 +64,30 @@ MagickWand` resolves `7.1.2` from the **default** path and `libMagickWand-7.Q16H
 loader cache. You do **not** need `PKG_CONFIG_PATH` or `LD_LIBRARY_PATH` once `ldconfig` has run
 (fallbacks if it somehow didn't: `PKG_CONFIG_PATH=/usr/local/lib/pkgconfig` for the build,
 `LD_LIBRARY_PATH=/usr/local/lib` for the run). Verify: `magick -version` shows `7.1.2 ... Q16-HDRI`.
+
+**Step 4b — Copy the private headers `make install` leaves behind.** Recent ImageMagick *git master*
+(e.g. `7.1.2-32 Beta`) has a public header that includes private ones — `MagickCore/pixel-accessor.h`
+pulls in `MagickCore/image-private.h`, which pulls in `MagickCore/quantum-private.h`, and so on — but
+`make install` installs only the public set. Every cgo compile of `gopkg.in/gographics/imagick.v3`
+then dies with `fatal error: MagickCore/image-private.h: No such file or directory`. Backfill the
+whole set from the source tree:
+
+```bash
+IM_SRC=$PWD                 # Step 4 left us in the ImageMagick source tree
+INC=/usr/local/include/ImageMagick-7
+for d in MagickCore MagickWand; do
+  for f in "$IM_SRC/$d"/*.h; do
+    b=$(basename "$f"); [ -f "$INC/$d/$b" ] || cp "$f" "$INC/$d/$b"
+  done
+done
+
+cd /home/user/receipt-wrangler/api
+go build ./...
+```
+
+Do **not** pipe that loop into `head` — the SIGPIPE kills it partway and you get a second, different
+missing-header error. Verify with `go build ./...` (not `go build ... | tail`, whose exit status is
+`tail`'s and so hides the failure).
 
 **Step 5 — Create `api/data/`** (gitignored via `/data/*`, so a fresh clone doesn't have it):
 ```bash
@@ -134,8 +158,11 @@ pre-installed binary works.
 - `./generate-client.sh mobile <output-dir>` - Generate Dart Dio client
 
 ### Go Toolchain
-- Requires **Go 1.25+** (the MCP `github.com/modelcontextprotocol/go-sdk` sets a 1.25 minimum).
-  Docker images and CI containers use `golang:1.25-trixie`.
+- Requires **Go 1.26.8+** — `api/go.mod` declares `go 1.26.8`, which `golang.org/x/crypto v0.56.0`
+  forces (it declares `go 1.26.0`). The MCP `github.com/modelcontextprotocol/go-sdk` sets a lower,
+  1.25 minimum.
+  Docker images and CI containers use `golang:1.26-trixie`, which currently resolves to the same
+  digest as `1.26.8-trixie` and so satisfies the directive without a toolchain download.
 
 ## Architecture Overview
 

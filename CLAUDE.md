@@ -29,12 +29,18 @@ Each component has its own CLAUDE.md with detailed component-specific guidance. 
   from the generated MCP TypeScript client above.
 
 ### Technology Stack
-- **Backend**: Go 1.25 with Chi router, GORM ORM, Asynq background jobs
+- **Backend**: Go 1.26 with Chi router, GORM ORM, Asynq background jobs
 - **Frontend**: Angular 19 with NGXS state management, Material + Bootstrap UI
 - **Mobile**: Flutter with Provider state management, go_router navigation
 - **Infrastructure**: Docker, nginx, PostgreSQL/MySQL/SQLite
 
 ## Docker Deployment
+
+**All Docker build config lives in `docker/` — nothing else.** Those two Dockerfiles are what CI
+builds images from (`.github/workflows/ci.yml` and `release.yml` both pass `file: ./docker/Dockerfile`
+with `context: .`). Per-component `api/Dockerfile` and `desktop/Dockerfile` used to exist and were
+removed as dead config; do not add them back. Because the build context is the repo root, a
+`.dockerignore` is only ever consulted at the repo root too.
 
 ### Production Build (Monolith)
 The `docker/Dockerfile` builds a single container with both API and web interface:
@@ -179,7 +185,7 @@ them instead of rediscovering:
 - **Frontend:** `desktop/CLAUDE.md` → "Running in the Claude Code Web/Cloud Sandbox"
 
 **Root cause of the friction:** the sandbox base image is **Ubuntu 24.04 (Noble)**, whereas the
-project's Docker images / setup scripts assume **Debian** (`golang:1.25-trixie`, `bullseye`). The big
+project's Docker images / setup scripts assume **Debian** (`golang:1.26-trixie`, `bullseye`). The big
 one is ImageMagick: the Go API's `imagick.v3` CGO binding needs **ImageMagick 7**, but Ubuntu only
 ships ImageMagick **6** and has no IM7 package — so `set-up-dependencies.sh` can't provide it and IM7
 has to be **built from source**. Redis is installed but not started, and Tesseract/ImageMagick native

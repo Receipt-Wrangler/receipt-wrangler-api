@@ -2,8 +2,8 @@ import { TestBed } from "@angular/core/testing";
 import { NgxsModule, Store } from "@ngxs/store";
 import { DEFAULT_RECEIPT_TABLE_COLUMNS, ReceiptTableInterface } from "src/interfaces";
 import { FilterOperation, ReceiptPagedRequestFilter, ReceiptStatus } from "../open-api";
-import { ResetReceiptFilter, SetPage, SetPageSize, SetReceiptFilter, SetReceiptFilterData, } from "./receipt-table.actions";
-import { defaultReceiptFilter, ReceiptTableState } from "./receipt-table.state";
+import { ResetReceiptFilter, SetPage, SetPageSize, SetReceiptFilter, SetReceiptFilterData, SetReceiptFilterField, } from "./receipt-table.actions";
+import { buildDefaultReceiptFilter, defaultReceiptFilter, ReceiptTableState } from "./receipt-table.state";
 
 describe("ReceiptTableState", () => {
   let store: Store;
@@ -158,5 +158,57 @@ describe("ReceiptTableState", () => {
 
     const result = store.selectSnapshot(ReceiptTableState.filterData).filter;
     expect(result).toEqual(defaultReceiptFilter);
+  });
+  it("should count a zero-valued filter field", () => {
+    store.reset({
+      receiptTable: {
+        filter: { ...defaultReceiptFilter, amount: { operation: FilterOperation.Equals, value: 0 } },
+      },
+    });
+
+    expect(store.selectSnapshot(ReceiptTableState.numFiltersApplied)).toEqual(1);
+  });
+
+  it("should set a single filter field, leaving the others alone", () => {
+    store.dispatch(
+      new SetReceiptFilterField("status", {
+        operation: FilterOperation.Contains,
+        value: [ReceiptStatus.Open],
+      })
+    );
+
+    const result = store.selectSnapshot(ReceiptTableState.filterData).filter as any;
+    expect(result.status).toEqual({
+      operation: FilterOperation.Contains,
+      value: [ReceiptStatus.Open],
+    });
+    expect(result.categories).toEqual({ operation: null, value: [] });
+    expect(result.date).toEqual({ operation: null, value: null });
+  });
+
+  it("should clear a single filter field back to its default empty shape", () => {
+    store.reset({ receiptTable: { filter: filledFilter } });
+
+    store.dispatch(new SetReceiptFilterField("categories", null));
+    store.dispatch(new SetReceiptFilterField("date", null));
+
+    const result = store.selectSnapshot(ReceiptTableState.filterData).filter as any;
+    // A list field clears to [], a scalar to null.
+    expect(result.categories).toEqual({ operation: null, value: [] });
+    expect(result.date).toEqual({ operation: null, value: null });
+    expect(result.name).toEqual(filledFilter.name);
+  });
+
+  // ResetReceiptFilter writes a default filter straight into state, so without a
+  // fresh object per write a later field update would corrupt the module-level
+  // default for the rest of the session.
+  it("should never mutate the exported default filter", () => {
+    store.dispatch(new ResetReceiptFilter());
+    store.dispatch(
+      new SetReceiptFilterField("name", { operation: FilterOperation.Contains, value: "whole" })
+    );
+
+    expect(defaultReceiptFilter).toEqual(buildDefaultReceiptFilter());
+    expect((defaultReceiptFilter as any).name).toEqual({ operation: null, value: null });
   });
 });

@@ -1,5 +1,6 @@
 import { expect, Route, test } from '@playwright/test';
 import { stubTokenRefresh } from './helpers/auth';
+import { openReceiptsOverflowMenu } from './helpers/receipts-table';
 import {
   apiCreateGroup,
   apiDeleteGroupById,
@@ -69,9 +70,10 @@ test.describe('Quick scan dialog field response', () => {
   test('shows/hides and requires fields per the selected group config', async ({ page }) => {
     await page.goto(`/receipts/group/${group.id}`);
 
-    // The feature-flag-gated Quick Scan button now renders (flag stubbed + admin owns the group). It
-    // is an icon-only button (tooltip is aria-describedby, not the a11y name), so target its testid.
-    await page.getByTestId('receipts-quick-scan').getByRole('button').click();
+    // The feature-flag-gated Quick Scan entry now renders (flag stubbed + admin owns the group).
+    // It lives in the toolbar's overflow menu, and the mat-menu-item carries the testid itself.
+    await openReceiptsOverflowMenu(page);
+    await page.getByTestId('receipts-quick-scan').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
 

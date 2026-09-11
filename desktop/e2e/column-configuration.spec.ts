@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { stubTokenRefresh } from './helpers/auth';
+import { gotoReceiptsTable, openReceiptsOverflowMenu } from './helpers/receipts-table';
 
 // Configuring the receipts-table columns regressed with
 // "TypeError: 0 is read-only": the dialog sorted the (frozen, dev-mode) NGXS
@@ -7,16 +8,6 @@ import { stubTokenRefresh } from './helpers/auth';
 // tests open the dialog (the core regression) and round-trip a couple of
 // configurations. The default chromium project uses e2e/.auth/user.json
 // (e2e-user = Legacy User), which can read its own group's receipts.
-
-async function gotoReceiptsTable(page: Page): Promise<void> {
-  // storageState means we're already authed; "/" redirects to the dashboard
-  // for the user's group, from which we can recover the group id.
-  await page.goto('/');
-  await page.waitForURL(/\/dashboard\/group\/\d+/);
-  const groupId = page.url().match(/\/dashboard\/group\/(\d+)/)![1];
-  await page.goto(`/receipts/group/${groupId}`);
-  await expect(page.getByTestId('configure-columns')).toBeVisible();
-}
 
 test.describe('Receipt table column configuration', () => {
   test.beforeEach(async ({ page }) => {
@@ -26,6 +17,7 @@ test.describe('Receipt table column configuration', () => {
   test('opens the dialog without crashing', async ({ page }) => {
     await gotoReceiptsTable(page);
 
+    await openReceiptsOverflowMenu(page);
     await page.getByTestId('configure-columns').click();
 
     const dialog = page.getByRole('dialog');
@@ -47,6 +39,7 @@ test.describe('Receipt table column configuration', () => {
     await expect(addedAtHeader).toBeVisible();
 
     // Open the dialog and toggle "Added At" off, then save.
+    await openReceiptsOverflowMenu(page);
     await page.getByTestId('configure-columns').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -59,6 +52,7 @@ test.describe('Receipt table column configuration', () => {
     await expect(addedAtHeader).toHaveCount(0);
 
     // Reopen and reset back to the defaults — the column returns.
+    await openReceiptsOverflowMenu(page);
     await page.getByTestId('configure-columns').click();
     await expect(dialog).toBeVisible();
     await dialog.getByTestId('reset-columns').click();

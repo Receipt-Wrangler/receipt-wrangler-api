@@ -1,3 +1,4 @@
+import { openReceiptsOverflowMenu } from './receipts-table';
 import { expect, type Locator, type Page, type Route } from '@playwright/test';
 
 // Shared helpers for the Quick Scan dialog e2e specs. The dialog is only
@@ -108,7 +109,9 @@ export async function injectQuickScanAppData(
  */
 export async function openQuickScanDialog(page: Page, groupId: number): Promise<Locator> {
   await page.goto(`/receipts/group/${groupId}`);
-  await page.getByTestId('receipts-quick-scan').getByRole('button').click();
+  await openReceiptsOverflowMenu(page);
+  // A mat-menu-item is the button itself, so there is no inner button to reach.
+  await page.getByTestId('receipts-quick-scan').click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   return dialog;

@@ -7,7 +7,7 @@ import { MatTableDataSource } from "@angular/material/table";
 import { ActivatedRoute, Router } from "@angular/router";
 import { UntilDestroy, untilDestroyed } from "@ngneat/until-destroy";
 import { Store } from "@ngxs/store";
-import { map, take, tap } from "rxjs";
+import { catchError, EMPTY, map, Subject, switchMap, take, tap } from "rxjs";
 import { fadeInOut } from "src/animations";
 import { ReceiptFilterService } from "src/services/receipt-filter.service";
 import { ConfirmationDialogComponent } from "src/shared-ui/confirmation-dialog/confirmation-dialog.component";
@@ -72,7 +72,9 @@ export class ReceiptsTableComponent implements OnInit, AfterViewInit {
     private store: Store,
     private customCurrencyPipe: CustomCurrencyPipe,
     private datePipe: DatePipe,
-  ) {}
+  ) {
+    this.listenForRefreshRequests();
+  }
 
   readonly createdAtCell = viewChild.required<TemplateRef<any>>("createdAtCell");
 
@@ -105,6 +107,8 @@ export class ReceiptsTableComponent implements OnInit, AfterViewInit {
   public columnConfig = this.store.selectSignal(ReceiptTableState.columnConfig);
 
   public selectedGroupId = this.store.selectSignal(GroupState.selectedGroupId);
+
+  private readonly refreshRequested = new Subject<void>();
 
   private groups = this.store.selectSignal(GroupState.groups);
 
@@ -500,10 +504,28 @@ export class ReceiptsTableComponent implements OnInit, AfterViewInit {
   }
 
   public getFilteredReceipts(): void {
-    this.receiptFilterService
-      .getPagedReceiptsForGroups(this.groupId.toString())
+    this.refreshRequested.next();
+  }
+
+  /**
+   * Every refresh goes through one switchMap, so a newer request supersedes
+   * whatever is in flight (and aborts its XHR) instead of racing it. Without
+   * this the last *response* wins rather than the last *request* — and the
+   * quick date arrows put those one click apart, so a slow earlier page could
+   * repaint the table with a month the user has already stepped past.
+   */
+  private listenForRefreshRequests(): void {
+    this.refreshRequested
       .pipe(
-        take(1),
+        untilDestroyed(this),
+        switchMap(() =>
+          this.receiptFilterService.getPagedReceiptsForGroups(this.groupId.toString()).pipe(
+            // Keeps the outer subscription alive. An error surfacing through
+            // switchMap would complete it and silently kill every later
+            // refresh; the HTTP interceptor already reports the failure.
+            catchError(() => EMPTY)
+          )
+        ),
         tap((pagedData) => {
           this.dataSource.set(new MatTableDataSource(pagedData.data));
           this.totalCount.set(pagedData.totalCount);

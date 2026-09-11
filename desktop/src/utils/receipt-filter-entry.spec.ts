@@ -16,10 +16,11 @@ describe("isFilterEntryActive", () => {
     expect(isFilterEntryActive(null)).toBe(false);
   });
 
-  // An untouched numeric field stringifies to "0", which must not read as a
-  // condition — this is the rule the filter-count badge has always applied.
-  it("treats a zero value as inactive", () => {
-    expect(isFilterEntryActive({ operation: FilterOperation.Equals, value: 0 })).toBe(false);
+  // No field defaults to 0 — they default to null or [] — so a zero was typed,
+  // and the API applies it. Hiding its badge and chip would leave a filter that
+  // narrows the table with no way to see or clear it.
+  it("treats a zero value as active", () => {
+    expect(isFilterEntryActive({ operation: FilterOperation.Equals, value: 0 })).toBe(true);
   });
 
   // The one operation that carries no value: the API pins the range itself.

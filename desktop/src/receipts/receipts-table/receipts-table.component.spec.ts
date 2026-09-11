@@ -9,7 +9,7 @@ import { MatSnackBarModule } from "@angular/material/snack-bar";
 import { MatTooltipModule } from "@angular/material/tooltip";
 import { ActivatedRoute, provideRouter } from "@angular/router";
 import { NgxsModule, Store } from "@ngxs/store";
-import { of } from "rxjs";
+import { of, Subject, throwError } from "rxjs";
 import { PipesModule } from "src/pipes/pipes.module";
 import { ReceiptTableState } from "src/store/receipt-table.state";
 import { MonthStepperComponent } from "../../shared-ui/month-stepper/month-stepper.component";
@@ -214,6 +214,39 @@ describe("ReceiptsTableComponent", () => {
         { key: "categories", label: "Categories contains Groceries" },
         { key: "status", label: "Status contains Open" },
       ]);
+    });
+
+    // Each refresh used to be its own subscription, so the last RESPONSE won
+    // rather than the last REQUEST — and the quick date arrows are one click
+    // apart, which is what makes this reachable.
+    it("lets a newer refresh supersede an in-flight one", () => {
+      const superseded = new Subject<any>();
+      const latest = new Subject<any>();
+      refetch.mockReturnValueOnce(superseded).mockReturnValueOnce(latest);
+
+      component.monthSelected({ year: 2026, month: 8 });
+      component.monthSelected({ year: 2026, month: 9 });
+
+      // The first request resolving late must not repaint the table.
+      superseded.next({ data: [{ id: 1 }], totalCount: 1 });
+      expect(component.totalCount()).toEqual(0);
+
+      latest.next({ data: [{ id: 2 }], totalCount: 2 });
+      expect(component.totalCount()).toEqual(2);
+    });
+
+    // switchMap completes the outer stream on an error unless the inner one
+    // swallows it, which would silently kill every refresh after the first
+    // failure.
+    it("keeps refreshing after a failed request", () => {
+      refetch.mockReturnValueOnce(throwError(() => new Error("boom")));
+
+      component.monthSelected({ year: 2026, month: 8 });
+
+      refetch.mockReturnValue(of({ data: [{ id: 3 }], totalCount: 3 }));
+      component.monthSelected({ year: 2026, month: 9 });
+
+      expect(component.totalCount()).toEqual(3);
     });
 
     it("clears exactly the field whose chip was dismissed", () => {

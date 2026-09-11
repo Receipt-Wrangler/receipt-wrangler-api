@@ -159,14 +159,14 @@ describe("ReceiptTableState", () => {
     const result = store.selectSnapshot(ReceiptTableState.filterData).filter;
     expect(result).toEqual(defaultReceiptFilter);
   });
-  it("should not count a zero-valued filter field", () => {
+  it("should count a zero-valued filter field", () => {
     store.reset({
       receiptTable: {
         filter: { ...defaultReceiptFilter, amount: { operation: FilterOperation.Equals, value: 0 } },
       },
     });
 
-    expect(store.selectSnapshot(ReceiptTableState.numFiltersApplied)).toEqual(0);
+    expect(store.selectSnapshot(ReceiptTableState.numFiltersApplied)).toEqual(1);
   });
 
   it("should set a single filter field, leaving the others alone", () => {

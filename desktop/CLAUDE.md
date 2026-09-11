@@ -1222,8 +1222,10 @@ so they can never disagree.
   the extracted `FILTER_OPERATION_DISPLAY_VALUES`, so a chip cannot describe a condition differently
   from the row that produced it.
 - **`isFilterEntryActive`** (`src/utils/receipt-filter-entry.ts`) is the shared "does this field
-  narrow anything" predicate: a non-empty stringified value that isn't `"0"`, **or** the operation
-  `WITHIN_CURRENT_MONTH` (the one operation that carries no value). `ReceiptTableState.numFiltersApplied`
+  narrow anything" predicate: any non-empty stringified value, **or** the operation
+  `WITHIN_CURRENT_MONTH` (the one operation that carries no value). **Zero counts** — no field
+  defaults to `0` (they default to `null`/`[]`), and the API applies an `amount EQUALS 0`, so
+  excluding it would leave a filter that narrows the table with no badge and no clearable chip. `ReceiptTableState.numFiltersApplied`
   and the chip builder both call it, so the Filter badge and the chip set always agree.
 - **Single-field writes go through `SetReceiptFilterField`**, whose handler spreads a new filter
   object and rebuilds a cleared field from a **fresh** `buildDefaultReceiptFilter()`. That factory
@@ -1232,11 +1234,36 @@ so they can never disagree.
   in-place edit would have corrupted the default for the rest of the session.
   `ReceiptsTableComponent.applyFilterField()` is the only caller — it dispatches the action, then
   `SetPage(1)`, then refetches, so narrowing a filter from page 7 can never land on an empty page.
+- **Refreshes go through one `switchMap`** (`listenForRefreshRequests()`, wired in the constructor;
+  `getFilteredReceipts()` just pushes onto its `Subject`). Each refresh used to be its own
+  subscription, so the last *response* won rather than the last *request* — and the quick date
+  arrows put those one click apart, so a slow earlier page could repaint the table with a month the
+  user had already stepped past. The inner observable carries a `catchError(() => EMPTY)`: an error
+  surfacing *through* `switchMap` would complete the outer subscription and silently kill every
+  later refresh. `getInitialData()` deliberately stays on its own one-shot subscription, because it
+  owns the single `setColumns()` call and that reads `viewChild.required` template refs.
 
 ### The month stepper is the Date filter
 
 `app-month-stepper` (`src/shared-ui/month-stepper/`, standalone, deliberately presentational) emits
-months; `receipts-table` translates them with `src/utils/receipt-date-filter.ts`. A month is written
+months; `receipts-table` translates them with `src/utils/receipt-date-filter.ts`.
+
+**Its panel is a CDK overlay, not a `mat-menu` — do not "simplify" it back.** The panel holds a year
+pager, a month grid and three shortcuts, and **none of them is a `mat-menu-item`**. Inside a menu
+that makes the `FocusKeyManager`'s item list empty, so arrow keys are no-ops, and
+`ListKeyManager.onKeydown` turns **Tab** into `tabOut`, which `MatMenu` wires to `closed.emit('tab')`
+— so Tab *dismissed* the panel instead of entering it, leaving the whole picker mouse-only
+(verified in a browser: the grid is gone after one Tab). It is now
+`cdkConnectedOverlay` + `cdkTrapFocus [cdkTrapFocusAutoCapture]` with `role="dialog"`, an
+`aria-label`, `(keydown.escape)` and a transparent backdrop; the trap restores focus to the trigger
+when the overlay is destroyed. The year pager's old `$event.stopPropagation()` is gone with it — it
+only existed because a menu closes on any click inside itself.
+
+The same rule applies to the two house alternatives, which is why neither was used: `cdkMenu` (the
+`filtered-stateful-menu` precedent) has the identical empty-key-manager problem, and `ngbPopover`
+(the header notifications precedent) hard-codes `role="tooltip"` on `NgbPopoverWindow`'s host, which
+is equally wrong for interactive content and cannot be overridden. `e2e/receipt-quick-date-filter.spec.ts`
+pins the keyboard path — it fails against a `mat-menu` implementation. A month is written
 as `BETWEEN [startOfMonth, endOfMonth]` — the one operation that can express *any* month, which is
 why this feature needed no API change. Picking a month **overwrites** whatever the Date filter held.
 

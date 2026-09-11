@@ -8,13 +8,17 @@
     (clicked)="step(-1)"
   ></app-button>
   <app-button
+    cdkOverlayOrigin
+    #trigger="cdkOverlayOrigin"
     data-testid="receipts-month-label"
     matButtonType="basic"
     icon="calendar_month"
     color="accent"
     tooltip="Filter by month"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="panelOpen()"
     [buttonText]="label()"
-    [matMenuTriggerFor]="panel"
+    (clicked)="togglePanel()"
   ></app-button>
   <app-button
     data-testid="receipts-month-next"
@@ -26,11 +30,30 @@
   ></app-button>
 </div>
 
-<mat-menu #panel="matMenu">
-  <ng-template matMenuContent>
-    <!-- Material closes the panel on any click inside it, so the year pager has
-         to stop its clicks from reaching the panel or paging would dismiss it. -->
-    <div class="month-stepper__year" (click)="$event.stopPropagation()">
+<!--
+  A dialog, not a menu: the panel holds a pager, a grid and shortcuts rather
+  than menu items, so it owns its own focus trap and Escape handling. The trap's
+  autoCapture also restores focus to the trigger when the overlay is destroyed.
+-->
+<ng-template
+  cdkConnectedOverlay
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  [cdkConnectedOverlayOrigin]="trigger"
+  [cdkConnectedOverlayOpen]="panelOpen()"
+  [cdkConnectedOverlayPositions]="panelPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  (backdropClick)="closePanel()"
+  (detach)="closePanel()"
+>
+  <div
+    class="month-stepper__panel"
+    role="dialog"
+    aria-label="Filter by month"
+    cdkTrapFocus
+    [cdkTrapFocusAutoCapture]="true"
+    (keydown.escape)="closePanel()"
+  >
+    <div class="month-stepper__year">
       <app-button
         data-testid="month-stepper-year-prev"
         matButtonType="iconButton"
@@ -79,10 +102,10 @@
         type="button"
         class="month-stepper__shortcut--muted"
         data-testid="month-stepper-all-time"
-        (click)="allTimeSelected.emit()"
+        (click)="pickAllTime()"
       >
         All time
       </button>
     </div>
-  </ng-template>
-</mat-menu>
+  </div>
+</ng-template>

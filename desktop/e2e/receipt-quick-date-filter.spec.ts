@@ -40,18 +40,26 @@ test.describe('Receipts quick date filter', () => {
 
   let group: { id: number; name: string };
 
-  /** An ISO date in the middle of the month [delta] months from now. */
+  /**
+   * One instant for the whole suite. The seeded receipt dates, the expected
+   * labels and the browser's own clock all derive from it, so a run that
+   * crosses a month boundary cannot leave the app a month ahead of its fixture.
+   */
+  const REFERENCE_TIME = new Date();
+
+  /** An ISO date in the middle of the month [delta] months from the reference. */
   function isoInMonth(delta: number): string {
-    const now = new Date();
-    return new Date(Date.UTC(now.getFullYear(), now.getMonth() + delta, 15)).toISOString();
+    return new Date(
+      Date.UTC(REFERENCE_TIME.getFullYear(), REFERENCE_TIME.getMonth() + delta, 15),
+    ).toISOString();
   }
 
   function monthLabel(delta: number): string {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + delta, 1).toLocaleString('en-US', {
-      month: 'long',
-      year: 'numeric',
-    });
+    return new Date(
+      REFERENCE_TIME.getFullYear(),
+      REFERENCE_TIME.getMonth() + delta,
+      1,
+    ).toLocaleString('en-US', { month: 'long', year: 'numeric' });
   }
 
   const stepperLabel = (page: Page) => page.getByTestId('receipts-month-label');
@@ -89,6 +97,12 @@ test.describe('Receipts quick date filter', () => {
 
   test.beforeEach(async ({ page }) => {
     await stubTokenRefresh(page);
+    // Pin the app's clock to the same instant. The component reads its own
+    // new Date() for This month / Last month and for an arrow press with
+    // nothing selected, so a spec-side reference alone would still disagree
+    // with it across a month boundary. setFixedTime only changes what Date
+    // returns — timers keep running, so animations are unaffected.
+    await page.clock.setFixedTime(REFERENCE_TIME);
   });
 
   async function gotoSeededGroup(page: Page): Promise<void> {
@@ -209,6 +223,69 @@ test.describe('Receipts quick date filter', () => {
     );
 
     await page.getByTestId('receipt-filter-chip-clear-date').click();
+    await expect(stepperLabel(page)).toContainText('All time');
+  });
+
+  // The panel is a dialog, not a menu. Under the mat-menu it was mouse-only:
+  // with no mat-menu-items the key manager was empty so arrows did nothing, and
+  // ListKeyManager turns Tab into tabOut, which MatMenu wires to close — so Tab
+  // dismissed the panel instead of entering it.
+  test('is operable by keyboard and returns focus to the trigger', async ({ page }) => {
+    await gotoSeededGroup(page);
+
+    await stepperLabel(page).locator('button').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Filter by month' })).toBeVisible();
+
+    // Tab must move INTO the panel, not close it.
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('dialog', { name: 'Filter by month' })).toBeVisible();
+    expect(
+      await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]')),
+    ).toBe(true);
+
+    // Reach a month button by keyboard and pick it.
+    await page.getByTestId('month-stepper-month-0').focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page.getByRole('dialog', { name: 'Filter by month' })).toBeHidden();
+    await expect(stepperLabel(page)).toContainText('January');
+
+    // The focus trap hands focus back to the control that opened it.
+    expect(
+      await page.evaluate(
+        () => document.activeElement?.closest('[data-testid]')?.getAttribute('data-testid'),
+      ),
+    ).toEqual('receipts-month-label');
+  });
+
+  test('closes on Escape without changing the filter', async ({ page }) => {
+    await gotoSeededGroup(page);
+
+    await stepperLabel(page).click();
+    await expect(page.getByRole('dialog', { name: 'Filter by month' })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByRole('dialog', { name: 'Filter by month' })).toBeHidden();
+    await expect(stepperLabel(page)).toContainText('All time');
+  });
+
+  // Paging the year used to need a stopPropagation hack, because a mat-menu
+  // closes on any click inside it.
+  test('stays open while paging the year', async ({ page }) => {
+    await gotoSeededGroup(page);
+
+    await stepperLabel(page).click();
+    const year = await page.getByTestId('month-stepper-year').textContent();
+
+    await page.getByTestId('month-stepper-year-prev').click();
+
+    await expect(page.getByRole('dialog', { name: 'Filter by month' })).toBeVisible();
+    await expect(page.getByTestId('month-stepper-year')).toHaveText(
+      String(Number(year) - 1),
+    );
+    // Paging is a view concern — it must not have written a filter.
     await expect(stepperLabel(page)).toContainText('All time');
   });
 

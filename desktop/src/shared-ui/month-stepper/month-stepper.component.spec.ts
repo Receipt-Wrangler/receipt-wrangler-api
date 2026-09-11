@@ -138,9 +138,42 @@ describe("MonthStepperComponent", () => {
     });
 
     it("emits all time separately", () => {
-      component.allTimeSelected.emit();
+      component.pickAllTime();
 
       expect(allTimeEmissions).toBe(1);
+      expect(emitted).toEqual([]);
+    });
+
+    it("opens and closes", () => {
+      expect(component.panelOpen()).toBe(false);
+
+      component.togglePanel();
+      expect(component.panelOpen()).toBe(true);
+
+      component.togglePanel();
+      expect(component.panelOpen()).toBe(false);
+    });
+
+    it("closes once a month or a shortcut is picked", () => {
+      for (const pick of [
+        () => component.pickMonth(3),
+        () => component.pickRelativeMonth(0),
+        () => component.pickAllTime(),
+      ]) {
+        component.togglePanel();
+        pick();
+        expect(component.panelOpen()).toBe(false);
+      }
+    });
+
+    // Paging is a view concern. Under the old mat-menu this needed a
+    // stopPropagation hack because the menu closed on any click inside it.
+    it("stays open while paging the year", () => {
+      component.togglePanel();
+
+      component.pageYear(-1);
+
+      expect(component.panelOpen()).toBe(true);
       expect(emitted).toEqual([]);
     });
 

@@ -68,9 +68,18 @@ void main() {
     await pumpUntilFound(tester, find.byType(PopupMenuButton));
 
     // Open the image-screen popup menu and pick the file source.
+    //
+    // Wait on `hitTestable()` and drain a few frames before tapping: a popup
+    // menu mounts its items on the animation's first frame, so a plain
+    // `pumpUntilFound(find.text(...))` returns while the menu is still scaling
+    // and the tap lands where the item *was*. (This spec never ran on Linux
+    // before, so it had not needed the hardening the sibling specs carry.)
     await tester.tap(find.byType(PopupMenuButton));
-    await pumpUntilFound(tester, find.text(uploadFileLabel));
-    await tester.tap(find.text(uploadFileLabel));
+    await pumpUntilFound(tester, find.text(uploadFileLabel).hitTestable());
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.tap(find.text(uploadFileLabel).hitTestable());
     // Mocked openFiles() resolves immediately; the model's
     // imagesToUploadBehaviorSubject emits, the carousel updates.
     await tester.pumpAndSettle(const Duration(seconds: 2));

@@ -178,6 +178,9 @@ the user explicitly confirms the divergence**. Examples of standards to follow:
   generate handler is synchronous by design: `type` is a plain `@Input`, so under zoneless CD only
   the click event's CD pass renders the reveal (the clipboard write is a detached side effect).
 - **Tables:** `app-table`; **dialogs:** `app-dialog` + `app-dialog-footer`.
+- **Badges:** the shared standalone **`app-badge`** (`src/shared-ui/badge/`) — `<app-badge [text]="..."
+  [tone]="...">`, a 9.5px uppercase micro-badge for marking an item in a list. Do NOT hand-roll one;
+  see **The shared badge** below for the tones and the two traps.
 - **Simple filters:** the segmented `app-filter-bar` (`src/shared-ui/filter-bar/`) — pass `FilterTab[]`
   (`{ value, label, icon?, count? }`) and two-way bind the selected `value`.
 - **Breadcrumbs:** `app-breadcrumb` with `BreadcrumbItem[]`.
@@ -194,6 +197,50 @@ the user explicitly confirms the divergence**. Examples of standards to follow:
   control a `<resource>-add` `data-testid` and a `tooltip`. Do NOT hand-roll a raw `app-button` for a
   list-page add action, and do NOT use a bespoke page-title header.
 If a design appears to require a new pattern, confirm with the user before diverging.
+
+### The shared badge (`app-badge`)
+
+`src/shared-ui/badge/` — a small uppercase badge (`text` + `tone` signal inputs) used to mark an item
+in a list. It replaced two hand-rolled copies with identical geometry and **different colours**, which
+is exactly the drift a shared component prevents: `app-select`'s option badge was slate, the report
+panel's custom badge purple. Both are now purple, so **"Custom" looks the same everywhere** — the
+report builder's dropdowns and picked rows, and the receipts table's Configure Columns dialog.
+
+`CUSTOM_FIELD_BADGE` ("Custom") is exported from the component file, so the string has one home.
+
+Three things about it are load-bearing:
+
+- **The class is `.rw-badge`, NOT `.badge`.** Bootstrap is a global stylesheet here
+  (`angular.json` builds `bootstrap-scss/bootstrap.scss`) and defines an unscoped `.badge` with its
+  own `line-height`, `text-align`, `white-space` and a **white** `color`. A component rule only
+  overrides what it *declares*, so everything else leaks — measured as a ~44% height change — and
+  Bootstrap's badge is genuinely used elsewhere (`dashboard/pie-chart`), so it can't just be dropped.
+  `rw-` matches the existing `.rw-chip` / `.rw-card` convention. **Any new shared component must check
+  for a Bootstrap collision on its class names.**
+- **Tones are opaque, and that is the point.** Both originals used a translucent fill, and both
+  carried a comment that at 9.5px/700 the text is "small text" under WCAG and needs 4.5:1 against its
+  *composited* background. A translucent fill makes contrast depend on whatever the badge is dropped
+  onto, which a shared component cannot know — so each tone is the pre-composited opaque colour.
+  `purple` 6.43:1, `slate` 6.22:1, `blue` 5.90:1, `green` 5.88:1. **`blue`/`green` are darker than the
+  report panel's original kind badges**, which never got the contrast pass the custom badge did (they
+  measured 2.61:1 and 3.03:1); the row's `.kind-*` **icon chip** keeps its lighter translucent fill,
+  so chip and badge in the same row are deliberately not the same shade.
+- **`flex: none` lives on `:host`, not the inner span** — the host is the flex item, so on the span it
+  silently does nothing. The badge carries **no margin**: the two flex call sites space it with `gap`,
+  and only `app-select` (where it follows inline text) adds `margin-left`, in its own stylesheet.
+
+Wiring: registered in `SharedUiModule`'s `imports` + `exports` (the `LoginQrComponent` pattern), which
+covers `ReceiptsModule` and `ReportsModule`. **`SelectModule` imports the component directly** —
+`SharedUiModule` imports `SelectModule`, so reaching it the other way would be a circular import.
+
+Two call-site rules the e2e suites depend on:
+- **Keep the badge inside the `mat-option`'s text content.** `e2e/report-custom-fields.spec.ts`
+  matches option accessible names with `^${name} Custom$`, and `e2e/helpers/reports.ts`
+  (`addGroupingLevel`) documents the same coupling.
+- **Keep it OUT of a `mat-checkbox`'s label.** In the Configure Columns dialog it is a sibling of the
+  checkbox, so the checkbox's accessible name stays the bare field name — otherwise every locator that
+  picks a column by its field name stops resolving. (`.column-checkbox { flex: 1 }` then pushes the
+  badge to the right of the row, which is why it reads as a tidy right-hand column there.)
 
 ### Roles & Permissions (Manage Roles)
 
@@ -525,6 +572,12 @@ field after the nine built-in columns, and each one can be turned into a sortabl
     with the sort order or a report.
   - **Do not name a `@let` after the signal it reads.** `@let value = value()` shadows the component
     member inside its own initializer and fails with "undefined is not a function".
+- **Each custom field row carries the shared `app-badge`** reading "Custom"
+  (`data-testid="column-config-custom"`), so a field named "Vendor" is not mistaken for a built-in
+  column. `ColumnConfigItem.isCustom` comes from the existing `parseCustomFieldColumnDef` helper, and
+  is stripped in `saveConfiguration()` — the saved object is persisted to localStorage and read back
+  as the column config, so a derived key must not ride along. See "The shared badge" above for why it
+  sits outside the checkbox label.
 - The receipts list response now always carries custom field values **with their definitions**; see
   `api/CLAUDE.md` → "Custom fields on the receipts list" for why the definitions are not optional.
 - **E2E:** `e2e/custom-field-columns.spec.ts` (serial, admin storageState, own seeded group) — the
@@ -1280,7 +1333,10 @@ endpoint); the builder's own ad-hoc generate still gates on `app.reports.generat
   and the shared **`app-select` gained an optional `optionBadgeKey`** input that draws it beside the
   option text. Because `MatOption.viewValue` is the option's `textContent`, a badged option would read
   "HSTCustom" in the closed select — so a badged select also renders its own `<mat-select-trigger>`.
-  Both are opt-in and default off, so every other `app-select` call site is unchanged. The already-picked
+  Both are opt-in and default off, so every other `app-select` call site is unchanged. The badge itself
+  is the shared **`app-badge`** (see "The shared badge" above), as are the picked rows' custom and kind
+  badges; `app-select` also takes an `optionBadgeTone` (defaulting to the custom-field purple) so a
+  select badging something other than a custom field can say so. The already-picked
   grouping levels and column rows carry the same badge (`isCustom` on `groupByLevels()` / `columnRows()`,
   resolved through the catalog rather than by matching the key's shape, so a user without
   `app.custom-fields.read` sees no badge instead of one on a field the builder cannot name).

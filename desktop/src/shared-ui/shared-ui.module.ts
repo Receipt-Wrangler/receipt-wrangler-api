@@ -66,6 +66,7 @@ import { EditableListComponent } from './editable-list/editable-list.component';
 import { IconAutocompleteComponent } from './icon-autocomplete/icon-autocomplete.component';
 import { PieChartUiComponent } from './pie-chart/pie-chart.component';
 import { LoginQrComponent } from './login-qr/login-qr.component';
+import { BadgeComponent } from './badge/badge.component';
 
 @NgModule({
   declarations: [
@@ -139,6 +140,7 @@ import { LoginQrComponent } from './login-qr/login-qr.component';
     UserAutocompleteModule,
     PieChartUiComponent,
     LoginQrComponent,
+    BadgeComponent,
   ],
   exports: [
     AddButtonComponent,
@@ -183,6 +185,7 @@ import { LoginQrComponent } from './login-qr/login-qr.component';
     IconAutocompleteComponent,
     PieChartUiComponent,
     LoginQrComponent,
+    BadgeComponent,
   ],
   providers: [CurrencyPipe],
 })

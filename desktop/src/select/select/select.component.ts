@@ -1,4 +1,5 @@
 import { Component, Input, OnInit, input } from "@angular/core";
+import { BadgeTone } from "src/shared-ui/badge/badge.component";
 import { BaseInputComponent } from "../../base-input";
 
 @Component({
@@ -25,6 +26,13 @@ export class SelectComponent extends BaseInputComponent implements OnInit {
    * existing call sites are unaffected.
    */
   public readonly optionBadgeKey = input<string>("");
+
+  /**
+   * The tone the option badges are drawn in. Purple - the tone marking a custom
+   * field - is the default because that is every badged select today, but the
+   * badge itself is generic, so a select badging something else can say so.
+   */
+  public readonly optionBadgeTone = input<BadgeTone>("purple");
 
   constructor() {
     super();

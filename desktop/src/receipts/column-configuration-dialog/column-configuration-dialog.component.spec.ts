@@ -1,6 +1,7 @@
 import { CdkDragDrop } from "@angular/cdk/drag-drop";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { MAT_DIALOG_DATA, MatDialogRef } from "@angular/material/dialog";
+import { provideRouter } from "@angular/router";
 import { NgxsModule } from "@ngxs/store";
 import { DEFAULT_RECEIPT_TABLE_COLUMNS, ReceiptTableColumnConfig } from "../../interfaces";
 import { CustomField, CustomFieldType } from "../../open-api";
@@ -43,7 +44,10 @@ describe("ColumnConfigurationDialogComponent", () => {
       imports: [SharedUiModule, NgxsModule.forRoot([ReceiptTableState])],
       providers: [
         { provide: MatDialogRef, useValue: mockDialogRef },
-        { provide: MAT_DIALOG_DATA, useValue: mockDialogData }
+        { provide: MAT_DIALOG_DATA, useValue: mockDialogData },
+        // The shared dialog shell pulls in router-aware buttons, so rendering the
+        // template (rather than only exercising the class) needs a router.
+        provideRouter([])
       ]
     }).compileComponents();
 
@@ -89,19 +93,22 @@ describe("ColumnConfigurationDialogComponent", () => {
         matColumnDef: "created_at",
         visible: true,
         order: 0,
-        displayName: "Added At"
+        displayName: "Added At",
+        isCustom: false
       });
       expect(component.columns[1]).toEqual({
         matColumnDef: "name",
         visible: true,
         order: 1,
-        displayName: "Name"
+        displayName: "Name",
+        isCustom: false
       });
       expect(component.columns[2]).toEqual({
         matColumnDef: "amount",
         visible: false,
         order: 2,
-        displayName: "Amount"
+        displayName: "Amount",
+        isCustom: false
       });
     });
 
@@ -169,8 +176,8 @@ describe("ColumnConfigurationDialogComponent", () => {
 
       // Sorted by name, so the ids are deliberately out of order above.
       expect(component.columns.slice(DEFAULT_RECEIPT_TABLE_COLUMNS.length)).toEqual([
-        { matColumnDef: "custom_2", visible: false, order: 9, displayName: "Approver" },
-        { matColumnDef: "custom_7", visible: false, order: 10, displayName: "Vendor" }
+        { matColumnDef: "custom_2", visible: false, order: 9, displayName: "Approver", isCustom: true },
+        { matColumnDef: "custom_7", visible: false, order: 10, displayName: "Vendor", isCustom: true }
       ]);
     });
 
@@ -200,8 +207,40 @@ describe("ColumnConfigurationDialogComponent", () => {
         matColumnDef: "custom_7",
         visible: true,
         order: 0,
-        displayName: "Vendor"
+        displayName: "Vendor",
+        isCustom: true
       });
+    });
+  });
+
+  describe("custom field badge", () => {
+    it("badges a custom field row and no built-in one", () => {
+      mockDialogData.customFields = [customField(7, "Vendor")];
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      const rows = fixture.nativeElement.querySelectorAll(".column-item");
+      const badged = Array.from(rows as ArrayLike<HTMLElement>).filter((row) =>
+        row.querySelector("app-badge")
+      );
+
+      expect(badged.length).toEqual(1);
+      expect(badged[0].textContent).toContain("Vendor");
+      expect(badged[0].querySelector("app-badge")?.textContent?.trim()).toEqual("Custom");
+    });
+
+    // Inside the label the badge would join the checkbox's accessible name, and
+    // every locator picking a column by its field name would stop resolving.
+    it("keeps the badge out of the checkbox label", () => {
+      mockDialogData.customFields = [customField(7, "Vendor")];
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      const checkbox = fixture.nativeElement.querySelector(
+        ".column-item:last-child mat-checkbox"
+      ) as HTMLElement;
+
+      expect(checkbox.textContent?.trim()).toEqual("Vendor");
     });
   });
 
@@ -350,7 +389,8 @@ describe("ColumnConfigurationDialogComponent", () => {
         matColumnDef: "custom_7",
         visible: false,
         order: DEFAULT_RECEIPT_TABLE_COLUMNS.length,
-        displayName: "Vendor"
+        displayName: "Vendor",
+        isCustom: true
       });
     });
 
@@ -384,12 +424,16 @@ describe("ColumnConfigurationDialogComponent", () => {
       );
     });
 
-    it("should remove displayName property from result", () => {
+    it("should remove view-only properties from result", () => {
+      // The saved payload is persisted to localStorage and read back as the
+      // column config, so a display-only field riding along would be stored and
+      // then compared against a freshly derived one.
       component.saveConfiguration();
 
       const result = mockDialogRef.close.mock.calls[mockDialogRef.close.mock.calls.length - 1][0];
       result.forEach((col: any) => {
         expect(col.displayName).toBeUndefined();
+        expect(col.isCustom).toBeUndefined();
         expect(col.matColumnDef).toBeDefined();
         expect(col.visible).toBeDefined();
         expect(col.order).toBeDefined();

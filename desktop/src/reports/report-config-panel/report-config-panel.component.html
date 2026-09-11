@@ -53,8 +53,7 @@
       <span class="report-config__pos">{{ level.index + 1 }}</span>
       <span class="report-config__list-label" data-testid="report-grouping-label">{{ level.label }}</span>
       @if (level.isCustom) {
-        <span class="report-config__kind-badge report-config__custom-badge"
-          data-testid="report-grouping-custom">{{ customFieldBadge }}</span>
+        <app-badge [text]="customFieldBadge" data-testid="report-grouping-custom"></app-badge>
       }
       <app-button matButtonType="iconButton" icon="arrow_upward" tooltip="Move up" [disabled]="level.isFirst"
         (clicked)="moveGroupBy(level.index, -1)" data-testid="report-grouping-up"></app-button>
@@ -122,10 +121,9 @@
         <div class="report-config__col-desc">{{ column.disabled ? column.disabledReason : column.description }}</div>
       </div>
       @if (column.isCustom) {
-        <span class="report-config__kind-badge report-config__custom-badge"
-          data-testid="report-column-custom">{{ customFieldBadge }}</span>
+        <app-badge [text]="customFieldBadge" data-testid="report-column-custom"></app-badge>
       }
-      <span class="report-config__kind-badge" [ngClass]="column.kindClass">{{ column.kindLabel }}</span>
+      <app-badge [text]="column.kindLabel" [tone]="column.kindTone"></app-badge>
       <app-button matButtonType="iconButton" icon="arrow_upward" tooltip="Move up" [disabled]="column.isFirst"
         (clicked)="moveColumn(column.index, -1)" data-testid="report-column-up"></app-button>
       <app-button matButtonType="iconButton" icon="arrow_downward" tooltip="Move down" [disabled]="column.isLast"

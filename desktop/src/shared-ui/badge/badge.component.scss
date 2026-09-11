@@ -1,0 +1,63 @@
+// NOT `.badge`: Bootstrap is a global stylesheet here (angular.json) and defines
+// an unscoped `.badge` with its own line-height, text-align, white-space and a
+// white color. A component rule only overrides what it declares, so the rest
+// would leak - measured as a ~44% height change - and the app genuinely uses
+// Bootstrap's badge elsewhere (dashboard/pie-chart), so it cannot just be
+// dropped. `rw-` matches the existing `.rw-chip` / `.rw-card` convention.
+//
+// The badge is 9.5px/700, which is "small text" under WCAG, so every tone needs
+// 4.5:1 against the surface it is drawn on. Each is measured below.
+//
+// The fills are OPAQUE rather than translucent for that reason: this component is
+// dropped onto whatever background a caller has - a white dialog row, a #f8fafc
+// report row, a select's overlay panel - and a translucent fill would make the
+// contrast depend on the host, which is not something a shared component can
+// know. Purple and slate are exactly the translucent fills the two hand-rolled
+// badges this replaced used, pre-composited over white, so they are unchanged.
+
+// The flex item is the host, not the span inside it, so the "don't shrink me"
+// rule has to live here or it silently does nothing.
+:host {
+  display: inline-block;
+  flex: none;
+}
+
+.rw-badge {
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-radius: 5px;
+  padding: 2px 6px;
+
+  // Marks a custom field, so one stays identifiable after it has been picked -
+  // not only in the dropdown it was chosen from. 6.43:1.
+  &--purple {
+    color: #5b3fae;
+    background: #eeeafa;
+  }
+
+  // The neutral tone, for a classification that carries no warning. 6.22:1.
+  &--slate {
+    color: #475569;
+    background: #e6e9ec;
+  }
+
+  // Blue and green are DARKER than the report panel's original kind badges, which
+  // were never given the contrast pass the custom badge got: as drawn there they
+  // measured 2.61:1 and 3.03:1, both well under the 4.5:1 this size requires.
+  // These are 5.90:1 and 5.88:1.
+  &--blue {
+    color: #00609a;
+    background: #e4f3fd;
+  }
+
+  &--green {
+    color: #0b6b4c;
+    background: #e6f7f1;
+  }
+}

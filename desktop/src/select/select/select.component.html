@@ -25,7 +25,7 @@
             {{ selected | optionDisplay : options()[selected] : optionDisplayKey() : optionsDisplayArray() }}
             @let selectedBadge = badgeFor(options()[selected]);
             @if (selectedBadge) {
-              <span class="select__badge">{{ selectedBadge }}</span>
+              <app-badge [text]="selectedBadge" [tone]="optionBadgeTone()"></app-badge>
             }
           }
         </mat-select-trigger>
@@ -38,7 +38,7 @@
         {{ i | optionDisplay : option : optionDisplayKey() : optionsDisplayArray() }}
         @let badge = badgeFor(option);
         @if (badge) {
-          <span class="select__badge">{{ badge }}</span>
+          <app-badge [text]="badge" [tone]="optionBadgeTone()"></app-badge>
         }
       </mat-option>
     </mat-select>

@@ -149,6 +149,31 @@ test.describe('Receipts table — custom field columns', () => {
     await expect(page.getByRole('columnheader', { name: tipName })).toHaveCount(0);
   });
 
+  test('badges the custom fields and nothing else', async ({ page }) => {
+    await gotoTable(page);
+    await page.getByTestId('configure-columns').click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // Custom fields are global, so other specs' fields are in this list too -
+    // assert on the rows rather than on a total. Exactly the nine built-ins carry
+    // no badge; everything past them is a custom field and is badged.
+    const rows = dialog.locator('.column-item');
+    const badged = dialog.getByTestId('column-config-custom');
+    expect((await rows.count()) - (await badged.count())).toEqual(9);
+
+    const tipRow = rows.filter({ hasText: tipName });
+    await expect(tipRow.getByTestId('column-config-custom')).toHaveText('Custom');
+    await expect(
+      rows.filter({ hasText: 'Resolved Date' }).getByTestId('column-config-custom')
+    ).toHaveCount(0);
+
+    // The badge must stay out of the checkbox's accessible name, or every
+    // locator that picks a column by its field name stops resolving.
+    await expect(dialog.getByRole('checkbox', { name: tipName, exact: true })).toBeVisible();
+  });
+
   test('renders a currency custom field through the configured currency display', async ({ page }) => {
     await gotoTable(page);
     await showColumn(page, tipName);

@@ -1,19 +1,5 @@
-// The optional per-option badge (app-select's optionBadgeKey). It marks what an
-// option is — a custom field in the report builder's field pickers — so it sits
-// beside the option text and in the trigger, never replacing either.
-.select__badge {
-  display: inline-block;
+// The badge follows the option's text inline, with no flex gap to space it -
+// unlike the report panel's rows, which is why the component itself has no margin.
+app-badge {
   margin-left: 6px;
-  vertical-align: middle;
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border-radius: 5px;
-  padding: 2px 6px;
-  // Same WCAG reasoning as the report config panel's badge: 9.5px/700 is small
-  // text, so it needs 4.5:1 against the composited fill (#e2e4e7 over white).
-  // The lighter slate was 3.90:1; this is 5.95:1.
-  color: #475569;
-  background: rgba(100, 116, 139, 0.16);
 }

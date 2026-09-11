@@ -23,6 +23,15 @@
         >
           {{ column.displayName }}
         </mat-checkbox>
+
+        <!--
+          Outside the checkbox label on purpose: inside it, the badge would join
+          the checkbox's accessible name ("Tip Custom") and every locator that
+          picks a column by its field name would stop resolving.
+        -->
+        @if (column.isCustom) {
+          <app-badge [text]="customFieldBadge" data-testid="column-config-custom"></app-badge>
+        }
       </div>
     </div>
   </div>

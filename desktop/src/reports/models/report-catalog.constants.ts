@@ -1,3 +1,4 @@
+import { CUSTOM_FIELD_BADGE } from "src/shared-ui/badge/badge.component";
 import { ReportColumn, ReportPeriod } from "../../open-api";
 
 /**
@@ -11,9 +12,6 @@ export interface ReportField {
   label: string;
   isCustom?: boolean;
 }
-
-/** The badge text marking a custom field wherever the builder lists fields. */
-export const CUSTOM_FIELD_BADGE = "Custom";
 
 /** An app-select option built from a field: value/display plus an optional badge. */
 export interface ReportFieldOption {

@@ -15,9 +15,9 @@ import { Store } from "@ngxs/store";
 import { merge } from "rxjs";
 import { DEFAULT_DIALOG_CONFIG } from "src/constants/dialog.constant";
 import { GroupState } from "src/store";
+import { BadgeTone, CUSTOM_FIELD_BADGE } from "src/shared-ui/badge/badge.component";
 import { ReportColumn, ReportDetail, ReportPeriod } from "../../open-api";
 import {
-  CUSTOM_FIELD_BADGE,
   REPORT_DOCUMENT_VARIABLES,
   REPORT_PERIOD_PRESETS,
   ReportField,
@@ -64,6 +64,7 @@ interface ColumnRow {
   kindLabel: string;
   kindIcon: string;
   kindClass: string;
+  kindTone: BadgeTone;
   isCustom: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -76,10 +77,16 @@ interface ColumnRow {
 // untouched), so it is a constant rather than a real row id.
 const GROUPING_LEVEL_COLUMN_ID = "grouping-level";
 
-const KIND_META: Record<ReportColumn.KindEnum, { label: string; icon: string; cssClass: string }> = {
-  dimension: { label: "Dim", icon: "sell", cssClass: "kind-dimension" },
-  aggregate: { label: "Agg", icon: "functions", cssClass: "kind-aggregate" },
-  formula: { label: "Formula", icon: "calculate", cssClass: "kind-formula" },
+// cssClass colours the row's icon chip, which sits on a known background and so
+// keeps its translucent fill; tone colours the badge, which is the shared
+// component and carries its own opaque one.
+const KIND_META: Record<
+  ReportColumn.KindEnum,
+  { label: string; icon: string; cssClass: string; tone: BadgeTone }
+> = {
+  dimension: { label: "Dim", icon: "sell", cssClass: "kind-dimension", tone: "slate" },
+  aggregate: { label: "Agg", icon: "functions", cssClass: "kind-aggregate", tone: "blue" },
+  formula: { label: "Formula", icon: "calculate", cssClass: "kind-formula", tone: "green" },
 };
 
 /**
@@ -179,6 +186,7 @@ export class ReportConfigPanelComponent implements OnInit {
         kindLabel: meta.label,
         kindIcon: meta.icon,
         kindClass: meta.cssClass,
+        kindTone: meta.tone,
         isCustom: this.columnReadsACustomField(value),
         isFirst: index === 0,
         isLast: index === controls.length - 1,

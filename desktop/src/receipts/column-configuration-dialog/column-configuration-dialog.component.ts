@@ -2,11 +2,13 @@ import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { DEFAULT_RECEIPT_TABLE_COLUMNS, ReceiptTableColumnConfig } from '../../interfaces';
+import { CUSTOM_FIELD_BADGE } from '../../shared-ui/badge/badge.component';
 import { CustomField } from '../../open-api';
-import { columnDisplayName, mergeCustomFieldColumns } from '../../utils';
+import { columnDisplayName, mergeCustomFieldColumns, parseCustomFieldColumnDef } from '../../utils';
 
 interface ColumnConfigItem extends ReceiptTableColumnConfig {
   displayName: string;
+  isCustom: boolean;
 }
 
 @Component({
@@ -17,6 +19,8 @@ interface ColumnConfigItem extends ReceiptTableColumnConfig {
 })
 export class ColumnConfigurationDialogComponent implements OnInit {
   public columns: ColumnConfigItem[] = [];
+
+  protected readonly customFieldBadge = CUSTOM_FIELD_BADGE;
 
   constructor(
     private dialogRef: MatDialogRef<ColumnConfigurationDialogComponent>,
@@ -51,6 +55,7 @@ export class ColumnConfigurationDialogComponent implements OnInit {
       (col) => ({
         ...col,
         displayName: columnDisplayName(col.matColumnDef, this.customFields),
+        isCustom: parseCustomFieldColumnDef(col.matColumnDef) !== undefined,
       })
     );
   }
@@ -77,7 +82,9 @@ export class ColumnConfigurationDialogComponent implements OnInit {
   }
 
   public saveConfiguration(): void {
-    const result: ReceiptTableColumnConfig[] = this.columns.map(({ displayName, ...col }) => col);
+    const result: ReceiptTableColumnConfig[] = this.columns.map(
+      ({ displayName, isCustom, ...col }) => col
+    );
     this.dialogRef.close(result);
   }
 

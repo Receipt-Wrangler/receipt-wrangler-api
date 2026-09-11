@@ -88,7 +88,7 @@
   }
 }
 
-.month-stepper__shortcut--muted {
+.month-stepper__shortcuts .month-stepper__shortcut--muted {
   margin-left: auto;
   color: map.get(variables.$accent-palette, 500);
 

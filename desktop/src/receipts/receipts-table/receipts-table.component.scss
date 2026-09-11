@@ -16,6 +16,8 @@ app-receipts-table {
 
   .receipt-filter-chips {
     display: block;
+    // app-table-header owns the gap below itself, so only close the gap to the
+    // table here.
     margin-bottom: variables.$spacing-md;
   }
 }

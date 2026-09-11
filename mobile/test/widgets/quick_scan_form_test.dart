@@ -26,6 +26,10 @@ import 'package:receipt_wrangler_mobile/shared/widgets/tag_select_field.dart';
 // hidden/optional the server backfills a default, so the form omits it. Field
 // visibility/requirement is reactive to the group dropdown: changing the group
 // re-reads the new group's config and clears the group-scoped fields.
+//
+// Until a group is picked there is no config to honour, so ONLY the Group
+// dropdown renders. Hiding a field for that reason must not destroy its value —
+// the user's quickScanDefault* prefills have to survive the first group pick.
 
 const _groupId = 1;
 const _group2Id = 2;
@@ -119,7 +123,14 @@ QuickScanImage _image(
 /// Pumps [QuickScanForm] with a real [GroupModel] holding [groups] and a
 /// [UserModel] holding [users] (the latter backs the paid-by dropdown items).
 /// [imageGroupId] drives which group's config the form initially reads
-/// (0 = no group selected → null settings fallback). Returns the form key.
+/// (0 = no group selected → only the Group dropdown renders). Returns the form
+/// key.
+///
+/// The form change callback MIRRORS the real consumer (`quick_scan.dart`), which
+/// writes every record member onto the image unconditionally. That write-back is
+/// what makes the prefill-preservation cases meaningful — with an inert `(_) {}`
+/// callback the image is never mutated, so those tests would pass even with the
+/// bug present. [onFormChange] additionally exposes the last emitted record.
 Future<GlobalKey<FormBuilderState>> _pumpFormGroups(
   WidgetTester tester, {
   required List<api.Group> groups,
@@ -127,6 +138,7 @@ Future<GlobalKey<FormBuilderState>> _pumpFormGroups(
   List<api.UserView> users = const [],
   int? imagePaidByUserId,
   api.ReceiptStatus? imageStatus,
+  void Function(QuickScanFormValues values)? onFormChange,
   // The comment field is additionally gated on group.comments.create, so every
   // group the test uses is granted it unless a test opts out.
   bool canCreateComments = true,
@@ -171,7 +183,16 @@ Future<GlobalKey<FormBuilderState>> _pumpFormGroups(
               formKey: image.formKey,
               image: image,
               index: 0,
-              onFormChangeCallback: (_) {},
+              onFormChangeCallback: (values) {
+                // Mirrors quick_scan.dart's carousel consumer exactly.
+                image.groupId = values.groupId;
+                image.paidByUserId = values.paidByUserId;
+                image.status = values.status;
+                image.categories = values.categories;
+                image.tags = values.tags;
+                image.comment = values.comment;
+                onFormChange?.call(values);
+              },
             ),
           ),
         ),
@@ -248,23 +269,87 @@ void main() {
     expect(find.byType(TagSelectField), findsOneWidget);
   });
 
-  testWidgets('falls back to backend defaults when no group is selected', (
+  testWidgets('renders only the Group field when no group is selected', (
     tester,
   ) async {
-    // imageGroupId 0 → getGroupReceiptSettings returns null → paid-by/status
-    // default shown, categories/tags default hidden.
-    await _pumpForm(tester, settings: _settings(), imageGroupId: 0);
+    // imageGroupId 0 → no group picked → nothing but Group renders. The config
+    // that WOULD apply enables every field, so this also pins that the no-group
+    // rule wins over the settings.
+    await _pumpForm(
+      tester,
+      settings: _settings(
+        categoriesEnabled: true,
+        tagsEnabled: true,
+        commentEnabled: true,
+      ),
+      imageGroupId: 0,
+    );
 
-    expect(_dropdown('paidByUserId'), findsOneWidget);
-    expect(_dropdown('status'), findsOneWidget);
+    expect(_dropdown('groupId'), findsOneWidget);
+    expect(_dropdown('paidByUserId'), findsNothing);
+    expect(_dropdown('status'), findsNothing);
     expect(find.byType(CategorySelectField), findsNothing);
     expect(find.byType(TagSelectField), findsNothing);
+    expect(_commentField(), findsNothing);
+  });
+
+  testWidgets('keeps the paid-by and status prefills through the first group '
+      'selection', (tester) async {
+    // The regression guard for the prefill wipe: paid-by/status are unmounted
+    // while no group is picked, so they are absent from the form value. Reporting
+    // them as null would have the consumer erase the user's quickScanDefault*
+    // prefill on the very interaction that reveals the fields.
+    final group = _group(_settings(), members: [_member(42, _groupId)]);
+    final key = await _pumpFormGroups(
+      tester,
+      groups: [group],
+      imageGroupId: 0,
+      users: [_user(42, 'Payer')],
+      imagePaidByUserId: 42,
+      imageStatus: api.ReceiptStatus.OPEN,
+    );
+
+    // Precondition: neither field is mounted yet.
+    expect(_dropdown('paidByUserId'), findsNothing);
+    expect(_dropdown('status'), findsNothing);
+
+    await _selectGroup(tester, 'Test Group');
+
+    expect(key.currentState!.fields['paidByUserId']!.value, 42);
+    expect(key.currentState!.fields['status']!.value, api.ReceiptStatus.OPEN);
+  });
+
+  testWidgets('drops a prefilled paid-by who is not a member of the group '
+      'just picked', (tester) async {
+    // The other half of the prefill fix. The dropdown seeds BLANK for a payer who
+    // is not a member (`valueExists` in _buildUserDropDown), so without the
+    // post-frame re-sync the image would keep the invisible id and the submit
+    // would send a user the caller can neither see nor have meant.
+    final group = _group(_settings()); // no members
+    QuickScanFormValues? last;
+    final key = await _pumpFormGroups(
+      tester,
+      groups: [group],
+      imageGroupId: 0,
+      imagePaidByUserId: 42,
+      onFormChange: (values) => last = values,
+    );
+
+    await _selectGroup(tester, 'Test Group');
+
+    expect(key.currentState!.fields['paidByUserId']!.value, isNull);
+    expect(
+      last?.paidByUserId,
+      isNull,
+      reason: 'the image must not keep a payer the field cannot show',
+    );
   });
 
   testWidgets('a group with default settings shows paid-by + status, '
       'hides categories + tags', (tester) async {
-    // Non-null settings carrying the backend defaults (distinct from the
-    // null-fallback case above).
+    // Non-null settings carrying the backend defaults. This is the load-bearing
+    // contrast to the no-group case above: a PICKED group with these settings
+    // still shows paid-by + status.
     await _pumpForm(tester, settings: _settings());
 
     expect(_dropdown('paidByUserId'), findsOneWidget);

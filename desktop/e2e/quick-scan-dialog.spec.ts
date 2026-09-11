@@ -82,8 +82,17 @@ test.describe('Quick scan dialog field response', () => {
     const groupField = dialog.getByRole('combobox', { name: 'Group' });
     await expect(groupField).toBeVisible();
 
-    // Before a configured group is chosen, paid-by shows (the unconfigured default).
-    await expect(dialog.getByRole('combobox', { name: 'Paid By' })).toBeVisible();
+    // No group is selected yet (the admin belongs to several, so soleGroupId seeds nothing), and a
+    // form with no group has no config to honour -- so ONLY the Group field renders rather than
+    // guessing a field set it would have to flip the moment a group is chosen. The toHaveValue('')
+    // is load-bearing: it pins that precondition, since an auto-filled group would silently turn
+    // the five absence assertions below into vacuous truths.
+    await expect(groupField).toHaveValue('');
+    await expect(dialog.getByRole('combobox', { name: 'Paid By' })).toHaveCount(0);
+    await expect(dialog.getByRole('combobox', { name: 'Status' })).toHaveCount(0);
+    await expect(dialog.getByRole('combobox', { name: 'Categories' })).toHaveCount(0);
+    await expect(dialog.getByRole('combobox', { name: 'Tags' })).toHaveCount(0);
+    await expect(dialog.getByTestId('quick-scan-comment')).toHaveCount(0);
 
     // Select the injected-config group. Via the shared helper because the field
     // may already carry a value (it auto-fills for a single-group user), which

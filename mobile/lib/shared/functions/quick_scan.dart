@@ -195,6 +195,10 @@ Future<void> _submitQuickScan(
 
     final config = resolveQuickScanFieldConfig(
       settings,
+      // Always true here - the groupId <= 0 guard above already returned. Written
+      // as the same expression the form uses rather than a bare `true` so the two
+      // call sites stay textually identical and cannot drift.
+      hasGroup: groupId > 0,
       canCreateComments: canCommentCreate(permissionsModel, groupId),
     );
     final showPaidBy = config.showPaidBy;

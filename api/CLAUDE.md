@@ -1320,7 +1320,7 @@ a real paid-by and status — neither field is ever null/empty**. This is why th
 - **Comment (`QuickScanCommentEnabled` / `QuickScanCommentRequired`)** captures a receipt comment at
   scan time. Two things gate it beyond its own toggle, both resolved in **one** place per runtime so
   they can't drift — `GroupReceiptSettings.IsQuickScanCommentShown()` / `IsQuickScanCommentRequired()`
-  on the server, `resolveQuickScanFieldConfig` on mobile, `showComment(i)` on desktop:
+  on the server, and `resolveQuickScanFieldConfig` on both clients:
   - **`HideComments`** (the group-wide "hide comments" setting) overrides the toggle. It is derived,
     never written: the stored toggles are untouched, so turning `HideComments` off restores them. The
     desktop config UI greys the two checkboxes out for the same reason — which is why its `submit()`

@@ -11,6 +11,7 @@ import { SnackbarService } from "../../services";
 import { AuthState, GroupState } from "../../store";
 import { codePointMaxLengthValidator, trimmedRequiredValidator } from "../../validators";
 import { UploadImageComponent } from "../upload-image/upload-image.component";
+import { QuickScanFieldConfig, resolveQuickScanFieldConfig } from "./quick-scan-field-config";
 
 // Mirrors the backend's models.MaxCommentLength (the Comment column is varchar(500), which
 // MySQL/Postgres measure in characters) and mobile's FormBuilderTextField maxLength, so an
@@ -146,32 +147,45 @@ export class QuickScanDialogComponent implements OnInit {
     return this.store.selectSnapshot(GroupState.getGroupById(groupId.toString()))?.groupReceiptSettings;
   }
 
-  public showPaidBy(index: number): boolean {
-    return this.settingsForIndex(index)?.quickScanPaidByEnabled ?? true;
+  // Whether the user has picked a group for this image. This -- not "did settings resolve" -- is
+  // what gates the field set: a group id the store does not know (a stale quickScanDefaultGroupId,
+  // or AppData not carrying that group) is still a choice, and keeps the backend defaults.
+  private hasGroupAt(index: number): boolean {
+    return !!this.groupIds.at(index)?.value;
   }
 
-  public showStatus(index: number): boolean {
-    return this.settingsForIndex(index)?.quickScanStatusEnabled ?? true;
-  }
-
-  public showCategories(index: number): boolean {
-    return this.settingsForIndex(index)?.quickScanCategoriesEnabled ?? false;
-  }
-
-  public showTags(index: number): boolean {
-    return this.settingsForIndex(index)?.quickScanTagsEnabled ?? false;
-  }
-
+  // Resolved per call rather than cached per index: removeImage() shifts every later image down, so
+  // an index-keyed cache would hand an image another one's config. The template reads the show*
+  // getters on every change-detection pass, which is what keeps them correct as the group changes.
+  //
   // The comment field additionally requires group.comments.create: without it the field is hidden,
   // never required, and a comment sent anyway is dropped server-side. hideComments hides the whole
   // group's comments, so it hides this too. Mirrors the backend's IsQuickScanCommentShown.
-  public showComment(index: number): boolean {
-    const settings = this.settingsForIndex(index);
-    if (!(settings?.quickScanCommentEnabled ?? false) || (settings?.hideComments ?? false)) {
-      return false;
-    }
+  private configForIndex(index: number): QuickScanFieldConfig {
+    return resolveQuickScanFieldConfig(this.settingsForIndex(index), {
+      hasGroup: this.hasGroupAt(index),
+      canCreateComments: this.canCommentForIndex(index),
+    });
+  }
 
-    return this.canCommentForIndex(index);
+  public showPaidBy(index: number): boolean {
+    return this.configForIndex(index).showPaidBy;
+  }
+
+  public showStatus(index: number): boolean {
+    return this.configForIndex(index).showStatus;
+  }
+
+  public showCategories(index: number): boolean {
+    return this.configForIndex(index).showCategories;
+  }
+
+  public showTags(index: number): boolean {
+    return this.configForIndex(index).showTags;
+  }
+
+  public showComment(index: number): boolean {
+    return this.configForIndex(index).showComment;
   }
 
   // Cached per group: AuthState.hasGroupPermission allocates a new selector on each call, and
@@ -206,37 +220,39 @@ export class QuickScanDialogComponent implements OnInit {
   // group-configured defaults (a hidden paid-by/status must be sent empty, not with a stale value).
   private configureImages(): void {
     for (let i = 0; i < this.images.length; i++) {
-      const settings = this.settingsForIndex(i);
-      const paidByShown = settings?.quickScanPaidByEnabled ?? true;
-      const statusShown = settings?.quickScanStatusEnabled ?? true;
-      const categoriesShown = settings?.quickScanCategoriesEnabled ?? false;
-      const tagsShown = settings?.quickScanTagsEnabled ?? false;
+      const config = this.configForIndex(i);
 
-      setRequired(this.form.get("paidByUserIds." + i), paidByShown && (settings?.quickScanPaidByRequired ?? true));
-      setRequired(this.form.get("statuses." + i), statusShown && (settings?.quickScanStatusRequired ?? true));
-      setRequired(this.form.get("categories." + i), categoriesShown && (settings?.quickScanCategoriesRequired ?? false));
-      setRequired(this.form.get("tags." + i), tagsShown && (settings?.quickScanTagsRequired ?? false));
+      // Required is recomputed unconditionally: with no group nothing but Group is required, and a
+      // required flag left over from a group the user just cleared has to come off.
+      setRequired(this.form.get("paidByUserIds." + i), config.requirePaidBy);
+      setRequired(this.form.get("statuses." + i), config.requireStatus);
+      setRequired(this.form.get("categories." + i), config.requireCategories);
+      setRequired(this.form.get("tags." + i), config.requireTags);
+      setRequired(this.form.get("comments." + i), config.requireComment, commentRequiredValidator);
 
-      if (!paidByShown) {
+      // Clearing is gated on a group being SELECTED. "Hidden because this group's config hides it"
+      // must clear, so the server backfills its configured default instead of receiving a stale
+      // value. "Hidden because no group is picked yet" must NOT: the values sitting there are the
+      // caller's quickScanDefault* prefills, and every FormArray.push in fileLoaded() emits
+      // valueChanges, so this runs before groupIds is even pushed -- an ungated clear would wipe
+      // those prefills on the very first pass and never put them back.
+      if (!this.hasGroupAt(i)) {
+        continue;
+      }
+
+      if (!config.showPaidBy) {
         this.form.get("paidByUserIds." + i)?.setValue("", { emitEvent: false });
       }
-      if (!statusShown) {
+      if (!config.showStatus) {
         this.form.get("statuses." + i)?.setValue("", { emitEvent: false });
       }
-      if (!categoriesShown) {
+      if (!config.showCategories) {
         (this.form.get("categories." + i) as FormArray | null)?.clear({ emitEvent: false });
       }
-      if (!tagsShown) {
+      if (!config.showTags) {
         (this.form.get("tags." + i) as FormArray | null)?.clear({ emitEvent: false });
       }
-
-      const commentShown = this.showComment(i);
-      setRequired(
-        this.form.get("comments." + i),
-        commentShown && (settings?.quickScanCommentRequired ?? false),
-        commentRequiredValidator
-      );
-      if (!commentShown) {
+      if (!config.showComment) {
         this.form.get("comments." + i)?.setValue("", { emitEvent: false });
       }
     }

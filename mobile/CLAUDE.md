@@ -700,14 +700,49 @@ backend **backfills** a default for a hidden/optional paid-by or status, `_submi
 those and per-file comma-joined `categoryIds` / `tagIds` plus a per-file `comments` string, building
 **one aligned array entry per image** (never skipping, so `files` and the parallel arrays stay 1:1). It
 requires a field only when that group's config marks it shown+required, mirroring the backend's
-`resolveQuickScanFields`. Null settings (no group selected yet) fall back to the backend defaults:
-paid-by/status shown, categories/tags/comment hidden.
+`resolveQuickScanFields`.
+
+**Until a group is picked, ONLY the Group dropdown renders.** There is no configuration to honour
+yet, and the old behaviour — falling back to the backend's column defaults, paid-by/status shown
+and required — was a guess that flipped the field set the moment the user chose a group whose
+config hides them. Common, not exotic: the group is seeded only from
+`userPreferences.quickScanDefaultGroupId` or `soleGroupId`, so any user in ≥2 groups without a
+default starts blank.
 
 The show/require derivation for all five fields lives in **one** pure helper —
-`resolveQuickScanFieldConfig(GroupReceiptSettings?, {required bool canCreateComments})` →
-`QuickScanFieldConfig` (`lib/shared/functions/quick_scan_field_config.dart`) — reused by both the
-form's `build()` and `_submitQuickScan`, so the two can't drift from each other or from
-`resolveQuickScanFields`. Covered by `test/shared/functions/quick_scan_field_config_test.dart`.
+`resolveQuickScanFieldConfig(GroupReceiptSettings?, {required bool hasGroup, required bool
+canCreateComments})` → `QuickScanFieldConfig` (`lib/shared/functions/quick_scan_field_config.dart`)
+— reused by both the form's `build()` and `_submitQuickScan`, so the two can't drift from each
+other or from `resolveQuickScanFields`. `hasGroup: false` returns `noGroupQuickScanFieldConfig`
+(all ten flags false). Covered by `test/shared/functions/quick_scan_field_config_test.dart`.
+
+- **`hasGroup` is keyed off "a group id is chosen", deliberately NOT `settings == null`.**
+  `getGroupReceiptSettings` returns null for *two* states — no group, and a group whose settings
+  aren't in `GroupModel` (a stale `quickScanDefaultGroupId`, which
+  `quick_scan_initial_values_test.dart` pins as reachable). Only the first collapses to Group-only;
+  a selected-but-unresolvable group keeps the backend defaults, so this change moves exactly one
+  behaviour. Desktop's resolver takes the same flag for the same reason.
+- **Hiding a field must not destroy its value, so `onValueChange` MERGES rather than overwrites.**
+  A hidden field is never built (`Visibility` defaults to `maintainState: false`), so it never
+  registers with `FormBuilder` and its key is absent from `formKey.currentState.value`. `FormBuilder`
+  runs with the default `clearValueOnUnregister: false`, so a key that *has* been registered
+  survives the field being hidden later — **an absent key therefore means "never shown", not
+  "cleared"**, and the image's own value is the right answer. Reporting `null` for an absent key
+  made the carousel consumer (`quick_scan.dart`, which writes every record member onto the
+  `QuickScanImage` unconditionally) erase the user's `quickScanDefault*` prefill on the very first
+  group selection — for exactly the users who have to pick a group. A field that *is* mounted always
+  reports its own value, so the explicit clears in the group dropdown's `onChanged` still apply.
+- **The group dropdown's `onChanged` re-reports in a post-frame callback.** The new group's fields
+  mount on the *next* frame, each seeding from the image — and a prefilled paid-by who is **not a
+  member** of the group just picked seeds the dropdown **blank** (`valueExists` in
+  `_buildUserDropDown`). Without the second report the image would keep that invisible id and
+  `_submitQuickScan` would send a user the caller never chose. Safe to re-enter: `onValueChange`
+  does not `setState`.
+- Both regression paths are pinned by `test/widgets/quick_scan_form_test.dart` ("keeps the paid-by
+  and status prefills through the first group selection" / "drops a prefilled paid-by who is not a
+  member of the group just picked"). That harness's `onFormChangeCallback` **mirrors the real
+  consumer** — with an inert `(_) {}` callback the image is never mutated and both tests pass with
+  the bug present.
 
 **The comment field is gated on `group.comments.create` as well as the group config.** The permission
 is a **required named argument** to the resolver (not read from a provider) so the helper stays pure

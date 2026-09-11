@@ -34,6 +34,7 @@ import 'helpers/form_actions.dart';
 import 'helpers/login.dart';
 import 'helpers/platform_mocks.dart';
 import 'helpers/pump.dart';
+import 'helpers/quick_scan_actions.dart';
 import 'helpers/receipt_test_helpers.dart';
 import 'helpers/users.dart';
 
@@ -75,15 +76,22 @@ void main() {
     }
     await tester.tap(find.text(uploadFileLabel).hitTestable());
 
-    // The picker mock resolves immediately with one 1x1 PNG, and the sheet
-    // opens already seeded with it -- so the QuickScanForm card mounts with its
-    // three dropdowns (groupId, paidByUserId, status) without any further
-    // interaction.
+    // The picker mock resolves immediately with one 1x1 PNG, and the sheet opens
+    // already seeded with it -- so the QuickScanForm card mounts. e2e-admin
+    // belongs to several groups and has no quickScanDefaultGroupId, so no group
+    // is seeded and ONLY the Group dropdown renders at this point.
     await pumpUntilFound(tester, find.text('Group'));
 
     // Fill the per-image form. e2e-admin's quickScan user prefs are
     // null, so all three fields need to be set explicitly.
     await selectDropdown(tester, 'groupId', 'My Receipts');
+
+    // Paid-by and status mount only once the group is picked, on the frame after
+    // its onChanged setState. selectDropdown already drains enough frames for
+    // that, but wait explicitly so the dependency is visible rather than
+    // incidental -- selectDropdown taps its target without first waiting for it.
+    await pumpUntilFound(tester, quickScanDropdown('paidByUserId'));
+
     await selectDropdown(tester, 'paidByUserId', adminDisplayName(tester));
     await selectDropdown(tester, 'status', 'Open');
 

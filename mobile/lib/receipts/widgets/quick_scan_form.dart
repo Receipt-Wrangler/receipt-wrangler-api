@@ -60,15 +60,39 @@ class _QuickScanForm extends State<QuickScanForm> {
 
   void onValueChange() {
     widget.formKey.currentState!.save();
-    var formValue = widget.formKey.currentState!.value;
+    final formValue = widget.formKey.currentState!.value;
+
+    // A field the config hides is never BUILT (Visibility defaults to
+    // maintainState: false), so it never registers with FormBuilder and its key
+    // is absent from `value`. FormBuilder runs with the default
+    // clearValueOnUnregister: false, so a key that HAS been registered survives
+    // the field being hidden later - an absent key therefore means "never
+    // shown", not "cleared", and the image's own value is the right answer.
+    //
+    // Reporting null for an absent key would erase the user's quickScanDefault*
+    // prefill on the very first group selection, because the consumer
+    // (quick_scan.dart) writes every record member onto the image
+    // unconditionally and this runs BEFORE the setState that reveals the fields.
+    // A field that IS mounted always reports its own value, so the explicit
+    // clears in the group dropdown's onChanged still take effect.
     widget.onFormChangeCallback((
+      // Always built, so no fallback is needed.
       groupId: formValue["groupId"],
-      paidByUserId: formValue["paidByUserId"],
-      status: formValue["status"],
-      categories:
-          (formValue["categories"] as List?)?.cast<api.Category>() ?? const [],
-      tags: (formValue["tags"] as List?)?.cast<api.Tag>() ?? const [],
-      comment: formValue["comment"] as String?,
+      paidByUserId: formValue.containsKey("paidByUserId")
+          ? formValue["paidByUserId"] as int?
+          : widget.image.paidByUserId,
+      status: formValue.containsKey("status")
+          ? formValue["status"] as api.ReceiptStatus?
+          : widget.image.status,
+      categories: formValue.containsKey("categories")
+          ? (formValue["categories"] as List?)?.cast<api.Category>() ?? const []
+          : widget.image.categories,
+      tags: formValue.containsKey("tags")
+          ? (formValue["tags"] as List?)?.cast<api.Tag>() ?? const []
+          : widget.image.tags,
+      comment: formValue.containsKey("comment")
+          ? formValue["comment"] as String?
+          : widget.image.comment,
     ));
   }
 
@@ -100,6 +124,18 @@ class _QuickScanForm extends State<QuickScanForm> {
         onValueChange();
         setState(() {
           groupId = value as int;
+        });
+        // The new group's field set mounts on the NEXT frame, each field seeding
+        // itself from the image. Report again once it exists, so the image
+        // matches what the user can actually see: a prefilled paid-by who is not
+        // a member of the group just picked seeds the dropdown BLANK
+        // (`valueExists` in _buildUserDropDown), and without this the image would
+        // keep the invisible id and _submitQuickScan would send it. Safe to
+        // re-enter: onValueChange does not setState.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            onValueChange();
+          }
         });
       },
     );
@@ -210,9 +246,9 @@ class _QuickScanForm extends State<QuickScanForm> {
   Widget build(BuildContext context) {
     // Field visibility/requirement follows the selected group's quick-scan
     // config. When paid-by/status is not shown+required the server backfills a
-    // configured default, so the field can be omitted here. Null (no group yet)
-    // falls back to the backend defaults: paid-by/status shown, categories/tags
-    // hidden.
+    // configured default, so the field can be omitted here. With no group picked
+    // yet only the Group dropdown renders - there is no config to honour, and
+    // guessing one means flipping the field set the moment a group is chosen.
     final settings = Provider.of<GroupModel>(context, listen: false)
         .getGroupReceiptSettings(groupId);
     final permissionsModel =
@@ -220,6 +256,7 @@ class _QuickScanForm extends State<QuickScanForm> {
 
     final config = resolveQuickScanFieldConfig(
       settings,
+      hasGroup: groupId > 0,
       canCreateComments: canCommentCreate(permissionsModel, groupId),
     );
     final showPaidBy = config.showPaidBy;

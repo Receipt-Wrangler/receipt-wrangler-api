@@ -197,6 +197,102 @@ describe("QuickScanDialogComponent", () => {
     component.fileLoaded({} as any);
 
     expect(component.groupIds.value).toEqual([""]);
+
+    // With no group picked there is no config to honour, so only the Group field renders.
+    expect(component.showPaidBy(0)).toBe(false);
+    expect(component.showStatus(0)).toBe(false);
+    expect(component.showCategories(0)).toBe(false);
+    expect(component.showTags(0)).toBe(false);
+    expect(component.showComment(0)).toBe(false);
+  });
+
+  it("requires only the group while none is selected", () => {
+    store.reset({
+      auth: {},
+      groups: {
+        groups: [
+          { id: 7, name: "My Receipts", isAllGroup: false },
+          { id: 8, name: "Household", isAllGroup: false },
+        ],
+        selectedGroupId: "",
+        selectedDashboardId: "",
+      },
+    });
+
+    component.fileLoaded({} as any);
+
+    // A hidden field is never required, so nothing but Group can block the submit.
+    expect(component.paidByUserIds.at(0).valid).toBe(true);
+    expect(component.statuses.at(0).valid).toBe(true);
+    expect(component.categories.at(0).valid).toBe(true);
+    expect(component.tags.at(0).valid).toBe(true);
+    expect(component.comments.at(0).valid).toBe(true);
+    expect(component.groupIds.at(0).valid).toBe(false);
+    expect(component.form.invalid).toBe(true);
+  });
+
+  it("keeps the paid-by and status prefills while no group is selected", () => {
+    // The regression guard for the prefill wipe. configureImages() clears any field it considers
+    // hidden, and every FormArray.push in fileLoaded() emits valueChanges -- so it runs while the
+    // group is still blank. Clearing there would destroy the caller's quickScanDefault* prefills
+    // and never put them back. Two groups so soleGroupId cannot seed one.
+    store.reset({
+      auth: {
+        userPreferences: {
+          quickScanDefaultPaidById: 1,
+          quickScanDefaultStatus: ReceiptStatus.Open,
+        },
+      },
+      groups: {
+        groups: [
+          { id: 7, name: "My Receipts", isAllGroup: false },
+          { id: 8, name: "Household", isAllGroup: false },
+        ],
+        selectedGroupId: "",
+        selectedDashboardId: "",
+      },
+    });
+
+    component.fileLoaded({} as any);
+
+    expect(component.paidByUserIds.at(0).value).toEqual(1);
+    expect(component.statuses.at(0).value).toEqual(ReceiptStatus.Open);
+    expect(component.groupIds.at(0).value).toEqual("");
+  });
+
+  it("clears a field the selected group hides, but not one hidden only because no group is picked", () => {
+    // Both halves of the clear-gate in one case: the prefill survives a blank group, then the same
+    // prefill is cleared once a group whose config hides paid-by is chosen (so the server backfills
+    // its configured default rather than receiving a stale value).
+    store.reset({
+      auth: {
+        userPreferences: {
+          quickScanDefaultPaidById: 1,
+          quickScanDefaultStatus: ReceiptStatus.Open,
+        },
+      },
+      groups: {
+        groups: [
+          { id: 7, name: "My Receipts", isAllGroup: false },
+          {
+            id: 8,
+            name: "Household",
+            isAllGroup: false,
+            groupReceiptSettings: { quickScanPaidByEnabled: false },
+          },
+        ],
+        selectedGroupId: "",
+        selectedDashboardId: "",
+      },
+    });
+
+    component.fileLoaded({} as any);
+    expect(component.paidByUserIds.at(0).value).toEqual(1);
+
+    component.groupIds.at(0).setValue(8);
+
+    expect(component.showPaidBy(0)).toBe(false);
+    expect(component.paidByUserIds.at(0).value).toEqual("");
   });
 
   it("should drive field visibility and required-ness from the selected group's settings", () => {

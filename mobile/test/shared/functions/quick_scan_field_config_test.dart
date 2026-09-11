@@ -38,9 +38,59 @@ api.GroupReceiptSettings _settings({
 
 void main() {
   group('resolveQuickScanFieldConfig', () {
-    test('null settings falls back to backend defaults', () {
-      final config =
-          resolveQuickScanFieldConfig(null, canCreateComments: true);
+    void expectNoFieldsShown(QuickScanFieldConfig config) {
+      expect(config.showPaidBy, isFalse);
+      expect(config.requirePaidBy, isFalse);
+      expect(config.showStatus, isFalse);
+      expect(config.requireStatus, isFalse);
+      expect(config.showCategories, isFalse);
+      expect(config.requireCategories, isFalse);
+      expect(config.showTags, isFalse);
+      expect(config.requireTags, isFalse);
+      expect(config.showComment, isFalse);
+      expect(config.requireComment, isFalse);
+    }
+
+    test('no group selected hides every field', () {
+      // Nothing but the Group dropdown renders until a group is picked: there is
+      // no config to honour, and guessing one means flipping the field set the
+      // moment the user chooses.
+      final config = resolveQuickScanFieldConfig(
+        null,
+        hasGroup: false,
+        canCreateComments: true,
+      );
+
+      expectNoFieldsShown(config);
+    });
+
+    test('no group wins over a fully-enabled config', () {
+      // Pins that the early return is unconditional - settings can never sneak a
+      // field back in while the group is unpicked.
+      final config = resolveQuickScanFieldConfig(
+        _settings(
+          categoriesEnabled: true,
+          tagsEnabled: true,
+          commentEnabled: true,
+        ),
+        hasGroup: false,
+        canCreateComments: true,
+      );
+
+      expectNoFieldsShown(config);
+    });
+
+    test('a selected group with no settings still gets the backend defaults', () {
+      // The stale-quickScanDefaultGroupId / AppData-not-loaded case: a group id we
+      // cannot resolve is still a choice, so it keeps the backend defaults rather
+      // than collapsing to the Group field. See quick_scan_initial_values_test's
+      // 'prefers the quick-scan default group over the only group', which pins
+      // that such an id reaches the form.
+      final config = resolveQuickScanFieldConfig(
+        null,
+        hasGroup: true,
+        canCreateComments: true,
+      );
 
       // Paid-by/status shown+required; categories/tags hidden.
       expect(config.showPaidBy, isTrue);
@@ -70,6 +120,7 @@ void main() {
           commentEnabled: true,
           commentRequired: true,
         ),
+        hasGroup: true,
         canCreateComments: true,
       );
 
@@ -100,6 +151,7 @@ void main() {
           commentEnabled: false,
           commentRequired: true,
         ),
+        hasGroup: true,
         canCreateComments: true,
       );
 
@@ -120,6 +172,7 @@ void main() {
       // required comment they can never fill; the server drops one sent anyway.
       final config = resolveQuickScanFieldConfig(
         _settings(commentEnabled: true, commentRequired: true),
+        hasGroup: true,
         canCreateComments: false,
       );
 
@@ -135,6 +188,7 @@ void main() {
           commentRequired: true,
           hideComments: true,
         ),
+        hasGroup: true,
         canCreateComments: true,
       );
 
@@ -145,6 +199,7 @@ void main() {
     test('a shown comment is optional unless required', () {
       final config = resolveQuickScanFieldConfig(
         _settings(commentEnabled: true, commentRequired: false),
+        hasGroup: true,
         canCreateComments: true,
       );
 

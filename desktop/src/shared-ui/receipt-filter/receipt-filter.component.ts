@@ -4,7 +4,7 @@ import { MatDialogRef } from "@angular/material/dialog";
 import { Store } from "@ngxs/store";
 import { endOfDay, startOfMonth } from "date-fns";
 import { take, tap } from "rxjs";
-import { RECEIPT_STATUS_OPTIONS } from "src/constants";
+import { RECEIPT_FILTER_FIELDS, RECEIPT_STATUS_OPTIONS } from "src/constants";
 import { SetReceiptFilter } from "src/store/receipt-table.actions";
 import { FormCommand } from "../../form/index";
 import { Category, FilterOperation, Tag } from "../../open-api";
@@ -124,23 +124,12 @@ export class ReceiptFilterComponent implements OnInit {
   }
 
   private setupAutoOperationSelection(): void {
-    // List of all filter fields
-    const fieldsToWatch = [
-      { fieldName: "date", type: "date" },
-      { fieldName: "name", type: "text" },
-      { fieldName: "paidBy", type: "users" },
-      { fieldName: "amount", type: "number" },
-      { fieldName: "categories", type: "list" },
-      { fieldName: "tags", type: "list" },
-      { fieldName: "status", type: "list" },
-      { fieldName: "group", type: "list" },
-      { fieldName: "resolvedDate", type: "date" },
-      { fieldName: "createdAt", type: "date" }
-    ];
-
-    fieldsToWatch.forEach(({ fieldName, type }) => {
-      const valueControl = this.parentForm.get(`${this.basePath}${fieldName}.value`);
-      const operationControl = this.parentForm.get(`${this.basePath}${fieldName}.operation`);
+    // RECEIPT_FILTER_FIELDS is the shared definition of every filter field's
+    // label and operation type, so these rows and the filter chips that describe
+    // them cannot drift apart.
+    RECEIPT_FILTER_FIELDS.forEach(({ key, type }) => {
+      const valueControl = this.parentForm.get(`${this.basePath}${key}.value`);
+      const operationControl = this.parentForm.get(`${this.basePath}${key}.operation`);
 
       if (valueControl && operationControl) {
         valueControl.valueChanges.subscribe(value => {

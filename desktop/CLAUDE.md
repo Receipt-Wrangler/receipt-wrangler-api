@@ -1209,6 +1209,84 @@ helpers `withAdminApi` + `apiDeleteUserByName` / `apiDeleteGroupById` / `apiDele
   spec rather than an extension of `group-viewer-visibility.spec.ts`, whose serial block has a known
   pre-existing failure — a Legacy User can't load `/groups` — that would skip any test appended to it.)
 
+## Receipts table filtering
+
+The receipts table (`src/receipts/receipts-table/`) offers three ways into **one** filter —
+`ReceiptTableState.filter`, which is persisted to localStorage. The advanced dialog
+(`app-receipt-filter`), the month stepper and the filter chips all read and write that single slice,
+so they can never disagree.
+
+- **Field metadata is shared.** `RECEIPT_FILTER_FIELDS` (`src/constants/receipt-filter-fields.constant.ts`)
+  is the one definition of each field's key, label and operation type. The dialog's
+  `setupAutoOperationSelection()` and the chip builder both read it, and `OperationsPipe` now reads
+  the extracted `FILTER_OPERATION_DISPLAY_VALUES`, so a chip cannot describe a condition differently
+  from the row that produced it.
+- **`isFilterEntryActive`** (`src/utils/receipt-filter-entry.ts`) is the shared "does this field
+  narrow anything" predicate: a non-empty stringified value that isn't `"0"`, **or** the operation
+  `WITHIN_CURRENT_MONTH` (the one operation that carries no value). `ReceiptTableState.numFiltersApplied`
+  and the chip builder both call it, so the Filter badge and the chip set always agree.
+- **Single-field writes go through `SetReceiptFilterField`**, whose handler spreads a new filter
+  object and rebuilds a cleared field from a **fresh** `buildDefaultReceiptFilter()`. That factory
+  replaced the shared `defaultReceiptFilter` constant inside `@State` defaults and `ResetReceiptFilter`
+  for the same reason: the old code wrote the module-level object straight into state, where a later
+  in-place edit would have corrupted the default for the rest of the session.
+  `ReceiptsTableComponent.applyFilterField()` is the only caller — it dispatches the action, then
+  `SetPage(1)`, then refetches, so narrowing a filter from page 7 can never land on an empty page.
+
+### The month stepper is the Date filter
+
+`app-month-stepper` (`src/shared-ui/month-stepper/`, standalone, deliberately presentational) emits
+months; `receipts-table` translates them with `src/utils/receipt-date-filter.ts`. A month is written
+as `BETWEEN [startOfMonth, endOfMonth]` — the one operation that can express *any* month, which is
+why this feature needed no API change. Picking a month **overwrites** whatever the Date filter held.
+
+- **The stepper and the chips never show the same condition twice.** While `monthFromFilterEntry`
+  resolves the Date filter to a month, the label names it and the chip row omits `date`. When it
+  cannot (a partial range, a `GREATER_THAN`, `WITHIN_CURRENT_MONTH`) the label reads **"Custom"** and
+  the Date chip renders, so the filter stays visible and clearable.
+- **`monthFromFilterEntry` must accept ISO strings, not just `Date`s.** The filter is persisted and
+  NGXS serializes through JSON, so after a reload `filter.date.value` is two ISO strings. It matches
+  on calendar fields (day 1, same year+month, `getDaysInMonth` on the end) rather than on the
+  serialized text, which also makes it tolerate the local-midnight pair the dialog's datepickers
+  write. Get this wrong and the label silently degrades to "Custom" after every refresh —
+  `e2e/receipt-quick-date-filter.spec.ts` covers it because the Jest specs cannot.
+- **`WITHIN_CURRENT_MONTH` is a no-op on the backend for `date` today.** `BuildGormFilterQuery` guards
+  every field with `if Filter.Date.Value != nil` and the dialog stores `value: null` for that
+  operation, so it never reaches the query builder — the badge counts it and nothing is filtered.
+  Pre-existing; the chip just surfaces it for the first time.
+- **Arrow steps from "All time"/"Custom" seed the current month** and then apply the delta, so `‹`
+  and `›` never do the same thing.
+
+### The overflow menu
+
+Quick Scan, Export all receipts, Configure Columns, Poll email(s) and the selection actions live in a
+`⋮` `mat-menu` (`data-testid="receipts-overflow-menu"`), always collapsed — not breakpoint-driven.
+
+**Every entry is a plain `<button mat-menu-item>` in `receipts-table.component.html`, never a shared
+component that renders one.** `MatMenu` collects items with a **content** query
+(`@ContentChildren(MatMenuItem, { descendants: true })`), which does not cross a child component's
+**view** boundary — so a `mat-menu-item` rendered inside `app-quick-scan-button`'s own template would
+be invisible to the menu and silently skipped by its `FocusKeyManager` (no arrow-key navigation, no
+typeahead, no open-focus). `display: contents` does not help. The behaviour still lives in one place:
+export calls `ReceiptExportService` directly, and Quick Scan calls the shared
+`openQuickScanDialog(matDialog)` (`src/receipts/quick-scan-dialog/open-quick-scan-dialog.ts`), which
+`app-quick-scan-button` uses too.
+
+Two consequences for tests and styles:
+- **A `mat-menu-item`'s role is `menuitem`, not `button`.** A `getByRole('button', { name: 'Quick Scan' })`
+  negative would pass whether or not the entry rendered, so `receipt-feature-gating.spec.ts` asserts
+  those absences by `data-testid` **with the menu open** (`openReceiptsOverflowMenu` in
+  `e2e/helpers/receipts-table.ts`). Any new negative assertion about a menu entry must do the same.
+- **Menu content renders in a CDK overlay**, outside `app-receipts-table`, so the
+  `ViewEncapsulation.None` + `app-receipts-table { … }` nesting in the component's SCSS cannot reach
+  it — the `N selected` section label is styled at the top level of that file instead.
+
+The chips row is inline markup (`mat-chip-set` / `matChipRemove`) with every label built by the pure
+`buildReceiptFilterChips` util, so `ReceiptsModule` must import **`MatChipsModule`** — `SharedUiModule`
+imports it but does not export it. An id the caller cannot resolve (a category outside their grants,
+a group they have left) renders as the raw id rather than dropping the chip, so a filter that is
+actively removing rows is never invisible.
+
 ## Quick Scan Configuration
 
 - **Group receipt settings** (`src/group/group-receipt-settings/`) has a **Quick Scan** section: per

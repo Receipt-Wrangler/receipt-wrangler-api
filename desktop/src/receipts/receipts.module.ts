@@ -7,6 +7,7 @@ import { MatCheckboxModule } from "@angular/material/checkbox";
 import { MatDialogModule } from "@angular/material/dialog";
 import { MatExpansionModule } from "@angular/material/expansion";
 import { MatIconModule } from "@angular/material/icon";
+import { MatChipsModule } from "@angular/material/chips";
 import { MatMenuModule } from "@angular/material/menu";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
 import { MatTableModule } from "@angular/material/table";
@@ -28,6 +29,7 @@ import { CategoryAutocompleteComponent } from "../category-autocomplete/category
 import { CheckboxModule } from "../checkbox/checkbox.module";
 import { DirectivesModule } from "../directives";
 import { InputModule } from "../input";
+import { MonthStepperComponent } from "../shared-ui/month-stepper/month-stepper.component";
 import { ExportButtonComponent } from "../standalone/components/export-button/export-button.component";
 import { FilteredStatefulMenuComponent } from "../standalone/components/filtered-stateful-menu/filtered-stateful-menu.component";
 import { TagAutocompleteComponent } from "../tag-autocomplete/tag-autocomplete.component";
@@ -80,6 +82,7 @@ import { UserTotalWithPercentagePipe } from "./user-total-with-percentage.pipe";
     InputModule,
     MatCardModule,
     MatCheckboxModule,
+    MatChipsModule,
     MatDialogModule,
     MatExpansionModule,
     MatIconModule,
@@ -100,6 +103,7 @@ import { UserTotalWithPercentagePipe } from "./user-total-with-percentage.pipe";
     UserAutocompleteModule,
     FilteredStatefulMenuComponent,
     CheckboxModule,
+    MonthStepperComponent,
   ],
   exports: [
     UploadImageComponent

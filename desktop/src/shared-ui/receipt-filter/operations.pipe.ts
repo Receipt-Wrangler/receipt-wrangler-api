@@ -1,6 +1,7 @@
 import { Pipe, PipeTransform } from "@angular/core";
 import {
   dateOperationOptions,
+  FILTER_OPERATION_DISPLAY_VALUES,
   listOperationOptions,
   numberOperationOptions,
   textOperationOptions,
@@ -13,15 +14,6 @@ import { FilterOperation } from "src/open-api";
     standalone: false
 })
 export class OperationsPipe implements PipeTransform {
-  private displayValues: { [key: string]: string } = {
-    [FilterOperation.Contains]: "Contains",
-    [FilterOperation.Equals]: "Equals",
-    [FilterOperation.GreaterThan]: "Greater than",
-    [FilterOperation.LessThan]: "Less than",
-    [FilterOperation.Between]: "Between",
-    [FilterOperation.WithinCurrentMonth]: "Within current month"
-  };
-
   public transform(type: string, display: boolean): string[] {
     let operationOptions: FilterOperation[] = [];
 
@@ -48,7 +40,7 @@ export class OperationsPipe implements PipeTransform {
 
   private getDisplayValue(option: FilterOperation | null, display: boolean): string {
     if (display) {
-      return this.displayValues?.[option ?? ""] ?? "";
+      return FILTER_OPERATION_DISPLAY_VALUES?.[option ?? ""] ?? "";
     } else {
       return option ?? "";
     }

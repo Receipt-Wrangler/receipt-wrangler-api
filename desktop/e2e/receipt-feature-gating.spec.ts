@@ -1,5 +1,6 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test';
 import { creds, stubTokenRefresh } from './helpers/auth';
+import { openReceiptsOverflowMenu } from './helpers/receipts-table';
 import {
   apiCreateReceipt,
   apiDeleteGroupById,
@@ -102,24 +103,27 @@ test.describe('Receipt feature gating (quick-scan / poll-email / magic-fill)', (
     await stubTokenRefresh(page);
   });
 
-  test('the receipts header shows no Quick Scan button', async ({ page }) => {
+  // Both controls live in the toolbar's overflow menu, so the menu has to be
+  // open for their absence to mean anything. They are asserted by testid rather
+  // than by name because a mat-menu-item's role is "menuitem", so a
+  // getByRole('button', ...) negative would pass whether or not they rendered.
+  test('the receipts overflow menu shows no Quick Scan entry', async ({ page }) => {
     await page.goto(`/receipts/group/${groupId}`);
     // The table renders for a member who holds group.receipts.read.
+    await openReceiptsOverflowMenu(page);
+    // Configure Columns is ungated, so the menu is genuinely populated.
     await expect(page.getByTestId('configure-columns')).toBeVisible();
     // Quick Scan (group.receipts.quick-scan, also feature-flagged) is absent.
-    await expect(
-      page.getByRole('button', { name: 'Quick Scan' }),
-    ).toHaveCount(0);
+    await expect(page.getByTestId('receipts-quick-scan')).toHaveCount(0);
   });
 
-  test('the receipts header shows no Poll Email button', async ({ page }) => {
+  test('the receipts overflow menu shows no Poll Email entry', async ({ page }) => {
     await page.goto(`/receipts/group/${groupId}`);
+    await openReceiptsOverflowMenu(page);
     await expect(page.getByTestId('configure-columns')).toBeVisible();
     // Poll Email (group.email.poll, also feature-flagged + needs email
     // integration enabled) is absent.
-    await expect(
-      page.getByRole('button', { name: 'Poll email(s)' }),
-    ).toHaveCount(0);
+    await expect(page.getByTestId('receipts-poll-email')).toHaveCount(0);
   });
 
   test('the receipt form shows no Magic Fill button', async ({ page }) => {
@@ -142,13 +146,14 @@ test.describe('Receipt feature gating (quick-scan / poll-email / magic-fill)', (
   }) => {
     await injectQuickScanAppData(page);
 
-    // Editor group (holds quick-scan) -> the button renders.
+    // Editor group (holds quick-scan) -> the entry renders.
     await page.goto(`/receipts/group/${editorGroupId}`);
-    await expect(page.getByTestId('configure-columns')).toBeVisible();
+    await openReceiptsOverflowMenu(page);
     await expect(page.getByTestId('receipts-quick-scan')).toBeVisible();
 
-    // Viewer group (lacks quick-scan), flag still on -> the button is absent.
+    // Viewer group (lacks quick-scan), flag still on -> the entry is absent.
     await page.goto(`/receipts/group/${groupId}`);
+    await openReceiptsOverflowMenu(page);
     await expect(page.getByTestId('configure-columns')).toBeVisible();
     await expect(page.getByTestId('receipts-quick-scan')).toHaveCount(0);
   });

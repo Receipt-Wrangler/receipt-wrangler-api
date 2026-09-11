@@ -81,7 +81,7 @@ test.describe('Group dashboard read gating', () => {
     await page.goto(`/dashboard/group/${groupId}`);
     // The guard redirects to the group's receipt list.
     await expect(page).toHaveURL(new RegExp(`/receipts/group/${groupId}`));
-    await expect(page.getByTestId('configure-columns')).toBeVisible();
+    await expect(page.getByTestId('receipts-overflow-menu')).toBeVisible();
   });
 
   test.describe('owner with group.dashboards.read', () => {

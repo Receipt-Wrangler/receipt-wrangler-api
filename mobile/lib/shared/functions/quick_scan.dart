@@ -16,19 +16,35 @@ import 'package:receipt_wrangler_mobile/shared/functions/permissions.dart';
 import 'package:receipt_wrangler_mobile/shared/functions/quick_scan_field_config.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/bottom_submit_button.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/delete_button.dart';
-import 'package:receipt_wrangler_mobile/utils/scan.dart';
 import 'package:receipt_wrangler_mobile/utils/snackbar.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../client/client.dart';
 import '../../constants/colors.dart';
 import '../../constants/receipt_entry.dart';
+import '../../enums/upload_method.dart';
 import '../../interfaces/upload_multipart_file_data.dart';
 import '../../utils/bottom_sheet.dart';
 import 'receipt_entry.dart';
+import 'receipt_upload.dart';
 import 'receipt_entry_availability.dart';
 
-Widget _getUploadIcon(
+/// Appends a fresh pick to the sheet, seeded like every other image in it.
+Future<void> _addPickedImages(
+  BuildContext context,
+  UploadMethod method,
+  BehaviorSubject<List<QuickScanImage>> imageSubject,
+) async {
+  final uploadedImages = await acquireReceiptFiles(context, method);
+  if (uploadedImages.isNotEmpty && context.mounted) {
+    imageSubject
+        .add(imageSubject.value + buildQuickScanImages(context, uploadedImages));
+  }
+}
+
+/// The document scanner, kept as its own one-tap action — capturing a receipt
+/// is the sheet's primary gesture and should not cost a menu.
+Widget _getScanIcon(
     context,
     BehaviorSubject<List<QuickScanImage>> imageSubject,
     BehaviorSubject<bool> isCompletedSubject) {
@@ -41,19 +57,19 @@ Widget _getUploadIcon(
         icon: const Icon(Icons.add_a_photo),
         onPressed: isCompleted
             ? null
-            : () async {
-                var uploadedImages = await scanImagesMultiPart(100);
-                if (uploadedImages.isNotEmpty && context.mounted) {
-                  imageSubject.add(imageSubject.value +
-                      buildQuickScanImages(context, uploadedImages));
-                }
-              },
+            : () async =>
+                _addPickedImages(context, UploadMethod.camera, imageSubject),
       );
     },
   );
 }
 
-Widget _getGalleryUploadImage(
+/// The two picker sources behind one icon.
+///
+/// A menu rather than two more icons: the sheet's app bar already carries the
+/// scanner and the delete action beside its title, and a fourth is tight on a
+/// narrow phone.
+Widget _getUploadSourceMenu(
     context,
     BehaviorSubject<List<QuickScanImage>> imageSubject,
     BehaviorSubject<bool> isCompletedSubject) {
@@ -62,17 +78,19 @@ Widget _getGalleryUploadImage(
     builder: (context, snapshot) {
       final isCompleted = snapshot.hasData && snapshot.data == true;
 
-      return IconButton(
+      return PopupMenuButton<UploadMethod>(
+        key: const ValueKey("quick-scan-upload-source-menu"),
         icon: const Icon(Icons.upload_file_rounded),
-        onPressed: isCompleted
-            ? null
-            : () async {
-                var uploadedImages = await pickGalleryImages(context);
-                if (uploadedImages.isNotEmpty && context.mounted) {
-                  imageSubject.add(imageSubject.value +
-                      buildQuickScanImages(context, uploadedImages));
-                }
-              },
+        enabled: !isCompleted,
+        tooltip: uploadSourceTooltip,
+        onSelected: (method) async =>
+            _addPickedImages(context, method, imageSubject),
+        itemBuilder: (_) => const [
+          PopupMenuItem(
+              value: UploadMethod.photos, child: Text(uploadPhotoLabel)),
+          PopupMenuItem(
+              value: UploadMethod.files, child: Text(uploadFileLabel)),
+        ],
       );
     },
   );
@@ -272,7 +290,7 @@ Future<void> _submitQuickScan(
     isCompletedSubject.add(true);
   } catch (e) {
     print(e);
-    showApiErrorSnackbar(context, e as dynamic);
+    showApiErrorSnackbar(context, e);
   } finally {
     loadingModel.setIsLoading(false);
   }
@@ -420,8 +438,8 @@ showQuickScanBottomSheet(BuildContext context,
       BehaviorSubject<bool>.seeded(false);
 
   List<Widget> actions = [
-    _getUploadIcon(context, imageSubject, isCompletedSubject),
-    _getGalleryUploadImage(context, imageSubject, isCompletedSubject),
+    _getScanIcon(context, imageSubject, isCompletedSubject),
+    _getUploadSourceMenu(context, imageSubject, isCompletedSubject),
     _getDeleteIcon(infiniteScrollController, imageSubject, isCompletedSubject),
   ];
 

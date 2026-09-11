@@ -5,6 +5,7 @@ import 'package:receipt_wrangler_mobile/constants/spacing.dart';
 import 'package:receipt_wrangler_mobile/interfaces/upload_multipart_file_data.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/image_viewer.dart';
 import 'package:receipt_wrangler_mobile/utils/date.dart';
+import 'package:receipt_wrangler_mobile/shared/widgets/unrenderable_file_placeholder.dart';
 import 'package:receipt_wrangler_mobile/utils/receipts.dart';
 
 class ReceiptImageCarousel extends StatefulWidget {
@@ -86,30 +87,35 @@ class _ReceiptImageCarousel extends State<ReceiptImageCarousel> {
     return const SizedBox.shrink();
   }
 
-  Image getDecodedImage(int index) {
+  Widget getDecodedImage(int index) {
     var image = widget.images?[index];
     if (image?.encodedImage == null) {
-      // TODO: add placeholder. This should never happen though
-      return Image.asset("assets/images/placeholder.png");
+      // Previously `Image.asset("assets/images/placeholder.png")`, which throws:
+      // there is no `assets/images/` directory and pubspec declares no such
+      // asset.
+      return const UnrenderableFilePlaceholder();
     } else {
       var base64Image = image?.encodedImage.split(",").last;
       var bytes = getBytesFromEncodedImage(base64Image ?? "");
 
-      return Image.memory(bytes);
+      // An empty `encodedImage` funnels through as zero bytes, which throws in
+      // the decoder exactly like an undecodable file would.
+      return Image.memory(bytes, errorBuilder: unrenderableFileErrorBuilder());
     }
   }
 
-  Image getInMemoryImage(int index) {
+  Widget getInMemoryImage(int index) {
     var indexToUse = index;
     if ((widget.images ?? []).isNotEmpty) {
       indexToUse = index - (widget.images!.length - 1);
     }
 
     var image = widget.imagesToUpload![indexToUse];
-    return Image.memory(image.bytes);
+    return Image.memory(image.bytes,
+        errorBuilder: unrenderableFileErrorBuilder(filename: image.filename));
   }
 
-  Image getImage(int index) {
+  Widget getImage(int index) {
     if (index <= (widget.images ?? []).length - 1) {
       return getDecodedImage(index);
     } else {

@@ -6,14 +6,15 @@ import 'package:permission_handler/permission_handler.dart' show openAppSettings
 import 'package:provider/provider.dart';
 
 import '../../constants/receipt_entry.dart';
+import '../../enums/upload_method.dart';
 import '../../interfaces/upload_multipart_file_data.dart';
 import '../../models/loading_model.dart';
 import '../../services/token_refresh_service.dart';
 import '../../utils/group.dart';
 import '../../utils/permissions.dart';
-import '../../utils/scan.dart';
 import '../../utils/snackbar.dart';
 import 'quick_scan.dart';
+import 'receipt_upload.dart';
 import 'receipt_entry_availability.dart';
 
 /// The actions behind every receipt-entry affordance.
@@ -109,9 +110,9 @@ Future<void> startScanEntry(BuildContext context) async {
     case CameraAccess.denied:
       // The user declined this time but can be asked again, so no settings
       // detour — just carry on with the source that still works.
-      await fallBackToGallery(context, offerSettings: false);
+      await fallBackToPhotos(context, offerSettings: false);
     case CameraAccess.permanentlyDenied:
-      await fallBackToGallery(context, offerSettings: true);
+      await fallBackToPhotos(context, offerSettings: true);
   }
 }
 
@@ -121,14 +122,14 @@ Future<void> startScanEntry(BuildContext context) async {
 Future<void> openQuickScanFromCamera(BuildContext context) async {
   final List<UploadMultipartFileData> images;
   try {
-    images = await scanImagesMultiPart(100);
+    images = await acquireReceiptFiles(context, UploadMethod.camera);
   } on CunningDocumentScannerException catch (_) {
     // The scanner re-checks camera permission itself and throws when it is
     // missing. [ensureCameraAccess] normally settles that first, but the grant
     // can be revoked between the two calls (or refused inside the scanner's own
     // prompt) — so land on the same fallback rather than an unhandled error.
     if (context.mounted) {
-      await fallBackToGallery(context, offerSettings: true);
+      await fallBackToPhotos(context, offerSettings: true);
     }
     return;
   }
@@ -140,13 +141,18 @@ Future<void> openQuickScanFromCamera(BuildContext context) async {
       initialImages: buildQuickScanImages(context, images));
 }
 
-/// Explains that the camera is unavailable and continues with the gallery, the
-/// one image source that is still open to the user.
+/// Explains that the camera is unavailable and continues with the photo
+/// library.
+///
+/// Photos rather than a source menu because this is an automatic continuation,
+/// not a choice: the user just tried to *photograph* a receipt, so their
+/// library is the nearest substitute. Someone whose receipt is a PDF in Files
+/// can still reach it from the menu.
 ///
 /// [offerSettings] adds the OS settings shortcut, for the states a re-request
 /// cannot recover from — there the prompt resolves instantly with no dialog, so
 /// without this the tap would look like it did nothing.
-Future<void> fallBackToGallery(
+Future<void> fallBackToPhotos(
   BuildContext context, {
   required bool offerSettings,
 }) async {
@@ -157,52 +163,35 @@ Future<void> fallBackToGallery(
         ? SnackBarAction(label: "Settings", onPressed: openAppSettings)
         : null,
   );
-  await openQuickScanFromGallery(context);
+  await openQuickScanFromPicker(context, UploadMethod.photos);
 }
 
-/// The "Upload from gallery" menu item's tap.
+/// The "Upload Photo" / "Upload File" menu items' tap.
 ///
-/// The one Quick Scan initiation that does not go through [startScanEntry], so
-/// it needs its own refresh. [openQuickScanFromGallery] deliberately does not
-/// refresh on its own behalf: [fallBackToGallery] reaches it from inside
+/// The Quick Scan initiations that do not go through [startScanEntry], so they
+/// need their own refresh. [openQuickScanFromPicker] deliberately does not
+/// refresh on its own behalf: [fallBackToPhotos] reaches it from inside
 /// [startScanEntry], which has already refreshed, and a second fetch on the
 /// camera-denied path would be pure waste.
-Future<void> startGalleryEntry(BuildContext context) async {
+Future<void> startPickerEntry(
+    BuildContext context, UploadMethod method) async {
   await _refreshBeforeQuickScan(context);
   if (!context.mounted) {
     return;
   }
 
-  await openQuickScanFromGallery(context);
+  await openQuickScanFromPicker(context, method);
 }
 
-/// Picks from the gallery, then opens the sheet seeded with the selection.
-Future<void> openQuickScanFromGallery(BuildContext context) async {
-  final images = await pickGalleryImages(context);
+/// Picks from [method], then opens the sheet seeded with the selection.
+Future<void> openQuickScanFromPicker(
+    BuildContext context, UploadMethod method) async {
+  final images = await acquireReceiptFiles(context, method);
   if (images.isEmpty || !context.mounted) {
     return;
   }
   showQuickScanBottomSheet(context,
       initialImages: buildQuickScanImages(context, images));
-}
-
-/// [getGalleryImages] with any failure turned into a message.
-///
-/// It hard-throws off android/ios (`lib/utils/scan.dart`'s
-/// `Platform.operatingSystem` switch), which the nav's camera-denied fallback
-/// now makes reachable, and the picker itself can fail on a real device — an
-/// unhandled async error either way would surface as a red screen rather than
-/// an explanation.
-Future<List<UploadMultipartFileData>> pickGalleryImages(
-    BuildContext context) async {
-  try {
-    return await getGalleryImages();
-  } catch (_) {
-    if (context.mounted) {
-      showErrorSnackbar(context, galleryUnavailableMessage);
-    }
-    return [];
-  }
 }
 
 /// Opens the manual receipt form.
@@ -285,8 +274,14 @@ List<PopupMenuEntry> buildReceiptEntryMenuItems(BuildContext context) {
     if (availability.canQuickScan)
       PopupMenuItem(
         value: 2,
-        onTap: () => startGalleryEntry(context),
-        child: const Text(uploadFromGalleryLabel),
+        onTap: () => startPickerEntry(context, UploadMethod.photos),
+        child: const Text(uploadPhotoLabel),
+      ),
+    if (availability.canQuickScan)
+      PopupMenuItem(
+        value: 3,
+        onTap: () => startPickerEntry(context, UploadMethod.files),
+        child: const Text(uploadFileLabel),
       ),
   ];
 }

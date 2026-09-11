@@ -1,10 +1,10 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openapi/openapi.dart' as api;
 import 'package:receipt_wrangler_mobile/constants/receipt_entry.dart';
+import '../../helpers/image_picker_mock.dart';
 import 'package:receipt_wrangler_mobile/shared/functions/receipt_entry.dart';
 import 'package:receipt_wrangler_mobile/shared/functions/receipt_entry_availability.dart';
 import 'package:receipt_wrangler_mobile/utils/permissions.dart';
@@ -161,8 +161,17 @@ void main() {
           reason: 'a cancelled scan is "never mind", not an error');
     });
 
-    testWidgets('denied explains itself and falls back to the gallery',
+    testWidgets('denied explains itself and falls back to the photo library',
         (tester) async {
+      // The fallback lands on the photo picker, so make that picker fail: its
+      // message is what proves the fallback was actually attempted rather than
+      // the tap ending silently.
+      //
+      // This used to rely on `getGalleryImages` throwing "Unsupported platform"
+      // on a desktop host, which meant the case was skipped on Android/iOS and
+      // passed by accident everywhere else. Installing the failure explicitly
+      // makes it a contract and lets the case run on every target.
+      installFailingImagePickerMock();
       debugCameraAccessOverride = () async => CameraAccess.denied;
       await pumpEntry(tester,
           aiEnabled: true, permissions: [quickScan, create]);
@@ -174,17 +183,14 @@ void main() {
       expect(find.text('Settings'), findsNothing,
           reason: 'the user can still be re-prompted, so no settings detour');
 
-      // ScaffoldMessenger shows one snackbar at a time, so the gallery's own
-      // message is queued behind the notice. Dropping the first surfaces it --
-      // and the widget suite runs on a desktop host, where getGalleryImages
-      // throws "Unsupported platform", so that second message is the proof the
-      // gallery was actually attempted rather than the tap ending silently.
+      // ScaffoldMessenger shows one snackbar at a time, so the picker's own
+      // message is queued behind the notice. Dropping the first surfaces it.
       ScaffoldMessenger.of(capturedContext).removeCurrentSnackBar();
       await tester.pump();
 
-      expect(find.text(galleryUnavailableMessage), findsOneWidget);
+      expect(find.text(photoPickerUnavailableMessage), findsOneWidget);
       expect(visited, isEmpty);
-    }, skip: Platform.isAndroid || Platform.isIOS);
+    });
 
     testWidgets('permanently denied offers the settings escape hatch',
         (tester) async {
@@ -249,14 +255,15 @@ void main() {
       expect(
         await menuLabels(tester,
             aiEnabled: true, permissions: [quickScan, create]),
-        [quickScanLabel, addManualReceiptLabel, uploadFromGalleryLabel],
+        [quickScanLabel, addManualReceiptLabel, uploadPhotoLabel, uploadFileLabel],
       );
     });
 
     testWidgets('drops both scan entries when Quick Scan cannot run',
         (tester) async {
-      // Gallery upload feeds Quick Scan, so it is gated on quick-scan rather
-      // than create -- offering it here would produce an unsubmittable sheet.
+      // Both picker entries feed Quick Scan, so they are gated on quick-scan
+      // rather than create -- offering them here would produce an
+      // unsubmittable sheet.
       expect(
         await menuLabels(tester, aiEnabled: false, permissions: [quickScan, create]),
         [addManualReceiptLabel],
@@ -267,7 +274,7 @@ void main() {
         (tester) async {
       expect(
         await menuLabels(tester, aiEnabled: true, permissions: [quickScan]),
-        [quickScanLabel, uploadFromGalleryLabel],
+        [quickScanLabel, uploadPhotoLabel, uploadFileLabel],
       );
     });
 

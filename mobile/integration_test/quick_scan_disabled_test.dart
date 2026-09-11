@@ -82,8 +82,10 @@ void main() {
     await openEntryMenu();
     expect(find.text(quickScanLabel), findsNothing,
         reason: 'Quick Scan must not appear when aiPoweredReceipts=false');
-    expect(find.text(uploadFromGalleryLabel), findsNothing,
-        reason: 'gallery upload feeds Quick Scan, so it goes with it');
+    expect(find.text(uploadPhotoLabel), findsNothing,
+        reason: 'both picker entries feed Quick Scan, so they go with it');
+    expect(find.text(uploadFileLabel), findsNothing,
+        reason: 'both picker entries feed Quick Scan, so they go with it');
 
     // Dismiss the popup before reopening with the flag flipped on. Waiting for
     // the items to actually leave -- rather than pumping a fixed duration -- is
@@ -99,7 +101,9 @@ void main() {
     await openEntryMenu();
     expect(find.text(quickScanLabel), findsOneWidget,
         reason: 'Quick Scan must reappear when aiPoweredReceipts=true');
-    expect(find.text(uploadFromGalleryLabel), findsOneWidget,
-        reason: 'and gallery upload comes back with it');
+    expect(find.text(uploadPhotoLabel), findsOneWidget,
+        reason: 'and both picker entries come back with it');
+    expect(find.text(uploadFileLabel), findsOneWidget,
+        reason: 'and both picker entries come back with it');
   });
 }

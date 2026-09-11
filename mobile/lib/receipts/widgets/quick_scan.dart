@@ -3,6 +3,7 @@ import 'package:infinite_carousel/infinite_carousel.dart';
 import 'package:receipt_wrangler_mobile/receipts/widgets/quick_scan_form.dart';
 import 'package:receipt_wrangler_mobile/shared/classes/quick_scan_image.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/image_viewer.dart';
+import 'package:receipt_wrangler_mobile/shared/widgets/unrenderable_file_placeholder.dart';
 import 'package:receipt_wrangler_mobile/utils/receipts.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -20,7 +21,13 @@ class QuickScan extends StatelessWidget {
   final BehaviorSubject<bool> isCompletedSubject;
 
   Widget _buildImagePreview(BuildContext context, int index) {
-    var image = Image.memory(imageSubject.value[index].bytes);
+    final quickScanImage = imageSubject.value[index];
+    // A PDF picked from the file source uploads and OCRs fine but cannot be
+    // decoded here; without this it renders as a broken-image glyph and reads
+    // as a failed upload.
+    var image = Image.memory(quickScanImage.bytes,
+        errorBuilder:
+            unrenderableFileErrorBuilder(filename: quickScanImage.filename));
     return SizedBox(
         height: getImagePreviewHeight(context),
         width: getImagePreviewWidth(context),

@@ -1,19 +1,22 @@
 import 'dart:io';
 
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
-import 'package:file_selector/file_selector.dart';
 import 'package:dio/dio.dart' as dio;
 import 'package:http/http.dart';
 import 'package:receipt_wrangler_mobile/interfaces/upload_multipart_file_data.dart';
 
-const multipleFileFieldName = "files";
-const singularFileFieldName = "file";
+/// The multipart field name handed to `MultipartFile.fromPath` below.
+///
+/// It never reaches the wire — the generated client hardcodes its own field
+/// names (`files` on quick scan, `file` on receipt-image upload) — so this only
+/// exists to satisfy the constructor whose basename derivation we actually
+/// want.
+const _uploadFieldName = "file";
 
-Future<List<String>> scanImages(int numberOfPages) async {
-  return await CunningDocumentScanner.getPictures(noOfPages: numberOfPages) ??
-      [];
-}
-
+/// Captures pages with the document scanner.
+///
+/// The gallery and file sources live in `lib/utils/media_picker.dart`; the three
+/// are selected between by `acquireReceiptFiles`.
 Future<List<UploadMultipartFileData>> scanImagesMultiPart(
     int numberOfPages) async {
   var files = <UploadMultipartFileData>[];
@@ -27,10 +30,11 @@ Future<List<UploadMultipartFileData>> scanImagesMultiPart(
     return files;
   }
 
-  var multiple = numberOfPages > 1;
   for (var filePath in filePaths) {
+    // Built only to derive the basename from the path; the field name is
+    // discarded and the filename is what carries through.
     var multipartFile =
-        await MultipartFile.fromPath(getFieldName(multiple), filePath);
+        await MultipartFile.fromPath(_uploadFieldName, filePath);
     var bytes = await File(filePath).readAsBytes();
 
     var dioMultipartFile =
@@ -41,57 +45,4 @@ Future<List<UploadMultipartFileData>> scanImagesMultiPart(
   }
 
   return files;
-}
-
-Future<List<UploadMultipartFileData>> getGalleryImages(
-    {multiple = true}) async {
-  var files = <UploadMultipartFileData>[];
-
-  const XTypeGroup typeGroup = XTypeGroup();
-  List<XFile> openedFiles = [];
-
-  switch (Platform.operatingSystem) {
-    case "android":
-      openedFiles = await openAndroidGallery();
-      break;
-    case "ios":
-      openedFiles = await openIOSGallery();
-      break;
-    default:
-      throw Exception("Unsupported platform");
-  }
-
-  for (var file in openedFiles) {
-    var bytes = await file.readAsBytes();
-    var multipartFile = await MultipartFile.fromBytes(
-        getFieldName(multiple), bytes,
-        filename: file.name);
-
-    var dioMultipartFile =
-        dio.MultipartFile.fromBytes(bytes, filename: multipartFile.filename);
-    files.add(
-        UploadMultipartFileData(multipartFile: dioMultipartFile, bytes: bytes));
-  }
-
-  return files;
-}
-
-getFieldName(bool multiple) {
-  return multiple ? multipleFileFieldName : singularFileFieldName;
-}
-
-Future<List<XFile>> openIOSGallery() async {
-  const typeGroup = XTypeGroup(
-    uniformTypeIdentifiers: ["public.image", "com.adobe.pdf"],
-  );
-  return await openFiles(acceptedTypeGroups: [typeGroup]);
-}
-
-Future<List<XFile>> openAndroidGallery() async {
-  const typeGroup = XTypeGroup(
-    mimeTypes: ["image/*", "application/pdf"],
-  );
-  return await openFiles(
-    acceptedTypeGroups: [typeGroup],
-  );
 }

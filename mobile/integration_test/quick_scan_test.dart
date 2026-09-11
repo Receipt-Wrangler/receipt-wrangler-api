@@ -14,9 +14,11 @@
 // flow shows an error snackbar instead of the bottom sheet (see
 // mobile/lib/shared/functions/quick_scan.dart:227-231).
 //
-// Skipped on Linux: scan.dart's gallery path throws "Unsupported
-// platform" for Linux/macOS/Windows desktop. Runs on Android
-// emulator + iOS simulator in CI.
+// Runs on every target. It drives the **file** source, which
+// `installFileSelectorMock` intercepts by swapping the platform interface
+// before any platform code runs. (The photo source is not asserted here: on
+// Linux `image_picker` delegates to `file_selector`, so the two sources are
+// indistinguishable there.)
 
 import 'dart:io' show Platform;
 
@@ -44,10 +46,7 @@ void main() {
     }
   });
 
-  testWidgets('quick scan from gallery: pick image, fill form, submit',
-      // Same Linux skip as Flow #2 / Flow B -- gallery picker only
-      // supports Android/iOS in scan.dart.
-      skip: Platform.isLinux,
+  testWidgets('quick scan from a file: pick image, fill form, submit',
       (tester) async {
     // Quick Scan is gated on featureConfig.aiPoweredReceipts, which is off by
     // default on the local backend. Flip it on for this test (restored on
@@ -70,11 +69,11 @@ void main() {
     // misses (deterministic on iOS: "Offset(595.9, 866.0) ... would not hit
     // test"). Wait for hittability, then drain the animation -- same hardening
     // as addManualReceiptViaUI.
-    await pumpUntilFound(tester, find.text(uploadFromGalleryLabel).hitTestable());
+    await pumpUntilFound(tester, find.text(uploadFileLabel).hitTestable());
     for (int i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.tap(find.text(uploadFromGalleryLabel).hitTestable());
+    await tester.tap(find.text(uploadFileLabel).hitTestable());
 
     // The picker mock resolves immediately with one 1x1 PNG, and the sheet
     // opens already seeded with it -- so the QuickScanForm card mounts with its

@@ -138,8 +138,11 @@ void main() {
           reason: 'still holds receipts.create');
       expect(find.text(quickScanLabel), findsNothing,
           reason: 'lacks group.receipts.quick-scan');
-      expect(find.text(uploadFromGalleryLabel), findsNothing,
-          reason: 'gallery upload feeds Quick Scan, so it needs the same '
+      expect(find.text(uploadPhotoLabel), findsNothing,
+          reason: 'the picker entries feed Quick Scan, so they need the same '
+              'permission');
+      expect(find.text(uploadFileLabel), findsNothing,
+          reason: 'the picker entries feed Quick Scan, so they need the same '
               'permission');
     },
   );
@@ -163,7 +166,8 @@ void main() {
       await openEntryMenu(tester);
       await pumpUntilFound(tester, find.text(quickScanLabel));
       expect(find.text(quickScanLabel), findsOneWidget);
-      expect(find.text(uploadFromGalleryLabel), findsOneWidget);
+      expect(find.text(uploadPhotoLabel), findsOneWidget);
+      expect(find.text(uploadFileLabel), findsOneWidget);
     },
   );
 }

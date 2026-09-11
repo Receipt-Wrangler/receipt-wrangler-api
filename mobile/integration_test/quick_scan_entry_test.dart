@@ -81,7 +81,8 @@ void main() {
 
     expect(find.text(quickScanLabel), findsOneWidget);
     expect(find.text(addManualReceiptLabel), findsOneWidget);
-    expect(find.text(uploadFromGalleryLabel), findsOneWidget);
+    expect(find.text(uploadPhotoLabel), findsOneWidget);
+      expect(find.text(uploadFileLabel), findsOneWidget);
   });
 
   testWidgets('the receipts screen overflow carries the same entries',
@@ -107,7 +108,8 @@ void main() {
     await pumpUntilFound(tester, find.text(addManualReceiptLabel).hitTestable());
 
     expect(find.text(addManualReceiptLabel), findsOneWidget);
-    expect(find.text(uploadFromGalleryLabel), findsOneWidget);
+    expect(find.text(uploadPhotoLabel), findsOneWidget);
+      expect(find.text(uploadFileLabel), findsOneWidget);
   });
 
   testWidgets("the overflow's Quick Scan really opens the sheet",

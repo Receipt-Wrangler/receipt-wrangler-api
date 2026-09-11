@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -51,6 +53,22 @@ import 'models/system_settings_model.dart';
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
+  // Opt into the Android Photo Picker on API 33-35. It is already the default
+  // on 36+, where this is a no-op, and below 33 the Play Services backport
+  // covers it (see the ModuleDependencies service in AndroidManifest.xml).
+  //
+  // This is plugin *configuration* -- no permission request, no channel round
+  // trip, no system dialog -- so it does not fall under the launch-time-work
+  // ban documented in `_ReceiptWrangler.initState` for the iOS render-pause
+  // freeze (GitHub #617). Do not move it there. It has to run before the first
+  // pick, and `ensureInitialized()` above has just registered the plugin whose
+  // instance it reads.
+  final imagePicker = ImagePickerPlatform.instance;
+  if (imagePicker is ImagePickerAndroid) {
+    imagePicker.useAndroidPhotoPicker = true;
+  }
+
   await GlobalSharedPreferences.initialize();
 
   // Crash/error reporting is opt-out (on by default). When disabled we don't

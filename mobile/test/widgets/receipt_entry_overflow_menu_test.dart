@@ -83,7 +83,8 @@ void main() {
 
     expect(find.text(quickScanLabel), findsOneWidget);
     expect(find.text(addManualReceiptLabel), findsOneWidget);
-    expect(find.text(uploadFromGalleryLabel), findsOneWidget);
+    expect(find.text(uploadPhotoLabel), findsOneWidget);
+      expect(find.text(uploadFileLabel), findsOneWidget);
   });
 
   testWidgets('drops the scan entries when Quick Scan cannot run',
@@ -95,7 +96,8 @@ void main() {
 
     expect(find.text(addManualReceiptLabel), findsOneWidget);
     expect(find.text(quickScanLabel), findsNothing);
-    expect(find.text(uploadFromGalleryLabel), findsNothing);
+    expect(find.text(uploadPhotoLabel), findsNothing);
+      expect(find.text(uploadFileLabel), findsNothing);
   });
 
   testWidgets('drops manual entry without the create permission',

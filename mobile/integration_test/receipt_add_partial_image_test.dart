@@ -20,15 +20,15 @@
 //     on /receipts/<id>/view, and the receipt has 0 imageFiles
 //     server-side.
 //
-// Skipped on Linux: scan.dart's gallery picker only supports
-// Android/iOS (same as Flow 2). Runs on Android emulator + iOS sim
-// in CI.
+// Runs on every target: it drives the **file** source, which
+// `installFileSelectorMock` intercepts by swapping the platform interface.
 
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:receipt_wrangler_mobile/constants/receipt_entry.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/bottom_submit_button.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/receipt_edit_popup_menu.dart';
 
@@ -53,9 +53,6 @@ void main() {
 
   testWidgets(
       'image upload failure: partial-failure snackbar shown, receipt still created',
-      // Same Linux skip as Flow 2 -- scan.dart:58 throws
-      // "Unsupported platform" for the gallery picker on Linux.
-      skip: Platform.isLinux,
       (tester) async {
     await installFileSelectorMock();
     await binding.setSurfaceSize(const Size(1280, 900));
@@ -96,11 +93,11 @@ void main() {
     // hittable, then drain the open animation before tapping -- same
     // hardening as the Edit-popup taps in the cost-split/comments specs.
     await pumpUntilFound(
-        tester, find.text('Upload from Gallery').hitTestable());
+        tester, find.text(uploadFileLabel).hitTestable());
     for (int i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.tap(find.text('Upload from Gallery').hitTestable());
+    await tester.tap(find.text(uploadFileLabel).hitTestable());
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     await tester.tap(find.byIcon(Icons.arrow_back));

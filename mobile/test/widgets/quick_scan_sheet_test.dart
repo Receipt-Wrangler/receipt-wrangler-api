@@ -8,6 +8,11 @@ import 'package:receipt_wrangler_mobile/receipts/widgets/quick_scan.dart';
 import 'package:receipt_wrangler_mobile/shared/functions/quick_scan.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:receipt_wrangler_mobile/enums/upload_method.dart';
+
 import '../helpers/permission_test_helpers.dart';
 import '../helpers/receipt_entry_test_helpers.dart';
 import '../helpers/receipt_form_test_helpers.dart';
@@ -16,6 +21,34 @@ import '../helpers/receipt_form_test_helpers.dart';
 /// and the overflow menu, so it re-checks its own gates rather than trusting the
 /// caller -- and it offers a way out to manual entry only for users who could
 /// actually save one.
+class _RecordingImagePicker extends ImagePickerPlatform
+    with MockPlatformInterfaceMixin {
+  int pickCalls = 0;
+
+  @override
+  Future<List<XFile>> getMultiImageWithOptions({
+    MultiImagePickerOptions options = const MultiImagePickerOptions(),
+  }) async {
+    pickCalls++;
+    return <XFile>[];
+  }
+}
+
+class _RecordingFileSelector extends FileSelectorPlatform
+    with MockPlatformInterfaceMixin {
+  int openFilesCalls = 0;
+
+  @override
+  Future<List<XFile>> openFiles({
+    List<XTypeGroup>? acceptedTypeGroups,
+    String? initialDirectory,
+    String? confirmButtonText,
+  }) async {
+    openFilesCalls++;
+    return <XFile>[];
+  }
+}
+
 void main() {
   const quickScan = api.Permission.groupPeriodReceiptsPeriodQuickScan;
   const create = api.Permission.groupPeriodReceiptsPeriodCreate;
@@ -99,6 +132,61 @@ void main() {
 
     return controller;
   }
+
+  group('the upload source menu', () {
+    const menuKey = ValueKey('quick-scan-upload-source-menu');
+
+    testWidgets('offers both picker sources behind one icon', (tester) async {
+      await pumpSheet(tester,
+          aiEnabled: true, permissions: [quickScan, create]);
+
+      // Closed, it is one icon -- the sheet's app bar already carries the
+      // scanner and delete beside the title.
+      expect(find.byKey(menuKey), findsOneWidget);
+      expect(find.text(uploadPhotoLabel), findsNothing);
+      expect(find.text(uploadFileLabel), findsNothing);
+
+      await tester.tap(find.byKey(menuKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text(uploadPhotoLabel), findsOneWidget);
+      expect(find.text(uploadFileLabel), findsOneWidget);
+    });
+
+    testWidgets('routes each entry to its own picker', (tester) async {
+      final picker = _RecordingImagePicker();
+      final selector = _RecordingFileSelector();
+      ImagePickerPlatform.instance = picker;
+      FileSelectorPlatform.instance = selector;
+
+      await pumpSheet(tester,
+          aiEnabled: true, permissions: [quickScan, create]);
+
+      await tester.tap(find.byKey(menuKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(uploadPhotoLabel));
+      await tester.pumpAndSettle();
+
+      expect(picker.pickCalls, 1);
+      expect(selector.openFilesCalls, 0);
+
+      await tester.tap(find.byKey(menuKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(uploadFileLabel));
+      await tester.pumpAndSettle();
+
+      expect(selector.openFilesCalls, 1,
+          reason: 'the file entry must reach the document picker, which is '
+              'the only source that can produce a PDF');
+      expect(picker.pickCalls, 1);
+    });
+
+    // The submitted state disables this menu the same way it disables the
+    // scanner icon (`enabled: !isCompleted`), but the sheet owns
+    // `isCompletedSubject` internally and only a real submit flips it, so that
+    // branch is not reachable from a widget test. It is covered on-device by
+    // the queued-confirmation e2e.
+  });
 
   testWidgets('opens for a user who holds the quick-scan permission',
       (tester) async {

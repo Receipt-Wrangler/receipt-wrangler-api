@@ -81,8 +81,8 @@ func handleSearchReceipts(ctx context.Context, req *mcpsdk.CallToolRequest, in s
 	}
 
 	// Delegate to the shared enforced read so REST and MCP can't drift: it
-	// enforces app.receipts.search, scopes to the user's groups, and applies
-	// paid-by visibility in SQL before the limit.
+	// enforces app.receipts.search, narrows the user's groups to those granting
+	// group.receipts.read, and applies paid-by visibility in SQL before the limit.
 	results, err := services.NewReceiptService(nil).SearchReceiptsForUser(claims.UserId, in.Query, limit)
 	if err != nil {
 		if errors.Is(err, services.ErrSearchForbidden) {

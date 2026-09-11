@@ -463,6 +463,82 @@ func TestGetGroupPermissionsForUserNonMember(t *testing.T) {
 	}
 }
 
+func TestGroupIdsWithPermissionFiltersToPermittedGroups(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	// Three groups: one the user can read, one they are a member of without a role
+	// (so no permissions), and one they do not belong to at all.
+	userId, readableGroupId, _ := seedMemberWithGroupRole(t, "gidfilter", []string{permissions.GroupReceiptsRead})
+	roleLessGroupId := addMemberToNewGroup(t, userId, "gidfilter-noread")
+
+	foreignGroup := models.Group{Name: "gidfilter-foreign"}
+	if err := repositories.GetDB().Create(&foreignGroup).Error; err != nil {
+		t.Fatalf("seed foreign group: %v", err)
+	}
+
+	service := NewPermissionService(nil)
+	got, err := service.GroupIdsWithPermission(
+		userId,
+		[]uint{roleLessGroupId, readableGroupId, foreignGroup.ID},
+		permissions.GroupReceiptsRead,
+	)
+	if err != nil {
+		t.Fatalf("GroupIdsWithPermission: %v", err)
+	}
+	if len(got) != 1 || got[0] != readableGroupId {
+		t.Errorf("expected only the readable group %d, got %v", readableGroupId, got)
+	}
+}
+
+func TestGroupIdsWithPermissionPreservesOrder(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	// The caller pairs the result with other per-group state, so the input order
+	// must survive the filter.
+	userId, firstGroupId, roleId := seedMemberWithGroupRole(t, "gidorder", []string{permissions.GroupReceiptsRead})
+
+	db := repositories.GetDB()
+	var permittedGroupIds []uint
+	permittedGroupIds = append(permittedGroupIds, firstGroupId)
+	for _, name := range []string{"gidorder-b", "gidorder-c"} {
+		group := models.Group{Name: name}
+		if err := db.Create(&group).Error; err != nil {
+			t.Fatalf("seed group: %v", err)
+		}
+		member := models.GroupMember{GroupID: group.ID, UserID: userId, GroupRoleID: &roleId}
+		if err := db.Create(&member).Error; err != nil {
+			t.Fatalf("seed group member: %v", err)
+		}
+		permittedGroupIds = append(permittedGroupIds, group.ID)
+	}
+
+	reversed := []uint{permittedGroupIds[2], permittedGroupIds[1], permittedGroupIds[0]}
+	got, err := NewPermissionService(nil).GroupIdsWithPermission(userId, reversed, permissions.GroupReceiptsRead)
+	if err != nil {
+		t.Fatalf("GroupIdsWithPermission: %v", err)
+	}
+	if !slices.Equal(got, reversed) {
+		t.Errorf("expected input order %v preserved, got %v", reversed, got)
+	}
+}
+
+func TestGroupIdsWithPermissionEmptyInputReturnsEmptyNonNil(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	userId, _, _ := seedMemberWithGroupRole(t, "gidempty", []string{permissions.GroupReceiptsRead})
+
+	got, err := NewPermissionService(nil).GroupIdsWithPermission(userId, nil, permissions.GroupReceiptsRead)
+	if err != nil {
+		t.Fatalf("GroupIdsWithPermission: %v", err)
+	}
+	if got == nil {
+		t.Fatalf("expected a non-nil empty slice so callers can return it directly")
+	}
+	if len(got) != 0 {
+		t.Errorf("expected no groups, got %v", got)
+	}
+}
+
 // sortedCopy returns a sorted copy of keys, leaving the input untouched.
 func sortedCopy(keys []string) []string {
 	out := append([]string(nil), keys...)

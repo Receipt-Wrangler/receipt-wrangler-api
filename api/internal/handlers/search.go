@@ -19,10 +19,10 @@ func Search(w http.ResponseWriter, r *http.Request) {
 		Writer:       w,
 		Request:      r,
 		ResponseType: constants.ApplicationJson,
-		// Enforcement (app.receipts.search, group scope, paid-by visibility) lives in
-		// ReceiptService.SearchReceiptsForUser — the single shared path also used by
-		// the MCP search_receipts tool — so the declarative gate is intentionally
-		// omitted here to avoid two sources of truth.
+		// Enforcement (app.receipts.search, group scope narrowed to group.receipts.read,
+		// paid-by visibility) lives in ReceiptService.SearchReceiptsForUser — the single
+		// shared path also used by the MCP search_receipts tool — so the declarative gate
+		// is intentionally omitted here to avoid two sources of truth.
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetClaims(r)
 			searchTerm := r.URL.Query().Get("searchTerm")

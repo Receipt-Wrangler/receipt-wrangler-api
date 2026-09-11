@@ -792,7 +792,9 @@ Because paid-by hides the **whole** receipt (not just fields), enforcement diffe
 - **Search** (`handlers/search.go`): applies the predicate in SQL **before** `Limit(100)` via the
   shared `ReceiptRepository.ApplyPaidByDisjunction(query, memberGroupIds, resolver)` (the same per-group
   disjunction the all-group paged read uses). A post-fetch filter would be wrong here: hidden receipts
-  filling the first 100 by date would drop a restricted user's visible matches.
+  filling the first 100 by date would drop a restricted user's visible matches. The group list it is
+  handed is already narrowed to the groups granting `group.receipts.read` (see "Search group scoping"
+  below), so the disjunction only walks groups the caller may actually read.
 - **`GetReceiptsForGroupIds`**: `FilterReceiptsByPaidBy` post-filters the returned slice — fine because
   it has no `LIMIT` (it returns all receipts for the groups). **Pie chart** and **CSV export** pass the
   resolver through `GetPagedReceiptsByGroupId`.
@@ -810,6 +812,46 @@ Because paid-by hides the **whole** receipt (not just fields), enforcement diffe
   disjunction count correctness), `handlers/receipt_paid_by_enforcement_test.go` (single-GET 403),
   plus the round-trip/validation cases in `repositories/roles_grants_test.go`,
   `services/roles_test.go`, and `commands/upsert_role_command_test.go`.
+
+### Search group scoping (`group.receipts.read`)
+
+`ReceiptService.SearchReceiptsForUser` scopes to the caller's group **memberships** and then narrows
+that list to the groups whose role grants **`group.receipts.read`**, via
+`PermissionService.GroupIdsWithPermission(userId, groupIds, required...)`. Membership alone is not
+read access: search was previously the **only** receipt read surface that stopped at membership, so a
+member of a group whose role omitted `group.receipts.read` could search up a receipt's name, amount,
+status and payer that `GET /receipt/{id}` correctly denied them. Every other surface already gated on
+it — the paged list, `GetReceiptsForGroupIds`, export, receipt images (all via the declarative
+`GroupPermissions` gate) and `GetReceiptForUser`.
+
+Three properties are load-bearing:
+
+- **It filters, it does not reject.** A group the caller cannot read is dropped silently. Holding
+  `app.receipts.search` with read on **no** group returns an **empty 200**, never `ErrSearchForbidden`
+  — they do hold the app-level permission, and an empty result leaks nothing about whether matching
+  receipts exist (the same indistinguishability posture as `ErrReceiptAccessDenied`).
+- **It runs before the repository call**, so `ApplyPaidByDisjunction` and the per-group paid-by /
+  member-isolation resolution only walk the permitted groups.
+- **The empty case returns the pre-allocated `results` slice**, never `nil` — an empty search must
+  serialize as `[]`, not `null`, or the generated Dart deserializer fails the payload.
+
+`GroupIdsWithPermission` is a plain loop over `HasGroupPermissions` (one membership lookup per group;
+role permissions are cached process-wide by role id), matching every other multi-group check —
+`CanReportOverGroups`, `templateActionPassesGroupScope`, `generic_handler.go`. It is deliberately a
+**filter**, unlike those all-must-pass checks, which is why they were left alone.
+
+**Behavior change on upgrade:** a `group_members` row with a **NULL `group_role_id`** resolves to zero
+permissions, so its receipts now disappear from that member's search results — as do those of any
+hand-built role granting search without receipt read. Such users were already 403'd by every other
+receipt surface, so this makes search consistent rather than newly restrictive. All three seeded
+legacy group roles grant `GroupReceiptsRead` (`LegacyGroupViewerKeys`, with Editor concatenating
+Viewer and Owner holding every group key), so default and migrated installs are unaffected.
+
+Tests: `services/receipts_test.go`
+(`TestSearchReceiptsForUser{RequiresGroupReadPermission,ExcludesGroupsWithoutReadPermission,WithNoReadableGroupsReturnsEmptyNotForbidden}`),
+`services/permission_test.go` (`TestGroupIdsWithPermission*` — filtering, order preservation, empty
+input), and `mcp/mcp_test.go` (`TestSearchReceiptsRequiresGroupReadPermission`, completing that
+suite's scope / paid-by / app-permission / group-permission matrix).
 
 ### Group member management (self-escalation guard)
 
@@ -1132,8 +1174,9 @@ Claude can read a user's data. It is **off by default** and Go-native (no separa
   `ReceiptPaidByVisible` → `FilterReceiptCategoriesTagsForReceipt`, returning `ErrReceiptAccessDenied`
   on any miss/deny — mapped to a non-leaking MCP "receipt not found" / REST 403); `search_receipts`
   and the REST `Search` handler both call `ReceiptService.SearchReceiptsForUser(userId, query, limit)`
-  (`app.receipts.search` → group scope → paid-by disjunction in SQL before the limit → `SearchResult`
-  mapping; `ErrSearchForbidden` → MCP "unauthorized" / REST 403; blank query → empty). These two REST
+  (`app.receipts.search` → group scope narrowed to `group.receipts.read` → paid-by disjunction in SQL
+  before the limit → `SearchResult` mapping; `ErrSearchForbidden` → MCP "unauthorized" / REST 403;
+  blank query → empty; no readable group → empty, never a denial). These two REST
   handlers therefore intentionally omit the declarative `HandleRequest` permission/`ReceiptId` gates —
   enforcement lives once, in the service. v1 tools are read-only: `search_receipts`, `get_receipt`,
   `list_groups`, `list_categories`, `list_tags`, `list_dashboards`. `list_categories`/`list_tags` have

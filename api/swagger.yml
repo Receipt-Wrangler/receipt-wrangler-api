@@ -1796,6 +1796,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/SearchResult"
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
       security:

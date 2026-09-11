@@ -109,9 +109,10 @@ func (service ReceiptService) GetReceiptForUser(userId uint, receiptId string) (
 }
 
 // SearchReceiptsForUser is the single, shared receipt-search operation used by both
-// the REST handler and the MCP tool. It enforces app.receipts.search, scopes to the
-// caller's groups, applies paid-by visibility in SQL before the limit, and maps to
-// SearchResult. A blank query returns no results (matching the REST search bar).
+// the REST handler and the MCP tool. It enforces app.receipts.search, narrows the
+// caller's groups to those granting group.receipts.read, applies paid-by visibility
+// in SQL before the limit, and maps to SearchResult. A blank query returns no
+// results (matching the REST search bar).
 func (service ReceiptService) SearchReceiptsForUser(userId uint, query string, limit int) ([]structs.SearchResult, error) {
 	permissionService := NewPermissionService(service.TX)
 
@@ -134,8 +135,21 @@ func (service ReceiptService) SearchReceiptsForUser(userId uint, query string, l
 		return nil, err
 	}
 
+	// Membership alone is not read access: narrow to the groups actually granting
+	// group.receipts.read, so search matches every other receipt read surface. This
+	// runs before the query so the paid-by resolution below only walks those groups.
+	// Having none is "no results", not a denial — the caller does hold the app-level
+	// search permission.
+	readableGroupIds, err := permissionService.GroupIdsWithPermission(userId, groupIds, permissions.GroupReceiptsRead)
+	if err != nil {
+		return nil, err
+	}
+	if len(readableGroupIds) == 0 {
+		return results, nil
+	}
+
 	receiptRepository := repositories.NewReceiptRepository(service.TX)
-	receipts, err := receiptRepository.SearchReceiptsByGroupIds(groupIds, query, limit, permissionService.PaidByListResolver(userId))
+	receipts, err := receiptRepository.SearchReceiptsByGroupIds(readableGroupIds, query, limit, permissionService.PaidByListResolver(userId))
 	if err != nil {
 		return nil, err
 	}

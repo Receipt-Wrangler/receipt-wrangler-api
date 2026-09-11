@@ -484,6 +484,36 @@ func TestSearchReceiptsEnforcesPaidByVisibility(t *testing.T) {
 	}
 }
 
+func TestSearchReceiptsRequiresGroupReadPermission(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	// The mirror of the app-permission case below: the caller HAS app.receipts.search
+	// and is a member of the group, but their group role lacks group.receipts.read.
+	// Membership alone must not surface the receipt. Unlike a missing search
+	// permission this is not a denial — an empty result is the correct answer.
+	user := createUser(t, "nogroupread")
+	group := models.Group{Name: "g"}
+	if err := repositories.GetDB().Create(&group).Error; err != nil {
+		t.Fatalf("failed to create group: %v", err)
+	}
+	setAppRole(t, user.ID, "nogroupread-app-role", []string{permissions.AppReceiptsSearch})
+	addGroupMember(t, user.ID, group.ID, []string{})
+	createReceiptInGroup(t, "Coffee", group.ID, user.ID)
+
+	_, out, err := handleSearchReceipts(context.Background(), requestForUser(user.ID), searchReceiptsInput{Query: "Coffee"})
+	if err != nil {
+		t.Fatalf("handleSearchReceipts returned error: %v", err)
+	}
+
+	results, ok := out.([]structs.SearchResult)
+	if !ok {
+		t.Fatalf("expected []structs.SearchResult, got %T", out)
+	}
+	if len(results) != 0 {
+		t.Errorf("expected 0 results without group.receipts.read, got %d (%+v)", len(results), results)
+	}
+}
+
 func TestSearchReceiptsRequiresSearchPermission(t *testing.T) {
 	defer repositories.TruncateTestDb()
 

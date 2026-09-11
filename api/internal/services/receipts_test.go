@@ -243,3 +243,78 @@ func TestSearchReceiptsForUserBlankQueryReturnsEmpty(t *testing.T) {
 		t.Errorf("expected a blank query to return no results, got %d", len(results))
 	}
 }
+
+func TestSearchReceiptsForUserRequiresGroupReadPermission(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	// A member whose group role lacks group.receipts.read is filtered out, proving
+	// membership alone no longer grants search access. Mirrors the single-receipt
+	// TestGetReceiptForUserDeniesMemberWithoutReadPermission.
+	userId, groupId := seedReceiptMember(t, "srnoread", "srnoread-role", []string{}, nil, nil, nil, false)
+	giveAppRole(t, userId, "srnoread-app-role", []string{permissions.AppReceiptsSearch})
+	seedReceipt(t, "Coffee", groupId, userId)
+
+	results, err := NewReceiptService(nil).SearchReceiptsForUser(userId, "Coffee", 100)
+	if errors.Is(err, ErrSearchForbidden) {
+		t.Fatalf("expected no results, not a denial — the caller does hold app.receipts.search")
+	}
+	if err != nil {
+		t.Fatalf("SearchReceiptsForUser returned error: %v", err)
+	}
+	if len(results) != 0 {
+		t.Errorf("expected 0 results without group.receipts.read, got %d (%+v)", len(results), results)
+	}
+}
+
+func TestSearchReceiptsForUserExcludesGroupsWithoutReadPermission(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	// The permission is applied per group, not as a blanket "has read somewhere":
+	// the readable group's receipt comes back, the role-less group's does not.
+	userId, readableGroupId := seedReceiptMember(t, "srmixed", "srmixed-role",
+		[]string{permissions.GroupReceiptsRead}, nil, nil, nil, false)
+	giveAppRole(t, userId, "srmixed-app-role", []string{permissions.AppReceiptsSearch})
+	unreadableGroupId := addMemberToNewGroup(t, userId, "srmixed-noread")
+
+	seedReceipt(t, "Coffee readable", readableGroupId, userId)
+	seedReceipt(t, "Coffee unreadable", unreadableGroupId, userId)
+
+	results, err := NewReceiptService(nil).SearchReceiptsForUser(userId, "Coffee", 100)
+	if err != nil {
+		t.Fatalf("SearchReceiptsForUser returned error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected exactly 1 result from the readable group, got %d (%+v)", len(results), results)
+	}
+	if results[0].GroupID != readableGroupId {
+		t.Errorf("expected the receipt from group %d, got group %d", readableGroupId, results[0].GroupID)
+	}
+}
+
+func TestSearchReceiptsForUserWithNoReadableGroupsReturnsEmptyNotForbidden(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	// Read on none of the caller's groups is "no results", never a 403: they do hold
+	// app.receipts.search. The non-nil assertion pins the wire shape — an empty set
+	// must serialize as [], never null.
+	userId, groupId := seedReceiptMember(t, "srnone", "srnone-role", []string{}, nil, nil, nil, false)
+	giveAppRole(t, userId, "srnone-app-role", []string{permissions.AppReceiptsSearch})
+	secondGroupId := addMemberToNewGroup(t, userId, "srnone-second")
+
+	seedReceipt(t, "Coffee first", groupId, userId)
+	seedReceipt(t, "Coffee second", secondGroupId, userId)
+
+	results, err := NewReceiptService(nil).SearchReceiptsForUser(userId, "Coffee", 100)
+	if errors.Is(err, ErrSearchForbidden) {
+		t.Fatalf("expected an empty result, not ErrSearchForbidden")
+	}
+	if err != nil {
+		t.Fatalf("SearchReceiptsForUser returned error: %v", err)
+	}
+	if results == nil {
+		t.Fatalf("expected a non-nil empty slice so the response marshals as [], not null")
+	}
+	if len(results) != 0 {
+		t.Errorf("expected 0 results, got %d (%+v)", len(results), results)
+	}
+}

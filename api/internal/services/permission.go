@@ -110,6 +110,40 @@ func (service PermissionService) GetGroupPermissionsForUser(userId uint, groupId
 	return service.resolveGroupPermissions(userId, groupId)
 }
 
+// GroupIdsWithPermission narrows groupIds to those where the user's group role
+// grants ALL of the required group-level permissions, preserving input order.
+// It serves the read surfaces that FILTER rather than reject: a group the caller
+// cannot read is dropped silently instead of failing the whole request. Contrast
+// CanReportOverGroups, which is all-must-pass.
+//
+// It exists because membership is deliberately NOT access. A surface that derives
+// its group set from the caller's memberships (rather than from a group id in the
+// request, which the declarative HandleRequest gate covers) must still apply the
+// group-scoped permission itself, exactly as that gate would for a named group.
+//
+// An empty result is a real answer ("no groups qualify"), never a denial — callers
+// must map it to "no results", not to a permission error. The returned slice is
+// always non-nil so it can be returned directly.
+//
+// Cost is one membership lookup per group (each role's permission list is cached
+// process-wide by role id, the per-user assignment is not), so callers doing other
+// per-group work should filter FIRST to shorten those later loops.
+func (service PermissionService) GroupIdsWithPermission(userId uint, groupIds []uint, required ...string) ([]uint, error) {
+	allowed := make([]uint, 0, len(groupIds))
+
+	for _, groupId := range groupIds {
+		hasPermission, err := service.HasGroupPermissions(userId, groupId, required...)
+		if err != nil {
+			return nil, err
+		}
+		if hasPermission {
+			allowed = append(allowed, groupId)
+		}
+	}
+
+	return allowed, nil
+}
+
 func (service PermissionService) checkApp(userId uint, match matcher, required ...string) (bool, error) {
 	if err := validateRequiredPermissions(permissions.ScopeApp, required); err != nil {
 		return false, err

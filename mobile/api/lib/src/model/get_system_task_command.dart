@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:openapi/src/model/associated_entity_type.dart';
 import 'package:openapi/src/model/sort_direction.dart';
+import 'package:openapi/src/model/system_task_paged_request_filter.dart';
 import 'package:openapi/src/model/paged_request_command.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -14,14 +15,18 @@ part 'get_system_task_command.g.dart';
 /// GetSystemTaskCommand
 ///
 /// Properties:
-/// * [associatedEntityId] - Associated entity id
-/// * [associatedEntityType] 
 /// * [page] - Page number
 /// * [pageSize] - Number of records per page
 /// * [orderBy] - field to order on
 /// * [sortDirection] 
+/// * [associatedEntityId] - Associated entity id
+/// * [associatedEntityType] 
+/// * [filter] 
 @BuiltValue()
 abstract class GetSystemTaskCommand implements PagedRequestCommand, Built<GetSystemTaskCommand, GetSystemTaskCommandBuilder> {
+  @BuiltValueField(wireName: r'filter')
+  SystemTaskPagedRequestFilter? get filter;
+
   /// Associated entity id
   @BuiltValueField(wireName: r'associatedEntityId')
   int? get associatedEntityId;
@@ -53,16 +58,11 @@ class _$GetSystemTaskCommandSerializer implements PrimitiveSerializer<GetSystemT
     GetSystemTaskCommand object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'pageSize';
-    yield serializers.serialize(
-      object.pageSize,
-      specifiedType: const FullType(int),
-    );
-    if (object.orderBy != null) {
-      yield r'orderBy';
+    if (object.filter != null) {
+      yield r'filter';
       yield serializers.serialize(
-        object.orderBy,
-        specifiedType: const FullType(String),
+        object.filter,
+        specifiedType: const FullType(SystemTaskPagedRequestFilter),
       );
     }
     if (object.associatedEntityId != null) {
@@ -79,11 +79,6 @@ class _$GetSystemTaskCommandSerializer implements PrimitiveSerializer<GetSystemT
         specifiedType: const FullType(SortDirection),
       );
     }
-    yield r'page';
-    yield serializers.serialize(
-      object.page,
-      specifiedType: const FullType(int),
-    );
     if (object.associatedEntityType != null) {
       yield r'associatedEntityType';
       yield serializers.serialize(
@@ -91,6 +86,23 @@ class _$GetSystemTaskCommandSerializer implements PrimitiveSerializer<GetSystemT
         specifiedType: const FullType(AssociatedEntityType),
       );
     }
+    yield r'pageSize';
+    yield serializers.serialize(
+      object.pageSize,
+      specifiedType: const FullType(int),
+    );
+    if (object.orderBy != null) {
+      yield r'orderBy';
+      yield serializers.serialize(
+        object.orderBy,
+        specifiedType: const FullType(String),
+      );
+    }
+    yield r'page';
+    yield serializers.serialize(
+      object.page,
+      specifiedType: const FullType(int),
+    );
   }
 
   @override
@@ -114,19 +126,12 @@ class _$GetSystemTaskCommandSerializer implements PrimitiveSerializer<GetSystemT
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'pageSize':
+        case r'filter':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(int),
-          ) as int;
-          result.pageSize = valueDes;
-          break;
-        case r'orderBy':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.orderBy = valueDes;
+            specifiedType: const FullType(SystemTaskPagedRequestFilter),
+          ) as SystemTaskPagedRequestFilter;
+          result.filter.replace(valueDes);
           break;
         case r'associatedEntityId':
           final valueDes = serializers.deserialize(
@@ -142,19 +147,33 @@ class _$GetSystemTaskCommandSerializer implements PrimitiveSerializer<GetSystemT
           ) as SortDirection;
           result.sortDirection = valueDes;
           break;
-        case r'page':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
-          result.page = valueDes;
-          break;
         case r'associatedEntityType':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(AssociatedEntityType),
           ) as AssociatedEntityType;
           result.associatedEntityType = valueDes;
+          break;
+        case r'pageSize':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.pageSize = valueDes;
+          break;
+        case r'orderBy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.orderBy = valueDes;
+          break;
+        case r'page':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.page = valueDes;
           break;
         default:
           unhandled.add(key);

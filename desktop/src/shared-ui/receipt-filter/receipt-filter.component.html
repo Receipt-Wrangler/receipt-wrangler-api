@@ -7,118 +7,108 @@
 
 <ng-template #formTemplate>
   <ng-container *ngIf="isOpen(); else preview">
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Date',
-        fieldName: 'date',
-        type: 'date'
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Date"
+      fieldName="date"
+      type="date"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+    ></app-filter-field>
 
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Name',
-        fieldName: 'name',
-        type: 'text'
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Name"
+      fieldName="name"
+      type="text"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+    ></app-filter-field>
 
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Paid by',
-        fieldName: 'paidBy',
-        type: 'users',
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Paid by"
+      fieldName="paidBy"
+      type="users"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+    ></app-filter-field>
 
     @if (showGroupFilter) {
-      <ng-template
-        [ngTemplateOutlet]="filterField"
-        [ngTemplateOutletContext]="{
-          label: 'Group',
-          fieldName: 'group',
-          type: 'list',
-          options: groups() ?? [],
-          optionFilterKey: 'name',
-          optionDisplayKey: 'name',
-          optionValueKey: 'id',
-          multiple: true
-        }"
-      ></ng-template>
+      <app-filter-field
+        label="Group"
+        fieldName="group"
+        type="list"
+        optionFilterKey="name"
+        optionDisplayKey="name"
+        optionValueKey="id"
+        [parentForm]="parentForm"
+        [basePath]="basePath"
+        [options]="groups() ?? []"
+        [multiple]="true"
+      ></app-filter-field>
     }
 
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Amount',
-        fieldName: 'amount',
-        type: 'number',
-        isCurrency: true,
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Amount"
+      fieldName="amount"
+      type="number"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+      [isCurrency]="true"
+    ></app-filter-field>
 
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Categories',
-        fieldName: 'categories',
-        type: 'list',
-        options: categories,
-        optionFilterKey: 'name',
-        optionDisplayKey: 'name',
-        optionValueKey: 'id',
-        multiple: true
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Categories"
+      fieldName="categories"
+      type="list"
+      optionFilterKey="name"
+      optionDisplayKey="name"
+      optionValueKey="id"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+      [options]="categories"
+      [multiple]="true"
+    ></app-filter-field>
 
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Tags',
-        fieldName: 'tags',
-        type: 'list',
-        options: tags,
-        optionFilterKey: 'name',
-        optionDisplayKey: 'name',
-        optionValueKey: 'id',
-        multiple: true
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Tags"
+      fieldName="tags"
+      type="list"
+      optionFilterKey="name"
+      optionDisplayKey="name"
+      optionValueKey="id"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+      [options]="tags"
+      [multiple]="true"
+    ></app-filter-field>
 
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Status',
-        fieldName: 'status',
-        type: 'list',
-        options: receiptStatusOptions,
-        optionFilterKey: 'value',
-        optionValueKey: 'value',
-        optionDisplayKey: 'displayValue',
-        multiple: true
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Status"
+      fieldName="status"
+      type="list"
+      optionFilterKey="value"
+      optionDisplayKey="displayValue"
+      optionValueKey="value"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+      [options]="receiptStatusOptions"
+      [multiple]="true"
+    ></app-filter-field>
 
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Resolved Date',
-        fieldName: 'resolvedDate',
-        type: 'date'
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Resolved Date"
+      fieldName="resolvedDate"
+      type="date"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+    ></app-filter-field>
 
-    <ng-template
-      [ngTemplateOutlet]="filterField"
-      [ngTemplateOutletContext]="{
-        label: 'Added At',
-        fieldName: 'createdAt',
-        type: 'date'
-      }"
-    ></ng-template>
+    <app-filter-field
+      label="Added At"
+      fieldName="createdAt"
+      type="date"
+      [parentForm]="parentForm"
+      [basePath]="basePath"
+    ></app-filter-field>
 
     <ng-template
       [ngTemplateOutlet]="footerTemplate() ?? defaultFooter"
@@ -141,152 +131,6 @@
     (submitClicked)="submitButtonClicked()"
     (cancelClicked)="cancelButtonClicked()"
   ></app-dialog-footer>
-</ng-template>
-
-<ng-template
-  #filterField
-  let-label="label"
-  let-fieldName="fieldName"
-  let-type="type"
-  let-isCurrency="isCurrency"
-  let-options="options"
-  let-optionFilterKey="optionFilterKey"
-  let-multiple="multiple"
-  let-optionDisplayKey="optionDisplayKey"
-  let-optionValueKey="optionValueKey"
->
-  <div class="d-flex">
-    @if ((parentForm | formGet : basePath + fieldName + '.operation').value === FilterOperation.Between) {
-      <div class="d-flex w-100">
-        <div class="d-flex w-50 align-items-center">
-          <div class="w-50">
-            <app-input
-              *ngIf="type === 'text' || type === 'number'"
-              [label]="'Start ' + label"
-              [isCurrency]="isCurrency"
-              [inputFormControl]="parentForm | formGet : basePath +  fieldName + '.value.0'"
-              [additionalErrorMessages]="{
-              'invalidValue': 'Start ' + label + ' is invalid.'
-              }"
-            ></app-input>
-            <app-datepicker
-              *ngIf="type === 'date'"
-              [label]="'Start ' + label"
-              [inputFormControl]="parentForm | formGet : basePath + fieldName + '.value.0'"
-              [additionalErrorMessages]="{
-              'invalidValue': 'Start ' + label + ' is invalid.'
-              }"
-            >
-            </app-datepicker>
-          </div>
-          <span class="between-separator">
-            and
-          </span>
-          <div class="w-50">
-            <app-input
-              *ngIf="type === 'text' || type === 'number'"
-              [label]="'End ' + label"
-              [isCurrency]="isCurrency"
-              [inputFormControl]="parentForm | formGet : basePath +  fieldName + '.value.1'"
-            ></app-input>
-            <app-datepicker
-              *ngIf="type === 'date'"
-              [label]="'End ' + label"
-              [inputFormControl]="parentForm | formGet : basePath + fieldName + '.value.1'"
-            >
-            </app-datepicker>
-          </div>
-        </div>
-
-        <div class="ms-2 w-50">
-          <app-select
-            label="Operation"
-            [inputFormControl]="parentForm | formGet : basePath + fieldName + '.operation'"
-            [options]="type | operations: false"
-            [optionsDisplayArray]="type | operations: true"
-            [addEmptyOption]="true"
-          ></app-select>
-        </div>
-      </div>
-    } @else if ((parentForm | formGet : basePath + fieldName + '.operation').value === FilterOperation.WithinCurrentMonth) {
-      <div class="d-flex w-100">
-        <div class="d-flex w-50 align-items-center">
-          <div class="w-50">
-            <app-datepicker
-              *ngIf="type === 'date'"
-              [label]="'Start ' + label"
-              [inputFormControl]="startOfMonthFormControl"
-            >
-            </app-datepicker>
-          </div>
-          <span class="between-separator">
-            and
-          </span>
-          <div class="w-50">
-            <app-datepicker
-              *ngIf="type === 'date'"
-              [label]="'End ' + label"
-              [inputFormControl]="endOfTodayFormControl"
-            >
-            </app-datepicker>
-          </div>
-        </div>
-
-        <div class="ms-2 w-50">
-          <app-select
-            label="Operation"
-            [inputFormControl]="parentForm | formGet : basePath + fieldName + '.operation'"
-            [options]="type | operations: false"
-            [optionsDisplayArray]="type | operations: true"
-            [addEmptyOption]="true"
-          ></app-select>
-        </div>
-      </div>
-    } @else {
-      <app-input
-        *ngIf="type === 'text' || type === 'number'"
-        class="w-50"
-        [label]="label"
-        [isCurrency]="isCurrency"
-        [inputFormControl]="parentForm | formGet : basePath +  fieldName + '.value'"
-      ></app-input>
-      <app-user-autocomplete
-        *ngIf="type === 'users'"
-        class="w-50"
-        optionValueKey="id"
-        [label]="label"
-        [multiple]="true"
-        [inputFormControl]="parentForm | formGet : basePath + fieldName + '.value'"
-      ></app-user-autocomplete>
-      <app-datepicker
-        *ngIf="type === 'date'"
-        class="w-50"
-        [label]="label"
-        [inputFormControl]="parentForm | formGet : basePath + fieldName + '.value'"
-      >
-      </app-datepicker>
-      <app-autocomlete
-        *ngIf="type === 'list'"
-        class="w-50"
-        [multiple]="multiple"
-        [label]="label"
-        [inputFormControl]="parentForm | formGet : basePath + fieldName + '.value'"
-        [options]="options"
-        [optionValueKey]="optionValueKey"
-        [optionFilterKey]="optionFilterKey"
-        [optionDisplayKey]="optionDisplayKey"
-      >
-      </app-autocomlete>
-      <app-select
-        class="ms-2 w-50"
-        label="Operation"
-        [inputFormControl]="parentForm | formGet : basePath + fieldName + '.operation'"
-        [options]="type | operations: false"
-        [optionsDisplayArray]="type | operations: true"
-        [addEmptyOption]="true"
-      ></app-select>
-    }
-  </div>
 </ng-template>
 
 <ng-template #resetButton>

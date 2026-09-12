@@ -90,6 +90,7 @@ export * from './subjectLineRegex';
 export * from './systemEmail';
 export * from './systemSettings';
 export * from './systemTask';
+export * from './systemTaskPagedRequestFilter';
 export * from './systemTaskStatus';
 export * from './systemTaskType';
 export * from './tag';

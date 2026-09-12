@@ -2,15 +2,60 @@
   headerText="System Tasks"
   subtitle="Review the background tasks the system has run and their results."
 >
-  <app-button
-    matButtonType="iconButton"
-    icon="refresh"
-    color="accent"
-    tooltip="Refresh System Tasks"
-    (clicked)="refresh()"
-  ></app-button>
+  <div class="d-flex align-items-center">
+    <app-button
+      data-testid="system-tasks-filter"
+      icon="filter_alt"
+      matButtonType="iconButton"
+      tooltip="Filter System Tasks"
+      color="accent"
+      matBadgeColor="accent"
+      [matBadgeContent]="numFiltersApplied()"
+      (clicked)="filterButtonClicked()"
+    ></app-button>
+    <app-button
+      *ngIf="(numFiltersApplied() ?? 0) > 0"
+      data-testid="system-tasks-filter-reset"
+      icon="restart_alt"
+      matButtonType="iconButton"
+      tooltip="Reset filter"
+      color="accent"
+      (clicked)="resetFilterButtonClicked()"
+    ></app-button>
+    <app-button
+      matButtonType="iconButton"
+      icon="refresh"
+      color="accent"
+      tooltip="Refresh System Tasks"
+      (clicked)="refresh()"
+    ></app-button>
+  </div>
 </app-table-header>
-<app-task-table [expandedRowTemplate]="expandedRowTemplate"></app-task-table>
+
+@if (filterChips().length > 0) {
+  <mat-chip-set class="system-task-filter-chips" aria-label="Applied filters">
+    @for (chip of filterChips(); track chip.key) {
+      <mat-chip
+        [attr.data-testid]="'system-task-filter-chip-' + chip.key"
+        (removed)="filterChipCleared(chip.key)"
+      >
+        {{ chip.label }}
+        <button
+          matChipRemove
+          [attr.data-testid]="'system-task-filter-chip-clear-' + chip.key"
+          [attr.aria-label]="'Remove ' + chip.label + ' filter'"
+        >
+          <mat-icon>cancel</mat-icon>
+        </button>
+      </mat-chip>
+    }
+  </mat-chip-set>
+}
+
+<app-task-table
+  [filterProvider]="filterProvider"
+  [expandedRowTemplate]="expandedRowTemplate"
+></app-task-table>
 
 <ng-template
   #expandedRowTemplate

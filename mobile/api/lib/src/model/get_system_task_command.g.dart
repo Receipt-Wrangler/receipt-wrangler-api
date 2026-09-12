@@ -8,6 +8,8 @@ part of 'get_system_task_command.dart';
 
 class _$GetSystemTaskCommand extends GetSystemTaskCommand {
   @override
+  final SystemTaskPagedRequestFilter? filter;
+  @override
   final int? associatedEntityId;
   @override
   final AssociatedEntityType? associatedEntityType;
@@ -25,7 +27,8 @@ class _$GetSystemTaskCommand extends GetSystemTaskCommand {
       (GetSystemTaskCommandBuilder()..update(updates))._build();
 
   _$GetSystemTaskCommand._(
-      {this.associatedEntityId,
+      {this.filter,
+      this.associatedEntityId,
       this.associatedEntityType,
       required this.page,
       required this.pageSize,
@@ -45,6 +48,7 @@ class _$GetSystemTaskCommand extends GetSystemTaskCommand {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is GetSystemTaskCommand &&
+        filter == other.filter &&
         associatedEntityId == other.associatedEntityId &&
         associatedEntityType == other.associatedEntityType &&
         page == other.page &&
@@ -56,6 +60,7 @@ class _$GetSystemTaskCommand extends GetSystemTaskCommand {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, filter.hashCode);
     _$hash = $jc(_$hash, associatedEntityId.hashCode);
     _$hash = $jc(_$hash, associatedEntityType.hashCode);
     _$hash = $jc(_$hash, page.hashCode);
@@ -69,6 +74,7 @@ class _$GetSystemTaskCommand extends GetSystemTaskCommand {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'GetSystemTaskCommand')
+          ..add('filter', filter)
           ..add('associatedEntityId', associatedEntityId)
           ..add('associatedEntityType', associatedEntityType)
           ..add('page', page)
@@ -84,6 +90,12 @@ class GetSystemTaskCommandBuilder
         Builder<GetSystemTaskCommand, GetSystemTaskCommandBuilder>,
         PagedRequestCommandBuilder {
   _$GetSystemTaskCommand? _$v;
+
+  SystemTaskPagedRequestFilterBuilder? _filter;
+  SystemTaskPagedRequestFilterBuilder get filter =>
+      _$this._filter ??= SystemTaskPagedRequestFilterBuilder();
+  set filter(covariant SystemTaskPagedRequestFilterBuilder? filter) =>
+      _$this._filter = filter;
 
   int? _associatedEntityId;
   int? get associatedEntityId => _$this._associatedEntityId;
@@ -121,6 +133,7 @@ class GetSystemTaskCommandBuilder
   GetSystemTaskCommandBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _filter = $v.filter?.toBuilder();
       _associatedEntityId = $v.associatedEntityId;
       _associatedEntityType = $v.associatedEntityType;
       _page = $v.page;
@@ -146,17 +159,31 @@ class GetSystemTaskCommandBuilder
   GetSystemTaskCommand build() => _build();
 
   _$GetSystemTaskCommand _build() {
-    final _$result = _$v ??
-        _$GetSystemTaskCommand._(
-          associatedEntityId: associatedEntityId,
-          associatedEntityType: associatedEntityType,
-          page: BuiltValueNullFieldError.checkNotNull(
-              page, r'GetSystemTaskCommand', 'page'),
-          pageSize: BuiltValueNullFieldError.checkNotNull(
-              pageSize, r'GetSystemTaskCommand', 'pageSize'),
-          orderBy: orderBy,
-          sortDirection: sortDirection,
-        );
+    _$GetSystemTaskCommand _$result;
+    try {
+      _$result = _$v ??
+          _$GetSystemTaskCommand._(
+            filter: _filter?.build(),
+            associatedEntityId: associatedEntityId,
+            associatedEntityType: associatedEntityType,
+            page: BuiltValueNullFieldError.checkNotNull(
+                page, r'GetSystemTaskCommand', 'page'),
+            pageSize: BuiltValueNullFieldError.checkNotNull(
+                pageSize, r'GetSystemTaskCommand', 'pageSize'),
+            orderBy: orderBy,
+            sortDirection: sortDirection,
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'filter';
+        _filter?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'GetSystemTaskCommand', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

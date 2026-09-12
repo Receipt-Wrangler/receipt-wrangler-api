@@ -7,16 +7,12 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { SystemTaskPagedRequestFilter } from './systemTaskPagedRequestFilter';
 import { SortDirection } from './sortDirection';
 import { AssociatedEntityType } from './associatedEntityType';
 
 
 export interface GetSystemTaskCommand { 
-    /**
-     * Associated entity id
-     */
-    associatedEntityId?: number;
-    associatedEntityType?: AssociatedEntityType;
     /**
      * Page number
      */
@@ -30,6 +26,12 @@ export interface GetSystemTaskCommand {
      */
     orderBy?: string;
     sortDirection?: SortDirection;
+    /**
+     * Associated entity id
+     */
+    associatedEntityId?: number;
+    associatedEntityType?: AssociatedEntityType;
+    filter?: SystemTaskPagedRequestFilter;
 }
 export namespace GetSystemTaskCommand {
 }

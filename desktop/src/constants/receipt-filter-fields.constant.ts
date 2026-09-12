@@ -1,19 +1,11 @@
 import { ReceiptPagedRequestFilter } from "../open-api";
+import { FilterField, FilterFieldType } from "./filter-fields.constant";
 
 export type ReceiptFilterFieldKey = keyof ReceiptPagedRequestFilter;
 
-/**
- * The operation-option bucket a field belongs to. Matches the `type` argument
- * `OperationsPipe` switches on, so a field's operations and its label come from
- * the same place.
- */
-export type ReceiptFilterFieldType = "date" | "text" | "number" | "list" | "users";
+export type ReceiptFilterFieldType = FilterFieldType;
 
-export interface ReceiptFilterField {
-  key: ReceiptFilterFieldKey;
-  label: string;
-  type: ReceiptFilterFieldType;
-}
+export type ReceiptFilterField = FilterField<ReceiptFilterFieldKey>;
 
 /**
  * The ten filterable receipt fields, in the order the filter dialog renders

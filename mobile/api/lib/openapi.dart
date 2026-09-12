@@ -129,6 +129,7 @@ export 'package:openapi/src/model/subject_line_regex.dart';
 export 'package:openapi/src/model/system_email.dart';
 export 'package:openapi/src/model/system_settings.dart';
 export 'package:openapi/src/model/system_task.dart';
+export 'package:openapi/src/model/system_task_paged_request_filter.dart';
 export 'package:openapi/src/model/system_task_status.dart';
 export 'package:openapi/src/model/system_task_type.dart';
 export 'package:openapi/src/model/tag.dart';

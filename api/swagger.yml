@@ -4802,6 +4802,17 @@ components:
     PagedRequestField:
       type: object
       description: "Contains two keys: operation of type FilterOperation and value which can a different type depending on the field."
+    SystemTaskPagedRequestFilter:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/PagedRequestField"
+        ranBy:
+          $ref: "#/components/schemas/PagedRequestField"
+        startedAt:
+          $ref: "#/components/schemas/PagedRequestField"
+        endedAt:
+          $ref: "#/components/schemas/PagedRequestField"
     SearchResult:
       required:
         - id
@@ -5936,12 +5947,14 @@ components:
       allOf:
         - $ref: "#/components/schemas/PagedRequestCommand"
         - type: object
-      properties:
-        associatedEntityId:
-          type: integer
-          description: Associated entity id
-        associatedEntityType:
-          $ref: "#/components/schemas/AssociatedEntityType"
+          properties:
+            associatedEntityId:
+              type: integer
+              description: Associated entity id
+            associatedEntityType:
+              $ref: "#/components/schemas/AssociatedEntityType"
+            filter:
+              $ref: "#/components/schemas/SystemTaskPagedRequestFilter"
     ReceiptProcessingSettings:
       allOf:
         - $ref: "#/components/schemas/BaseModel"

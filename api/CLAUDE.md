@@ -1260,6 +1260,62 @@ See `mobile/CLAUDE.md` → "App Links / Universal Links — server-URL pre-fill 
 `commands/upsert_system_settings_command_test.go` (validation), `services/system_settings_test.go`
 (`BuildLoginQrUrl` compose/encoding + `GetFeatureConfig` mapping).
 
+## System task filtering
+
+`GET`-by-POST `/systemTask/getPagedSystemTasks` accepts a `filter` on
+`GetSystemTaskCommand`: a `SystemTaskPagedRequestFilter` of four `PagedRequestField`s — `type`,
+`ranBy`, `startedAt`, `endedAt` — reusing the receipt filter's `FilterOperation` enum and wire shape,
+so the desktop renders both dialogs from one row component.
+
+- **`BaseRepository.BuildFilterQuery`** is the shared operation→WHERE translator, promoted from
+  `ReceiptRepository.buildFilterQuery` so the receipt filter and the system task filter cannot drift
+  on what an operation means. `fieldName` is interpolated into the clause, so it MUST stay a
+  hardcoded column literal supplied by the caller — never a request value.
+- **Predicates are applied before `Count`** (`buildSystemTaskFilterQuery`, called from
+  `GetPagedSystemTasks`), mirroring `GetPagedActivities`' visibility disjunction, so `totalCount`
+  describes the filtered set rather than the whole table.
+- **Every unwrap is a comma-ok assertion.** Values arrive as `interface{}` off the request body; a
+  wrong-typed value is treated as "field not set". This is deliberately unlike the receipt builder's
+  bare `.(string)` / `.([]interface{})` assertions, which panic on a malformed body — and it is why
+  there is no `initSystemTaskFilterValues` analogue seeding non-nil defaults.
+- **`ranBy` does not go through the shared helper**, because `ran_by_user_id` is nullable and the
+  rows with no user are exactly the ones the table labels "System". The desktop submits
+  `repositories.SystemRanByUserId` (`-1`, negative so it can never collide with a real id — the
+  `OWN_PAID_RECEIPTS_OPTION_ID` convention) for those, and `applyRanByFilter` splits the sentinel out
+  of the id list: sentinel only ⇒ `IS NULL`, ids only ⇒ `IN ?`, both ⇒
+  `IS NULL OR ran_by_user_id IN ?`. Ids decode as `float64` through `encoding/json`, hence `toInt64`.
+- **`started_at` / `ended_at` are compared as whole calendar days** (`applyTimestampDayFilter`).
+  Unlike the date-only column the receipt `date` filter compares against, these carry a time of day,
+  so a raw comparison to the datepicker's midnight would make `EQUALS` never match and `BETWEEN` drop
+  everything after midnight on the end day. `EQUALS d` ⇒ `[startOfDay(d), startOfDay(d)+24h)`,
+  `GREATER_THAN d` ⇒ `>= startOfDay(d)+24h`, `LESS_THAN d` ⇒ `< startOfDay(d)`, `BETWEEN [a,b]` ⇒
+  `[startOfDay(a), startOfDay(b)+24h)`; `WITHIN_CURRENT_MONTH` delegates to `BuildFilterQuery`, which
+  already does the right thing.
+  - **"Day" resolves in the server's location** (`time.Local`), the same zone
+    `WITHIN_CURRENT_MONTH` already uses — a client in a different zone can shift the boundary by a
+    day, exactly as it can for receipts.
+  - **`ended_at` is nullable, so any filter on it excludes tasks that are still running.** That is
+    the correct reading of "ended before X"; it is not special-cased.
+- **The three child-only types stay excluded.** `filteredSystemTaskTypes` (`RECEIPT_UPLOADED`,
+  `CHAT_COMPLETION`, `OCR_PROCESSING`) is applied before the filter, so a `type` filter narrows
+  within the top-level rows. The desktop's Type picker omits them for the same reason; keep
+  `CHILD_ONLY_SYSTEM_TASK_TYPES` in `desktop/src/constants/system-task-type-options.ts` in sync with
+  the Go list, which `TestGetPagedSystemTasksExcludesChildTaskTypes` pins.
+
+The handler is unchanged: `GetSystemTasks` already passes the whole command through and the
+`app.system-tasks.read` gate still applies. Note this endpoint has **no** member-isolation filtering
+(unlike `GetPagedActivities`) — it is admin-only by that permission.
+
+**Tests:** `repositories/system_task_test.go` — `TestApplyTimestampDayFilterWidensBoundsToWholeDays`
+asserts the **bound values** off a `DryRun` statement rather than row counts, because the test DB is
+SQLite: it stores timestamps as text and compares them lexically, where a raw bound happens to sort
+*after* every row on the same day (`" " < "T"`), so a row count alone cannot tell the widened path
+from the broken one. The behavioural cases (`...FiltersByType`, `...FiltersByRanBy`,
+`...BetweenIncludesTasksLateOnTheEndDay`, `...EqualsMatchesTheWholeDay`,
+`...LessThanOnEndedAtExcludesRunningTasks`, `...IgnoresWrongTypedFilterValues`) all assert
+`totalCount` alongside the rows. Also `commands/get_system_task_command_test.go` (the wire keys, the
+`float64` ids, and an absent `filter` staying zero-valued).
+
 ## Receipt statuses
 
 `models.ReceiptStatus` (`internal/models/receipt_status.go`) is a plain Go `string` type — there is

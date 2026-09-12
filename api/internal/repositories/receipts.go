@@ -697,7 +697,7 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 	if pagedRequest.Filter.Name.Value != nil {
 		name := pagedRequest.Filter.Name.Value.(string)
 		if len(name) > 0 {
-			query = repository.buildFilterQuery(query, name, pagedRequest.Filter.Name.Operation, "name", false)
+			query = repository.BuildFilterQuery(query, name, pagedRequest.Filter.Name.Operation, "name", false)
 		}
 	}
 
@@ -711,14 +711,14 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 			date = pagedRequest.Filter.Date.Value.(string)
 		}
 
-		query = repository.buildFilterQuery(query, date, pagedRequest.Filter.Date.Operation, "date", isBetweenOperation)
+		query = repository.BuildFilterQuery(query, date, pagedRequest.Filter.Date.Operation, "date", isBetweenOperation)
 	}
 
 	// Paid By
 	if pagedRequest.Filter.PaidBy.Value != nil {
 		paidBy := pagedRequest.Filter.PaidBy.Value.([]interface{})
 		if len(paidBy) > 0 {
-			query = repository.buildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
+			query = repository.BuildFilterQuery(query, paidBy, pagedRequest.Filter.PaidBy.Operation, "paid_by_user_id", true)
 		}
 	}
 
@@ -751,7 +751,7 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 		} else {
 			amount = pagedRequest.Filter.Amount.Value.(float64)
 		}
-		query = repository.buildFilterQuery(
+		query = repository.BuildFilterQuery(
 			query,
 			amount,
 			pagedRequest.Filter.Amount.Operation,
@@ -763,7 +763,7 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 	if pagedRequest.Filter.Status.Value != nil {
 		status := pagedRequest.Filter.Status.Value.([]interface{})
 		if len(status) > 0 {
-			query = repository.buildFilterQuery(query, status, pagedRequest.Filter.Status.Operation, "status", true)
+			query = repository.BuildFilterQuery(query, status, pagedRequest.Filter.Status.Operation, "status", true)
 		}
 	}
 
@@ -771,7 +771,7 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 	if pagedRequest.Filter.Group.Value != nil {
 		groups := pagedRequest.Filter.Group.Value.([]interface{})
 		if len(groups) > 0 {
-			query = repository.buildFilterQuery(query, groups, pagedRequest.Filter.Group.Operation, "group_id", true)
+			query = repository.BuildFilterQuery(query, groups, pagedRequest.Filter.Group.Operation, "group_id", true)
 		}
 	}
 
@@ -785,7 +785,7 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 			resolvedDate = pagedRequest.Filter.ResolvedDate.Value.(string)
 		}
 
-		query = repository.buildFilterQuery(
+		query = repository.BuildFilterQuery(
 			query,
 			resolvedDate,
 			pagedRequest.Filter.ResolvedDate.Operation,
@@ -804,7 +804,7 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 			addedAt = pagedRequest.Filter.CreatedAt.Value.(string)
 		}
 
-		query = repository.buildFilterQuery(
+		query = repository.BuildFilterQuery(
 			query,
 			addedAt,
 			pagedRequest.Filter.CreatedAt.Operation,
@@ -814,49 +814,6 @@ func (repository ReceiptRepository) BuildGormFilterQuery(pagedRequest commands.R
 	}
 
 	return query, nil
-}
-
-func (repository ReceiptRepository) buildFilterQuery(runningQuery *gorm.DB, value interface{}, operation commands.FilterOperation, fieldName string, isArray bool) *gorm.DB {
-	if operation == commands.EQUALS && !isArray {
-		return runningQuery.Where(fmt.Sprintf("%v = ?", fieldName), value)
-	}
-
-	if operation == commands.CONTAINS && !isArray {
-		searchValue := value.(string)
-		searchValue = "%" + searchValue + "%"
-		return runningQuery.Where(fmt.Sprintf("%v LIKE ?", fieldName), searchValue)
-	}
-
-	if operation == commands.CONTAINS && isArray {
-		return runningQuery.Where(fmt.Sprintf("%v IN ?", fieldName), value)
-	}
-
-	if operation == commands.GREATER_THAN && !isArray {
-		return runningQuery.Where(fmt.Sprintf("%v > ?", fieldName), value)
-	}
-
-	if operation == commands.LESS_THAN && !isArray {
-		return runningQuery.Where(fmt.Sprintf("%v < ?", fieldName), value)
-	}
-
-	if operation == commands.BETWEEN {
-		arrayValue := value.([]interface{})
-		if len(arrayValue) != 2 {
-			return runningQuery
-		}
-
-		return runningQuery.Where(fmt.Sprintf("%v >= ? AND %v <= ?", fieldName, fieldName), arrayValue[0], arrayValue[1])
-	}
-
-	if operation == commands.WITHIN_CURRENT_MONTH {
-		now := time.Now()
-		beginningOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-		endOfToday := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
-
-		return runningQuery.Where(fmt.Sprintf("%v >= ? AND %v <= ?", fieldName, fieldName), beginningOfMonth, endOfToday)
-	}
-
-	return runningQuery
 }
 
 func (repository ReceiptRepository) isTrustedValue(pagedRequest commands.ReceiptPagedRequestCommand) bool {

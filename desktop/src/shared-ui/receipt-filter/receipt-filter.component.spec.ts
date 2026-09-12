@@ -184,16 +184,18 @@ describe("ReceiptFilterComponent", () => {
   it("renders the group field only when showGroupFilter is true", () => {
     const noopComponent = TestBed.createComponent(NoopComponent).componentInstance;
 
-    const countAutocompletes = (showGroupFilter: boolean): number => {
+    const countListRows = (showGroupFilter: boolean): number => {
       const localFixture = TestBed.createComponent(ReceiptFilterComponent);
       localFixture.componentInstance.parentForm = buildReceiptFilterForm({}, noopComponent);
       localFixture.componentInstance.showGroupFilter = showGroupFilter;
       localFixture.detectChanges();
-      return localFixture.nativeElement.querySelectorAll("app-autocomlete").length;
+      // The rows are the shared app-filter-field; CUSTOM_ELEMENTS_SCHEMA keeps
+      // it unrendered here, so the inner controls it projects are not in the DOM.
+      return localFixture.nativeElement.querySelectorAll("app-filter-field[type='list']").length;
     };
 
-    // The group field is the only additional list autocomplete gated on the flag.
-    expect(countAutocompletes(true)).toBe(countAutocompletes(false) + 1);
+    // The group field is the only additional list row gated on the flag.
+    expect(countListRows(true)).toBe(countListRows(false) + 1);
   });
 
   it("defaults showGroupFilter to false", () => {

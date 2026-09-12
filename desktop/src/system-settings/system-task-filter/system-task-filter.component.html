@@ -1,0 +1,57 @@
+<app-dialog [headerText]="headerText">
+  <app-filter-field
+    label="Type"
+    fieldName="type"
+    type="list"
+    optionFilterKey="displayValue"
+    optionDisplayKey="displayValue"
+    optionValueKey="value"
+    [parentForm]="parentForm"
+    [options]="systemTaskTypeOptions"
+    [multiple]="true"
+  ></app-filter-field>
+
+  <app-filter-field
+    label="Ran By"
+    fieldName="ranBy"
+    type="list"
+    optionFilterKey="displayName"
+    optionDisplayKey="displayName"
+    optionValueKey="id"
+    [parentForm]="parentForm"
+    [options]="ranByOptions()"
+    [multiple]="true"
+  ></app-filter-field>
+
+  <app-filter-field
+    label="Started At"
+    fieldName="startedAt"
+    type="date"
+    [parentForm]="parentForm"
+  ></app-filter-field>
+
+  <app-filter-field
+    label="Ended At"
+    fieldName="endedAt"
+    type="date"
+    [parentForm]="parentForm"
+  ></app-filter-field>
+
+  <app-dialog-footer
+    submitButtonTooltip="Apply filter"
+    [additionalButtonsTemplate]="resetButton"
+    (submitClicked)="submitButtonClicked()"
+    (cancelClicked)="cancelButtonClicked()"
+  ></app-dialog-footer>
+</app-dialog>
+
+<ng-template #resetButton>
+  <app-button
+    matButtonType="iconButton"
+    icon="restart_alt"
+    color="accent"
+    tooltip="Reset filter"
+    data-testid="system-tasks-filter-dialog-reset"
+    (clicked)="resetFilter()"
+  ></app-button>
+</ng-template>

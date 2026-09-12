@@ -1209,6 +1209,37 @@ helpers `withAdminApi` + `apiDeleteUserByName` / `apiDeleteGroupById` / `apiDele
   spec rather than an extension of `group-viewer-visibility.spec.ts`, whose serial block has a known
   pre-existing failure — a Legacy User can't load `/groups` — that would skip any test appended to it.)
 
+## Filter dialogs (the shared pieces)
+
+Two tables have a `{ operation, value }` filter dialog — receipts and system tasks — and they are
+**one implementation with two field lists**, not two dialogs. Anything new of this shape reuses these
+four pieces rather than copying a row template:
+
+- **`app-filter-field`** (`src/shared-ui/filter-field/`, declared *and exported* by `SharedUiModule`)
+  renders one row: the value editor for the field's `type` beside its Operation `app-select`,
+  switching shape with the selected operation (a two-slot range for `BETWEEN`, a **disabled** implied
+  range for `WITHIN_CURRENT_MONTH`, a single editor otherwise). It is deliberately presentational and
+  form-agnostic — it reaches into the caller's `parentForm` by `basePath + fieldName`, exactly as the
+  receipt filter's local `#filterField` template did before it was extracted.
+- **`src/utils/filter-form.ts`** holds the form machinery: `buildFieldFormGroup` (a `FormArray` value
+  for list/users fields, because the multi-select autocompletes `push()` onto the control),
+  `listenForBetweenOperation` (swaps the value control between a scalar and a two-slot range as the
+  operation flips) and `setupAutoOperationSelection` (picks the first operation for a field's type as
+  soon as it gains a value, and clears it when the value empties). Every entry point takes a
+  `thisContext` for `untilDestroyed`, so **the calling component must carry `@UntilDestroy()`**.
+  `buildReceiptFilterForm` and `buildSystemTaskFilterForm` are thin field lists over these.
+- **`src/utils/filter-chips.ts`** builds the chip labels (`"<Field> <operation> <value>"`,
+  `WITHIN_CURRENT_MONTH` stopping at the operation, `BETWEEN` joined with `" – "`). It is pure: the
+  caller injects `formatDate` / `formatCurrency` / `resolveOptionName`. `receipt-filter-chips.ts` and
+  `system-task-filter-chips.ts` are wrappers supplying only their own id resolution.
+- **`FilterField<TKey>` / `FilterFieldType`** (`src/constants/filter-fields.constant.ts`) is the one
+  field-metadata type; `ReceiptFilterField` and `SystemTaskFilterField` are aliases of it.
+  `isFilterEntryActive` (`src/utils/receipt-filter-entry.ts`) is likewise shared verbatim, which is
+  what keeps every Filter badge and its chip row in agreement.
+
+**A chip row needs `MatChipsModule` in the consuming module** — `SharedUiModule` imports it but does
+not export it. `MatIconModule` too, for the `cancel` icon inside `matChipRemove`.
+
 ## Receipts table filtering
 
 The receipts table (`src/receipts/receipts-table/`) offers three ways into **one** filter —
@@ -1217,10 +1248,9 @@ The receipts table (`src/receipts/receipts-table/`) offers three ways into **one
 so they can never disagree.
 
 - **Field metadata is shared.** `RECEIPT_FILTER_FIELDS` (`src/constants/receipt-filter-fields.constant.ts`)
-  is the one definition of each field's key, label and operation type. The dialog's
-  `setupAutoOperationSelection()` and the chip builder both read it, and `OperationsPipe` now reads
-  the extracted `FILTER_OPERATION_DISPLAY_VALUES`, so a chip cannot describe a condition differently
-  from the row that produced it.
+  is the one definition of each field's key, label and operation type. The dialog's rows and the chip
+  builder both read it, and `OperationsPipe` reads the extracted `FILTER_OPERATION_DISPLAY_VALUES`,
+  so a chip cannot describe a condition differently from the row that produced it.
 - **`isFilterEntryActive`** (`src/utils/receipt-filter-entry.ts`) is the shared "does this field
   narrow anything" predicate: any non-empty stringified value, **or** the operation
   `WITHIN_CURRENT_MONTH` (the one operation that carries no value). **Zero counts** — no field
@@ -1313,6 +1343,56 @@ The chips row is inline markup (`mat-chip-set` / `matChipRemove`) with every lab
 imports it but does not export it. An id the caller cannot resolve (a category outside their grants,
 a group they have left) renders as the raw id rather than dropping the chip, so a filter that is
 actively removing rows is never invisible.
+
+## System tasks table filtering
+
+The System Tasks page (`src/system-settings/system-task-table/`) filters on **Type**, **Ran By**,
+**Started At** and **Ended At** through the shared pieces above: a badge-counted Filter button and a
+Reset button in the `app-table-header`, a chip row below it, and `app-system-task-filter` as the
+dialog. `SystemTaskTableState.filter` is the single slice all three read and write.
+
+- **The filter belongs to the page, not to `app-task-table`.** That shared table is rendered by three
+  hosts (this page, `system-email-form`, `receipt-processing-settings-form`), each with its own table
+  service, so the filter rides in as one optional input (`[filter]`) rather than widening
+  `BaseTableService`. The two embedded hosts leave it unbound, the key is omitted from the request,
+  and the API's zero-value filter adds no predicates.
+- **`TaskTableComponent` refreshes through one `switchMap`** (`listenForRefreshRequests()`, wired in
+  the constructor; `getTableData()` just pushes onto its `Subject`), with `catchError(() => EMPTY)`
+  on the *inner* observable so an error cannot complete the outer subscription and kill every later
+  refresh. Clearing two chips in quick succession is the same last-response-wins race the receipts
+  month stepper hit.
+- **"Ran By" is a `list` field, not `users`.** `app-user-autocomplete` cannot prepend the pinned
+  **"System"** option (`SYSTEM_RAN_BY_OPTION_ID = -1`) that matches the rows with no `ranByUserId` —
+  most of the table. Same reason the report builder's paid-by picker is a plain `app-autocomlete`.
+  Both types offer the same `CONTAINS`-only operation, so the row is identical either way. The API
+  turns the sentinel into an `IS NULL` disjunct (see `api/CLAUDE.md` → "System task filtering").
+- **The Type picker omits three types.** `SYSTEM_TASK_TYPE_OPTIONS`
+  (`src/constants/system-task-type-options.ts`) drops `RECEIPT_UPLOADED`, `CHAT_COMPLETION` and
+  `OCR_PROCESSING`: `GetPagedSystemTasks` never returns them as top-level rows (they are children,
+  shown in an expanded row), so offering them would be a picker that can only ever return zero rows.
+  Keep `CHILD_ONLY_SYSTEM_TASK_TYPES` in sync with `filteredSystemTaskTypes` in the Go repository —
+  `TestGetPagedSystemTasksExcludesChildTaskTypes` pins that side.
+- **The persisted slice predates the filter, so every read must tolerate its absence.**
+  `systemTaskTable` was already in both storage-key lists, so an existing session rehydrates with no
+  `filter` key at all. `SystemTaskTableState.filter` / `.numFiltersApplied` and the
+  `SetSystemTaskFilterField` handler all fall back to `buildDefaultSystemTaskFilter()`; without that
+  the page throws for anyone who has ever loaded it before. Covered by a spec case.
+- **`buildDefaultSystemTaskFilter()` is a factory, not a shared constant** — the value is written
+  straight into state, so handing out one object would let a later in-place edit corrupt the default
+  for the rest of the session. Same reasoning as `buildDefaultReceiptFilter`.
+- **Every filter write outside the dialog goes through `applyFilterChange()`**, which dispatches the
+  action, then `SetPage(1)`, then refetches — narrowing from page 7 can never land on an empty page.
+  The dialog's `afterClosed()` does the same.
+- **Date fields are timestamps, and the server widens them to whole days.** The client sends the
+  datepicker's value unchanged; `EQUALS` means that calendar day, `BETWEEN` runs to the end of the
+  last day. See `api/CLAUDE.md` → "System task filtering" for why, and for the timezone caveat.
+
+**E2E:** `e2e/system-task-filter.spec.ts` (serial, admin storageState). It seeds a deterministic row
+by creating and deleting an API key (`apiRecordApiKeyDeletedSystemTask` — system tasks are only ever
+written as a side effect of real work, so there is no endpoint that creates one), then asserts what
+the Jest specs cannot: the server narrows (`totalCount` included, which is what proves the predicates
+land before the count), the "System" sentinel matches unattributed rows, a Started At of the task's
+own day matches while the previous day does not, and the filter survives a reload.
 
 ## Quick Scan Configuration
 

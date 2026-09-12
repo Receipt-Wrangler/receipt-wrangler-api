@@ -6,8 +6,9 @@ import 'package:openapi/openapi.dart';
 /// (visibility + validators) and the submit path (which fields to send / require)
 /// stay aligned.
 ///
-/// Null [settings] (no group selected yet) falls back to the backend defaults:
-/// paid-by/status shown, categories/tags/comment hidden.
+/// With no group selected the form shows only the Group field - see [noGroupQuickScanFieldConfig].
+/// Null [settings] with a group that IS selected still falls back to the backend
+/// defaults (paid-by/status shown, categories/tags/comment hidden).
 class QuickScanFieldConfig {
   final bool showPaidBy;
   final bool requirePaidBy;
@@ -34,6 +35,22 @@ class QuickScanFieldConfig {
   });
 }
 
+/// Every field hidden and none required. Until a group is picked there is no
+/// configuration to honour, so the form renders only the Group dropdown rather
+/// than guessing a field set it would have to flip the moment a group is chosen.
+const noGroupQuickScanFieldConfig = QuickScanFieldConfig(
+  showPaidBy: false,
+  requirePaidBy: false,
+  showStatus: false,
+  requireStatus: false,
+  showCategories: false,
+  requireCategories: false,
+  showTags: false,
+  requireTags: false,
+  showComment: false,
+  requireComment: false,
+);
+
 /// [canCreateComments] is whether the caller holds `group.comments.create` in the
 /// target group. It acts as an extra AND on the comment field's "enabled": without
 /// it the field is hidden, is never required (so a member who cannot comment is
@@ -41,10 +58,21 @@ class QuickScanFieldConfig {
 /// server. It is passed in rather than read from a provider so this helper stays
 /// pure, and is a required named argument so both call sites - the form and the
 /// submit - are forced to supply it and cannot drift apart.
+/// [hasGroup] is whether the user has actually picked a group, and is deliberately
+/// NOT derived from `settings == null`: a group id we cannot resolve settings for
+/// (a stale `quickScanDefaultGroupId`, or AppData not carrying that group) is still
+/// a choice, so it keeps the backend-mirroring defaults below rather than collapsing
+/// the form to the Group field alone. Required, like [canCreateComments], so both
+/// call sites - the form and the submit - must supply it and cannot drift.
 QuickScanFieldConfig resolveQuickScanFieldConfig(
   GroupReceiptSettings? settings, {
+  required bool hasGroup,
   required bool canCreateComments,
 }) {
+  if (!hasGroup) {
+    return noGroupQuickScanFieldConfig;
+  }
+
   final showPaidBy = settings?.quickScanPaidByEnabled ?? true;
   final showStatus = settings?.quickScanStatusEnabled ?? true;
   final showCategories = settings?.quickScanCategoriesEnabled ?? false;

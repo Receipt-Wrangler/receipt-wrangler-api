@@ -73,6 +73,16 @@ dependencies:
   path_provider: ^2.1.6
   share_plus: ^13.2.1
   sentry_flutter: ^8.14.2
+  # The photo-library source. file_selector opens a *document* picker
+  # (ACTION_OPEN_DOCUMENT / the Files app), and the camera roll is not a Files
+  # provider -- so on iOS it cannot reach photos at all. image_picker opens the
+  # Android Photo Picker and PHPickerViewController instead. Neither needs a
+  # runtime permission, which is why no READ_MEDIA_IMAGES declaration comes with
+  # this. file_selector stays, for the Files/PDF source.
+  image_picker: ^1.2.0
+  # Direct dependency only so main() can reference the ImagePickerAndroid type
+  # to set `useAndroidPhotoPicker`; the plugin itself arrives transitively.
+  image_picker_android: ^0.8.13
   # Kept as a regular dependency (not a dev_dependency) on purpose.
   # Flutter 3.27+ strips dev_dependency plugins from release builds, but the
   # generated GeneratedPluginRegistrant.java still references IntegrationTestPlugin

@@ -64,7 +64,7 @@ and defer the `go` until the menu finishes dismissing (see
 
 ### Key Features
 - **Receipt Management**: Create, edit, view receipts with items and images
-- **Image Handling**: Camera/gallery upload with scanning capabilities
+- **Image Handling**: three sources — the document scanner (camera), the OS photo library and the OS file browser — plus scanning capabilities
 - **Group Management**: Multi-user groups with role-based access
 - **Search**: Full-text search across receipts
 - **Offline Support**: Secure token storage with refresh token flow
@@ -104,7 +104,7 @@ stubs every field `storeAppData` touches — a mock missing one throws mid-store
 assertion under test.
 
 **Starting a Quick Scan forces a reload, ahead of the scanner.** `startScanEntry` and
-`startGalleryEntry` (`lib/shared/functions/receipt_entry.dart`) both `await
+`startPickerEntry` (`lib/shared/functions/receipt_entry.dart`) both `await
 TokenRefreshService().reloadAppData()` before anything else, so the group's quick-scan field config,
 the caller's permissions and the AI feature flag are all current for that tap.
 
@@ -120,8 +120,8 @@ the caller's permissions and the AI feature flag are all current for that tap.
   `showQuickScanBottomSheet` stays synchronous.
 - **`openQuickScanFromGallery` deliberately does not refresh on its own behalf** — `fallBackToGallery`
   reaches it from inside `startScanEntry`, which already has, so the camera-denied path would
-  double-fetch. The gallery *menu item* goes through `startGalleryEntry` instead, because it is the
-  one initiation that bypasses `startScanEntry`.
+  double-fetch. The two picker *menu items* go through `startPickerEntry(context, method)` instead,
+  because they are the initiations that bypass `startScanEntry`.
 - **`reloadAppData()` never throws.** The scanner is about to open, so a transient failure falls
   through to the data already loaded rather than blocking the scan — Quick Scan stays usable offline.
   The nav tap is fire-and-forget (`BottomNav.onDestinationSelected` is `void Function(int)`), so a
@@ -164,7 +164,7 @@ its whole toolbar into a `Column` *only* when `bottom != null`
 `actions` child**. Anything in `actions` that captured its own `BuildContext` and uses it after an
 `await` then fails its `mounted` guard and silently gives up.
 
-That shipped: the receipts-screen overflow menu's **Quick Scan** and **Upload from Gallery** items did
+That shipped: the receipts-screen overflow menu's **Quick Scan** and picker items did
 nothing, because `_refreshBeforeQuickScan` — the very thing they await — is what raises this bar. Only
 "Add Manual Receipt" worked, being synchronous, and the bottom-nav long-press was immune because its
 context comes from the nav rather than the app bar. The avatar menu in the same bar survives because it
@@ -533,8 +533,8 @@ backend enforces the two permissions **separately** (`handlers.QuickScan` → `g
   mounted"). It is also why `quick_scan_entry_test.dart` **taps** the overflow's Quick Scan rather than
   only asserting its label: a widget test cannot reproduce this, since `TokenRefreshService` is
   uninitialized there and `reloadAppData()` returns within a microtask, so the bar never gets a frame.
-- **Gallery upload is gated on quick-scan, not create** — that flow feeds the Quick Scan sheet, so
-  offering it to a create-only user would produce a sheet they cannot submit.
+- **Both picker entries are gated on quick-scan, not create** — they feed the Quick Scan sheet, so
+  offering them to a create-only user would produce a sheet they cannot submit.
 - **A submitted sheet confirms itself** (`quick-scan-queued-confirmation`). Submitting disables every
   field and hides the submit button, so once the success snackbar fades the sheet would otherwise sit
   there greyed out with nothing saying why. Extraction is an async backend job, so the wording
@@ -565,6 +565,129 @@ backend enforces the two permissions **separately** (`handlers.QuickScan` → `g
   Its `bottomSheetWidget` is built inside the modal route, which is outside the GoRouter subtree, so
   `GoRouterState.of` throws there — resolve before opening and pass the result down.
 
+### Picking receipt files
+
+Three sources feed a receipt image, selected by `UploadMethod { camera, photos, files }` and
+dispatched by the single `acquireReceiptFiles(context, method)`
+(`lib/shared/functions/receipt_upload.dart`). Every entry point routes through it — the Quick Scan
+sheet's two app-bar actions, the scan slot's long-press menu, the receipts overflow menu and the
+receipt-image app bar — so which picker a source opens, how a failure is reported, and whether the
+result is guarded before it touches the tree are decided once.
+
+**Why the photo library is its own source.** `file_selector` opens a *document* picker on both
+platforms — `ACTION_OPEN_DOCUMENT` (SAF) on Android, `UIDocumentPickerViewController` on iOS. On
+Android photos are at least reachable through the file browser; **on iOS the Files app is not a view
+onto the photo library and the camera roll is unreachable from it entirely**, so the button that used
+to say "Upload from Gallery" could not open the gallery. `image_picker` opens the Android Photo
+Picker / `PHPickerViewController` instead. Both are kept: the photo pickers are media-only by design,
+and **only the file source can produce a PDF**, which the backend converts server-side
+(`FileRepository.GetBytesFromImageBytes`) and quick scan OCRs end to end.
+
+**Layering.** `lib/utils/media_picker.dart` is the raw half (`pickPhotos` / `pickDocuments`, no
+Provider, no `BuildContext`, no snackbars); `lib/shared/functions/receipt_upload.dart` is the policy
+half. That mirrors the existing `lib/utils/` vs `lib/shared/functions/` split. Top-level functions,
+not a class — the operation is stateless, and the test seam already exists one layer down
+(`FileSelectorPlatform.instance` / `ImagePickerPlatform.instance` are both settable), so a
+class-level seam would be redundant *and* would stub out the bytes→`MultipartFile` conversion.
+
+**No runtime permission is required and none must be added.** The Android Photo Picker and PHPicker
+both work without one — that is their whole point, and Play Console requires a restricted-permission
+declaration to justify `READ_MEDIA_IMAGES` when the system picker would do. Do **not** route these
+through `ensureCameraAccess` or `Gal.requestAccess`: the latter is for *saving* to the library
+(`saveReceiptImageToGallery`), which is what `WRITE_EXTERNAL_STORAGE` and
+`NSPhotoLibraryAddUsageDescription` are for. `NSPhotoLibraryUsageDescription` already existed and
+needed no change.
+
+**No `imageQuality` / `maxWidth` / `maxHeight` on `pickMultiImage`.** Those make `image_picker`
+re-encode on device, and the backend already normalises HEIC before OCR — re-encoding here would only
+cost fidelity on the images we most need read accurately.
+
+**One `XTypeGroup`, no platform switch.** `receiptFileTypeGroup` carries `mimeTypes`,
+`uniformTypeIdentifiers` and `extensions` at once and each `file_selector` implementation reads the
+field it understands. `extensions` is not decorative: `file_selector_windows` throws `ArgumentError`
+without it and `file_selector_linux` (the e2e host) needs it because GTK's `image/*` wildcard
+handling is unreliable. Deleting the old `Platform.operatingSystem` switch is what un-skipped three
+Linux e2e specs.
+
+**`useAndroidPhotoPicker` is set in `main()`**, after `WidgetsFlutterBinding.ensureInitialized()` and
+before `runApp`. It is plugin *configuration* — no permission request, no channel round trip — so it
+is exempt from the launch-time-work ban documented in `_ReceiptWrangler.initState` (GitHub #617);
+the comment there says so, so it does not get "cleaned up" into that block later. Needed on API
+33–35; a no-op on 36+, and below 33 the Play Services `ModuleDependencies` service in
+`AndroidManifest.xml` pulls in the backported picker (without it those devices simply fall back to
+`ACTION_OPEN_DOCUMENT`, i.e. the old behaviour). The branch itself lives in
+`configureAndroidPhotoPicker([ImagePickerPlatform?])`, split out of `main()` **only** so it is
+reachable from a test — the parameter defaults to the live instance, so the production call site is
+unchanged, and it must stay in `main()` rather than moving into `initState`.
+`test/main_photo_picker_test.dart` pins both branches (Android gets the opt-in, any other
+implementation is untouched and does not throw). **e2e pumps `buildApp()`, not `main()`, so the
+plugin *registration* is still uncovered** — verify that on a physical Android device.
+
+**Undecodable bytes render a placeholder, not a broken-image glyph.**
+`UnrenderableFilePlaceholder` / `unrenderableFileErrorBuilder`
+(`lib/shared/widgets/unrenderable_file_placeholder.dart`) back the `errorBuilder` on every
+`Image.memory` that shows picked or server bytes. A PDF picked from the file source *uploads and OCRs
+fine* but cannot be decoded for preview; without this the user sees Flutter's grey broken-image glyph
+and concludes the upload failed. It also replaces `Image.asset("assets/images/placeholder.png")` in
+`receipt_image_carousel.dart`, which threw — there is no such asset. `ImageViewer.image` is typed
+`Widget` rather than `Image` for this reason.
+
+**`QuickScanImage` no longer redeclares `multipartFile` / `bytes`.** It used to, shadowing the
+superclass fields. Both copies held the same object so it worked, but Dart fields are not virtual: a
+getter on `UploadMultipartFileData` (such as the `filename` the placeholder uses) reads the *base*
+field while subclass code reads the shadow. Do not reintroduce them.
+
+**Known gap — `ImagePicker.retrieveLostData()` is not implemented.** On low-memory Android the
+activity can be destroyed while the photo picker is foregrounded; the selection is then only
+recoverable via `retrieveLostData()` on resume. Today it is silently lost and the user re-picks.
+Deferred deliberately: recovering it means deciding *where* the file lands (the Quick Scan sheet is
+gone by then), and the failure is rare and non-destructive.
+
+### The receipt-image app bar had an unreachable twin
+
+`ReceiptAppBarActionBuilder.buildAppBarMenu` used to branch on
+`state.fullPath.contains("images") / ("comments")` and serve two further menus. **No such route
+exists** — the full set is `/`, `/login`, `/groups`, `/groups/:groupId/{dashboards,receipts}`,
+`/receipts/add`, `/receipts/:receiptId/{view,edit}`, `/profile`, `/reports`, `/search` — and
+`ReceiptImageScreen` is pushed as a plain `MaterialPageRoute` from `receipt_form.dart`, so the path
+never changes when it opens. Both branches were dead, and the images one was a stale copy of
+`ReceiptImageAppBar` that navigated to `/receipts/:id/images/edit`, a URL the router does not define.
+They were **deleted** (306 lines → 58), not merged; `ReceiptImageAppBar` is the live implementation
+and now takes its upload plumbing from `receipt_upload.dart`. Do not recreate the copy.
+
+Four latent bugs in that plumbing were fixed while it moved: no try/catch around the picker (now via
+`acquireReceiptFiles`), no `context.mounted` guards after awaits, `showApiErrorSnackbar(context, e as
+DioException)` throwing a `TypeError` *from inside the catch block* for any non-Dio error (the helper
+now takes `Object` and reports non-Dio errors to Sentry, which fixes every call site at once), and a
+multi-image upload that assigned a success message and then `return`ed before showing it. The loading
+spinner is now raised and lowered in exactly one place, so a cancelled pick can no longer clear a
+spinner another request raised.
+
+**`acquireReceiptFiles` swallows every picker failure EXCEPT
+`CunningDocumentScannerException`, which it rethrows** — that one means camera permission is
+missing, and the right answer differs per call site, so turning it into a snackbar centrally would
+delete the distinction. Every caller therefore has to handle it, and there are three:
+`openQuickScanFromCamera` (`receipt_entry.dart`) answers it with `fallBackToPhotos`, because it is
+*starting* a flow and can redirect the whole thing; `_addPickedImages` (`quick_scan.dart`) and
+`addImagesToReceipt` (`receipt_upload.dart`) answer it with the `cameraDeniedFallbackMessage`
+snackbar and nothing else, because both already sit inside a surface that offers a photo source one
+tap away — opening a second Quick Scan flow over the top would be wrong. The latter two went
+uncaught at first, so a denied camera threw out of an async `onTap` and the scan icon simply
+appeared to do nothing. Pinned by `test/widgets/quick_scan_sheet_test.dart` ("a denied camera
+explains itself instead of escaping"), which asserts on the **permission-request count** rather than
+the snackbar count — `ScaffoldMessenger` renders one snackbar into *every* registered `Scaffold`, and
+while the sheet is open that is both the sheet's and the route's underneath, so `findsOneWidget`
+would fail for a reason that has nothing to do with the code under test.
+
+**`uploadImagesToReceipt` publishes partial results.** Each image is its own API call, so a failure
+on the third leaves the first two already persisted server-side. `uploaded` is declared **outside**
+the `try` and emitted once in `finally` (guarded by `isNotEmpty`), so every exit carries it —
+success, error, and the early return taken when the context is gone. Scoping it inside the `try`
+instead meant a mid-batch failure discarded images the server had already stored: the user saw only
+an error, and repeating the action uploaded them a second time, leaving the receipt with duplicates.
+Guarded by `test/shared/functions/receipt_upload_publish_test.dart`, which also pins that a
+first-image failure publishes nothing and that a successful batch emits exactly once.
+
 #### Camera permission
 
 `ensureCameraAccess()` (`lib/utils/permissions.dart`) maps the OS state to
@@ -575,17 +698,20 @@ denied state resolves instantly with no dialog, which reads to the user as the t
 and shares a single in-flight future for the same
 `ERROR_ALREADY_REQUESTING_PERMISSIONS` reason `requestPermissions()` does.
 
-Denied falls back to the gallery with a notice; permanently denied adds an **Open Settings**
-snackbar action (`openAppSettings`). **Keep the request lazy** — a launch-time request was removed
+Denied falls back to the **photo library** with a notice (`fallBackToPhotos`); permanently denied
+adds an **Open Settings** snackbar action (`openAppSettings`). Photos rather than a source menu
+because this is an automatic continuation, not a choice — the user just tried to *photograph* a
+receipt. Someone whose receipt is a PDF in Files can still reach it from the menu. **Keep the request lazy** — a launch-time request was removed
 deliberately for the iOS 26.x render-pause freeze (GitHub #617).
 
 `debugCameraAccessOverride` is the test seam (the plugins are statics with no injectable seam),
 mirroring the settable `OpenApiClient.client` and `QrScannerScreen`'s `debugForce*` flags.
 
-Three latent bugs on this path were fixed alongside: `scanImagesMultiPart` dereferenced a null with
-`!` (the scanner returns null on cancel, now an ordinary flow), `getPictures` re-requests camera
-permission itself and **throws** when it is missing (now caught → gallery fallback), and
-`getGalleryImages` throws off android/ios and is newly reachable (now caught → message).
+Two latent bugs on this path were fixed alongside: `scanImagesMultiPart` dereferenced a null with
+`!` (the scanner returns null on cancel, now an ordinary flow), and `getPictures` re-requests camera
+permission itself and **throws** when it is missing (now caught → photo-library fallback). A third —
+`getGalleryImages` throwing off android/ios — is gone with the picker rework below, which deleted the
+`Platform.operatingSystem` switch entirely.
 
 ### Quick Scan field configuration
 
@@ -604,14 +730,59 @@ backend **backfills** a default for a hidden/optional paid-by or status, `_submi
 those and per-file comma-joined `categoryIds` / `tagIds` plus a per-file `comments` string, building
 **one aligned array entry per image** (never skipping, so `files` and the parallel arrays stay 1:1). It
 requires a field only when that group's config marks it shown+required, mirroring the backend's
-`resolveQuickScanFields`. Null settings (no group selected yet) fall back to the backend defaults:
-paid-by/status shown, categories/tags/comment hidden.
+`resolveQuickScanFields`.
+
+**Until a group is picked, ONLY the Group dropdown renders.** There is no configuration to honour
+yet, and the old behaviour — falling back to the backend's column defaults, paid-by/status shown
+and required — was a guess that flipped the field set the moment the user chose a group whose
+config hides them. Common, not exotic: the group is seeded only from
+`userPreferences.quickScanDefaultGroupId` or `soleGroupId`, so any user in ≥2 groups without a
+default starts blank.
 
 The show/require derivation for all five fields lives in **one** pure helper —
-`resolveQuickScanFieldConfig(GroupReceiptSettings?, {required bool canCreateComments})` →
-`QuickScanFieldConfig` (`lib/shared/functions/quick_scan_field_config.dart`) — reused by both the
-form's `build()` and `_submitQuickScan`, so the two can't drift from each other or from
-`resolveQuickScanFields`. Covered by `test/shared/functions/quick_scan_field_config_test.dart`.
+`resolveQuickScanFieldConfig(GroupReceiptSettings?, {required bool hasGroup, required bool
+canCreateComments})` → `QuickScanFieldConfig` (`lib/shared/functions/quick_scan_field_config.dart`)
+— reused by both the form's `build()` and `_submitQuickScan`, so the two can't drift from each
+other or from `resolveQuickScanFields`. `hasGroup: false` returns `noGroupQuickScanFieldConfig`
+(all ten flags false). Covered by `test/shared/functions/quick_scan_field_config_test.dart`.
+
+- **`hasGroup` is keyed off "a group id is chosen", deliberately NOT `settings == null`.**
+  `getGroupReceiptSettings` returns null for *two* states — no group, and a group whose settings
+  aren't in `GroupModel` (a stale `quickScanDefaultGroupId`, which
+  `quick_scan_initial_values_test.dart` pins as reachable). Only the first collapses to Group-only;
+  a selected-but-unresolvable group keeps the backend defaults, so this change moves exactly one
+  behaviour. Desktop's resolver takes the same flag for the same reason.
+- **Hiding a field must not destroy its value, so `onValueChange` MERGES rather than overwrites.**
+  A hidden field is never built (`Visibility` defaults to `maintainState: false`), so it never
+  registers with `FormBuilder` and its key is absent from `formKey.currentState.value`. `FormBuilder`
+  runs with the default `clearValueOnUnregister: false`, so a key that *has* been registered
+  survives the field being hidden later — **an absent key therefore means "never shown", not
+  "cleared"**, and the image's own value is the right answer. Reporting `null` for an absent key
+  made the carousel consumer (`quick_scan.dart`, which writes every record member onto the
+  `QuickScanImage` unconditionally) erase the user's `quickScanDefault*` prefill on the very first
+  group selection — for exactly the users who have to pick a group. A field that *is* mounted always
+  reports its own value, so the explicit clears in the group dropdown's `onChanged` still apply.
+- **The group dropdown's `onChanged` re-reports in a post-frame callback.** The new group's fields
+  mount on the *next* frame, each seeding from the image — and a prefilled paid-by who is **not a
+  member** of the group just picked seeds the dropdown **blank** (`valueExists` in
+  `_buildUserDropDown`). Without the second report the image would keep that invisible id and
+  `_submitQuickScan` would send a user the caller never chose. Safe to re-enter: `onValueChange`
+  does not `setState`.
+- Both regression paths are pinned by `test/widgets/quick_scan_form_test.dart` ("keeps the paid-by
+  and status prefills through the first group selection" / "drops a prefilled paid-by who is not a
+  member of the group just picked"). That harness's `onFormChangeCallback` **mirrors the real
+  consumer** — with an inert `(_) {}` callback the image is never mutated and both tests pass with
+  the bug present.
+- **A value the user SELECTED never survives a group that hides its field — only an untouched
+  prefill does.** The distinction is easy to get backwards, and was raised in review as a suspected
+  bug. It holds for two reasons that are worth keeping together: the dropdown's `onChanged` clears
+  paid-by/categories/tags *before* its own `setState`, so the clear lands while the **old** group's
+  fields are still mounted and registered; and the merge above only falls back to the image for a key
+  that is **absent**, which — with `clearValueOnUnregister: false` — means "never shown", not
+  "hidden later". A field shown under group A and hidden under B keeps its (cleared) key, so a later
+  group C that shows it again gets a blank field, while a prefill that was never rendered is still
+  offered. Pinned by the A→B→C pair "a selected paid-by does not come back after a group that hides
+  it" / "a prefilled paid-by DOES survive a group that hides it".
 
 **The comment field is gated on `group.comments.create` as well as the group config.** The permission
 is a **required named argument** to the resolver (not read from a provider) so the helper stays pure
@@ -1370,10 +1541,10 @@ All three runners source `api/dev/switch-to-sqlite.sh` for the four `E2E_*` cred
 - **Destination markers must be unique to the destination.** `find.text('Name')` matches on BOTH `/view` and
   `/edit` receipt forms, so it cannot prove an Edit navigation happened — use `find.byType(BottomSubmitButton)`
   (only mounted on edit/add paths) instead.
-- **Quick Scan image input on Linux:** `getGalleryImages` (`lib/utils/scan.dart`) throws `"Unsupported platform"` on desktop via a `Platform.operatingSystem` switch **before** it reaches `file_selector`, so the file-selector mock can't help and `quick_scan_test.dart` (the gallery happy-path) is `skip: Platform.isLinux`. To reach the Quick Scan form headlessly, go through the **document scanner** — tap the scan slot with `installDocumentScannerMock()` installed (`openQuickScanImageForm` in `helpers/quick_scan_actions.dart`), which works on **all** targets (Linux/iOS/Android).
+- **Quick Scan image input on Linux:** the old `"Unsupported platform"` throw is **gone** — `getGalleryImages` and its `Platform.operatingSystem` switch were deleted (see "Picking receipt files"), so `installFileSelectorMock()` now reaches the file source on desktop and `quick_scan_test.dart` / `receipt_add_gallery_test.dart` / `receipt_add_partial_image_test.dart` run un-skipped — all three verified green on the Linux runner. `receipt_add_gallery_test.dart` needed the `hitTestable()` + frame-drain hardening before its popup-menu tap (tap-flake pattern 2 above); it had never run on Linux, so it had never needed it. **Assert the file source, not the photo one:** `image_picker_linux` is implemented on top of `file_selector_linux`, so on Linux the file-selector mock intercepts *both* and no Linux e2e can tell the two apart. The **document scanner** (`installDocumentScannerMock()`, `openQuickScanImageForm` in `helpers/quick_scan_actions.dart`) is still the way in when a spec wants a source that is neither picker.
 - **Reaching the receipt entry points:** a **tap** on the scan slot is a direct action, so manual entry is reached by **holding** it — `openManualReceiptForm(tester)` (`helpers/receipt_test_helpers.dart`) is the shared path, and it works on every screen and in every flag state (the receipts-screen overflow menu does not). Use `scanNavSlot()` rather than `find.text('Add')` when you only need to *reach* the slot: its label is "Scan" or "Add" depending on the caller's gates.
 - **Driving camera permission states:** set `debugCameraAccessOverride` (`lib/utils/permissions.dart`) rather than swapping the permission channel mock — login bootstrap also touches permission_handler, and the override pins only the branch under test. See `quick_scan_camera_denied_test.dart`. The suite uses the first-party `integration_test` package, which **cannot** drive native OS permission dialogs; that would need Patrol.
-- **Shared channel mocks live in `test/helpers/channel_mocks.dart`,** not here: the widget suite is the gating one and must not import from `integration_test/`. `helpers/platform_mocks.dart` re-exports them. `installPermissionMocks(status:, requestStatus:)` is the parameterised variant (`PermissionStatusWire` names the wire ints); `installCameraGalleryPermissionMocks()` is the always-granted one the scanner path needs.
+- **Shared channel mocks live in `test/helpers/channel_mocks.dart`,** not here: the widget suite is the gating one and must not import from `integration_test/`. `helpers/platform_mocks.dart` re-exports them, along with `test/helpers/image_picker_mock.dart` (`installImagePickerMock` / `installFailingImagePickerMock`) which lives there for the same reason. `installPermissionMocks(status:, requestStatus:)` is the parameterised variant (`PermissionStatusWire` names the wire ints); `installCameraGalleryPermissionMocks()` is the always-granted one the scanner path needs.
 - **Document-scanner mock must grant camera permission on every platform:** `CunningDocumentScanner.getPictures` requests `Permission.camera` **itself** (Dart-side, via `permission_handler`) before invoking its native channel, so `installDocumentScannerMock()` also calls `installCameraGalleryPermissionMocks()` (extracted from `installLinuxDesktopMocks`) on **all** platforms — not just Linux. Without it, iOS/Android hit the real permission_handler: the fire-and-forget `requestPermissions()` in `main.dart` leaves an app-init camera request **pending** (its native dialog is never dismissed in a headless test), and `getPictures`' own camera request then collides with it → `PlatformException(ERROR_ALREADY_REQUESTING_PERMISSIONS)`. Granting up front makes both requests resolve instantly with no dialog. Only this scan path needs the mobile grant; every other spec hits permission_handler natively (one fire-and-forget request, never a second) and stays green. `flutter_secure_storage` stays **real** on iOS/Android (only Linux mocks it).
 - **Linux build linker/ar:** the desktop build resolves its toolchain from the installed clang's dir (e.g. `/usr/lib/llvm-19/bin`). With only `clang` installed you get `Failed to find any of [ld.lld, ld]` then `[llvm-ar, ar]` — install `lld` **and** the matching `llvm` package (see the Flutter SDK Setup apt line above) so `ld.lld` / `llvm-ar` land in that dir.
 - **Headless display:** Flutter Linux desktop apps render through GTK and exit immediately without a display. `run-e2e.sh` auto-wraps in `xvfb-run` when `$DISPLAY` is unset. If you see "The log reader stopped unexpectedly, or never started," your display setup isn't working — check `xvfb-run --help` or set `DISPLAY` to a real X server.
@@ -1437,7 +1608,8 @@ All three runners source `api/dev/switch-to-sqlite.sh` for the four `E2E_*` cred
 - `integration_test/quick_scan_prefill_test.dart` — Quick Scan per-image **prefill** from user preferences vs group config. Each added image seeds group/paid-by/status from `userPreferences.quickScanDefault*` (`_getInitialQuickScanValues`, delivered via AppData). Persists a group that **hides** paid-by (real prefs→AppData→form path via `setUserQuickScanPrefs` + `setGroupQuickScanConfig`, both restored) and asserts a **preset paid-by falls off** (field absent) while a **preset status is kept** (shown), then that submit **queues** (the hidden paid-by is backfilled from the group's `UPLOADER` default). Hiding paid-by/status in a persisted config **requires a group default** (`quickScanDefaultPaidByType: 'UPLOADER'` needs no id; `quickScanDefaultStatus` for status) — the backend rejects hiding/optional without one.
 - `test/widgets/quick_scan_form_test.dart` — fast widget-level coverage of the same form logic: per-config visibility, paid-by/status required-vs-optional validators, null + non-null default configs, the group-switch behaviors (fields re-render per the new group's config; paid-by/categories/tags values clear on switch; a required validator is re-evaluated after switching), the picker tap-opens-with-null-shellContext crash guards, the **comment** cases (optional vs required validator, hidden by default / by `hideComments` / without `group.comments.create`, and surviving a group change), and **prefill vs config** (a prefilled paid-by/status shows when the group shows the field, and **falls off** — field absent — when the group hides it). Categories/tags "required" is **not** a field validator (enforced at submit in `quick_scan.dart`), so it's asserted in the integration spec, not here.
 - `integration_test/helpers/document_scanner_mock.dart` — `installDocumentScannerMock()`: stubs the `cunning_document_scanner` channel's `getPictures` to return a fixed on-disk PNG **and** grants camera/gallery permission via `installCameraGalleryPermissionMocks()` on every platform (see the "Document-scanner mock" caveat above). This is the **only** way to add an image to the Quick Scan sheet on Linux desktop.
-- `integration_test/helpers/platform_mocks.dart` — `installLinuxDesktopMocks()` (Linux-only: permission_handler + gal + flutter_secure_storage) and the extracted `installCameraGalleryPermissionMocks()` (camera + gallery grant, shared with the document-scanner mock on all platforms).
+- `integration_test/helpers/platform_mocks.dart` — `installLinuxDesktopMocks()` (Linux-only: permission_handler + gal + flutter_secure_storage) and the extracted `installCameraGalleryPermissionMocks()` (camera + gallery grant, shared with the document-scanner mock on all platforms). Also re-exports the photo-picker fakes.
+- `test/helpers/image_picker_mock.dart` — `installImagePickerMock()` swaps `ImagePickerPlatform.instance` for a fake returning a real on-disk file (same empty-filename rationale as the file-selector mock); `installFailingImagePickerMock()` is the throwing variant the failure-message specs use. **Widget tests must pass `bytes:` explicitly** (`quickScanTestPngBytes`) — `rootBundle` is not serviced there — **and must wrap the pick in `tester.runAsync`**, since `testWidgets` runs in fake-async where the mock's temp-file I/O never completes and the test hangs rather than failing. `integration_test/helpers/file_selector_mock.dart` gained a matching `installFailingFileSelectorMock()`.
 - `integration_test/helpers/receipt_test_helpers.dart` — `addManualReceiptViaUI` (group-selectable), URL/id extraction, receipt cleanup.
 - `integration_test/helpers/nav.dart` — group-entry and group-receipt navigation helpers.
 - `test_driver/integration_test.dart` — `integrationDriver()` entrypoint that `flutter drive` uses.

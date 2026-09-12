@@ -31,14 +31,34 @@ const noReceiptEntryPermissionMessage =
     "You don't have permission to add receipts here.";
 
 const cameraDeniedFallbackMessage =
-    "Camera access is off — pick from your gallery instead.";
+    "Camera access is off — pick a photo instead.";
 
-const galleryUnavailableMessage =
-    "Couldn't open the gallery on this device.";
+/// The three picker sources fail for different reasons, so they say different
+/// things — a single "gallery" message would misdescribe two of the three.
+const photoPickerUnavailableMessage =
+    "Couldn't open your photos on this device.";
+
+const filePickerUnavailableMessage =
+    "Couldn't open the file picker on this device.";
+
+const scannerUnavailableMessage =
+    "Couldn't open the scanner on this device.";
 
 const addManualReceiptLabel = "Add Manual Receipt";
 const quickScanLabel = "Quick Scan";
-const uploadFromGalleryLabel = "Upload from Gallery";
+
+/// The photo library and the document browser are separate entries because
+/// they are separate OS pickers with different reach: only [uploadFileLabel]
+/// can produce a PDF, and on iOS only [uploadPhotoLabel] can reach the camera
+/// roll at all.
+const uploadPhotoLabel = "Upload Photo";
+const uploadFileLabel = "Upload File";
+const uploadFromCameraLabel = "Upload from Camera";
+
+/// `PopupMenuButton`'s default tooltip is the localized "Show menu", which says
+/// nothing about what the menu is for.
+const uploadSourceTooltip = "Add a photo or file";
+
 const enterDetailsManuallyLabel = "Enter details manually instead";
 const quickScanQueuedMessage = "Queued — we'll fill in the details for you.";
 

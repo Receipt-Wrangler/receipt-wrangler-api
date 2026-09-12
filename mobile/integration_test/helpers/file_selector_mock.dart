@@ -7,7 +7,12 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 /// Replaces [FileSelectorPlatform.instance] with a stub that returns a
 /// fixed file on disk from [openFiles]. Lets tests exercise the receipt
-/// form's "Upload from Gallery" path without driving a native picker.
+/// form's "Upload File" path without driving a native picker.
+///
+/// Note for Linux: `image_picker_linux` is built on `file_selector_linux`, so
+/// this fake also intercepts the **photo** source there and the two cannot be
+/// told apart. Assert the file source in Linux e2e; prove the split in a widget
+/// test with an explicit `ImagePickerPlatform` fake.
 ///
 /// The platform-interface swap works on every target Flutter supports, so
 /// this is the same code path on Linux desktop, Android emulator, and
@@ -66,4 +71,22 @@ Future<void> installFileSelectorMock({
   final tempFile = File('${tempDir.path}/$name');
   await tempFile.writeAsBytes(pngBytes, flush: true);
   FileSelectorPlatform.instance = _FakeFileSelector(tempFile.path, name);
+}
+
+/// A file selector whose every call throws, for specs asserting the failure
+/// message.
+void installFailingFileSelectorMock() {
+  FileSelectorPlatform.instance = _FailingFileSelector();
+}
+
+class _FailingFileSelector extends FileSelectorPlatform
+    with MockPlatformInterfaceMixin {
+  @override
+  Future<List<XFile>> openFiles({
+    List<XTypeGroup>? acceptedTypeGroups,
+    String? initialDirectory,
+    String? confirmButtonText,
+  }) async {
+    throw Exception('file picker unavailable');
+  }
 }

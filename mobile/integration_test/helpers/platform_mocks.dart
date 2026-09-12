@@ -15,6 +15,11 @@ export '../../test/helpers/channel_mocks.dart'
         PermissionMockCalls,
         PermissionStatusWire;
 
+/// Re-exported for the same reason: the photo-library fake lives beside the
+/// channel mocks in `test/helpers/` so the widget suite can use it too.
+export '../../test/helpers/image_picker_mock.dart'
+    show installImagePickerMock, installFailingImagePickerMock;
+
 /// Installs mock [MethodChannel] handlers for plugins that don't have a working
 /// Linux desktop implementation in this project's runtime environment:
 ///

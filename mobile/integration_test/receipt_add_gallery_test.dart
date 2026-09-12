@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:receipt_wrangler_mobile/constants/receipt_entry.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/bottom_submit_button.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/receipt_edit_popup_menu.dart';
 
@@ -25,12 +26,7 @@ void main() {
   });
 
   testWidgets(
-      'admin can add a receipt with a gallery image',
-      // mobile/lib/utils/scan.dart:58 throws "Unsupported platform" on
-      // Linux -- the gallery picker path only handles Android/iOS.
-      // On Linux we'd never reach our file_selector mock; skip the
-      // test there. Runs on Android emulator + iOS simulator in CI.
-      skip: Platform.isLinux,
+      'admin can add a receipt with an image picked from files',
       (tester) async {
     await installFileSelectorMock();
     await binding.setSurfaceSize(const Size(1280, 900));
@@ -71,10 +67,19 @@ void main() {
     // on iOS -- byIcon(more_vert) never matches on iOS.
     await pumpUntilFound(tester, find.byType(PopupMenuButton));
 
-    // Open the image-screen popup menu and pick "Upload from Gallery".
+    // Open the image-screen popup menu and pick the file source.
+    //
+    // Wait on `hitTestable()` and drain a few frames before tapping: a popup
+    // menu mounts its items on the animation's first frame, so a plain
+    // `pumpUntilFound(find.text(...))` returns while the menu is still scaling
+    // and the tap lands where the item *was*. (This spec never ran on Linux
+    // before, so it had not needed the hardening the sibling specs carry.)
     await tester.tap(find.byType(PopupMenuButton));
-    await pumpUntilFound(tester, find.text('Upload from Gallery'));
-    await tester.tap(find.text('Upload from Gallery'));
+    await pumpUntilFound(tester, find.text(uploadFileLabel).hitTestable());
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.tap(find.text(uploadFileLabel).hitTestable());
     // Mocked openFiles() resolves immediately; the model's
     // imagesToUploadBehaviorSubject emits, the carousel updates.
     await tester.pumpAndSettle(const Duration(seconds: 2));

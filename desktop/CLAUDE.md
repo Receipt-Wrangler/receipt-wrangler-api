@@ -1338,7 +1338,33 @@ actively removing rows is never invisible.
 - **Quick scan dialog** (`src/receipts/quick-scan-dialog/`) resolves each image's config from **that
   image's selected group** (`GroupState.getGroupById(...).groupReceiptSettings`) to drive per-image
   field visibility + required validators; hidden paid-by/status are sent empty so the server backfills
-  the group default. Category/tag pickers (`app-category-autocomplete`/`app-tag-autocomplete`,
+  the group default.
+  - **Until a group is picked for an image, ONLY its Group field renders.** There is no configuration
+    to honour yet, and the old fallback (paid-by/status shown+required) was a guess that flipped the
+    field set the moment the user chose a group whose config hides them. The derivation lives in one
+    pure helper, **`resolveQuickScanFieldConfig(settings, { hasGroup, canCreateComments })`**
+    (`quick-scan-field-config.ts`) — a line-for-line port of mobile's
+    `lib/shared/functions/quick_scan_field_config.dart`, and the single source for both the
+    `show*(i)` getters and `configureImages()`, which previously each carried their own copy of the
+    `?? true` / `?? false` default table.
+  - **`hasGroup` is "a group id is chosen", NOT "settings resolved".** `settingsForIndex` returns
+    `undefined` for *two* states — no group, and a group id the store doesn't know (a stale
+    `quickScanDefaultGroupId`, or AppData not carrying it; pinned by the spec case
+    `'should push new image when there user preferences'`, which seeds a group absent from the
+    store). Only the first collapses to Group-only.
+  - **`configureImages()` gates its CLEARING on `hasGroupAt(i)`, but not its `setRequired`.** Hidden
+    *because this group's config hides it* must clear, so the server backfills its configured default
+    instead of receiving a stale value (what the `preset paid-by falls off the submission` e2e pins).
+    Hidden *because no group is picked yet* must **not**: those values are the caller's
+    `quickScanDefault*` prefills, and every `FormArray.push` in `fileLoaded()` emits `valueChanges`,
+    so `configureImages()` runs **before `groupIds` is even pushed** — an ungated clear wipes the
+    prefills on the first pass and never restores them. Requiredness is recomputed unconditionally
+    because a validator left over from a group the user just **cleared** (the autocomplete's X, which
+    the e2e helper `selectImageGroup` clicks on every switch) has to come off. Note desktop *can*
+    return to the no-group state mid-session this way; mobile's dropdown offers no null option, so
+    there it is only ever the initial state.
+  - `configForIndex(i)` is resolved per call, never cached per index — `removeImage()` shifts every
+    later image down, so an index-keyed cache would hand an image another one's config. Category/tag pickers (`app-category-autocomplete`/`app-tag-autocomplete`,
   `[creatable]="false"`) source options from `AuthState.groupCategories`/`groupTags` and are serialized
   as per-image comma-joined id strings for `quickScanReceipt(...)`. The **comment** is an
   `app-textarea` (`data-testid="quick-scan-comment"`) backed by a scalar per-image `FormControl` in a

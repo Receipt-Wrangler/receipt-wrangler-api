@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 class ImageViewer extends StatefulWidget {
   const ImageViewer({super.key, required this.image});
 
-  final Image image;
+  /// A `Widget`, not an `Image`: a source that cannot be decoded renders the
+  /// unrenderable-file placeholder instead, and that is not an `Image`.
+  final Widget image;
 
   @override
   State<ImageViewer> createState() => _ImageViewer();

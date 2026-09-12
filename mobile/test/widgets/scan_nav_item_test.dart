@@ -139,7 +139,8 @@ void main() {
 
     expect(find.text(quickScanLabel), findsOneWidget);
     expect(find.text(addManualReceiptLabel), findsOneWidget);
-    expect(find.text(uploadFromGalleryLabel), findsOneWidget);
+    expect(find.text(uploadPhotoLabel), findsOneWidget);
+      expect(find.text(uploadFileLabel), findsOneWidget);
   });
 
   testWidgets("a hold on the blocked slot offers only what the user can do",
@@ -151,7 +152,8 @@ void main() {
 
     expect(find.text(addManualReceiptLabel), findsOneWidget);
     expect(find.text(quickScanLabel), findsNothing);
-    expect(find.text(uploadFromGalleryLabel), findsNothing);
+    expect(find.text(uploadPhotoLabel), findsNothing);
+      expect(find.text(uploadFileLabel), findsNothing);
   });
 
   testWidgets('names the hold gesture for assistive tech', (tester) async {

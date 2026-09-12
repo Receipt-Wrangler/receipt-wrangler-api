@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -48,9 +50,36 @@ import 'models/context_model.dart';
 import 'models/custom_field_model.dart';
 import 'models/system_settings_model.dart';
 
+/// Opts into the Android Photo Picker, which is a no-op on every other platform.
+///
+/// Split out of [main] only so both branches are reachable from a test —
+/// [ImagePickerPlatform.instance] is a real plugin instance at runtime, and
+/// `buildApp()` (what the e2e suite pumps) never runs [main]. [platform]
+/// defaults to the live instance, so the production call site is unchanged.
+@visibleForTesting
+void configureAndroidPhotoPicker([ImagePickerPlatform? platform]) {
+  final picker = platform ?? ImagePickerPlatform.instance;
+  if (picker is ImagePickerAndroid) {
+    picker.useAndroidPhotoPicker = true;
+  }
+}
+
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
+  // Opt into the Android Photo Picker on API 33-35. It is already the default
+  // on 36+, where this is a no-op, and below 33 the Play Services backport
+  // covers it (see the ModuleDependencies service in AndroidManifest.xml).
+  //
+  // This is plugin *configuration* -- no permission request, no channel round
+  // trip, no system dialog -- so it does not fall under the launch-time-work
+  // ban documented in `_ReceiptWrangler.initState` for the iOS render-pause
+  // freeze (GitHub #617). Do not move it there. It has to run before the first
+  // pick, and `ensureInitialized()` above has just registered the plugin whose
+  // instance it reads.
+  configureAndroidPhotoPicker();
+
   await GlobalSharedPreferences.initialize();
 
   // Crash/error reporting is opt-out (on by default). When disabled we don't

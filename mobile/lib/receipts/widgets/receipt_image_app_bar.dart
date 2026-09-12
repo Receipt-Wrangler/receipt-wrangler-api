@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:openapi/openapi.dart' as api;
 import 'package:provider/provider.dart';
@@ -7,14 +6,14 @@ import 'package:receipt_wrangler_mobile/shared/widgets/full_screen_image_viewer.
 import 'package:receipt_wrangler_mobile/utils/receipts.dart';
 import 'package:rxdart/rxdart.dart';
 
-import '../../client/client.dart';
-import '../../enums/upload_method.dart';
-import '../../interfaces/upload_multipart_file_data.dart';
 import '../../models/loading_model.dart';
+import '../../client/client.dart';
+import '../../interfaces/upload_multipart_file_data.dart';
 import '../../models/receipt_model.dart';
+import '../../shared/functions/receipt_upload.dart';
 import '../../shared/functions/receipt_image_gallery.dart';
 import '../../shared/widgets/receipt_edit_popup_menu.dart';
-import '../../utils/scan.dart';
+import '../../shared/widgets/unrenderable_file_placeholder.dart';
 import '../../utils/snackbar.dart';
 
 class ReceiptImageAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -93,10 +92,8 @@ class ReceiptImageAppBar extends StatelessWidget implements PreferredSizeWidget 
   }
 
   List<PopupMenuEntry> _buildEditModeActions(BuildContext context, ReceiptModel receiptModel) {
-    List<PopupMenuEntry> popupMenuEntries = [
-      _buildUploadFromCameraButton(context, receiptModel),
-      _buildUploadFromGalleryButton(context, receiptModel),
-    ];
+    final popupMenuEntries = buildImageSourceMenuItems(context,
+        receiptModel: receiptModel, formState: formState);
 
     if (receiptModel.imageBehaviorSubject.value.isNotEmpty ||
         receiptModel.imagesToUploadBehaviorSubject.value.isNotEmpty) {
@@ -123,7 +120,9 @@ class ReceiptImageAppBar extends StatelessWidget implements PreferredSizeWidget 
             context,
             MaterialPageRoute(
                 builder: (context) =>
-                    FullScreenImageViewer(image: Image.memory(bytes))),
+                    FullScreenImageViewer(
+                        image: Image.memory(bytes,
+                            errorBuilder: unrenderableFileErrorBuilder()))),
           );
         });
   }
@@ -181,85 +180,22 @@ class ReceiptImageAppBar extends StatelessWidget implements PreferredSizeWidget 
       var currentImages =
           List<api.FileDataView?>.from(receiptModel.imageBehaviorSubject.value);
       currentImages.removeAt(index);
+      // Deliberately before the mounted guard: the image is already gone from
+      // the server, so the model has to follow whether or not this widget
+      // survived the await.
       receiptModel.imageBehaviorSubject.add(currentImages);
 
+      if (!context.mounted) {
+        return;
+      }
       showSuccessSnackbar(context, "Successfully deleted image");
     } catch (e) {
-      showApiErrorSnackbar(context, e as DioException);
-    }
-  }
-
-  PopupMenuEntry _buildUploadFromGalleryButton(BuildContext context, ReceiptModel receiptModel) {
-    return PopupMenuItem(
-        value: "gallery",
-        child: const Text("Upload from Gallery"),
-        onTap: () async => await _getImages(context, receiptModel, UploadMethod.gallery));
-  }
-
-  PopupMenuEntry _buildUploadFromCameraButton(BuildContext context, ReceiptModel receiptModel) {
-    return PopupMenuItem(
-        value: "camera",
-        child: const Text("Upload from Camera"),
-        onTap: () async => await _getImages(context, receiptModel, UploadMethod.camera));
-  }
-
-  Future<void> _getImages(BuildContext context, ReceiptModel receiptModel, UploadMethod method) async {
-    List<UploadMultipartFileData> imagesToUpload;
-
-    if (method == UploadMethod.camera) {
-      imagesToUpload = await scanImagesMultiPart(1);
-    } else {
-      imagesToUpload = await getGalleryImages(multiple: false);
-    }
-
-    if (formState == WranglerFormState.add) {
-      _addImagesToModel(receiptModel, imagesToUpload);
-    } else if (formState == WranglerFormState.edit) {
-      await _uploadImages(context, receiptModel, imagesToUpload);
-    }
-  }
-
-  void _addImagesToModel(ReceiptModel receiptModel, List<UploadMultipartFileData> imagesToUpload) {
-    for (var image in imagesToUpload) {
-      var currentList = receiptModel.imagesToUploadBehaviorSubject.value;
-      receiptModel.imagesToUploadBehaviorSubject.add([...currentList, image]);
-    }
-  }
-
-  Future<void> _uploadImages(BuildContext context, ReceiptModel receiptModel,
-      List<UploadMultipartFileData> imagesToUpload) async {
-    var successMessage = "Successfully uploaded image";
-    try {
-      if (imagesToUpload.isNotEmpty) {
-        Provider.of<LoadingModel>(context, listen: false).setIsLoading(true);
-      }
-
-      for (var image in imagesToUpload) {
-        var uploadedImage = await OpenApiClient.client
-            .getReceiptImageApi()
-            .uploadReceiptImage(
-                file: image.multipartFile, receiptId: receiptModel.receipt.id);
-        var oldImages = List<api.FileDataView?>.from(
-            receiptModel.imageBehaviorSubject.value);
-        oldImages.add(uploadedImage.data);
-        receiptModel.imageBehaviorSubject.add(oldImages);
-      }
-      Provider.of<LoadingModel>(context, listen: false).setIsLoading(false);
-
-      if (imagesToUpload.isEmpty) {
+      // Both snackbars resolve ScaffoldMessenger.of(context), so neither may
+      // run once this widget is unmounted.
+      if (!context.mounted) {
         return;
       }
-      if (imagesToUpload.length > 1) {
-        successMessage =
-            "Successfully uploaded ${imagesToUpload.length} images";
-        return;
-      }
-
-      showSuccessSnackbar(context, successMessage);
-    } catch (e) {
-      print(e);
-      Provider.of<LoadingModel>(context, listen: false).setIsLoading(false);
-      showApiErrorSnackbar(context, e as DioException);
+      showApiErrorSnackbar(context, e);
     }
   }
 

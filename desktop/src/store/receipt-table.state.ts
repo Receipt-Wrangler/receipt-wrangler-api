@@ -1,10 +1,11 @@
 import { Injectable } from "@angular/core";
 import { Action, Selector, State, StateContext } from "@ngxs/store";
+import { DEFAULT_QUICK_DATE_FIELD, ReceiptDateFilterFieldKey } from "../constants/receipt-filter-fields.constant";
 import { ReceiptTableInterface } from "../interfaces";
 import { DEFAULT_RECEIPT_TABLE_COLUMNS, ReceiptTableColumnConfig } from "../interfaces/receipt-table-column-config.interface";
 import { ReceiptPagedRequestFilter } from "../open-api";
 import { isFilterEntryActive } from "../utils/receipt-filter-entry";
-import { ResetReceiptFilter, SetColumnConfig, SetPage, SetPageSize, SetReceiptFilter, SetReceiptFilterData, SetReceiptFilterField } from "./receipt-table.actions";
+import { ResetReceiptFilter, SetColumnConfig, SetPage, SetPageSize, SetQuickDateField, SetReceiptFilter, SetReceiptFilterData, SetReceiptFilterField } from "./receipt-table.actions";
 
 /**
  * A pristine filter. This is a factory rather than a shared constant because
@@ -68,6 +69,7 @@ export const defaultReceiptFilter = buildDefaultReceiptFilter();
     orderBy: "created_at",
     sortDirection: "desc",
     filter: buildDefaultReceiptFilter(),
+    quickDateField: DEFAULT_QUICK_DATE_FIELD,
     columnConfig: DEFAULT_RECEIPT_TABLE_COLUMNS,
   },
 })
@@ -95,6 +97,17 @@ export class ReceiptTableState {
     // Shares isFilterEntryActive with the filter chips, so the badge count and
     // the chips can never disagree about what counts as a condition.
     return Object.keys(filter).filter((key) => isFilterEntryActive(filter[key])).length;
+  }
+
+  /**
+   * The date field the quick date control targets. The fallback lives here
+   * rather than only in the state defaults because `defaults` never runs for a
+   * state hydrated from localStorage — every install that filtered before this
+   * key existed would otherwise read `undefined` and index the filter with it.
+   */
+  @Selector()
+  static quickDateField(state: ReceiptTableInterface): ReceiptDateFilterFieldKey {
+    return state.quickDateField ?? DEFAULT_QUICK_DATE_FIELD;
   }
 
   @Selector()
@@ -159,10 +172,23 @@ export class ReceiptTableState {
     });
   }
 
+  @Action(SetQuickDateField)
+  setQuickDateField(
+    { patchState }: StateContext<ReceiptTableInterface>,
+    payload: SetQuickDateField
+  ) {
+    patchState({
+      quickDateField: payload.field,
+    });
+  }
+
   @Action(ResetReceiptFilter)
   resetFilter({ patchState }: StateContext<ReceiptTableInterface>) {
+    // The targeted field is part of what the user configured, so a reset puts
+    // the control back where a fresh install starts it.
     patchState({
       filter: buildDefaultReceiptFilter(),
+      quickDateField: DEFAULT_QUICK_DATE_FIELD,
     });
   }
 

@@ -14,6 +14,38 @@ app-receipts-table {
     row-gap: variables.$spacing-xs;
   }
 
+  // The field picker and the stepper read as one control, so keep them on a
+  // single line and let the pair wrap together.
+  .receipts-quick-date {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  // Chip-shaped, so it reads as the label on the stepper rather than as another
+  // toolbar action.
+  [data-testid="receipts-quick-date-field"] button {
+    min-width: 0;
+    padding: 0 variables.$spacing-xs 0 variables.$spacing-sm;
+    border-radius: 1rem;
+    background: map.get(variables.$accent-palette, 100);
+
+    // A caret, so the label reads as something you can open rather than as a
+    // static description. app-button renders one leading icon only, so this
+    // trailing one is a pseudo-element on the ligature icon font the app
+    // already loads (styles.scss) rather than a second mat-icon.
+    .d-flex::after {
+      content: "arrow_drop_down";
+      font-family: "Material Icons";
+      // Material Icons resolves its names through DISCRETIONARY ligatures,
+      // which browsers leave off by default — without these the glyph renders
+      // blank rather than falling back to the literal text.
+      font-feature-settings: "liga";
+      font-variant-ligatures: discretionary-ligatures;
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+  }
+
   .receipt-filter-chips {
     display: block;
     // app-table-header owns the gap below itself, so only close the gap to the

@@ -12,13 +12,45 @@
       [buttonRouterLink]="['/receipts/add']"
     ></app-add-button>
 
-    <app-month-stepper
-      class="me-2"
-      [value]="stepperMonth()"
-      [label]="stepperLabel()"
-      (monthSelected)="monthSelected($event)"
-      (allTimeSelected)="allTimeSelected()"
-    ></app-month-stepper>
+    <!--
+      The field picker and the stepper are one control: the picker names the
+      date column the stepper writes to. A mat-menu is right here (unlike the
+      stepper's own panel, which is a CDK overlay) because every entry really is
+      a mat-menu-item, so the FocusKeyManager has items to navigate.
+    -->
+    <div class="receipts-quick-date me-2">
+      <app-button
+        data-testid="receipts-quick-date-field"
+        matButtonType="basic"
+        icon="event"
+        color="accent"
+        tooltip="Choose which date field to filter on"
+        aria-haspopup="menu"
+        [buttonText]="quickDateFieldLabel()"
+        [matMenuTriggerFor]="quickDateFieldMenu"
+      ></app-button>
+
+      <mat-menu #quickDateFieldMenu="matMenu">
+        @for (field of dateFilterFields; track field.key) {
+          <button
+            mat-menu-item
+            [attr.data-testid]="'receipts-quick-date-field-' + field.key"
+            [attr.aria-checked]="field.key === quickDateField()"
+            (click)="quickDateFieldSelected(field.key)"
+          >
+            <mat-icon>{{ field.key === quickDateField() ? "check" : "" }}</mat-icon>
+            <span>{{ field.label }}</span>
+          </button>
+        }
+      </mat-menu>
+
+      <app-month-stepper
+        [value]="stepperMonth()"
+        [label]="stepperLabel()"
+        (monthSelected)="monthSelected($event)"
+        (allTimeSelected)="allTimeSelected()"
+      ></app-month-stepper>
+    </div>
 
     <app-button
       class="me-2 filter-button"

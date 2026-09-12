@@ -11,11 +11,11 @@ import { catchError, EMPTY, map, Subject, switchMap, take, tap } from "rxjs";
 import { fadeInOut } from "src/animations";
 import { ReceiptFilterService } from "src/services/receipt-filter.service";
 import { ConfirmationDialogComponent } from "src/shared-ui/confirmation-dialog/confirmation-dialog.component";
-import { ResetReceiptFilter, SetColumnConfig, SetPage, SetPageSize, SetReceiptFilterData, SetReceiptFilterField, } from "src/store/receipt-table.actions";
+import { ResetReceiptFilter, SetColumnConfig, SetPage, SetPageSize, SetQuickDateField, SetReceiptFilterData, SetReceiptFilterField, } from "src/store/receipt-table.actions";
 import { ReceiptTableState } from "src/store/receipt-table.state";
 import { TableColumn } from "src/table/table-column.interface";
 import { TableComponent } from "src/table/table/table.component";
-import { DEFAULT_DIALOG_CONFIG, DEFAULT_HOST_CLASS } from "../../constants";
+import { DEFAULT_DIALOG_CONFIG, DEFAULT_HOST_CLASS, RECEIPT_DATE_FILTER_FIELDS, ReceiptDateFilterFieldKey } from "../../constants";
 import { ReceiptTableColumnConfig } from "../../interfaces";
 import {
   BulkStatusUpdateCommand,
@@ -118,11 +118,25 @@ export class ReceiptsTableComponent implements OnInit, AfterViewInit {
     () => this.filter()?.filter as ReceiptPagedRequestFilter | undefined
   );
 
+  /** The date field the quick date control writes to. */
+  public quickDateField = this.store.selectSignal(ReceiptTableState.quickDateField);
+
+  public readonly dateFilterFields = RECEIPT_DATE_FILTER_FIELDS;
+
+  public quickDateFieldLabel = computed(
+    () =>
+      RECEIPT_DATE_FILTER_FIELDS.find((field) => field.key === this.quickDateField())?.label ??
+      "Date"
+  );
+
+  /** The entry the quick date control currently owns. */
+  private quickDateEntry = computed(() => this.receiptFilter()?.[this.quickDateField()]);
+
   /**
-   * The month the quick date control is showing, or null when the Date filter
-   * is unset or is something a month cannot express.
+   * The month the quick date control is showing, or null when its field is
+   * unset or holds something a month cannot express.
    */
-  public stepperMonth = computed(() => monthFromFilterEntry(this.receiptFilter()?.date));
+  public stepperMonth = computed(() => monthFromFilterEntry(this.quickDateEntry()));
 
   public stepperLabel = computed(() => {
     const month = this.stepperMonth();
@@ -130,9 +144,9 @@ export class ReceiptsTableComponent implements OnInit, AfterViewInit {
       return this.datePipe.transform(new Date(month.year, month.month, 1), "LLLL y") ?? "";
     }
 
-    // A Date filter the stepper cannot describe still has to be visible as a
-    // filter — the chip beside it spells out what it actually is.
-    return isFilterEntryActive(this.receiptFilter()?.date) ? "Custom" : "All time";
+    // A filter the stepper cannot describe still has to be visible as a
+    // filter — the chip below spells out what it actually is.
+    return isFilterEntryActive(this.quickDateEntry()) ? "Custom" : "All time";
   });
 
   public filterChips = computed<ReceiptFilterChip[]>(() => {
@@ -153,9 +167,7 @@ export class ReceiptsTableComponent implements OnInit, AfterViewInit {
         users,
         formatDate: (value) => this.datePipe.transform(value as string) ?? "",
         formatCurrency: (value) => this.customCurrencyPipe.transform(value as number),
-      },
-      // The stepper already says "September 2026", so don't say it twice.
-      this.stepperMonth() ? ["date"] : []
+      }
     );
   });
 
@@ -437,12 +449,22 @@ export class ReceiptsTableComponent implements OnInit, AfterViewInit {
   }
 
   public monthSelected(month: FilterMonth): void {
-    // The quick control IS the Date filter, so it overwrites whatever was there.
-    this.applyFilterField("date", monthFilterEntry(month) as any);
+    // The quick control IS its field's filter, so it overwrites whatever was there.
+    this.applyFilterField(this.quickDateField(), monthFilterEntry(month) as any);
   }
 
   public allTimeSelected(): void {
-    this.applyFilterField("date", null);
+    this.applyFilterField(this.quickDateField(), null);
+  }
+
+  /**
+   * Re-points the quick date control at another date field. Deliberately
+   * non-destructive: it changes no condition — only which one the stepper
+   * describes — so whatever the previous field held stays applied and keeps its
+   * chip. Nothing to refetch.
+   */
+  public quickDateFieldSelected(field: ReceiptDateFilterFieldKey): void {
+    this.store.dispatch(new SetQuickDateField(field));
   }
 
   public filterChipCleared(field: keyof ReceiptPagedRequestFilter): void {

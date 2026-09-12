@@ -17,7 +17,7 @@ import { ApiModule, FilterOperation, Permission, Receipt, ReceiptStatus } from "
 import { ReceiptFilterService } from "../../services/receipt-filter.service";
 import { AuthState, GroupState, UserState } from "../../store";
 import { SetPermissions } from "../../store/auth.state.actions";
-import { SetReceiptFilter } from "../../store/receipt-table.actions";
+import { SetQuickDateField, SetReceiptFilter } from "../../store/receipt-table.actions";
 import { ReceiptsTableComponent } from "./receipts-table.component";
 import { provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
 
@@ -195,10 +195,76 @@ describe("ReceiptsTableComponent", () => {
       ]);
     });
 
-    it("never shows a date chip for the month the stepper is already showing", () => {
+    // The chip row used to omit the field the stepper was naming. It is the only
+    // place that says WHICH date column is filtered now that the target is
+    // selectable, so it no longer makes exceptions.
+    it("chips the month the stepper is showing", () => {
       component.monthSelected({ year: 2026, month: 8 });
 
-      expect(component.filterChips()).toEqual([]);
+      expect(component.filterChips().map((chip) => chip.key)).toEqual(["date"]);
+    });
+
+    describe("choosing which date field to filter on", () => {
+      it("defaults to the receipt date", () => {
+        expect(component.quickDateField()).toEqual("date");
+        expect(component.quickDateFieldLabel()).toEqual("Date");
+      });
+
+      it("offers exactly the date fields, labelled as the dialog labels them", () => {
+        expect(component.dateFilterFields.map((field) => [field.key, field.label])).toEqual([
+          ["date", "Date"],
+          ["resolvedDate", "Resolved Date"],
+          ["createdAt", "Added At"],
+        ]);
+      });
+
+      it("writes the picked month to the selected field, not to date", () => {
+        component.quickDateFieldSelected("resolvedDate");
+        component.monthSelected({ year: 2026, month: 8 });
+
+        const filter = store.selectSnapshot(ReceiptTableState.filterData).filter as any;
+        expect(filter.resolvedDate.operation).toEqual(FilterOperation.Between);
+        expect(filter.date).toEqual({ operation: null, value: null });
+
+        expect(component.quickDateFieldLabel()).toEqual("Resolved Date");
+        expect(component.stepperLabel()).toEqual("September 2026");
+      });
+
+      it("reads the stepper label and Custom fallback off the selected field", () => {
+        setFilter({
+          date: { operation: FilterOperation.Between, value: [new Date(2026, 8, 1), new Date(2026, 8, 30)] },
+          createdAt: { operation: FilterOperation.WithinCurrentMonth, value: null },
+        });
+
+        expect(component.stepperLabel()).toEqual("September 2026");
+
+        component.quickDateFieldSelected("createdAt");
+
+        expect(component.stepperMonth()).toBeNull();
+        expect(component.stepperLabel()).toEqual("Custom");
+      });
+
+      // Switching the target changes no condition, only which one the stepper
+      // describes — so nothing the user set elsewhere is destroyed, and the
+      // abandoned condition stays visible and clearable as its own chip.
+      it("leaves the previous field's condition applied, with its chip", () => {
+        component.monthSelected({ year: 2026, month: 8 });
+        refetch.mockClear();
+
+        component.quickDateFieldSelected("resolvedDate");
+
+        const filter = store.selectSnapshot(ReceiptTableState.filterData).filter as any;
+        expect(filter.date.operation).toEqual(FilterOperation.Between);
+        expect(component.stepperLabel()).toEqual("All time");
+        expect(component.filterChips().map((chip) => chip.key)).toEqual(["date"]);
+        expect(refetch).not.toHaveBeenCalled();
+      });
+
+      it("follows a field chosen outside the component", () => {
+        store.dispatch(new SetQuickDateField("createdAt"));
+
+        expect(component.quickDateFieldLabel()).toEqual("Added At");
+      });
     });
 
     it("builds a chip per active field, resolving ids to names", () => {

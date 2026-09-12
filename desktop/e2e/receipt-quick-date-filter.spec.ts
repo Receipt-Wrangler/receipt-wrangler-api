@@ -37,6 +37,10 @@ test.describe('Receipts quick date filter', () => {
   const thisMonthReceipt = uniqueName('qdf-this');
   const lastMonthReceipt = uniqueName('qdf-last');
   const olderReceipt = uniqueName('qdf-older');
+  // Created RESOLVED, so the server stamps resolved_date to now: its Resolved
+  // Date is in the current month while its Date is two months back. That split
+  // is what tells the two columns apart on the wire.
+  const resolvedReceipt = uniqueName('qdf-resolved');
 
   let group: { id: number; name: string };
 
@@ -63,6 +67,7 @@ test.describe('Receipts quick date filter', () => {
   }
 
   const stepperLabel = (page: Page) => page.getByTestId('receipts-month-label');
+  const fieldPicker = (page: Page) => page.getByTestId('receipts-quick-date-field');
   const rowLink = (page: Page, name: string) => page.getByRole('link', { name });
 
   test.beforeAll(async () => {
@@ -82,6 +87,14 @@ test.describe('Receipts quick date filter', () => {
           date: isoInMonth(delta),
         });
       }
+
+      await apiCreateReceipt(api, {
+        groupId: group.id,
+        paidByUserId: adminId,
+        name: resolvedReceipt,
+        date: isoInMonth(-2),
+        status: 'RESOLVED',
+      });
     });
   });
 
@@ -122,7 +135,7 @@ test.describe('Receipts quick date filter', () => {
     await expect(rowLink(page, olderReceipt)).toBeVisible();
   });
 
-  test('narrows the table to a month and shows no duplicate date chip', async ({ page }) => {
+  test('narrows the table to a month and chips the date condition', async ({ page }) => {
     await gotoSeededGroup(page);
 
     await stepperLabel(page).click();
@@ -133,9 +146,9 @@ test.describe('Receipts quick date filter', () => {
     await expect(rowLink(page, lastMonthReceipt)).toHaveCount(0);
     await expect(rowLink(page, olderReceipt)).toHaveCount(0);
 
-    // The stepper already names the month, so the Date chip stays suppressed…
-    await expect(page.getByTestId('receipt-filter-chip-date')).toHaveCount(0);
-    // …but it is still a filter, so the badge and the reset control show it.
+    // The chip row names which date column is filtered — the stepper's label
+    // only says the month, and the target field is selectable.
+    await expect(page.getByTestId('receipt-filter-chip-date')).toContainText('Date');
     await expect(page.getByTestId('receipts-filter-reset')).toBeVisible();
   });
 
@@ -193,14 +206,58 @@ test.describe('Receipts quick date filter', () => {
 
     const nameChip = page.getByTestId('receipt-filter-chip-name');
     await expect(nameChip).toContainText(`Name contains ${thisMonthReceipt}`);
-    // Still only the one chip — the month is the stepper's to show.
-    await expect(page.getByTestId('receipt-filter-chip-date')).toHaveCount(0);
+    // Both conditions are chipped; clearing one must not touch the other.
+    await expect(page.getByTestId('receipt-filter-chip-date')).toBeVisible();
 
     await page.getByTestId('receipt-filter-chip-clear-name').click();
 
     await expect(nameChip).toHaveCount(0);
     await expect(stepperLabel(page)).toContainText(monthLabel(0));
     await expect(rowLink(page, thisMonthReceipt)).toBeVisible();
+  });
+
+  // The stepper's target field is selectable, and only an e2e proves a chosen
+  // field reaches the SERVER as a different column — the Jest specs assert
+  // against a mocked store. It also pins the pointer's persistence, the same
+  // reload trap the month itself has.
+  test('filters on the chosen date field and keeps it across a reload', async ({ page }) => {
+    await gotoSeededGroup(page);
+
+    // Start on Date, this month: the resolved receipt is dated two months back,
+    // so it is excluded.
+    await expect(fieldPicker(page)).toContainText('Date');
+    await stepperLabel(page).click();
+    await page.getByTestId('month-stepper-this-month').click();
+    await expect(rowLink(page, thisMonthReceipt)).toBeVisible();
+    await expect(rowLink(page, resolvedReceipt)).toHaveCount(0);
+    await expect(page.getByTestId('receipt-filter-chip-date')).toBeVisible();
+
+    // Switching the field changes no condition, only which one the stepper
+    // describes — so the Date filter is still applied and still chipped.
+    await fieldPicker(page).click();
+    await page.getByTestId('receipts-quick-date-field-resolvedDate').click();
+
+    await expect(fieldPicker(page)).toContainText('Resolved Date');
+    await expect(stepperLabel(page)).toContainText('All time');
+    await expect(page.getByTestId('receipt-filter-chip-date')).toBeVisible();
+
+    await page.getByTestId('receipt-filter-chip-clear-date').click();
+    await expect(page.getByTestId('receipt-filter-chip-date')).toHaveCount(0);
+
+    // Now the month lands on resolved_date, which only the RESOLVED receipt has.
+    await stepperLabel(page).click();
+    await page.getByTestId('month-stepper-this-month').click();
+
+    await expect(rowLink(page, resolvedReceipt)).toBeVisible();
+    await expect(rowLink(page, thisMonthReceipt)).toHaveCount(0);
+    await expect(page.getByTestId('receipt-filter-chip-resolvedDate')).toBeVisible();
+
+    await page.reload();
+
+    await expect(fieldPicker(page)).toContainText('Resolved Date');
+    await expect(stepperLabel(page)).toContainText(monthLabel(0));
+    await expect(rowLink(page, resolvedReceipt)).toBeVisible();
+    await expect(rowLink(page, thisMonthReceipt)).toHaveCount(0);
   });
 
   // A Date filter the stepper cannot express has to stay visible and clearable.

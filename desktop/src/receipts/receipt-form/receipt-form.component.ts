@@ -115,11 +115,6 @@ export class ReceiptFormComponent implements OnInit {
   // user added, or typed into, is theirs and is left alone.
   private autoAppliedCustomFieldIds = new Set<number>();
 
-  // listenForGroupChanges() replays the current group id via startWith() in every
-  // mode, so the first emission is "the form just initialised", not "the user
-  // picked a group". Reset with the form in initForm().
-  private groupChangeIsInitialEmission = true;
-
   public originalReceipt?: Receipt;
 
   public images = signal<FileDataView[]>([]);
@@ -420,9 +415,9 @@ export class ReceiptFormComponent implements OnInit {
   private initForm(): void {
     // Reset BEFORE the form is built: initForm() re-runs on every route-data
     // emission and ends by calling listenForGroupChanges(), whose startWith()
-    // fires synchronously - so both must already describe the new form.
+    // fires synchronously - so it must already describe the new form. Without
+    // this, a stale auto set could strip a saved receipt's own fields.
     this.autoAppliedCustomFieldIds.clear();
-    this.groupChangeIsInitialEmission = true;
 
     // The group being browsed, or -- when that is not a receipt target (the "All"
     // group, nothing selected, or a stale persisted id) -- the user's only group.
@@ -536,7 +531,6 @@ export class ReceiptFormComponent implements OnInit {
         // CD that write is what schedules the render, and a FormArray mutation
         // on its own has no change-detection trigger.
         this.applyGroupDefaultCustomFields(groupId);
-        this.groupChangeIsInitialEmission = false;
       })
     )
       .subscribe();
@@ -547,16 +541,17 @@ export class ReceiptFormComponent implements OnInit {
   // dropped when the new group doesn't want it, anything with a value (or that
   // the user added themselves) stays, and the new group's missing defaults are
   // appended.
+  //
+  // Runs on load in EVERY mode (via listenForGroupChanges' startWith) and on
+  // every group change. A group's defaults are meant to read as that group's
+  // built-in receipt fields, so a saved receipt that predates the configuration
+  // shows them too - blank and read-only in view mode, and attached as empty
+  // values once an edit is saved. On load the removal pass is inert:
+  // autoAppliedCustomFieldIds is cleared at the top of initForm().
   private applyGroupDefaultCustomFields(groupId: number | string | null | undefined): void {
-    // Never on a read-only receipt, and never without the catalog permission -
-    // such a user's save would 403 on the backend's custom field selection check.
-    if (this.mode === FormMode.view || !this.canManageCustomFields()) {
-      return;
-    }
-
-    // The initial emission is the form loading, not a user choice: only the add
-    // form seeds defaults then, so an existing receipt opens exactly as saved.
-    if (!groupId || (this.groupChangeIsInitialEmission && this.mode !== FormMode.add)) {
+    // Never without the catalog permission - such a user's save would 403 on the
+    // backend's custom field selection check.
+    if (!groupId || !this.canManageCustomFields()) {
       return;
     }
 

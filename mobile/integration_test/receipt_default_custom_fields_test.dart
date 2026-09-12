@@ -2,7 +2,8 @@
 //
 // A group can declare custom fields that are pre-added to its receipts
 // (`GroupReceiptSettings.defaultCustomFieldIds`), so each group is effectively
-// its own receipt template. Selecting a different group "smart swaps": a
+// its own receipt template. They are applied on load in every form state, so an
+// existing receipt shows them too. Selecting a different group "smart swaps": a
 // default this form added and the user never filled in is dropped, anything
 // they typed into or added by hand is kept, and the new group's missing
 // defaults are added.
@@ -406,7 +407,7 @@ void main() {
     _expectNoUiErrors(tester, 'switching Beta -> Alpha');
   });
 
-  testWidgets('view never applies defaults and edit applies only on a change',
+  testWidgets("an existing receipt shows its group's defaults in view and edit",
       (tester) async {
     await binding.setSurfaceSize(const Size(1280, 900));
     addTearDown(() => binding.setSurfaceSize(null));
@@ -425,7 +426,7 @@ void main() {
     );
 
     // Seeded server-side with no custom fields at all, even though its group
-    // declares two -- an existing receipt is not retro-fitted.
+    // declares two -- the form is what retro-fits them, on load.
     final receiptName = 'e2e-dcf-existing-${DateTime.now().millisecondsSinceEpoch}';
     await createReceipt(
       groupId: fixture.alphaId,
@@ -438,24 +439,27 @@ void main() {
         username: fixture.user.username, password: fixture.user.password);
     await openGroupReceipts(tester, fixture.alphaName, receiptName);
 
+    // View mode renders Alpha's two defaults, blank and read-only -- they are
+    // meant to read as that group's built-in receipt fields.
     await tester.tap(find.text(receiptName).hitTestable());
     await pumpUntilFound(tester, find.byType(ReceiptEditPopupMenu));
     await _drain(tester);
-    _expectFields(const [], [fixture.id('a'), fixture.id('b'), fixture.id('c')]);
+    await pumpUntilFound(tester, _customField(fixture.id('a')));
+    _expectFields([fixture.id('a'), fixture.id('b')], [fixture.id('c')]);
+    expect(_renderedText(tester, fixture.id('a')), '');
     _expectNoUiErrors(tester, 'opening the receipt in view mode');
 
-    // Edit mode: still nothing on load -- applying here would silently attach
-    // fields to somebody's saved receipt just by opening it.
     await tester.tap(find.byType(ReceiptEditPopupMenu));
     await pumpUntilFound(tester, find.text('Edit').hitTestable());
     await _drain(tester);
     await tester.tap(find.text('Edit').hitTestable());
     await pumpUntilFound(tester, find.byType(BottomSubmitButton));
     await pumpUntilFound(tester, find.text('Add Custom Field'));
-    _expectFields(const [], [fixture.id('a'), fixture.id('b'), fixture.id('c')]);
+    _expectFields([fixture.id('a'), fixture.id('b')], [fixture.id('c')]);
     _expectNoUiErrors(tester, 'opening the receipt in edit mode');
 
-    // An ACTIVE group change does apply, in edit mode as much as on create.
+    // The load-applied defaults are still the swap's: both are empty, so a
+    // group change takes them back and leaves only Beta's.
     await _selectGroup(tester, fixture.betaName);
     _expectFields([fixture.id('c')], [fixture.id('a'), fixture.id('b')]);
     _expectNoUiErrors(tester, 'changing the group in edit mode');

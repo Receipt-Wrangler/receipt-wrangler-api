@@ -60,7 +60,13 @@ class _ReceiptForm extends State<ReceiptForm> {
   /// selected group declares them as defaults. Only these are candidates for
   /// removal when the group changes -- anything the user added by hand, or
   /// typed a value into, is theirs (see [_applyGroupDefaultCustomFields]).
-  final Set<int> _autoAppliedCustomFieldIds = {};
+  ///
+  /// Held by [ReceiptModel], not this State: the form is remounted against the
+  /// same working copy on a view -> edit navigation, and provenance has to
+  /// survive that or a field the user removed and re-added by hand is reclaimed
+  /// as the form's and dropped on the next group change.
+  Set<int> get _autoAppliedCustomFieldIds =>
+      receiptModel.autoAppliedCustomFieldIds;
 
   @override
   void initState() {
@@ -69,19 +75,22 @@ class _ReceiptForm extends State<ReceiptForm> {
 
     groupId = modifiedReceipt.groupId;
 
-    // Always scheduled, not just when the receipt already knows its group: on an
-    // add form _resolveInitialGroupId can produce one the receipt does not carry
-    // (the group being browsed, or the user's only group). Deferred to after the
-    // first frame because applying the group's defaults mutates ReceiptModel, and
-    // notifying its listeners while the tree is still building throws -- and
-    // because `formState`/`getGroupId` read the route, which needs a mounted
-    // element.
+    // Runs in every form state, not just add: a group's default custom fields
+    // are meant to read as that group's built-in receipt fields, so a saved
+    // receipt that predates the configuration shows them too (read-only in
+    // view, and attached as empty values once an edit is saved). Deferred to
+    // after the first frame because applying the group's defaults mutates
+    // ReceiptModel, and notifying its listeners while the tree is still
+    // building throws -- and because `formState`/`getGroupId` read the route,
+    // which needs a mounted element.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || formState != WranglerFormState.add) {
+      if (!mounted) {
         return;
       }
 
-      // Mirrors what buildGroupField seeded the dropdown with.
+      // Mirrors what buildGroupField seeded the dropdown with. On an add form
+      // this can be a group the receipt does not carry (the group being
+      // browsed, or the user's only group); otherwise it is the receipt's own.
       final resolvedGroupId = _resolveInitialGroupId();
       if (resolvedGroupId == 0) {
         return;
@@ -479,8 +488,8 @@ class _ReceiptForm extends State<ReceiptForm> {
 
   /// Applies [newGroupId]'s default custom fields to the form, swapping out the
   /// ones the previously selected group put there. Each group is effectively
-  /// its own receipt template, so this runs on every group change (and once on
-  /// load for an add form that already knows its group).
+  /// its own receipt template, so this runs on every group change and once on
+  /// load, in every form state.
   ///
   /// The swap is deliberately conservative. It only removes a field this form
   /// added itself ([_autoAppliedCustomFieldIds]) that is still **empty**; a
@@ -492,10 +501,6 @@ class _ReceiptForm extends State<ReceiptForm> {
   /// swallowed into an empty list), which is exactly the gate we want here: the
   /// backend's `enforceReceiptCustomFieldSelection` would 403 their save.
   void _applyGroupDefaultCustomFields(int newGroupId) {
-    if (formState == WranglerFormState.view) {
-      return;
-    }
-
     var knownCustomFieldIds =
         customFieldModel.customFields.map((cf) => cf.id).toSet();
     var defaultIds = <int>[

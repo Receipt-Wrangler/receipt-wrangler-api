@@ -692,12 +692,17 @@ Custom Fields** `app-form-section` on `src/group/group-receipt-settings/` (betwe
 - **Receipt form "smart swap".** `applyGroupDefaultCustomFields(groupId)` runs **inside**
   `listenForGroupChanges()`'s `tap`, **after** the `selectedGroup.set(group)` write — under zoneless
   CD that signal write is the only change-detection trigger; a FormArray mutation has none of its own.
-  It returns early in view mode, without `canManageCustomFields()`, on a falsy group id, and — via
-  `groupChangeIsInitialEmission` — on the listener's `startWith()` replay unless the mode is `add`.
-  That guard is the **only** thing keeping an edit-mode receipt untouched on load, since `startWith`
-  fires at init in every mode. Both it and `autoAppliedCustomFieldIds` are reset at the **top** of
-  `initForm()` (which re-runs on every route-data emission) so a stale auto set can never strip a
-  saved receipt's own fields.
+  It returns early only without `canManageCustomFields()` and on a falsy group id.
+- **It applies on load in every mode**, via that listener's `startWith()` replay, which fires at init
+  in `add`, `edit` **and** `view`. A group's defaults are meant to read as its built-in receipt
+  fields, so a receipt saved before the group was configured picks them up too — blank and read-only
+  in view (the template's `@for` already binds `[readonly]="mode | inputReadonly"`), editable in edit,
+  and persisted as empty attached values once that edit is saved. `addCustomFieldControl` skips a
+  field the form already carries, so a receipt that already has the default is untouched.
+  `autoAppliedCustomFieldIds` is reset at the **top** of `initForm()` (which re-runs on every
+  route-data emission), which is what makes the removal pass inert on load — a stale auto set could
+  otherwise strip a saved receipt's own fields — and it is also why a default applied on load is
+  still the swap's to take back on a later group change.
 - The swap drops a previously auto-added default only while it is still **empty**
   (`isCustomFieldControlEmpty`: every typed column null-or-`""` **and** `booleanValue` falsy — so a
   BOOLEAN deliberately left `false` counts as empty and is swapped out); anything with a value stays
@@ -716,6 +721,10 @@ delivery paths, which the Jest specs cannot — they inject settings into a mock
   the proof the client sent every attached field (an id set that doesn't match the stored one is a
   403 from `enforceReceiptCustomFieldSelection`). Verified to FAIL with the empty-check inverted.
 - Deleting a custom field prunes it from the group's stored set.
+- A receipt created while its group declared **nothing** shows the field once the group gains it:
+  blank on `/receipts/:id/view`, editable on `/edit`, and the value survives a save + re-navigation.
+  Reaching the view page after that save is the proof `enforceReceiptCustomFieldSelection` accepted
+  the newly attached id.
 
 Three `data-testid`s were added for it, none of them pre-existing: **`autocomplete-clear`** on the
 shared `app-autocomlete`'s clear button, **`receipt-group`** on the receipt form's group picker, and

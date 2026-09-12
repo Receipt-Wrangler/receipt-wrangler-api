@@ -200,22 +200,32 @@ String _locationFor(WranglerFormState formState, int receiptId) {
 ///
 /// The form derives its mode from the route (`getFormStateFromContext`), so a
 /// real [GoRouter] is mounted at the location matching [formState].
+///
+/// Pass [receiptModel] to pump against a model an earlier call returned: the
+/// second pump replaces the tree, so `ReceiptForm` gets a fresh `State`
+/// while the working copy and its auto-applied provenance carry over. That is
+/// what a view -> edit navigation does in the app -- the app bar menu's Edit
+/// entry is a plain `go`, and `ReceiptFormScreen` re-hydrates only for a
+/// different receipt id -- so a remount is reproduced rather than simulated.
+/// [receipt] is ignored when a model is supplied; the model already holds one.
 Future<ReceiptFormHarness> pumpReceiptForm(
   WidgetTester tester, {
   required List<api.Group> groups,
   api.Receipt? receipt,
+  ReceiptModel? receiptModel,
   List<api.CustomField> customFields = const [],
   List<api.UserView> users = const [],
   WranglerFormState formState = WranglerFormState.add,
 }) async {
   registerCustomCurrencyForTests();
 
-  final seededReceipt = receipt ?? getDefaultReceipt();
+  final seededReceipt = receiptModel?.receipt ?? receipt ?? getDefaultReceipt();
 
   // Seed the receipt before the first pump: `ReceiptForm` captures the model's
   // form key once (`late final`), and `setReceipt` regenerates that key
   // whenever the receipt identity changes.
-  final receiptModel = ReceiptModel()..setReceipt(seededReceipt, false);
+  final model =
+      receiptModel ?? (ReceiptModel()..setReceipt(seededReceipt, false));
   final groupModel = GroupModel()..setGroups(groups);
   final userModel = UserModel()..setUsers(users);
   final customFieldModel = CustomFieldModel()..setCustomFields(customFields);
@@ -240,7 +250,7 @@ Future<ReceiptFormHarness> pumpReceiptForm(
   await tester.pumpWidget(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider<ReceiptModel>.value(value: receiptModel),
+        ChangeNotifierProvider<ReceiptModel>.value(value: model),
         ChangeNotifierProvider<GroupModel>.value(value: groupModel),
         ChangeNotifierProvider<UserModel>.value(value: userModel),
         ChangeNotifierProvider<CustomFieldModel>.value(value: customFieldModel),
@@ -262,7 +272,7 @@ Future<ReceiptFormHarness> pumpReceiptForm(
   await tester.pumpAndSettle();
 
   return ReceiptFormHarness(
-    receiptModel: receiptModel,
+    receiptModel: model,
     groupModel: groupModel,
     userModel: userModel,
     customFieldModel: customFieldModel,

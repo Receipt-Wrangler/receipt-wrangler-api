@@ -956,7 +956,7 @@ failing that from **the user's only group**; Quick Scan seeds each picked image 
 A group can declare custom fields that are pre-added to its receipts
 (`GroupReceiptSettings.defaultCustomFieldIds`, configured on desktop's Group Receipt Settings — see
 the root `CLAUDE.md` → "Group Default Custom Fields" for the cross-component contract). The receipt
-form (`lib/receipts/widgets/receipt_form.dart`) applies the selected group's set on **create** and on
+form (`lib/receipts/widgets/receipt_form.dart`) applies the selected group's set on **load** and on
 every **active group change**, because each group is effectively its own receipt template.
 
 - **The swap is conservative.** `_applyGroupDefaultCustomFields(newGroupId)` only takes back a field
@@ -964,10 +964,31 @@ every **active group change**, because each group is effectively its own receipt
   user typed into is kept and handed over to them (dropped from the auto set); so is anything they
   added by hand. Adding or removing a field by hand (`_addCustomField` / `_removeCustomField`) removes
   its id from the auto set, so the swap never fights a decision the user made.
-- **It runs on an active change, never on load in edit/view.** `initState` seeds only when
-  `formState == add` and the form already knows its group; the dropdown's `onChanged` runs it **before**
-  its `setState`, because it writes to `ReceiptModel` and `notifyListeners()` must not fire from inside
-  a setState callback. View mode returns early.
+- **It runs on load in EVERY form state, and on every active group change.** A group's defaults are
+  meant to read as its built-in receipt fields, so a receipt saved before the group was configured
+  picks them up too — read-only in view (`CustomFieldWidget` gets `onRemove: null` and there is no
+  Add button), and persisted as empty attached values once an edit is saved. `initState`'s post-frame
+  callback runs `_applyGroupDefaultCustomFields` whenever `_resolveInitialGroupId` yields a group;
+  the dropdown's `onChanged` runs it **before** its `setState`, because it writes to `ReceiptModel`
+  and `notifyListeners()` must not fire from inside a setState callback.
+- **Provenance lives on `ReceiptModel`, not the form's `State`.**
+  `ReceiptModel.autoAppliedCustomFieldIds` is the set the form adds to when it attaches a default and
+  removes from when the user touches one. It has to outlive the screen: the app bar menu's Edit entry
+  is a plain `go` (`receipt_app_bar_action_builder.dart`) and `receipt_form_screen.dart` re-hydrates
+  only for a *different* receipt id, so **view → edit remounts the form against the same
+  `modifiedReceipt`** with a fresh `State`. Two sequences end with the same empty field attached and
+  absent from the saved receipt, and only the set tells them apart: one the *form* added in the view
+  mount (still the swap's, dropped on a later group change) and one the *user* removed and re-added
+  by hand (theirs, kept). An earlier attempt inferred this on load from "every default the saved
+  receipt does not carry", which reclaimed the second case and silently dropped it — see
+  [receipt-wrangler#689](https://github.com/Receipt-Wrangler/receipt-wrangler/pull/689).
+  - The set is cleared wherever the working copy is replaced — `setReceipt` (which also covers the
+    post-save re-hydration, by which point the fields really are the receipt's own data) and
+    `resetModel` (the back arrow, and the `/receipts/add` route redirect in `main.dart`) — so
+    provenance and `modifiedReceipt` can never disagree. It deliberately does **not** notify:
+    nothing renders from it.
+  - The removal pass is inert on a *first* load, since the set is empty until something attaches a
+    default.
 - **One model write per swap.** `_customFieldValuesWith(add:, remove:)` is pure and every caller hands
   the whole result to a single `_setCustomFieldValues`, so a multi-field swap rebuilds the form once
   instead of once per field, with its fields half-mounted in between.
@@ -989,13 +1010,19 @@ every **active group change**, because each group is effectively its own receipt
   because the backend REPLACES the whole association on update.
 
 **Tests.** `test/widgets/receipt_form_default_custom_fields_test.dart` covers the rules exhaustively
-against injected models (13 cases: seeding, each keep/drop rule, A→B→A leaving no residue, an unchecked
-BOOLEAN counting as empty, a missing/empty catalog, view mode, edit-mode-on-change-only). **E2E:**
+against injected models (18 cases: seeding, each keep/drop rule, A→B→A leaving no residue, an unchecked
+BOOLEAN counting as empty, a missing/empty catalog, the load-time apply in view and edit, no duplicate
+for a default the receipt already carries, and the two remount cases the provenance set exists for —
+the view → edit carry-over staying swappable, and a hand-re-added default staying the user's). Those
+last two pass `pumpReceiptForm`'s `receiptModel:` seam a model an earlier pump returned, so the
+second pump is a **real remount** (fresh `State`, same working copy and provenance) rather than a
+simulated one. **E2E:**
 `integration_test/receipt_default_custom_fields_test.dart` — three specs proving the ids survive the
 wire (persisted, hydrated onto `GroupModel` via AppData at login, applied by the real form, accepted on
 save): the full swap matrix ending in an API read-back of the saved values, the stale-value guard (type
-into a default → remove it by hand → switch away and back → it returns **blank**), and view-never /
-edit-only-on-change. Every step also asserts no UI error survived it.
+into a default → remove it by hand → switch away and back → it returns **blank**), and a receipt seeded
+server-side with no custom fields showing its group's defaults in view and edit and still swapping on a
+group change. Every step also asserts no UI error survived it.
 
 Three things that spec encodes, all of which cost a debugging cycle:
 - **Do not install a `FlutterError.onError` collector to catch UI errors.** It takes the handler away

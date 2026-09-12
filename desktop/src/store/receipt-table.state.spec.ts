@@ -2,7 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { NgxsModule, Store } from "@ngxs/store";
 import { DEFAULT_RECEIPT_TABLE_COLUMNS, ReceiptTableInterface } from "src/interfaces";
 import { FilterOperation, ReceiptPagedRequestFilter, ReceiptStatus } from "../open-api";
-import { ResetReceiptFilter, SetPage, SetPageSize, SetReceiptFilter, SetReceiptFilterData, SetReceiptFilterField, } from "./receipt-table.actions";
+import { ResetReceiptFilter, SetPage, SetPageSize, SetQuickDateField, SetReceiptFilter, SetReceiptFilterData, SetReceiptFilterField, } from "./receipt-table.actions";
 import { buildDefaultReceiptFilter, defaultReceiptFilter, ReceiptTableState } from "./receipt-table.state";
 
 describe("ReceiptTableState", () => {
@@ -73,6 +73,7 @@ describe("ReceiptTableState", () => {
       orderBy: "created_at",
       sortDirection: "desc",
       filter: defaultReceiptFilter,
+      quickDateField: "date",
       columnConfig: DEFAULT_RECEIPT_TABLE_COLUMNS,
     });
   });
@@ -132,8 +133,14 @@ describe("ReceiptTableState", () => {
     };
     store.dispatch(new SetReceiptFilterData(filterData));
 
+    // The payload omits columnConfig and quickDateField, and patchState only
+    // touches the keys it is handed — so sorting cannot reset either.
     const result = store.selectSnapshot(ReceiptTableState.filterData);
-    expect(result).toEqual({ ...filterData, columnConfig: DEFAULT_RECEIPT_TABLE_COLUMNS });
+    expect(result).toEqual({
+      ...filterData,
+      quickDateField: "date",
+      columnConfig: DEFAULT_RECEIPT_TABLE_COLUMNS,
+    });
   });
 
   it("should set filter receipt filter", () => {
@@ -197,6 +204,29 @@ describe("ReceiptTableState", () => {
     expect(result.categories).toEqual({ operation: null, value: [] });
     expect(result.date).toEqual({ operation: null, value: null });
     expect(result.name).toEqual(filledFilter.name);
+  });
+
+  it("should set the quick date field", () => {
+    store.dispatch(new SetQuickDateField("resolvedDate"));
+
+    expect(store.selectSnapshot(ReceiptTableState.quickDateField)).toEqual("resolvedDate");
+  });
+
+  // The quick date field arrived after this slice was already being persisted to
+  // localStorage, so every existing install hydrates a state without the key.
+  // @State defaults do not run for a hydrated state, which is why the fallback
+  // has to live in the selector.
+  it("should fall back to date for a state persisted before the key existed", () => {
+    store.reset({ receiptTable: { filter: filledFilter } });
+
+    expect(store.selectSnapshot(ReceiptTableState.quickDateField)).toEqual("date");
+  });
+
+  it("should reset the quick date field along with the filter", () => {
+    store.dispatch(new SetQuickDateField("createdAt"));
+    store.dispatch(new ResetReceiptFilter());
+
+    expect(store.selectSnapshot(ReceiptTableState.quickDateField)).toEqual("date");
   });
 
   // ResetReceiptFilter writes a default filter straight into state, so without a

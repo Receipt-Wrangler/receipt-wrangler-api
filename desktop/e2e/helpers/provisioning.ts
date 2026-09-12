@@ -359,6 +359,12 @@ export async function apiCreateReceipt(
     name: string;
     /** Receipt date as an ISO string. Defaults to a fixed date in 2024. */
     date?: string;
+    /**
+     * Receipt status. Defaults to OPEN. Pass RESOLVED to have the server stamp
+     * `resolvedDate` — the only way to seed a receipt the Resolved Date filter
+     * can match.
+     */
+    status?: string;
     customFields?: ReceiptCustomFieldValue[];
   },
 ): Promise<number> {
@@ -369,7 +375,7 @@ export async function apiCreateReceipt(
       date: opts.date ?? '2024-01-01T00:00:00Z',
       groupId: Number(opts.groupId),
       paidByUserId: opts.paidByUserId,
-      status: 'OPEN',
+      status: opts.status ?? 'OPEN',
       ...(opts.customFields ? { customFields: opts.customFields } : {}),
     },
   });

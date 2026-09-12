@@ -44,7 +44,7 @@ describe("buildReceiptFilterChips", () => {
       lookups
     );
 
-    expect(chip.label).toBe("Date between Tue Sep 01 2026 – Wed Sep 30 2026");
+    expect(chip.label).toBe("Receipt Date between Tue Sep 01 2026 – Wed Sep 30 2026");
   });
 
   it("labels a currency comparison", () => {
@@ -93,15 +93,19 @@ describe("buildReceiptFilterChips", () => {
       lookups
     );
 
-    expect(chip.label).toBe("Date within current month");
+    expect(chip.label).toBe("Receipt Date within current month");
   });
 
-  it("omits the keys the caller already renders elsewhere", () => {
+  // The quick date control used to suppress its own field's chip while the
+  // month stepper named that month. Its target field is now selectable, so the
+  // chip row is the only place that says WHICH date column is filtered — and a
+  // condition with no chip is one the user cannot clear from here.
+  it("chips a whole-month date condition like any other, alongside the rest", () => {
     const filter = filterWith({
       date: { operation: FilterOperation.Between, value: [new Date(2026, 8, 1), new Date(2026, 8, 30)] },
       name: { operation: FilterOperation.Contains, value: "whole" },
     });
 
-    expect(buildReceiptFilterChips(filter, lookups, ["date"]).map((chip) => chip.key)).toEqual(["name"]);
+    expect(buildReceiptFilterChips(filter, lookups).map((chip) => chip.key)).toEqual(["date", "name"]);
   });
 });

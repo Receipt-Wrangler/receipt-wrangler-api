@@ -33,23 +33,22 @@ const BETWEEN_SEPARATOR = " – ";
  * One chip per filter field that actually narrows the result set, labelled
  * `"<Field> <operation> <value>"`.
  *
- * `omitKeys` lets a caller suppress a field it already renders another way —
- * the receipts table passes `["date"]` while the month stepper is displaying
- * that exact month, so the same condition never appears twice.
+ * Exceptionless on purpose: the quick date control's own condition is chipped
+ * too. It used to be suppressed while the month stepper named that month, but
+ * the stepper's target field is now selectable, so this row is the only place
+ * that says *which* date column is being filtered — and a condition with no
+ * chip is one the user can neither see nor clear from here.
  */
 export function buildReceiptFilterChips(
   filter: ReceiptPagedRequestFilter | undefined | null,
   lookups: ReceiptFilterChipLookups,
-  omitKeys: readonly string[] = [],
 ): ReceiptFilterChip[] {
   if (!filter) {
     return [];
   }
 
-  return RECEIPT_FILTER_FIELDS.filter(
-    (field) =>
-      !omitKeys.includes(field.key) &&
-      isFilterEntryActive((filter as Record<string, unknown>)[field.key]),
+  return RECEIPT_FILTER_FIELDS.filter((field) =>
+    isFilterEntryActive((filter as Record<string, unknown>)[field.key]),
   ).map((field) => ({
     key: field.key,
     label: buildLabel(field, (filter as Record<string, unknown>)[field.key] as ReceiptFilterEntry, lookups),

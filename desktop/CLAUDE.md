@@ -1225,11 +1225,21 @@ The receipts table (`src/receipts/receipts-table/`) offers three ways into **one
 (`app-receipt-filter`), the month stepper and the filter chips all read and write that single slice,
 so they can never disagree.
 
-- **Field metadata is shared.** `RECEIPT_FILTER_FIELDS` (`src/constants/receipt-filter-fields.constant.ts`)
-  is the one definition of each field's key, label and operation type. The dialog's
-  `setupAutoOperationSelection()` and the chip builder both read it, and `OperationsPipe` now reads
-  the extracted `FILTER_OPERATION_DISPLAY_VALUES`, so a chip cannot describe a condition differently
-  from the row that produced it.
+- **Field metadata is shared — but the labels only partly.** `RECEIPT_FILTER_FIELDS`
+  (`src/constants/receipt-filter-fields.constant.ts`) defines each field's key, label and operation
+  type, and `OperationsPipe` reads the extracted `FILTER_OPERATION_DISPLAY_VALUES`, so the operation
+  wording is genuinely single-sourced. **The field labels are not.** The dialog reads only
+  `{ key, type }` from the constant (`setupAutoOperationSelection()`) and **authors its own label in
+  its template** — each row is an `ngTemplateOutlet` with a literal
+  `{ label: 'Receipt Date', fieldName: 'date', type: 'date' }` context. So the constant's `label`
+  reaches the chips and the quick-date picker only, and **renaming a field means editing both
+  `receipt-filter-fields.constant.ts` and `receipt-filter.component.html`** or the dialog row will
+  disagree with the chip it produces. (Collapsing those ten outlets into a loop is not the one-liner
+  it looks like: four rows carry an extra `options:` context key and the Group row sits in its own
+  conditional wrapper.)
+- **A field's label matches its table column.** `date` is **"Receipt Date"**, not "Date" — the
+  column header is `Receipt Date` and the table also shows `Resolved Date` and `Added At`, so a bare
+  "Date" left the user guessing which of the three a filter or chip meant.
 - **`isFilterEntryActive`** (`src/utils/receipt-filter-entry.ts`) is the shared "does this field
   narrow anything" predicate: any non-empty stringified value, **or** the operation
   `WITHIN_CURRENT_MONTH` (the one operation that carries no value). **Zero counts** — no field
@@ -1252,10 +1262,11 @@ so they can never disagree.
   later refresh. `getInitialData()` deliberately stays on its own one-shot subscription, because it
   owns the single `setColumns()` call and that reads `viewChild.required` template refs.
 
-### The month stepper is the Date filter
+### The month stepper targets one date field
 
 `app-month-stepper` (`src/shared-ui/month-stepper/`, standalone, deliberately presentational) emits
-months; `receipts-table` translates them with `src/utils/receipt-date-filter.ts`.
+months; `receipts-table` translates them with `src/utils/receipt-date-filter.ts` and writes them to
+**whichever date field the control is pointed at** — `date`, `resolvedDate` or `createdAt`.
 
 **Its panel is a CDK overlay, not a `mat-menu` — do not "simplify" it back.** The panel holds a year
 pager, a month grid and three shortcuts, and **none of them is a `mat-menu-item`**. Inside a menu
@@ -1274,14 +1285,36 @@ The same rule applies to the two house alternatives, which is why neither was us
 is equally wrong for interactive content and cannot be overridden. `e2e/receipt-quick-date-filter.spec.ts`
 pins the keyboard path — it fails against a `mat-menu` implementation. A month is written
 as `BETWEEN [startOfMonth, endOfMonth]` — the one operation that can express *any* month, which is
-why this feature needed no API change. Picking a month **overwrites** whatever the Date filter held.
+why this feature needed no API change. Picking a month **overwrites** whatever that field held.
 
-- **The stepper and the chips never show the same condition twice.** While `monthFromFilterEntry`
-  resolves the Date filter to a month, the label names it and the chip row omits `date`. When it
-  cannot (a partial range, a `GREATER_THAN`, `WITHIN_CURRENT_MONTH`) the label reads **"Custom"** and
-  the Date chip renders, so the filter stays visible and clearable.
+- **The target field is a chip-shaped `mat-menu` trigger at the right-hand end of the control**
+  (`receipts-quick-date-field`), so it reads left to right as "September 2026 … on Receipt Date".
+  It offers `RECEIPT_DATE_FILTER_FIELDS` — the `type: "date"` subset of
+  `RECEIPT_FILTER_FIELDS`, so the picker, the dialog row and the chip all name a field identically.
+  **A `mat-menu` is right here and wrong for the stepper's own panel**: every entry really is a
+  `<button mat-menu-item>`, so the `FocusKeyManager` has items. This is not a licence to convert that
+  panel back — see the paragraph above.
+- **The chosen field is persisted state** (`ReceiptTableInterface.quickDateField` +
+  `SetQuickDateField`), because the filter itself is persisted: without it a reload would leave the
+  stepper reading `date` while the user's month sat on `resolvedDate`. The **fallback lives in the
+  `ReceiptTableState.quickDateField` selector, not only in the `@State` defaults** — defaults never
+  run for a state hydrated from localStorage, so every install that filtered before this key existed
+  would otherwise read `undefined` and index the filter with it. `ResetReceiptFilter` clears it back
+  to `date` alongside the filter.
+- **Switching fields is deliberately non-destructive and triggers no refetch.** It changes no
+  condition, only which one the stepper describes, so a Date filter set in the dialog survives a move
+  to Resolved Date — and is still visible and clearable as its own chip. `SetReceiptFilterData` (the
+  sort path) omits the key and `patchState` only touches what it is handed, so sorting cannot reset
+  it either.
+- **Every active condition is chipped, including the stepper's own.** This reverses the original
+  rule ("never show the same condition twice", which omitted `date` while the stepper named that
+  month): now that the target field is selectable, the chip row is the only place that says *which*
+  date column is filtered, and a condition with no chip is one the user can neither see nor clear
+  from there. `buildReceiptFilterChips` therefore no longer takes an `omitKeys` argument. When the
+  stepper cannot describe the entry (a partial range, a `GREATER_THAN`, `WITHIN_CURRENT_MONTH`) the
+  label reads **"Custom"**, and the chip spells out what it actually is.
 - **`monthFromFilterEntry` must accept ISO strings, not just `Date`s.** The filter is persisted and
-  NGXS serializes through JSON, so after a reload `filter.date.value` is two ISO strings. It matches
+  NGXS serializes through JSON, so after a reload the entry's value is two ISO strings. It matches
   on calendar fields (day 1, same year+month, `getDaysInMonth` on the end) rather than on the
   serialized text, which also makes it tolerate the local-midnight pair the dialog's datepickers
   write. Get this wrong and the label silently degrades to "Custom" after every refresh —
@@ -1319,7 +1352,8 @@ Two consequences for tests and styles:
 
 The chips row is inline markup (`mat-chip-set` / `matChipRemove`) with every label built by the pure
 `buildReceiptFilterChips` util, so `ReceiptsModule` must import **`MatChipsModule`** — `SharedUiModule`
-imports it but does not export it. An id the caller cannot resolve (a category outside their grants,
+imports it but does not export it. It makes no exceptions: see "Every active condition is chipped"
+above. An id the caller cannot resolve (a category outside their grants,
 a group they have left) renders as the raw id rather than dropping the chip, so a filter that is
 actively removing rows is never invisible.
 

@@ -41,8 +41,19 @@
 
       <mat-menu #quickDateFieldMenu="matMenu">
         @for (field of dateFilterFields; track field.key) {
+          <!--
+            role="menuitemradio", not the default menuitem: aria-checked is only
+            meaningful on a role that carries a checked state, so on a plain
+            menuitem the selected field was never exposed to a screen reader.
+            MatMenuItem.role is a typed input bound to [attr.role]; Material
+            leaves the state to the app, which is all this needs — the value is
+            single-select off quickDateField(), the panel is role="menu" (a
+            valid owner), and arrow/Enter/typeahead come from MatMenu's own
+            FocusKeyManager because these are real mat-menu-items.
+          -->
           <button
             mat-menu-item
+            role="menuitemradio"
             [attr.data-testid]="'receipts-quick-date-field-' + field.key"
             [attr.aria-checked]="field.key === quickDateField()"
             (click)="quickDateFieldSelected(field.key)"

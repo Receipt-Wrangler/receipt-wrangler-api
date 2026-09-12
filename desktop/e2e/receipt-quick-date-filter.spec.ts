@@ -235,6 +235,18 @@ test.describe('Receipts quick date filter', () => {
     // Switching the field changes no condition, only which one the stepper
     // describes — so the Date filter is still applied and still chipped.
     await fieldPicker(page).click();
+
+    // The menu is a radio group: aria-checked is only meaningful on a role that
+    // carries a checked state, so a regression to the default menuitem would
+    // silently stop exposing which field is selected.
+    const active = page.getByTestId('receipts-quick-date-field-date');
+    await expect(active).toHaveAttribute('role', 'menuitemradio');
+    await expect(active).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('receipts-quick-date-field-resolvedDate')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+
     await page.getByTestId('receipts-quick-date-field-resolvedDate').click();
 
     await expect(fieldPicker(page)).toContainText('Resolved Date');

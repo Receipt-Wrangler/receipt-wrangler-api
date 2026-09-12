@@ -126,7 +126,7 @@ export class ReceiptsTableComponent implements OnInit, AfterViewInit {
   public quickDateFieldLabel = computed(
     () =>
       RECEIPT_DATE_FILTER_FIELDS.find((field) => field.key === this.quickDateField())?.label ??
-      "Date"
+      "Receipt Date"
   );
 
   /** The entry the quick date control currently owns. */

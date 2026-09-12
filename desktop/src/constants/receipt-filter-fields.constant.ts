@@ -22,7 +22,7 @@ export interface ReceiptFilterField {
  * disagree with the row that produced it.
  */
 export const RECEIPT_FILTER_FIELDS: readonly ReceiptFilterField[] = [
-  { key: "date", label: "Date", type: "date" },
+  { key: "date", label: "Receipt Date", type: "date" },
   { key: "name", label: "Name", type: "text" },
   { key: "paidBy", label: "Paid by", type: "users" },
   { key: "group", label: "Group", type: "list" },

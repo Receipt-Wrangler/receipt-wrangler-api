@@ -1225,11 +1225,21 @@ The receipts table (`src/receipts/receipts-table/`) offers three ways into **one
 (`app-receipt-filter`), the month stepper and the filter chips all read and write that single slice,
 so they can never disagree.
 
-- **Field metadata is shared.** `RECEIPT_FILTER_FIELDS` (`src/constants/receipt-filter-fields.constant.ts`)
-  is the one definition of each field's key, label and operation type. The dialog's
-  `setupAutoOperationSelection()` and the chip builder both read it, and `OperationsPipe` now reads
-  the extracted `FILTER_OPERATION_DISPLAY_VALUES`, so a chip cannot describe a condition differently
-  from the row that produced it.
+- **Field metadata is shared — but the labels only partly.** `RECEIPT_FILTER_FIELDS`
+  (`src/constants/receipt-filter-fields.constant.ts`) defines each field's key, label and operation
+  type, and `OperationsPipe` reads the extracted `FILTER_OPERATION_DISPLAY_VALUES`, so the operation
+  wording is genuinely single-sourced. **The field labels are not.** The dialog reads only
+  `{ key, type }` from the constant (`setupAutoOperationSelection()`) and **authors its own label in
+  its template** — each row is an `ngTemplateOutlet` with a literal
+  `{ label: 'Receipt Date', fieldName: 'date', type: 'date' }` context. So the constant's `label`
+  reaches the chips and the quick-date picker only, and **renaming a field means editing both
+  `receipt-filter-fields.constant.ts` and `receipt-filter.component.html`** or the dialog row will
+  disagree with the chip it produces. (Collapsing those ten outlets into a loop is not the one-liner
+  it looks like: four rows carry an extra `options:` context key and the Group row sits in its own
+  conditional wrapper.)
+- **A field's label matches its table column.** `date` is **"Receipt Date"**, not "Date" — the
+  column header is `Receipt Date` and the table also shows `Resolved Date` and `Added At`, so a bare
+  "Date" left the user guessing which of the three a filter or chip meant.
 - **`isFilterEntryActive`** (`src/utils/receipt-filter-entry.ts`) is the shared "does this field
   narrow anything" predicate: any non-empty stringified value, **or** the operation
   `WITHIN_CURRENT_MONTH` (the one operation that carries no value). **Zero counts** — no field
@@ -1277,8 +1287,9 @@ pins the keyboard path — it fails against a `mat-menu` implementation. A month
 as `BETWEEN [startOfMonth, endOfMonth]` — the one operation that can express *any* month, which is
 why this feature needed no API change. Picking a month **overwrites** whatever that field held.
 
-- **The target field is a chip-shaped `mat-menu` trigger** beside the stepper
-  (`receipts-quick-date-field`), offering `RECEIPT_DATE_FILTER_FIELDS` — the `type: "date"` subset of
+- **The target field is a chip-shaped `mat-menu` trigger at the right-hand end of the control**
+  (`receipts-quick-date-field`), so it reads left to right as "September 2026 … on Receipt Date".
+  It offers `RECEIPT_DATE_FILTER_FIELDS` — the `type: "date"` subset of
   `RECEIPT_FILTER_FIELDS`, so the picker, the dialog row and the chip all name a field identically.
   **A `mat-menu` is right here and wrong for the stepper's own panel**: every entry really is a
   `<button mat-menu-item>`, so the `FocusKeyManager` has items. This is not a licence to convert that

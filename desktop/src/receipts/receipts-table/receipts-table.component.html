@@ -13,12 +13,21 @@
     ></app-add-button>
 
     <!--
-      The field picker and the stepper are one control: the picker names the
-      date column the stepper writes to. A mat-menu is right here (unlike the
-      stepper's own panel, which is a CDK overlay) because every entry really is
-      a mat-menu-item, so the FocusKeyManager has items to navigate.
+      The stepper and the field picker are one control, read left to right as
+      "September 2026 ... on Receipt Date". A mat-menu is right for the picker
+      (unlike the stepper's own panel, which is a CDK overlay) because every
+      entry really is a mat-menu-item, so the FocusKeyManager has items to
+      navigate. The menu stays next to its trigger: [matMenuTriggerFor] resolves
+      the reference within this template.
     -->
     <div class="receipts-quick-date me-2">
+      <app-month-stepper
+        [value]="stepperMonth()"
+        [label]="stepperLabel()"
+        (monthSelected)="monthSelected($event)"
+        (allTimeSelected)="allTimeSelected()"
+      ></app-month-stepper>
+
       <app-button
         data-testid="receipts-quick-date-field"
         matButtonType="basic"
@@ -43,13 +52,6 @@
           </button>
         }
       </mat-menu>
-
-      <app-month-stepper
-        [value]="stepperMonth()"
-        [label]="stepperLabel()"
-        (monthSelected)="monthSelected($event)"
-        (allTimeSelected)="allTimeSelected()"
-      ></app-month-stepper>
     </div>
 
     <app-button

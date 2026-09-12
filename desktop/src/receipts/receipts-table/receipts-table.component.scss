@@ -14,11 +14,14 @@ app-receipts-table {
     row-gap: variables.$spacing-xs;
   }
 
-  // The field picker and the stepper read as one control, so keep them on a
-  // single line and let the pair wrap together.
+  // The stepper and the field picker read as one control, so keep them on a
+  // single line and let the pair wrap together. The gap applies only to those
+  // two direct children, so the stepper's own arrows stay tight against their
+  // label — without it the trailing picker reads as a fourth stepper button.
   .receipts-quick-date {
     display: inline-flex;
     align-items: center;
+    gap: variables.$spacing-xs;
   }
 
   // Chip-shaped, so it reads as the label on the stepper rather than as another

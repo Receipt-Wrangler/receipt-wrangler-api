@@ -44,7 +44,7 @@ describe("buildReceiptFilterChips", () => {
       lookups
     );
 
-    expect(chip.label).toBe("Date between Tue Sep 01 2026 – Wed Sep 30 2026");
+    expect(chip.label).toBe("Receipt Date between Tue Sep 01 2026 – Wed Sep 30 2026");
   });
 
   it("labels a currency comparison", () => {
@@ -93,7 +93,7 @@ describe("buildReceiptFilterChips", () => {
       lookups
     );
 
-    expect(chip.label).toBe("Date within current month");
+    expect(chip.label).toBe("Receipt Date within current month");
   });
 
   // The quick date control used to suppress its own field's chip while the

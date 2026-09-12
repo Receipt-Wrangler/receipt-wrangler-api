@@ -148,7 +148,7 @@ test.describe('Receipts quick date filter', () => {
 
     // The chip row names which date column is filtered — the stepper's label
     // only says the month, and the target field is selectable.
-    await expect(page.getByTestId('receipt-filter-chip-date')).toContainText('Date');
+    await expect(page.getByTestId('receipt-filter-chip-date')).toContainText('Receipt Date');
     await expect(page.getByTestId('receipts-filter-reset')).toBeVisible();
   });
 
@@ -225,7 +225,7 @@ test.describe('Receipts quick date filter', () => {
 
     // Start on Date, this month: the resolved receipt is dated two months back,
     // so it is excluded.
-    await expect(fieldPicker(page)).toContainText('Date');
+    await expect(fieldPicker(page)).toContainText('Receipt Date');
     await stepperLabel(page).click();
     await page.getByTestId('month-stepper-this-month').click();
     await expect(rowLink(page, thisMonthReceipt)).toBeVisible();
@@ -276,7 +276,7 @@ test.describe('Receipts quick date filter', () => {
 
     await expect(stepperLabel(page)).toContainText('Custom');
     await expect(page.getByTestId('receipt-filter-chip-date')).toContainText(
-      'Date within current month',
+      'Receipt Date within current month',
     );
 
     await page.getByTestId('receipt-filter-chip-clear-date').click();

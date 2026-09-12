@@ -191,7 +191,7 @@ describe("ReceiptsTableComponent", () => {
       expect(component.stepperMonth()).toBeNull();
       expect(component.stepperLabel()).toEqual("Custom");
       expect(component.filterChips()).toEqual([
-        { key: "date", label: "Date within current month" },
+        { key: "date", label: "Receipt Date within current month" },
       ]);
     });
 
@@ -207,12 +207,12 @@ describe("ReceiptsTableComponent", () => {
     describe("choosing which date field to filter on", () => {
       it("defaults to the receipt date", () => {
         expect(component.quickDateField()).toEqual("date");
-        expect(component.quickDateFieldLabel()).toEqual("Date");
+        expect(component.quickDateFieldLabel()).toEqual("Receipt Date");
       });
 
       it("offers exactly the date fields, labelled as the dialog labels them", () => {
         expect(component.dateFilterFields.map((field) => [field.key, field.label])).toEqual([
-          ["date", "Date"],
+          ["date", "Receipt Date"],
           ["resolvedDate", "Resolved Date"],
           ["createdAt", "Added At"],
         ]);

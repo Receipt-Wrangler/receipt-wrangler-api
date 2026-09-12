@@ -28,6 +28,13 @@ import '../../utils/snackbar.dart';
 /// been explained to the user by the time this returns, so neither is worth an
 /// exception the callers would each have to handle identically.
 ///
+/// **The one exception callers must handle is [CunningDocumentScannerException]**,
+/// which is rethrown rather than swallowed: it means camera permission is
+/// missing, and the right answer differs per call site — the scan entry point
+/// falls back to the photo library and opens a new flow, while a caller that is
+/// already inside a sheet or on the receipt-image screen only wants the
+/// camera-denied message. Swallowing it here would silently delete that split.
+///
 /// [cameraPages] is the document scanner's page ceiling and is ignored by the
 /// other sources: the Quick Scan sheet accepts a whole multi-page scan, while
 /// the receipt-image app bar attaches one page at a time.
@@ -117,8 +124,21 @@ Future<void> addImagesToReceipt(
   required UploadMethod method,
   int cameraPages = 1,
 }) async {
-  final images =
-      await acquireReceiptFiles(context, method, cameraPages: cameraPages);
+  final List<UploadMultipartFileData> images;
+  try {
+    images =
+        await acquireReceiptFiles(context, method, cameraPages: cameraPages);
+  } on CunningDocumentScannerException catch (_) {
+    // The one exception acquireReceiptFiles lets through (see its doc comment).
+    // Deliberately NOT fallBackToPhotos: that opens a new Quick Scan flow, which
+    // is right for the scan entry point but wrong on the receipt-image screen,
+    // where the user already has a photo source in the same menu.
+    if (context.mounted) {
+      showErrorSnackbar(context, cameraDeniedFallbackMessage);
+    }
+    return;
+  }
+
   if (images.isEmpty || !context.mounted) {
     return;
   }
@@ -157,8 +177,13 @@ Future<void> uploadImagesToReceipt(BuildContext context,
   final loadingModel = Provider.of<LoadingModel>(context, listen: false);
   loadingModel.setIsLoading(true);
 
+  // Declared OUTSIDE the try so a mid-batch failure cannot discard it. Each
+  // image is its own API call: if the third fails, the first two are already
+  // persisted server-side. Dropping them here would show the user nothing but
+  // an error, and repeating the action would upload them a second time --
+  // leaving the receipt with duplicates.
+  final uploaded = <api.FileDataView?>[];
   try {
-    final uploaded = <api.FileDataView?>[];
     for (final image in images) {
       final response = await OpenApiClient.client
           .getReceiptImageApi()
@@ -166,8 +191,6 @@ Future<void> uploadImagesToReceipt(BuildContext context,
               file: image.multipartFile, receiptId: receiptModel.receipt.id);
       uploaded.add(response.data);
     }
-    receiptModel.imageBehaviorSubject
-        .add([...receiptModel.imageBehaviorSubject.value, ...uploaded]);
 
     if (!context.mounted) {
       return;
@@ -183,6 +206,13 @@ Future<void> uploadImagesToReceipt(BuildContext context,
     }
     showApiErrorSnackbar(context, error, stackTrace);
   } finally {
+    // Published here rather than after the loop so every exit carries it -- the
+    // success path, the error path, and the early return taken when the context
+    // is gone. Exactly one emission either way, so the carousel rebuilds once.
+    if (uploaded.isNotEmpty) {
+      receiptModel.imageBehaviorSubject
+          .add([...receiptModel.imageBehaviorSubject.value, ...uploaded]);
+    }
     // Exactly one place, on every path. Raising it only for a non-empty list
     // but lowering it unconditionally used to let a cancelled pick clear a
     // spinner some other in-flight request had raised.

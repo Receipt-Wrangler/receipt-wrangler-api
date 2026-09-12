@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:built_collection/built_collection.dart';
+import 'package:cunning_document_scanner/cunning_document_scanner.dart'
+    show CunningDocumentScannerException;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:infinite_carousel/infinite_carousel.dart';
@@ -35,7 +37,22 @@ Future<void> _addPickedImages(
   UploadMethod method,
   BehaviorSubject<List<QuickScanImage>> imageSubject,
 ) async {
-  final uploadedImages = await acquireReceiptFiles(context, method);
+  final List<UploadMultipartFileData> uploadedImages;
+  try {
+    uploadedImages = await acquireReceiptFiles(context, method);
+  } on CunningDocumentScannerException catch (_) {
+    // acquireReceiptFiles rethrows this one rather than swallowing it: the
+    // scanner re-checks camera permission itself and throws when it is missing,
+    // which is a permission problem rather than a picker failure. Deliberately
+    // NOT fallBackToPhotos -- that opens a whole new Quick Scan flow, which is
+    // right for the scan entry point but wrong here, where the sheet is already
+    // open and the user can reach the photo source from its own app bar.
+    if (context.mounted) {
+      showErrorSnackbar(context, cameraDeniedFallbackMessage);
+    }
+    return;
+  }
+
   if (uploadedImages.isNotEmpty && context.mounted) {
     imageSubject
         .add(imageSubject.value + buildQuickScanImages(context, uploadedImages));

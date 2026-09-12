@@ -418,6 +418,84 @@ void main() {
     expect(status.validator, isNull);
   });
 
+  testWidgets('a selected paid-by does not come back after a group that hides '
+      'it', (tester) async {
+    // A -> B -> C, where B HIDES paid-by and A and C both show it. The concern
+    // is that B never registers the field, so the group dropdown's setValue(null)
+    // cannot reach it and the image keeps the member picked under A -- which C
+    // would then re-display.
+    //
+    // It does not happen, and the reason is worth recording: the clear runs
+    // while the OLD field set is still mounted (onChanged fires before the
+    // setState that re-resolves the config), so A's live field is cleared on the
+    // way out. FormBuilder also runs with clearValueOnUnregister: false, so the
+    // key survives B unmounting the field -- `containsKey` stays true and
+    // onValueChange's fallback to the image is never taken.
+    final groupA = _group(_settings(id: _groupId, paidByEnabled: true),
+        name: 'Group A', members: [_member(42, _groupId)]);
+    final groupB = _group(_settings(id: _group2Id, paidByEnabled: false),
+        name: 'Group B', members: [_member(42, _group2Id)]);
+    const group3Id = 3;
+    final groupC = _group(_settings(id: group3Id, paidByEnabled: true),
+        name: 'Group C', members: [_member(42, group3Id)]);
+
+    final key = await _pumpFormGroups(
+      tester,
+      groups: [groupA, groupB, groupC],
+      imageGroupId: 0,
+      users: [_user(42, 'Payer')],
+    );
+
+    // Pick A and choose a member, so the value is a deliberate selection rather
+    // than a prefill.
+    await _selectGroup(tester, 'Group A');
+    await tester.tap(_dropdown('paidByUserId'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Payer').last);
+    await tester.pumpAndSettle();
+    expect(key.currentState!.fields['paidByUserId']!.value, 42);
+
+    // B hides it.
+    await _selectGroup(tester, 'Group B');
+    expect(_dropdown('paidByUserId'), findsNothing);
+
+    // C shows it again -- and it must be empty, not Payer.
+    await _selectGroup(tester, 'Group C');
+    expect(_dropdown('paidByUserId'), findsOneWidget);
+    expect(
+      key.currentState!.fields['paidByUserId']!.value,
+      isNull,
+      reason: 'a member chosen under A must not survive into C',
+    );
+  });
+
+  testWidgets('a prefilled paid-by DOES survive a group that hides it', (
+    tester,
+  ) async {
+    // The deliberate counterpart to the case above, pinning the two apart. An
+    // untouched quickScanDefaultPaidById is the user's standing preference, not
+    // a stale selection, so a group that shows the field is meant to offer it --
+    // exactly as it would have on the very first group picked.
+    final groupA = _group(_settings(id: _groupId, paidByEnabled: false),
+        name: 'Group A', members: [_member(42, _groupId)]);
+    final groupB = _group(_settings(id: _group2Id, paidByEnabled: true),
+        name: 'Group B', members: [_member(42, _group2Id)]);
+
+    final key = await _pumpFormGroups(
+      tester,
+      groups: [groupA, groupB],
+      imageGroupId: 0,
+      users: [_user(42, 'Payer')],
+      imagePaidByUserId: 42,
+    );
+
+    await _selectGroup(tester, 'Group A'); // hides paid-by; never mounted
+    expect(_dropdown('paidByUserId'), findsNothing);
+
+    await _selectGroup(tester, 'Group B'); // shows it
+    expect(key.currentState!.fields['paidByUserId']!.value, 42);
+  });
+
   testWidgets('re-renders fields per config when the group changes', (
     tester,
   ) async {

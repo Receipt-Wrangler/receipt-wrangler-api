@@ -180,10 +180,21 @@ class ReceiptImageAppBar extends StatelessWidget implements PreferredSizeWidget 
       var currentImages =
           List<api.FileDataView?>.from(receiptModel.imageBehaviorSubject.value);
       currentImages.removeAt(index);
+      // Deliberately before the mounted guard: the image is already gone from
+      // the server, so the model has to follow whether or not this widget
+      // survived the await.
       receiptModel.imageBehaviorSubject.add(currentImages);
 
+      if (!context.mounted) {
+        return;
+      }
       showSuccessSnackbar(context, "Successfully deleted image");
     } catch (e) {
+      // Both snackbars resolve ScaffoldMessenger.of(context), so neither may
+      // run once this widget is unmounted.
+      if (!context.mounted) {
+        return;
+      }
       showApiErrorSnackbar(context, e);
     }
   }

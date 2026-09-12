@@ -13,6 +13,7 @@ import 'package:image_picker_platform_interface/image_picker_platform_interface.
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:receipt_wrangler_mobile/enums/upload_method.dart';
 
+import '../helpers/channel_mocks.dart';
 import '../helpers/permission_test_helpers.dart';
 import '../helpers/receipt_entry_test_helpers.dart';
 import '../helpers/receipt_form_test_helpers.dart';
@@ -151,6 +152,36 @@ void main() {
 
       expect(find.text(uploadPhotoLabel), findsOneWidget);
       expect(find.text(uploadFileLabel), findsOneWidget);
+    });
+
+    testWidgets('a denied camera explains itself instead of escaping',
+        (tester) async {
+      // acquireReceiptFiles RETHROWS CunningDocumentScannerException rather than
+      // swallowing it, because the right answer differs per call site. The sheet
+      // has to catch it: uncaught, it escaped an async onPressed with no user
+      // feedback at all, so the scan icon just appeared to do nothing.
+      //
+      // Deliberately the message and not fallBackToPhotos -- that opens a whole
+      // new Quick Scan flow, and this sheet is already open with a photo source
+      // one tap away in its own app bar.
+      final permCalls = installPermissionMocks(status: PermissionStatusWire.denied);
+      addTearDown(clearPermissionMocks);
+
+      await pumpSheet(tester,
+          aiEnabled: true, permissions: [quickScan, create]);
+
+      await tester.tap(find.byIcon(Icons.add_a_photo));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull,
+          reason: 'the permission failure must not escape the callback');
+      // findsWidgets, not findsOneWidget: ScaffoldMessenger renders the snack
+      // bar into every registered Scaffold, and while the sheet is open that is
+      // both the sheet's and the route's underneath. `requests` is the honest
+      // proof it was REPORTED once -- the scanner asks for camera permission
+      // exactly once per invocation.
+      expect(find.text(cameraDeniedFallbackMessage), findsWidgets);
+      expect(permCalls.requests, 1, reason: 'one tap, one attempt');
     });
 
     testWidgets('routes each entry to its own picker', (tester) async {

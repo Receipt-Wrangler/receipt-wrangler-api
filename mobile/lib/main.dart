@@ -50,6 +50,20 @@ import 'models/context_model.dart';
 import 'models/custom_field_model.dart';
 import 'models/system_settings_model.dart';
 
+/// Opts into the Android Photo Picker, which is a no-op on every other platform.
+///
+/// Split out of [main] only so both branches are reachable from a test —
+/// [ImagePickerPlatform.instance] is a real plugin instance at runtime, and
+/// `buildApp()` (what the e2e suite pumps) never runs [main]. [platform]
+/// defaults to the live instance, so the production call site is unchanged.
+@visibleForTesting
+void configureAndroidPhotoPicker([ImagePickerPlatform? platform]) {
+  final picker = platform ?? ImagePickerPlatform.instance;
+  if (picker is ImagePickerAndroid) {
+    picker.useAndroidPhotoPicker = true;
+  }
+}
+
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
@@ -64,10 +78,7 @@ void main() async {
   // freeze (GitHub #617). Do not move it there. It has to run before the first
   // pick, and `ensureInitialized()` above has just registered the plugin whose
   // instance it reads.
-  final imagePicker = ImagePickerPlatform.instance;
-  if (imagePicker is ImagePickerAndroid) {
-    imagePicker.useAndroidPhotoPicker = true;
-  }
+  configureAndroidPhotoPicker();
 
   await GlobalSharedPreferences.initialize();
 

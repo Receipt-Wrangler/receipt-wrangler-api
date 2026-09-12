@@ -615,8 +615,13 @@ is exempt from the launch-time-work ban documented in `_ReceiptWrangler.initStat
 the comment there says so, so it does not get "cleaned up" into that block later. Needed on API
 33–35; a no-op on 36+, and below 33 the Play Services `ModuleDependencies` service in
 `AndroidManifest.xml` pulls in the backported picker (without it those devices simply fall back to
-`ACTION_OPEN_DOCUMENT`, i.e. the old behaviour). **e2e pumps `buildApp()`, not `main()`, so no
-automated test covers that line** — verify it on a physical Android device.
+`ACTION_OPEN_DOCUMENT`, i.e. the old behaviour). The branch itself lives in
+`configureAndroidPhotoPicker([ImagePickerPlatform?])`, split out of `main()` **only** so it is
+reachable from a test — the parameter defaults to the live instance, so the production call site is
+unchanged, and it must stay in `main()` rather than moving into `initState`.
+`test/main_photo_picker_test.dart` pins both branches (Android gets the opt-in, any other
+implementation is untouched and does not throw). **e2e pumps `buildApp()`, not `main()`, so the
+plugin *registration* is still uncovered** — verify that on a physical Android device.
 
 **Undecodable bytes render a placeholder, not a broken-image glyph.**
 `UnrenderableFilePlaceholder` / `unrenderableFileErrorBuilder`
@@ -657,6 +662,31 @@ now takes `Object` and reports non-Dio errors to Sentry, which fixes every call 
 multi-image upload that assigned a success message and then `return`ed before showing it. The loading
 spinner is now raised and lowered in exactly one place, so a cancelled pick can no longer clear a
 spinner another request raised.
+
+**`acquireReceiptFiles` swallows every picker failure EXCEPT
+`CunningDocumentScannerException`, which it rethrows** — that one means camera permission is
+missing, and the right answer differs per call site, so turning it into a snackbar centrally would
+delete the distinction. Every caller therefore has to handle it, and there are three:
+`openQuickScanFromCamera` (`receipt_entry.dart`) answers it with `fallBackToPhotos`, because it is
+*starting* a flow and can redirect the whole thing; `_addPickedImages` (`quick_scan.dart`) and
+`addImagesToReceipt` (`receipt_upload.dart`) answer it with the `cameraDeniedFallbackMessage`
+snackbar and nothing else, because both already sit inside a surface that offers a photo source one
+tap away — opening a second Quick Scan flow over the top would be wrong. The latter two went
+uncaught at first, so a denied camera threw out of an async `onTap` and the scan icon simply
+appeared to do nothing. Pinned by `test/widgets/quick_scan_sheet_test.dart` ("a denied camera
+explains itself instead of escaping"), which asserts on the **permission-request count** rather than
+the snackbar count — `ScaffoldMessenger` renders one snackbar into *every* registered `Scaffold`, and
+while the sheet is open that is both the sheet's and the route's underneath, so `findsOneWidget`
+would fail for a reason that has nothing to do with the code under test.
+
+**`uploadImagesToReceipt` publishes partial results.** Each image is its own API call, so a failure
+on the third leaves the first two already persisted server-side. `uploaded` is declared **outside**
+the `try` and emitted once in `finally` (guarded by `isNotEmpty`), so every exit carries it —
+success, error, and the early return taken when the context is gone. Scoping it inside the `try`
+instead meant a mid-batch failure discarded images the server had already stored: the user saw only
+an error, and repeating the action uploaded them a second time, leaving the receipt with duplicates.
+Guarded by `test/shared/functions/receipt_upload_publish_test.dart`, which also pins that a
+first-image failure publishes nothing and that a successful batch emits exactly once.
 
 #### Camera permission
 
@@ -743,6 +773,16 @@ other or from `resolveQuickScanFields`. `hasGroup: false` returns `noGroupQuickS
   member of the group just picked"). That harness's `onFormChangeCallback` **mirrors the real
   consumer** — with an inert `(_) {}` callback the image is never mutated and both tests pass with
   the bug present.
+- **A value the user SELECTED never survives a group that hides its field — only an untouched
+  prefill does.** The distinction is easy to get backwards, and was raised in review as a suspected
+  bug. It holds for two reasons that are worth keeping together: the dropdown's `onChanged` clears
+  paid-by/categories/tags *before* its own `setState`, so the clear lands while the **old** group's
+  fields are still mounted and registered; and the merge above only falls back to the image for a key
+  that is **absent**, which — with `clearValueOnUnregister: false` — means "never shown", not
+  "hidden later". A field shown under group A and hidden under B keeps its (cleared) key, so a later
+  group C that shows it again gets a blank field, while a prefill that was never rendered is still
+  offered. Pinned by the A→B→C pair "a selected paid-by does not come back after a group that hides
+  it" / "a prefilled paid-by DOES survive a group that hides it".
 
 **The comment field is gated on `group.comments.create` as well as the group config.** The permission
 is a **required named argument** to the resolver (not read from a provider) so the helper stays pure

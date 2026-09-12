@@ -200,10 +200,17 @@ String _locationFor(WranglerFormState formState, int receiptId) {
 ///
 /// The form derives its mode from the route (`getFormStateFromContext`), so a
 /// real [GoRouter] is mounted at the location matching [formState].
+///
+/// [modifiedReceipt] seeds the model's **working copy** only, leaving [receipt]
+/// as the saved one. That split is what a view -> edit navigation looks like:
+/// `ReceiptModel` outlives the screen, so the edit form mounts with whatever
+/// the view form attached still on `modifiedReceipt` but absent from the
+/// receipt the server stored.
 Future<ReceiptFormHarness> pumpReceiptForm(
   WidgetTester tester, {
   required List<api.Group> groups,
   api.Receipt? receipt,
+  api.Receipt? modifiedReceipt,
   List<api.CustomField> customFields = const [],
   List<api.UserView> users = const [],
   WranglerFormState formState = WranglerFormState.add,
@@ -216,6 +223,9 @@ Future<ReceiptFormHarness> pumpReceiptForm(
   // form key once (`late final`), and `setReceipt` regenerates that key
   // whenever the receipt identity changes.
   final receiptModel = ReceiptModel()..setReceipt(seededReceipt, false);
+  if (modifiedReceipt != null) {
+    receiptModel.setModifiedReceipt(modifiedReceipt);
+  }
   final groupModel = GroupModel()..setGroups(groups);
   final userModel = UserModel()..setUsers(users);
   final customFieldModel = CustomFieldModel()..setCustomFields(customFields);

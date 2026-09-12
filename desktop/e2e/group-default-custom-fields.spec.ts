@@ -1,10 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { stubTokenRefresh } from './helpers/auth';
+import { creds, stubTokenRefresh } from './helpers/auth';
 import {
   apiCreateCustomField,
   apiCreateGroup,
+  apiCreateReceipt,
   apiDeleteCustomFieldById,
   apiDeleteGroupById,
+  apiGetUserId,
   apiSetGroupDefaultCustomFields,
   uniqueName,
   withAdminApi,
@@ -17,7 +19,9 @@ import {
 //   - the settings page reads GET /group/{id} through groupResolverFn, so test 1 is a real
 //     persistence round-trip;
 //   - the receipt form reads GroupState, hydrated from AppData on every navigation, so test 2
-//     proves the ids reach a different consumer over a different endpoint.
+//     proves the ids reach a different consumer over a different endpoint;
+//   - a saved receipt picks its group's defaults up on load, so test 4 proves the retro-fit
+//     survives a real save (enforceReceiptCustomFieldSelection would 403 a mismatched id set).
 //
 // Runs as admin: the section needs group.update + app.custom-fields.read, and seeding custom
 // fields needs app.custom-fields.create/delete.
@@ -106,6 +110,15 @@ test.describe('Group default custom fields', () => {
     await page.waitForURL(/\/receipt-settings\/view/);
   }
 
+  /** Asserts the receipt form's mounted custom-field set is exactly [names] — count included, so
+   *  a duplicated field fails as loudly as a missing one. */
+  async function expectFields(page: Page, names: string[]) {
+    await expect(page.locator('app-custom-field')).toHaveCount(names.length);
+    for (const name of names) {
+      await expect(page.getByLabel(name)).toBeVisible();
+    }
+  }
+
   test('the picker persists a group default set and its ingest toggle', async ({ page }) => {
     await page.goto(`/groups/${alpha.id}/receipt-settings/edit`);
     await expect(defaultFieldsPicker(page)).toBeVisible();
@@ -192,15 +205,6 @@ test.describe('Group default custom fields', () => {
       await expect(page.getByLabel(name)).toBeVisible();
     }
 
-    /** Asserts the mounted custom-field set is exactly [names] — count included, so a duplicated
-     *  field fails as loudly as a missing one. */
-    async function expectFields(names: string[]) {
-      await expect(page.locator('app-custom-field')).toHaveCount(names.length);
-      for (const name of names) {
-        await expect(page.getByLabel(name)).toBeVisible();
-      }
-    }
-
     const receiptName = uniqueName('dcf-receipt');
     await page.goto('/receipts/add');
     await expect(page.getByLabel('Name')).toBeVisible();
@@ -209,23 +213,23 @@ test.describe('Group default custom fields', () => {
 
     // Alpha declares A + B, so both are pre-added on the create form.
     await selectGroup(alpha.name);
-    await expectFields([nameA, nameB]);
+    await expectFields(page, [nameA, nameB]);
 
     // Typing into A makes it the user's data; C is added by hand, so it is never auto-managed.
     await page.getByLabel(nameA).fill('kept-A');
     await addFieldByHand(nameC);
-    await expectFields([nameA, nameB, nameC]);
+    await expectFields(page, [nameA, nameB, nameC]);
 
     // Beta declares only C. B is the only field the swap owns AND is still empty, so it is the
     // only one dropped; C is already attached and must not be added a second time.
     await selectGroup(beta.name);
-    await expectFields([nameA, nameC]);
+    await expectFields(page, [nameA, nameC]);
     await expect(page.getByLabel(nameA)).toHaveValue('kept-A');
 
     // Back to Alpha: B returns as a default and must come back BLANK (the form drops an
     // auto-applied field's stored value on removal), C stays because the user added it.
     await selectGroup(alpha.name);
-    await expectFields([nameA, nameB, nameC]);
+    await expectFields(page, [nameA, nameB, nameC]);
     await expect(page.getByLabel(nameA)).toHaveValue('kept-A');
     await expect(page.getByLabel(nameB)).toHaveValue('');
 
@@ -243,5 +247,40 @@ test.describe('Group default custom fields', () => {
     await expect(page.getByLabel(nameA)).toHaveValue('kept-A');
     await expect(page.getByLabel(nameB)).toHaveValue('typed-B');
     await expect(page.getByLabel(nameC)).toBeVisible();
+  });
+
+  test('a saved receipt picks up a default its group gained afterwards', async ({ page }) => {
+    // The receipt is created while beta declares nothing, so the field can only be on the form
+    // because the form put it there on load.
+    let receiptId: number;
+    const receiptName = uniqueName('dcf-existing');
+    await withAdminApi(async (api) => {
+      await apiSetGroupDefaultCustomFields(api, beta.id, []);
+      receiptId = await apiCreateReceipt(api, {
+        groupId: beta.id,
+        paidByUserId: await apiGetUserId(api, creds('admin').username),
+        name: receiptName,
+      });
+      await apiSetGroupDefaultCustomFields(api, beta.id, [fieldA.id]);
+    });
+
+    // View mode: blank and read-only, exactly like a built-in field with no value.
+    await page.goto(`/receipts/${receiptId!}/view`);
+    await expect(page.getByLabel('Name')).toHaveValue(receiptName);
+    await expectFields(page, [nameA]);
+    await expect(page.getByLabel(nameA)).toHaveValue('');
+
+    await page.goto(`/receipts/${receiptId!}/edit`);
+    await expect(page.getByLabel('Name')).toHaveValue(receiptName);
+    await expectFields(page, [nameA]);
+
+    await page.getByLabel(nameA).fill('retro-fitted');
+    await page.getByRole('button', { name: 'Save', exact: true }).first().click({ force: true });
+    await page.waitForURL(/\/receipts\/\d+\/view/);
+
+    // Reaching /view proves enforceReceiptCustomFieldSelection accepted the newly attached id;
+    // re-navigating proves the value came back out of the server rather than the live form.
+    await page.goto(`/receipts/${receiptId!}/view`);
+    await expect(page.getByLabel(nameA)).toHaveValue('retro-fitted');
   });
 });

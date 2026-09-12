@@ -1,3 +1,4 @@
+import 'package:built_collection/built_collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,10 +11,11 @@ import '../helpers/receipt_form_test_helpers.dart';
 
 // A group can declare default custom fields (`GroupReceiptSettings
 // .defaultCustomFieldIds`), which the receipt form pre-adds for that group --
-// each group is effectively its own receipt template. Selecting a different
-// group therefore "smart swaps": defaults this form added and the user never
-// filled in are dropped, anything they typed into or added by hand is kept, and
-// the new group's missing defaults are added.
+// each group is effectively its own receipt template. They are applied on load
+// in EVERY form state, so a saved receipt that predates the configuration shows
+// them too. Selecting a different group "smart swaps": defaults this form added
+// and the user never filled in are dropped, anything they typed into or added
+// by hand is kept, and the new group's missing defaults are added.
 //
 // Every case asserts the swap left NO UI error behind. The path mutates the
 // receipt's custom field list while FormBuilder fields mount and unmount under
@@ -75,11 +77,16 @@ List<api.Group> _groups({
       ),
     ];
 
-api.Receipt _receiptInGroup(int groupId, {int id = 0}) =>
+api.Receipt _receiptInGroup(
+  int groupId, {
+  int id = 0,
+  List<api.CustomFieldValue> customFields = const [],
+}) =>
     getDefaultReceipt().rebuild((b) => b
       ..id = id
       ..groupId = groupId
-      ..paidByUserId = _memberId);
+      ..paidByUserId = _memberId
+      ..customFields = ListBuilder<api.CustomFieldValue>(customFields));
 
 Finder _dropdown(String name) =>
     find.byWidgetPredicate((w) => w is FormBuilderDropdown && w.name == name);
@@ -413,7 +420,11 @@ void main() {
     _expectNoUiErrors(tester);
   });
 
-  testWidgets('never applies in view mode', (tester) async {
+  // A group's defaults are meant to read as its built-in receipt fields, so a
+  // saved receipt that predates the configuration picks them up on load -- in
+  // view as well as edit.
+  testWidgets("applies the group's missing defaults in view mode",
+      (tester) async {
     final harness = await pumpReceiptForm(
       tester,
       groups: _groups(),
@@ -423,21 +434,73 @@ void main() {
       formState: WranglerFormState.view,
     );
 
-    expect(find.byType(CustomFieldWidget), findsNothing);
-    expect(_attachedIds(harness), isEmpty);
+    expect(_customFieldWidget(_fieldAId), findsOneWidget);
+    expect(_attachedIds(harness), [_fieldAId]);
+    expect(harness.customFieldValue(_fieldAId), isNull);
+    // Display only: view mode offers no way to change the set.
+    expect(
+      find.descendant(
+        of: _customFieldWidget(_fieldAId),
+        matching: find.byIcon(Icons.remove_circle_outline),
+      ),
+      findsNothing,
+    );
+    expect(_addCustomFieldButton(), findsNothing);
     _expectNoUiErrors(tester);
   });
 
-  testWidgets('edit mode applies on a group change but never on load',
+  testWidgets("applies the group's missing defaults on an edit form's load",
       (tester) async {
-    // An existing receipt is what it is; only an active group change re-templates
-    // it.
     final harness = await pumpReceiptForm(
       tester,
       groups: _groups(),
       customFields: _catalog,
       users: _users,
       receipt: _receiptInGroup(_groupOneId, id: 5),
+      formState: WranglerFormState.edit,
+    );
+
+    expect(_customFieldWidget(_fieldAId), findsOneWidget);
+    expect(_attachedIds(harness), [_fieldAId]);
+    _expectNoUiErrors(tester);
+  });
+
+  testWidgets('does not duplicate a default the receipt already carries',
+      (tester) async {
+    final harness = await pumpReceiptForm(
+      tester,
+      groups: _groups(),
+      customFields: _catalog,
+      users: _users,
+      receipt: _receiptInGroup(
+        _groupOneId,
+        id: 5,
+        customFields: [
+          buildCustomFieldValue(
+            customFieldId: _fieldAId,
+            receiptId: 5,
+            stringValue: 'CC-7',
+          ),
+        ],
+      ),
+      formState: WranglerFormState.edit,
+    );
+
+    expect(_customFieldWidget(_fieldAId), findsOneWidget);
+    expect(_attachedIds(harness), [_fieldAId]);
+    expect(harness.customFieldValue(_fieldAId), 'CC-7');
+    _expectNoUiErrors(tester);
+  });
+
+  testWidgets('edit mode applies the new group\'s defaults on a group change',
+      (tester) async {
+    // Group Three configures none, so nothing lands until the group changes.
+    final harness = await pumpReceiptForm(
+      tester,
+      groups: _groups(),
+      customFields: _catalog,
+      users: _users,
+      receipt: _receiptInGroup(_groupThreeId, id: 5),
       formState: WranglerFormState.edit,
     );
 
@@ -448,6 +511,54 @@ void main() {
     await _selectGroup(tester, 'Group Two');
 
     expect(_customFieldWidget(_fieldBId), findsOneWidget);
+    expect(_attachedIds(harness), [_fieldBId]);
+    _expectNoUiErrors(tester);
+  });
+
+  testWidgets('a default applied on load is still the swap\'s to take back',
+      (tester) async {
+    final harness = await pumpReceiptForm(
+      tester,
+      groups: _groups(),
+      customFields: _catalog,
+      users: _users,
+      receipt: _receiptInGroup(_groupOneId, id: 5),
+      formState: WranglerFormState.edit,
+    );
+
+    expect(_attachedIds(harness), [_fieldAId]);
+
+    await _selectGroup(tester, 'Group Two');
+
+    expect(_customFieldWidget(_fieldAId), findsNothing);
+    expect(_attachedIds(harness), [_fieldBId]);
+    _expectNoUiErrors(tester);
+  });
+
+  testWidgets('takes back a default a previous mount of the form attached',
+      (tester) async {
+    // The view -> edit navigation: ReceiptModel outlives the screen, so the
+    // edit form mounts with the view form's default on the working copy but
+    // absent from the saved receipt. It is still the form's, not the user's.
+    final saved = _receiptInGroup(_groupOneId, id: 5);
+    final harness = await pumpReceiptForm(
+      tester,
+      groups: _groups(),
+      customFields: _catalog,
+      users: _users,
+      receipt: saved,
+      modifiedReceipt: saved.rebuild((b) => b
+        ..customFields = ListBuilder<api.CustomFieldValue>([
+          buildCustomFieldValue(customFieldId: _fieldAId, receiptId: 5),
+        ])),
+      formState: WranglerFormState.edit,
+    );
+
+    expect(_attachedIds(harness), [_fieldAId]);
+
+    await _selectGroup(tester, 'Group Two');
+
+    expect(_customFieldWidget(_fieldAId), findsNothing);
     expect(_attachedIds(harness), [_fieldBId]);
     _expectNoUiErrors(tester);
   });

@@ -822,6 +822,22 @@ describe("ReceiptFormComponent", () => {
       routeDataSubject.next({ mode: FormMode.add, customFields });
     };
 
+    const savedReceipt = (groupId: number, customFields: any[] = []): any => ({
+      id: 9,
+      name: "R",
+      amount: "1.00",
+      groupId,
+      customFields,
+    });
+
+    const openSavedForm = (
+      mode: FormMode,
+      receipt: any,
+      customFields: any[] = catalog
+    ): void => {
+      routeDataSubject.next({ mode, customFields, receipt });
+    };
+
     beforeEach(() => {
       store = TestBed.inject(Store);
       store.dispatch(new SetPermissions([Permission.AppCustomFieldsRead], {}));
@@ -900,38 +916,60 @@ describe("ReceiptFormComponent", () => {
       expect(attachedIds()).toEqual([2]);
     });
 
-    it("applies nothing to an edit-mode receipt on load", () => {
-      routeDataSubject.next({
-        mode: FormMode.edit,
-        customFields: catalog,
-        receipt: { id: 9, name: "R", amount: "1.00", groupId: 1, customFields: [] } as any,
-      });
+    // A group's defaults are meant to read as its built-in receipt fields, so a
+    // saved receipt that predates the configuration picks them up too.
+    it("applies the group's missing defaults to an edit-mode receipt on load", () => {
+      openSavedForm(FormMode.edit, savedReceipt(1));
 
-      expect(attachedIds()).toEqual([]);
+      expect(attachedIds()).toEqual([1]);
+      expect(menuItemFor(1).selected).toBe(true);
     });
 
-    it("applies the new group's defaults on an active group change in edit mode", () => {
-      routeDataSubject.next({
-        mode: FormMode.edit,
-        customFields: catalog,
-        receipt: { id: 9, name: "R", amount: "1.00", groupId: 1, customFields: [] } as any,
-      });
+    it("applies the group's missing defaults in view mode", () => {
+      openSavedForm(FormMode.view, savedReceipt(1));
+
+      expect(attachedIds()).toEqual([1]);
+      expect(menuItemFor(1).selected).toBe(true);
+    });
+
+    it("keeps the receipt's own custom fields alongside the ones it adds", () => {
+      // Field 2 is the receipt's own; group 1 defaults to field 1.
+      openSavedForm(
+        FormMode.edit,
+        savedReceipt(1, [{ customFieldId: 2, stringValue: "PO-1" }])
+      );
+
+      expect(attachedIds()).toEqual([2, 1]);
+      expect(component.customFieldsFormArray.at(0).value.stringValue).toEqual("PO-1");
+    });
+
+    it("does not duplicate a default the receipt already carries", () => {
+      openSavedForm(
+        FormMode.edit,
+        savedReceipt(1, [{ customFieldId: 1, stringValue: "R&D" }])
+      );
+
+      expect(attachedIds()).toEqual([1]);
+      expect(component.customFieldsFormArray.at(0).value.stringValue).toEqual("R&D");
+    });
+
+    it("hands a load-applied default to the swap, so a group change drops it while empty", () => {
+      openSavedForm(FormMode.edit, savedReceipt(1));
+      expect(attachedIds()).toEqual([1]);
 
       component.form.get("groupId")!.setValue(2);
 
       expect(attachedIds()).toEqual([2]);
     });
 
-    it("never applies defaults in view mode", () => {
-      routeDataSubject.next({
-        mode: FormMode.view,
-        customFields: catalog,
-        receipt: { id: 9, name: "R", amount: "1.00", groupId: 1, customFields: [] } as any,
-      });
+    it("applies the new group's defaults on an active group change in edit mode", () => {
+      // Group 3 configures none, so nothing is applied until the group changes.
+      openSavedForm(FormMode.edit, savedReceipt(3));
+      expect(attachedIds()).toEqual([]);
 
       component.form.get("groupId")!.setValue(2);
 
-      expect(attachedIds()).toEqual([]);
+      expect(attachedIds()).toEqual([2]);
     });
 
     it("never applies defaults without app.custom-fields.read", () => {
@@ -941,6 +979,12 @@ describe("ReceiptFormComponent", () => {
       expect(attachedIds()).toEqual([]);
 
       component.form.get("groupId")!.setValue(2);
+      expect(attachedIds()).toEqual([]);
+
+      // Including on a saved receipt: the backend's
+      // enforceReceiptCustomFieldSelection would 403 the save if the attached id
+      // set changed for such a caller.
+      openSavedForm(FormMode.edit, savedReceipt(1));
       expect(attachedIds()).toEqual([]);
     });
 

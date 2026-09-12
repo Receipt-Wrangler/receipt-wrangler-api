@@ -69,19 +69,22 @@ class _ReceiptForm extends State<ReceiptForm> {
 
     groupId = modifiedReceipt.groupId;
 
-    // Always scheduled, not just when the receipt already knows its group: on an
-    // add form _resolveInitialGroupId can produce one the receipt does not carry
-    // (the group being browsed, or the user's only group). Deferred to after the
-    // first frame because applying the group's defaults mutates ReceiptModel, and
-    // notifying its listeners while the tree is still building throws -- and
-    // because `formState`/`getGroupId` read the route, which needs a mounted
-    // element.
+    // Runs in every form state, not just add: a group's default custom fields
+    // are meant to read as that group's built-in receipt fields, so a saved
+    // receipt that predates the configuration shows them too (read-only in
+    // view, and attached as empty values once an edit is saved). Deferred to
+    // after the first frame because applying the group's defaults mutates
+    // ReceiptModel, and notifying its listeners while the tree is still
+    // building throws -- and because `formState`/`getGroupId` read the route,
+    // which needs a mounted element.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || formState != WranglerFormState.add) {
+      if (!mounted) {
         return;
       }
 
-      // Mirrors what buildGroupField seeded the dropdown with.
+      // Mirrors what buildGroupField seeded the dropdown with. On an add form
+      // this can be a group the receipt does not carry (the group being
+      // browsed, or the user's only group); otherwise it is the receipt's own.
       final resolvedGroupId = _resolveInitialGroupId();
       if (resolvedGroupId == 0) {
         return;
@@ -89,7 +92,7 @@ class _ReceiptForm extends State<ReceiptForm> {
 
       // Before the setState below: it writes to ReceiptModel, and
       // notifyListeners() must not fire from inside a setState callback.
-      _applyGroupDefaultCustomFields(resolvedGroupId);
+      _applyGroupDefaultCustomFields(resolvedGroupId, onLoad: true);
 
       if (resolvedGroupId != groupId) {
         // Carry the seed into the State field the group-derived parts of the
@@ -479,8 +482,8 @@ class _ReceiptForm extends State<ReceiptForm> {
 
   /// Applies [newGroupId]'s default custom fields to the form, swapping out the
   /// ones the previously selected group put there. Each group is effectively
-  /// its own receipt template, so this runs on every group change (and once on
-  /// load for an add form that already knows its group).
+  /// its own receipt template, so this runs on every group change and once on
+  /// load, in every form state ([onLoad]).
   ///
   /// The swap is deliberately conservative. It only removes a field this form
   /// added itself ([_autoAppliedCustomFieldIds]) that is still **empty**; a
@@ -491,11 +494,7 @@ class _ReceiptForm extends State<ReceiptForm> {
   /// is empty for a caller without `app.custom-fields.read` (the 403 is
   /// swallowed into an empty list), which is exactly the gate we want here: the
   /// backend's `enforceReceiptCustomFieldSelection` would 403 their save.
-  void _applyGroupDefaultCustomFields(int newGroupId) {
-    if (formState == WranglerFormState.view) {
-      return;
-    }
-
+  void _applyGroupDefaultCustomFields(int newGroupId, {bool onLoad = false}) {
     var knownCustomFieldIds =
         customFieldModel.customFields.map((cf) => cf.id).toSet();
     var defaultIds = <int>[
@@ -519,7 +518,16 @@ class _ReceiptForm extends State<ReceiptForm> {
     var attachedIds =
         modifiedReceipt.customFields.map((cfv) => cfv.customFieldId).toSet();
     var toAdd = defaultIds.difference(attachedIds);
-    _autoAppliedCustomFieldIds.addAll(toAdd);
+
+    // On load the form owns every default the SAVED receipt does not carry, not
+    // just the ones added on this pass: ReceiptModel outlives the screen, so a
+    // view -> edit navigation arrives with the previous mount's defaults
+    // already attached (receipt_form_screen.dart only re-hydrates for a
+    // different receipt). Claiming only `toAdd` would mistake them for the
+    // own data and never swap them out on a later group change.
+    var savedIds = receipt.customFields.map((cfv) => cfv.customFieldId).toSet();
+    _autoAppliedCustomFieldIds
+        .addAll(onLoad ? defaultIds.difference(savedIds) : toAdd);
 
     if (toRemove.isEmpty && toAdd.isEmpty) {
       return;

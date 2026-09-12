@@ -39,6 +39,13 @@ Future<void> selectDropdown(
   // is empty -- which it briefly is on slow targets (Android emulator) while
   // the dropdown menu is still opening. Wait for any match, then tap .last.
   await pumpUntilFound(tester, find.text(optionText));
+  // That wait is only a lower bound now that fields can arrive pre-selected:
+  // a dropdown already showing this option matches in its CLOSED state, so the
+  // wait can return before the menu is built and `.last` would resolve to the
+  // closed-state child. Draining the open animation closes that race.
+  for (int i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
   // Long menus (e.g. a groupId dropdown with several fixture groups) can lay
   // the target item out below the menu's viewport. ensureVisible jumps the
   // menu's scroll position but does NOT relayout -- pump a frame so the tap

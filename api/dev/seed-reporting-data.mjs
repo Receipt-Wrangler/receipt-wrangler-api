@@ -172,8 +172,8 @@ const TAG_NAMES = [
 
 const MEMBER_NAMES = ["Jordan Rivera", "Casey Morgan", "Taylor Brooks", "Riley Chen", "Avery Patel", "Sam Okafor"];
 
-const STATUSES = ["RESOLVED", "OPEN", "NEEDS_ATTENTION", "DRAFT"];
-const STATUS_WEIGHTS = [0.65, 0.2, 0.1, 0.05];
+const STATUSES = ["RESOLVED", "OPEN", "NEEDS_ATTENTION", "DRAFT", "DECLINED"];
+const STATUS_WEIGHTS = [0.6, 0.2, 0.1, 0.05, 0.05];
 const TAG_COUNT_WEIGHTS = [0.2, 0.4, 0.3, 0.1]; // 0, 1, 2, or 3 tags
 
 // ---------- seed ----------

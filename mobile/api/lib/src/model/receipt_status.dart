@@ -24,7 +24,16 @@ class ReceiptStatus extends EnumClass {
   @BuiltValueEnumConst(wireName: r'DRAFT')
   static const ReceiptStatus DRAFT = _$DRAFT;
   /// Status of a receipt
-  @BuiltValueEnumConst(wireName: r'')
+  @BuiltValueEnumConst(wireName: r'DECLINED')
+  static const ReceiptStatus DECLINED = _$DECLINED;
+  /// Status of a receipt
+  // HAND-PATCH (re-apply after every regen -- see mobile/CLAUDE.md "Known
+  // dart-dio default-value regressions"): `fallback: true` makes the generated
+  // `_$valueOf` return this member for an unrecognized wire value instead of
+  // throwing ArgumentError, which would fail the ENTIRE enclosing payload --
+  // the whole receipts list, or login when the value rides on AppData. The
+  // openapi-generator does not emit it.
+  @BuiltValueEnumConst(wireName: r'', fallback: true)
   static const ReceiptStatus empty = _$empty;
 
   static Serializer<ReceiptStatus> get serializer => _$receiptStatusSerializer;

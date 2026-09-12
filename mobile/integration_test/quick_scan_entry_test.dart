@@ -109,4 +109,57 @@ void main() {
     expect(find.text(addManualReceiptLabel), findsOneWidget);
     expect(find.text(uploadFromGalleryLabel), findsOneWidget);
   });
+
+  testWidgets("the overflow's Quick Scan really opens the sheet",
+      (tester) async {
+    // The overflow has to *work*, not just offer the right labels. Quick Scan
+    // awaits a real AppData refresh, which raises the app bar's loading bar --
+    // and the overflow lives in that same app bar. Toggling `AppBar.bottom`
+    // between null and non-null used to re-parent the whole toolbar, unmounting
+    // the menu's own context, so the post-await `if (!context.mounted) return;`
+    // swallowed the tap and no sheet ever appeared.
+    //
+    // Only an e2e reproduces it: in a widget test TokenRefreshService is never
+    // initialized, so `reloadAppData()` returns within a microtask and the
+    // loading bar never gets a frame. The framework seam itself is pinned by
+    // test/widgets/top_app_bar_loading_indicator_test.dart.
+    await enableAiPoweredReceiptsForTest();
+    await installDocumentScannerMock();
+    await binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => binding.setSurfaceSize(null));
+
+    final fixture = await provisionPermUser(roleName: 'Legacy Editor');
+    await loginAs(
+      tester,
+      username: fixture.username,
+      password: fixture.password,
+    );
+    await enterGroup(tester, fixture.groupName!);
+    await tester.tap(find.text('Receipts').hitTestable());
+
+    final overflow = find.byKey(const ValueKey('receipt-entry-overflow-menu'));
+    await pumpUntilFound(tester, overflow.hitTestable());
+    await tester.tap(overflow.hitTestable());
+
+    // The menu's items mount on the popup's first frame while it is still
+    // growing, so a tap computed then lands short and misses. Wait for
+    // hittability, then drain the animation -- the same shape as
+    // `openManualReceiptForm`.
+    await pumpUntilFound(tester, find.text(quickScanLabel).hitTestable());
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // Nothing else on the receipts screen carries this string, so the match is
+    // the menu item. (Once the sheet opens it becomes the sheet's own title.)
+    expect(find.text(quickScanLabel), findsOneWidget);
+    await tester.tap(find.text(quickScanLabel).hitTestable());
+
+    // 'Group' is the per-image form's first field and exists only inside the
+    // sheet. The longer window covers a real /appData round trip on top of the
+    // scanner. Before the fix this timed out: the tap returned silently.
+    await pumpUntilFound(tester, find.text('Group'),
+        timeout: const Duration(seconds: 25));
+    expect(find.text('Group'), findsWidgets);
+  });
 }

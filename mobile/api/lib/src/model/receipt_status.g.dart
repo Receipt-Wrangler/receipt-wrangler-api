@@ -11,6 +11,7 @@ const ReceiptStatus _$NEEDS_ATTENTION =
     const ReceiptStatus._('NEEDS_ATTENTION');
 const ReceiptStatus _$RESOLVED = const ReceiptStatus._('RESOLVED');
 const ReceiptStatus _$DRAFT = const ReceiptStatus._('DRAFT');
+const ReceiptStatus _$DECLINED = const ReceiptStatus._('DECLINED');
 const ReceiptStatus _$empty = const ReceiptStatus._('empty');
 
 ReceiptStatus _$valueOf(String name) {
@@ -23,10 +24,12 @@ ReceiptStatus _$valueOf(String name) {
       return _$RESOLVED;
     case 'DRAFT':
       return _$DRAFT;
+    case 'DECLINED':
+      return _$DECLINED;
     case 'empty':
       return _$empty;
     default:
-      throw ArgumentError(name);
+      return _$empty;
   }
 }
 
@@ -36,6 +39,7 @@ final BuiltSet<ReceiptStatus> _$values =
   _$NEEDS_ATTENTION,
   _$RESOLVED,
   _$DRAFT,
+  _$DECLINED,
   _$empty,
 ]);
 
@@ -45,6 +49,7 @@ class _$ReceiptStatusMeta {
   ReceiptStatus get NEEDS_ATTENTION => _$NEEDS_ATTENTION;
   ReceiptStatus get RESOLVED => _$RESOLVED;
   ReceiptStatus get DRAFT => _$DRAFT;
+  ReceiptStatus get DECLINED => _$DECLINED;
   ReceiptStatus get empty => _$empty;
   ReceiptStatus valueOf(String name) => _$valueOf(name);
   BuiltSet<ReceiptStatus> get values => _$values;
@@ -64,6 +69,7 @@ class _$ReceiptStatusSerializer implements PrimitiveSerializer<ReceiptStatus> {
     'NEEDS_ATTENTION': 'NEEDS_ATTENTION',
     'RESOLVED': 'RESOLVED',
     'DRAFT': 'DRAFT',
+    'DECLINED': 'DECLINED',
     'empty': '',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
@@ -71,6 +77,7 @@ class _$ReceiptStatusSerializer implements PrimitiveSerializer<ReceiptStatus> {
     'NEEDS_ATTENTION': 'NEEDS_ATTENTION',
     'RESOLVED': 'RESOLVED',
     'DRAFT': 'DRAFT',
+    'DECLINED': 'DECLINED',
     '': 'empty',
   };
 

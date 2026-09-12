@@ -1,11 +1,13 @@
 import { expect, Route, test } from '@playwright/test';
 import { stubTokenRefresh } from './helpers/auth';
+import { openReceiptsOverflowMenu } from './helpers/receipts-table';
 import {
   apiCreateGroup,
   apiDeleteGroupById,
   uniqueName,
   withAdminApi,
 } from './helpers/provisioning';
+import { selectImageGroup } from './helpers/quick-scan';
 
 // Verifies the quick-scan DIALOG responds to a group's quick-scan configuration — no scan is sent.
 //
@@ -68,9 +70,10 @@ test.describe('Quick scan dialog field response', () => {
   test('shows/hides and requires fields per the selected group config', async ({ page }) => {
     await page.goto(`/receipts/group/${group.id}`);
 
-    // The feature-flag-gated Quick Scan button now renders (flag stubbed + admin owns the group). It
-    // is an icon-only button (tooltip is aria-describedby, not the a11y name), so target its testid.
-    await page.getByTestId('receipts-quick-scan').getByRole('button').click();
+    // The feature-flag-gated Quick Scan entry now renders (flag stubbed + admin owns the group).
+    // It lives in the toolbar's overflow menu, and the mat-menu-item carries the testid itself.
+    await openReceiptsOverflowMenu(page);
+    await page.getByTestId('receipts-quick-scan').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
 
@@ -84,10 +87,10 @@ test.describe('Quick scan dialog field response', () => {
     // Before a configured group is chosen, paid-by shows (the unconfigured default).
     await expect(dialog.getByRole('combobox', { name: 'Paid By' })).toBeVisible();
 
-    // Select the injected-config group.
-    await groupField.click();
-    await groupField.fill(group.name);
-    await page.getByRole('option', { name: group.name, exact: true }).click();
+    // Select the injected-config group. Via the shared helper because the field
+    // may already carry a value (it auto-fills for a single-group user), which
+    // makes the input readonly until its X is clicked.
+    await selectImageGroup(page, dialog, group.name);
 
     // Fields now reflect the injected config: paid-by + tags hidden, status + categories shown.
     await expect(dialog.getByRole('combobox', { name: 'Paid By' })).toHaveCount(0);

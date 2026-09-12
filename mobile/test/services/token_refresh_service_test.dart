@@ -19,6 +19,36 @@ class MockFeatureConfig extends Mock implements FeatureConfig {}
 
 class MockUserPreferences extends Mock implements UserPreferences {}
 
+/// A fully stubbed `AppData` for the paths where `getAppData` succeeds.
+/// `storeAppData` reads every one of these fields, so a mock missing any would
+/// throw mid-store rather than fail the assertion under test. [jwt] and
+/// [refreshToken] are parameters because whether AppData carries a token pair is
+/// itself under test.
+MockAppData buildMockAppData({String? jwt = '', String? refreshToken = ''}) {
+  final appData = MockAppData();
+  when(() => appData.jwt).thenReturn(jwt);
+  when(() => appData.refreshToken).thenReturn(refreshToken);
+  when(() => appData.claims).thenReturn(MockClaims());
+  when(() => appData.featureConfig).thenReturn(MockFeatureConfig());
+  when(() => appData.groups).thenReturn(BuiltList<Group>());
+  when(() => appData.users).thenReturn(BuiltList<UserView>());
+  when(() => appData.userPreferences).thenReturn(MockUserPreferences());
+  when(() => appData.categories).thenReturn(BuiltList<Category>());
+  when(() => appData.tags).thenReturn(BuiltList<Tag>());
+  when(() => appData.currencyDisplay).thenReturn('');
+  when(() => appData.currencyDecimalSeparator)
+      .thenReturn(CurrencySeparator.period);
+  when(() => appData.currencyThousandthsSeparator)
+      .thenReturn(CurrencySeparator.comma);
+  when(() => appData.currencySymbolPosition)
+      .thenReturn(CurrencySymbolPosition.END);
+  when(() => appData.currencyHideDecimalPlaces).thenReturn(false);
+  when(() => appData.appPermissions).thenReturn(BuiltList<String>());
+  when(() => appData.groupPermissions)
+      .thenReturn(BuiltMap<String, BuiltList<String>>());
+  return appData;
+}
+
 void main() {
   late MockAuthModel mockAuthModel;
   late MockGroupModel mockGroupModel;
@@ -341,29 +371,7 @@ void main() {
             .thenAnswer((_) async => validJwt);
         when(() => mockGroupModel.groups).thenReturn([]);
 
-        final mockAppData = MockAppData();
-        when(() => mockAppData.jwt).thenReturn('');
-        when(() => mockAppData.refreshToken).thenReturn('');
-        when(() => mockAppData.claims).thenReturn(MockClaims());
-        when(() => mockAppData.featureConfig).thenReturn(MockFeatureConfig());
-        when(() => mockAppData.groups).thenReturn(BuiltList<Group>());
-        when(() => mockAppData.users).thenReturn(BuiltList<UserView>());
-        when(() => mockAppData.userPreferences)
-            .thenReturn(MockUserPreferences());
-        when(() => mockAppData.categories).thenReturn(BuiltList<Category>());
-        when(() => mockAppData.tags).thenReturn(BuiltList<Tag>());
-        when(() => mockAppData.currencyDisplay).thenReturn('');
-        when(() => mockAppData.currencyDecimalSeparator)
-            .thenReturn(CurrencySeparator.period);
-        when(() => mockAppData.currencyThousandthsSeparator)
-            .thenReturn(CurrencySeparator.comma);
-        when(() => mockAppData.currencySymbolPosition)
-            .thenReturn(CurrencySymbolPosition.END);
-        when(() => mockAppData.currencyHideDecimalPlaces).thenReturn(false);
-        when(() => mockAppData.appPermissions)
-            .thenReturn(BuiltList<String>());
-        when(() => mockAppData.groupPermissions)
-            .thenReturn(BuiltMap<String, BuiltList<String>>());
+        final mockAppData = buildMockAppData();
 
         when(() => mockUserApi.getAppData()).thenAnswer((_) async => Response(
               data: mockAppData,
@@ -405,29 +413,7 @@ void main() {
             .thenAnswer((_) async => validJwt);
         when(() => mockGroupModel.groups).thenReturn([]);
 
-        final mockAppData = MockAppData();
-        when(() => mockAppData.jwt).thenReturn(null);
-        when(() => mockAppData.refreshToken).thenReturn(null);
-        when(() => mockAppData.claims).thenReturn(MockClaims());
-        when(() => mockAppData.featureConfig).thenReturn(MockFeatureConfig());
-        when(() => mockAppData.groups).thenReturn(BuiltList<Group>());
-        when(() => mockAppData.users).thenReturn(BuiltList<UserView>());
-        when(() => mockAppData.userPreferences)
-            .thenReturn(MockUserPreferences());
-        when(() => mockAppData.categories).thenReturn(BuiltList<Category>());
-        when(() => mockAppData.tags).thenReturn(BuiltList<Tag>());
-        when(() => mockAppData.currencyDisplay).thenReturn('');
-        when(() => mockAppData.currencyDecimalSeparator)
-            .thenReturn(CurrencySeparator.period);
-        when(() => mockAppData.currencyThousandthsSeparator)
-            .thenReturn(CurrencySeparator.comma);
-        when(() => mockAppData.currencySymbolPosition)
-            .thenReturn(CurrencySymbolPosition.END);
-        when(() => mockAppData.currencyHideDecimalPlaces).thenReturn(false);
-        when(() => mockAppData.appPermissions)
-            .thenReturn(BuiltList<String>());
-        when(() => mockAppData.groupPermissions)
-            .thenReturn(BuiltMap<String, BuiltList<String>>());
+        final mockAppData = buildMockAppData(jwt: null, refreshToken: null);
 
         when(() => mockUserApi.getAppData()).thenAnswer((_) async => Response(
               data: mockAppData,
@@ -524,16 +510,123 @@ void main() {
         verifyNever(() => mockAuthModel.purgeTokens());
       });
 
-      test('skips app data loading when groups already exist', () async {
+      // AppData used to be fetched only when GroupModel was EMPTY, which is
+      // false for the whole of a logged-in session -- so the 15-minute timer and
+      // the on-resume refresh both became no-ops, and a group setting changed
+      // elsewhere could not reach a running app until the user logged out and
+      // back in. These two pin the replacement: refresh even when groups are
+      // already loaded, but collapse a burst.
+      test('reloads app data even when groups already exist', () async {
+        when(() => mockAuthModel.getJwt()).thenAnswer((_) async => validJwt);
+        when(() => mockAuthModel.getRefreshToken())
+            .thenAnswer((_) async => validJwt);
+        when(() => mockGroupModel.groups).thenReturn([MockGroup()]);
+        when(() => mockUserApi.getAppData()).thenAnswer((_) async => Response(
+              data: buildMockAppData(),
+              requestOptions: RequestOptions(path: '/user/appData'),
+              statusCode: 200,
+            ));
+
+        final result = await service.refreshTokens();
+
+        expect(result, true);
+        verify(() => mockUserApi.getAppData()).called(1);
+      });
+
+      // Quick Scan calls reloadAppData() before opening the scanner and needs a
+      // guarantee, not a best effort -- if the debounce silently swallowed it,
+      // a config change made seconds earlier would still not reach the form.
+      test('reloadAppData bypasses the debounce', () async {
+        when(() => mockAuthModel.getJwt()).thenAnswer((_) async => validJwt);
+        when(() => mockAuthModel.getRefreshToken())
+            .thenAnswer((_) async => validJwt);
+        when(() => mockGroupModel.groups).thenReturn([MockGroup()]);
+        when(() => mockUserApi.getAppData()).thenAnswer((_) async => Response(
+              data: buildMockAppData(),
+              requestOptions: RequestOptions(path: '/user/appData'),
+              statusCode: 200,
+            ));
+
+        // The debounced path would skip this second load; reloadAppData must not.
+        await service.refreshTokens();
+        await service.reloadAppData();
+
+        verify(() => mockUserApi.getAppData()).called(2);
+      });
+
+      // A load is a fetch AND a storeAppData. The scheduled path and the forced
+      // path are independent, so unserialized they overlap and whichever
+      // response lands last wins -- an older scheduled payload could overwrite
+      // the config a Quick Scan just fetched, which is the staleness this whole
+      // path exists to prevent.
+      test('serializes a forced reload against an in-flight scheduled load',
+          () async {
         when(() => mockAuthModel.getJwt()).thenAnswer((_) async => validJwt);
         when(() => mockAuthModel.getRefreshToken())
             .thenAnswer((_) async => validJwt);
         when(() => mockGroupModel.groups).thenReturn([MockGroup()]);
 
-        final result = await service.refreshTokens();
+        var inFlight = 0;
+        var peakInFlight = 0;
+        when(() => mockUserApi.getAppData()).thenAnswer((_) async {
+          inFlight++;
+          peakInFlight = inFlight > peakInFlight ? inFlight : peakInFlight;
+          // Long enough that an unserialized second load would start inside it.
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          inFlight--;
+          return Response(
+            data: buildMockAppData(),
+            requestOptions: RequestOptions(path: '/user/appData'),
+            statusCode: 200,
+          );
+        });
 
-        expect(result, true);
-        verifyNever(() => mockUserApi.getAppData());
+        // refreshTokens awaits the token checks before it ever reaches the
+        // load, so give it long enough to actually be mid-fetch -- otherwise the
+        // forced reload wins the race trivially and nothing is serialized.
+        final scheduled = service.refreshTokens();
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final forced = service.reloadAppData();
+        await Future.wait([scheduled, forced]);
+
+        expect(peakInFlight, 1, reason: 'the two loads never overlapped');
+        // Still two distinct fetches -- serializing must not collapse the forced
+        // reload into the scheduled one the way _refreshCompleter would.
+        verify(() => mockUserApi.getAppData()).called(2);
+      });
+
+      test('reloadAppData swallows a failed fetch', () async {
+        when(() => mockGroupModel.groups).thenReturn([MockGroup()]);
+        when(() => mockUserApi.getAppData()).thenThrow(DioException(
+          requestOptions: RequestOptions(path: '/user/appData'),
+          response: Response(
+            statusCode: 500,
+            requestOptions: RequestOptions(path: '/user/appData'),
+          ),
+        ));
+
+        // It sits in front of the scanner, so a transient failure must fall
+        // through to the data already loaded rather than block the scan.
+        await expectLater(service.reloadAppData(), completes);
+      });
+
+      test('debounces a second refresh that follows immediately', () async {
+        when(() => mockAuthModel.getJwt()).thenAnswer((_) async => validJwt);
+        when(() => mockAuthModel.getRefreshToken())
+            .thenAnswer((_) async => validJwt);
+        when(() => mockGroupModel.groups).thenReturn([MockGroup()]);
+        when(() => mockUserApi.getAppData()).thenAnswer((_) async => Response(
+              data: buildMockAppData(),
+              requestOptions: RequestOptions(path: '/user/appData'),
+              statusCode: 200,
+            ));
+
+        // Resume and the periodic timer can land together; the second call must
+        // not repeat the request.
+        await service.refreshTokens();
+        await service.refreshTokens();
+
+        verify(() => mockUserApi.getAppData()).called(1);
       });
     });
   });

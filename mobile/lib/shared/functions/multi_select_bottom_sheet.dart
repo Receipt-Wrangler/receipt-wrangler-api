@@ -30,7 +30,11 @@ Future<dynamic> showMultiselectBottomSheet(
             },
             buttonText: buttonText,
           ),
-          bodyPadding: EdgeInsets.zero)
+          bodyPadding: EdgeInsets.zero,
+          // The chip grid scrolls itself and the confirm button must reserve
+          // its space rather than float over the last row of chips -- see
+          // FilterMultiSelect and showFullscreenBottomSheet's doc comment.
+          bodyFillsSheet: true)
       .then((value) {
     return value;
   });

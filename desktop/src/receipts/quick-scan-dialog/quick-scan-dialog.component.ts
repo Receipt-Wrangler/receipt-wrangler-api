@@ -114,7 +114,15 @@ export class QuickScanDialogComponent implements OnInit {
     // Group is always required; paid-by/status validators are applied per-image by configureImages.
     this.paidByUserIds.push(new FormControl(userPreferences?.quickScanDefaultPaidById ?? ""));
     this.statuses.push(new FormControl(userPreferences?.quickScanDefaultStatus ?? ""));
-    this.groupIds.push(new FormControl(userPreferences?.quickScanDefaultGroupId ?? "", Validators.required));
+    // The user's quick-scan default group wins; failing that, a member of exactly
+    // one group has no choice to make, so seed it. configureImages() below then
+    // applies that group's show/require config exactly as a manual pick would.
+    this.groupIds.push(new FormControl(
+      userPreferences?.quickScanDefaultGroupId
+        ?? this.store.selectSnapshot(GroupState.soleGroupId)
+        ?? "",
+      Validators.required
+    ));
     // Categories/tags are multi-selects backed by app-category/tag-autocomplete,
     // which push selections onto a FormArray (see the receipt form). A plain
     // FormControl has no push(), so selecting one would throw — use a FormArray.

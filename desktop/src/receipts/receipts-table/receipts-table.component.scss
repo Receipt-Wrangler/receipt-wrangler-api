@@ -1,5 +1,36 @@
+@use "sass:map";
+@use "../../variables.scss" as variables;
+
 app-receipts-table {
   .filter-button button .mat-badge-content {
     color: white;
   }
+
+  // The toolbar now carries the month stepper as well, so let it wrap on narrow
+  // viewports rather than pushing the header out of the page.
+  .receipts-toolbar {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: variables.$spacing-xs;
+  }
+
+  .receipt-filter-chips {
+    display: block;
+    // app-table-header owns the gap below itself, so only close the gap to the
+    // table here.
+    margin-bottom: variables.$spacing-md;
+  }
+}
+
+// The overflow menu renders in a CDK overlay, outside app-receipts-table, so
+// this rule cannot live inside the host block above.
+.receipts-overflow-menu__label {
+  padding: variables.$spacing-sm variables.$spacing-md variables.$spacing-xs;
+  margin-top: variables.$spacing-xs;
+  border-top: 1px solid map.get(variables.$accent-palette, 200);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: map.get(variables.$accent-palette, 400);
 }

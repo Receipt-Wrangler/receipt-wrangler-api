@@ -21,6 +21,8 @@ void main() {
   const create = api.Permission.groupPeriodReceiptsPeriodCreate;
   const manualLinkKey = ValueKey('quick-scan-manual-entry-link');
   const pageIndicatorKey = ValueKey('quick-scan-page-indicator');
+  const previousPageKey = ValueKey('quick-scan-previous-page');
+  const nextPageKey = ValueKey('quick-scan-next-page');
 
   late BuildContext capturedContext;
 
@@ -64,11 +66,12 @@ void main() {
   /// [pumpSheet] can never reach a loaded state -- it can only prove the counter
   /// is absent. Mounting [QuickScan] directly is what lets the counter be
   /// asserted present, which is the whole point of keying it.
-  Future<void> pumpCarousel(
+  Future<InfiniteScrollController> pumpCarousel(
     WidgetTester tester, {
     required int pageCount,
   }) async {
     final images = List.generate(pageCount, (_) => buildQuickScanImage(groupId: 5));
+    final controller = InfiniteScrollController();
 
     final router = GoRouter(
       initialLocation: '/',
@@ -78,7 +81,7 @@ void main() {
           builder: (context, state) => Scaffold(
             body: QuickScan(
               imageSubject: BehaviorSubject.seeded(images),
-              infiniteScrollController: InfiniteScrollController(),
+              infiniteScrollController: controller,
               isCompletedSubject: BehaviorSubject.seeded(false),
             ),
           ),
@@ -93,6 +96,8 @@ void main() {
       groups: [buildGroup(id: 5, name: 'Household')],
     ));
     await tester.pump();
+
+    return controller;
   }
 
   testWidgets('opens for a user who holds the quick-scan permission',
@@ -146,20 +151,57 @@ void main() {
     expect(find.text(quickScanQueuedMessage), findsNothing);
   });
 
-  testWidgets('a single-page scan gets no page counter', (tester) async {
+  testWidgets('a single-page scan gets no page counter and no arrows',
+      (tester) async {
     await pumpCarousel(tester, pageCount: 1);
 
     expect(find.byKey(pageIndicatorKey), findsNothing,
-        reason: 'nothing to swipe to');
+        reason: 'nothing to page to');
+    expect(find.byKey(previousPageKey), findsNothing);
+    expect(find.byKey(nextPageKey), findsNothing);
   });
 
   testWidgets('a multi-page scan counts its pages', (tester) async {
     await pumpCarousel(tester, pageCount: 3);
 
     expect(find.byKey(pageIndicatorKey), findsOneWidget);
-    expect(find.text('1 of 3 · swipe for the next'), findsOneWidget,
+    expect(find.text('1 of 3'), findsOneWidget,
         reason: 'a scan carries up to 100 pages and the carousel gives no '
             'other hint the later ones exist');
+  });
+
+  testWidgets('the arrows only ever point at a page that exists',
+      (tester) async {
+    final controller = await pumpCarousel(tester, pageCount: 3);
+
+    expect(find.byKey(previousPageKey), findsNothing,
+        reason: 'the first page has nothing behind it');
+    expect(find.byKey(nextPageKey), findsOneWidget);
+
+    await tester.tap(find.byKey(nextPageKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedItem, 1);
+    expect(find.text('2 of 3'), findsOneWidget);
+    expect(find.byKey(previousPageKey), findsOneWidget,
+        reason: 'a middle page can go either way');
+    expect(find.byKey(nextPageKey), findsOneWidget);
+
+    await tester.tap(find.byKey(nextPageKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedItem, 2);
+    expect(find.text('3 of 3'), findsOneWidget);
+    expect(find.byKey(nextPageKey), findsNothing,
+        reason: 'the last page has nothing ahead of it');
+
+    await tester.tap(find.byKey(previousPageKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.selectedItem, 1,
+        reason: 'the arrows are the swipe, not a separate notion of where the '
+            'user is');
+    expect(find.text('2 of 3'), findsOneWidget);
   });
 
   testWidgets('the manual link closes the sheet and opens the form',

@@ -6,7 +6,7 @@ import 'package:receipt_wrangler_mobile/shared/widgets/image_viewer.dart';
 import 'package:receipt_wrangler_mobile/utils/receipts.dart';
 import 'package:rxdart/rxdart.dart';
 
-class QuickScan extends StatefulWidget {
+class QuickScan extends StatelessWidget {
   const QuickScan(
       {super.key,
       required this.imageSubject,
@@ -19,73 +19,116 @@ class QuickScan extends StatefulWidget {
 
   final BehaviorSubject<bool> isCompletedSubject;
 
-  @override
-  State<QuickScan> createState() => _QuickScan();
-}
-
-class _QuickScan extends State<QuickScan> {
-  /// Which page the carousel is showing, so the counter below the preview can
-  /// say so. Tracked here because `InfiniteScrollController.selectedItem` only
-  /// updates the controller -- it doesn't rebuild anything.
-  int _visibleIndex = 0;
-
-  Widget _buildImagePreview(int index) {
-    var image = Image.memory(widget.imageSubject.value[index].bytes);
+  Widget _buildImagePreview(BuildContext context, int index) {
+    var image = Image.memory(imageSubject.value[index].bytes);
     return SizedBox(
         height: getImagePreviewHeight(context),
         width: getImagePreviewWidth(context),
         child: ImageViewer(image: image));
   }
 
-  /// Tells the user there is more than one page and that swiping reaches it.
+  /// An arrow, or the space one would take.
+  ///
+  /// The ends of the scan drop their arrow rather than disabling it, so the
+  /// arrows that remain always lead somewhere. The placeholder keeps the
+  /// counter between them centered instead of letting it slide as the arrows
+  /// come and go -- [kMinInteractiveDimension] is the `IconButton` default
+  /// constraint, so the swap is exactly the same size.
+  Widget _buildNavArrow(
+      {required bool show,
+      required Key key,
+      required IconData icon,
+      required String tooltip,
+      required VoidCallback onPressed}) {
+    if (!show) {
+      return const SizedBox.square(dimension: kMinInteractiveDimension);
+    }
+
+    return IconButton(
+      key: key,
+      icon: Icon(icon),
+      tooltip: tooltip,
+      onPressed: onPressed,
+    );
+  }
+
+  /// Tells the user there is more than one page, and gives them a way to reach
+  /// it that isn't a swipe.
   ///
   /// A scan can carry up to 100 pages, and the carousel gives no other hint
   /// that the pages after the first exist -- so without this a multi-page scan
-  /// looks like a single-page one, and the forms behind it go unfilled.
-  Widget _buildPageIndicator(int pageCount) {
+  /// looks like a single-page one, and the forms behind it go unfilled. The
+  /// swipe alone left that hint to a line of text, which is easy to skip past.
+  ///
+  /// [index] is the page this row belongs to, not the page in view: the
+  /// carousel builds only the item on screen, and taking the index from the
+  /// item rather than tracking the selection means a page can never render an
+  /// arrow that points off the end of a scan an image was just deleted from.
+  Widget _buildPageNav(BuildContext context, int index, int pageCount) {
     if (pageCount < 2) {
       return const SizedBox.shrink();
     }
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Text(
-        key: const ValueKey('quick-scan-page-indicator'),
-        '${_visibleIndex + 1} of $pageCount \u00b7 swipe for the next',
-        style: Theme.of(context).textTheme.bodySmall,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildNavArrow(
+            show: index > 0,
+            key: const ValueKey('quick-scan-previous-page'),
+            icon: Icons.chevron_left,
+            tooltip: 'Previous page',
+            onPressed: () => infiniteScrollController.previousItem(),
+          ),
+          Text(
+            key: const ValueKey('quick-scan-page-indicator'),
+            '${index + 1} of $pageCount',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          _buildNavArrow(
+            show: index < pageCount - 1,
+            key: const ValueKey('quick-scan-next-page'),
+            icon: Icons.chevron_right,
+            tooltip: 'Next page',
+            onPressed: () => infiniteScrollController.nextItem(),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCarousel(bool isCompleted) {
+  Widget _buildCarousel(BuildContext context, bool isCompleted) {
     return InfiniteCarousel.builder(
-      itemCount: widget.imageSubject.value.length,
+      itemCount: imageSubject.value.length,
       itemExtent: MediaQuery.of(context).size.width,
       center: false,
       velocityFactor: 0.2,
-      onIndexChanged: (index) {
-        if (mounted && index != _visibleIndex) {
-          setState(() => _visibleIndex = index);
-        }
-      },
-      controller: widget.infiniteScrollController,
+      controller: infiniteScrollController,
       axisDirection: Axis.horizontal,
       loop: false,
       itemBuilder: (BuildContext context, int itemIndex, int realIndex) {
         return SingleChildScrollView(
           child: Column(
             children: [
-              _buildImagePreview(realIndex),
-              _buildPageIndicator(widget.imageSubject.value.length),
+              _buildImagePreview(context, realIndex),
+              _buildPageNav(context, realIndex, imageSubject.value.length),
               Padding(
                 padding: getImageDataPadding(),
                 child: QuickScanForm(
-                  formKey: widget.imageSubject.value[realIndex].formKey,
-                  image: widget.imageSubject.value[realIndex],
+                  // Keyed by the image, not by position. Deleting a page shifts
+                  // every later image down an index, and without a key Flutter
+                  // would match by position and hand the surviving form the old
+                  // page's State -- whose `groupId` (seeded once in initState)
+                  // would then disagree with the group the dropdown shows, so the
+                  // form would resolve its field set against the wrong group.
+                  key: ObjectKey(imageSubject.value[realIndex]),
+                  formKey: imageSubject.value[realIndex].formKey,
+                  image: imageSubject.value[realIndex],
                   index: realIndex,
                   enabled: !isCompleted,
                   onFormChangeCallback: (values) {
-                    var newImage = widget.imageSubject.value[realIndex];
+                    var newImage = imageSubject.value[realIndex];
                     newImage.groupId = values.groupId;
                     newImage.paidByUserId = values.paidByUserId;
                     newImage.status = values.status;
@@ -93,10 +136,10 @@ class _QuickScan extends State<QuickScan> {
                     newImage.tags = values.tags;
                     newImage.comment = values.comment;
 
-                    var newImages = widget.imageSubject.value;
+                    var newImages = imageSubject.value;
 
                     newImages[realIndex] = newImage;
-                    widget.imageSubject.add(newImages);
+                    imageSubject.add(newImages);
                   },
                 ),
               )
@@ -110,12 +153,12 @@ class _QuickScan extends State<QuickScan> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<bool>(
-        stream: widget.isCompletedSubject.stream,
+        stream: isCompletedSubject.stream,
         builder: (context, completedSnapshot) {
           final isCompleted = completedSnapshot.hasData && completedSnapshot.data == true;
 
           return StreamBuilder<List<QuickScanImage>>(
-              stream: widget.imageSubject.stream,
+              stream: imageSubject.stream,
               builder: (context, imageSnapshot) {
                 if (imageSnapshot.hasData && imageSnapshot.data!.isEmpty) {
                   return const Center(
@@ -124,11 +167,19 @@ class _QuickScan extends State<QuickScan> {
                 }
 
                 if (imageSnapshot.hasData && imageSnapshot.data!.isNotEmpty) {
-                  return SizedBox(
-                    height: MediaQuery.of(context).size.height,
-                    width: MediaQuery.of(context).size.width,
-                    child: _buildCarousel(isCompleted),
-                  );
+                  // Fill the sheet's body, not the screen. The carousel is
+                  // horizontal, so it needs a bounded height from somewhere --
+                  // but the sheet's body is shorter than the screen by the app
+                  // bar, drag handle and safe area. Sizing to the screen
+                  // overflowed the body, and because each slide's own
+                  // SingleChildScrollView then believed it had a full-screen
+                  // viewport it never scrolled, so the overflow was clipped and
+                  // unreachable: a configured comment field (last in the form)
+                  // simply could not be seen. Bounded constraints reach us
+                  // because the sheet no longer wraps the body in a scroll view
+                  // (`bodyFillsSheet: true` in showQuickScanBottomSheet).
+                  return SizedBox.expand(
+                      child: _buildCarousel(context, isCompleted));
                 }
 
                 return const SizedBox.shrink();

@@ -135,6 +135,15 @@ Future<int> addManualReceiptViaUI(
   // Offstage state and the BottomSubmitButton tap silently misses.
   await tester.pumpAndSettle(const Duration(seconds: 3));
 
+  return submitManualReceiptForm(tester);
+}
+
+/// Submits a filled receipt form and returns the new receipt's id.
+///
+/// Split out of [addManualReceiptViaUI] for specs that fill the form
+/// differently -- notably the ones asserting a field was pre-seeded, which must
+/// not touch it.
+Future<int> submitManualReceiptForm(WidgetTester tester) async {
   await tester.tap(find.byType(BottomSubmitButton));
   // Assert /view shell has mounted via the ReceiptEditPopupMenu, which
   // only renders on /view (gated on canEditReceipt -- see

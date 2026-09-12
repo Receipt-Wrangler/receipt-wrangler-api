@@ -357,6 +357,8 @@ export async function apiCreateReceipt(
     groupId: number | string;
     paidByUserId: number;
     name: string;
+    /** Receipt date as an ISO string. Defaults to a fixed date in 2024. */
+    date?: string;
     customFields?: ReceiptCustomFieldValue[];
   },
 ): Promise<number> {
@@ -364,7 +366,7 @@ export async function apiCreateReceipt(
     data: {
       name: opts.name,
       amount: '10.00',
-      date: '2024-01-01T00:00:00Z',
+      date: opts.date ?? '2024-01-01T00:00:00Z',
       groupId: Number(opts.groupId),
       paidByUserId: opts.paidByUserId,
       status: 'OPEN',

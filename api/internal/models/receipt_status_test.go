@@ -6,7 +6,7 @@ import (
 )
 
 func TestReceiptStatus_Value(t *testing.T) {
-	valid := []ReceiptStatus{OPEN, NEEDS_ATTENTION, RESOLVED, DRAFT}
+	valid := []ReceiptStatus{OPEN, NEEDS_ATTENTION, RESOLVED, DRAFT, DECLINED}
 	for _, v := range valid {
 		assertValuerValid(t, string(v), v, string(v))
 	}
@@ -33,7 +33,7 @@ func TestReceiptStatus_Scan(t *testing.T) {
 func TestReceiptStatuses(t *testing.T) {
 	statuses := ReceiptStatuses()
 
-	expected := []interface{}{OPEN, NEEDS_ATTENTION, RESOLVED, DRAFT}
+	expected := []interface{}{OPEN, NEEDS_ATTENTION, RESOLVED, DRAFT, DECLINED}
 	if len(statuses) != len(expected) {
 		utils.PrintTestError(t, len(statuses), len(expected))
 	}

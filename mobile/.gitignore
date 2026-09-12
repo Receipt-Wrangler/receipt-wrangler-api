@@ -21,3 +21,7 @@ doc/api/
 
 # E2E / integration_test
 .e2e-env.json
+
+# sentry_flutter (sentry-native) run/lock dir, written next to the binary on
+# every desktop launch — a per-run artifact, never source.
+.sentry-native/

@@ -3,9 +3,12 @@ import 'package:cunning_document_scanner/cunning_document_scanner.dart'
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart' show openAppSettings;
+import 'package:provider/provider.dart';
 
 import '../../constants/receipt_entry.dart';
 import '../../interfaces/upload_multipart_file_data.dart';
+import '../../models/loading_model.dart';
+import '../../services/token_refresh_service.dart';
 import '../../utils/group.dart';
 import '../../utils/permissions.dart';
 import '../../utils/scan.dart';
@@ -22,12 +25,56 @@ import 'receipt_entry_availability.dart';
 /// the states where they wouldn't work, and these checks are the backstop for a
 /// stale one.
 
+/// Test seam: skips the pre-scan refresh.
+///
+/// For a spec that drives the form from an injected `GroupModel` -- including
+/// synthetic groups that do not exist on the server, which a refresh would wipe
+/// out. A spec asserting real config should persist it through the API instead
+/// (`setGroupQuickScanConfig`) and leave this alone. Production always
+/// refreshes. Mirrors `debugCameraAccessOverride` in `lib/utils/permissions.dart`.
+@visibleForTesting
+bool debugSkipQuickScanAppDataRefresh = false;
+
+/// Re-fetches AppData before a Quick Scan flow begins, so the entry gate and the
+/// per-image form that follows both read config the server agrees with.
+///
+/// It runs *before* the scanner rather than before the sheet for two reasons:
+/// the sheet is handed images already seeded from `userPreferences` and
+/// `GroupModel` (`buildQuickScanImages`), and `QuickScanForm` reads its
+/// providers with `listen: false`, so data landing after the sheet is open would
+/// not reach it. Refreshing first makes the group pre-selection, the permission
+/// gate and the AI feature flag all current for this tap.
+///
+/// [TokenRefreshService.reloadAppData] never throws: a failed refresh falls
+/// through to the data the app already has rather than blocking the scan, which
+/// keeps Quick Scan usable offline. The loading bar is the thin
+/// `LinearProgressIndicator` in `TopAppBar` -- non-blocking, and the only
+/// feedback for the round trip the user is now waiting on.
+Future<void> _refreshBeforeQuickScan(BuildContext context) async {
+  if (debugSkipQuickScanAppDataRefresh) {
+    return;
+  }
+
+  final loadingModel = Provider.of<LoadingModel>(context, listen: false);
+  loadingModel.setIsLoading(true);
+  try {
+    await TokenRefreshService().reloadAppData();
+  } finally {
+    loadingModel.setIsLoading(false);
+  }
+}
+
 /// The Scan slot's tap.
 ///
 /// Quick Scan available → straight into the document scanner (no menu in
 /// between); blocked → straight into the manual form, carrying the reason so it
 /// can be explained there.
 Future<void> startScanEntry(BuildContext context) async {
+  await _refreshBeforeQuickScan(context);
+  if (!context.mounted) {
+    return;
+  }
+
   final availability = resolveReceiptEntryAvailability(context);
 
   if (!availability.canQuickScan) {
@@ -110,6 +157,22 @@ Future<void> fallBackToGallery(
         ? SnackBarAction(label: "Settings", onPressed: openAppSettings)
         : null,
   );
+  await openQuickScanFromGallery(context);
+}
+
+/// The "Upload from gallery" menu item's tap.
+///
+/// The one Quick Scan initiation that does not go through [startScanEntry], so
+/// it needs its own refresh. [openQuickScanFromGallery] deliberately does not
+/// refresh on its own behalf: [fallBackToGallery] reaches it from inside
+/// [startScanEntry], which has already refreshed, and a second fetch on the
+/// camera-denied path would be pure waste.
+Future<void> startGalleryEntry(BuildContext context) async {
+  await _refreshBeforeQuickScan(context);
+  if (!context.mounted) {
+    return;
+  }
+
   await openQuickScanFromGallery(context);
 }
 
@@ -222,7 +285,7 @@ List<PopupMenuEntry> buildReceiptEntryMenuItems(BuildContext context) {
     if (availability.canQuickScan)
       PopupMenuItem(
         value: 2,
-        onTap: () => openQuickScanFromGallery(context),
+        onTap: () => startGalleryEntry(context),
         child: const Text(uploadFromGalleryLabel),
       ),
   ];

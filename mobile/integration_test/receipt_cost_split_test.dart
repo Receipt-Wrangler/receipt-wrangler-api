@@ -246,17 +246,16 @@ Future<void> _openQuickActionsSheet(WidgetTester tester) async {
 
 /// Opens the "Users" MultiSelectField, taps each ChoiceChip whose label
 /// matches a display name in [displayNames], then taps the "Select"
-/// confirm button. The MultiSelectField's outer FormBuilderField wraps a
-/// GestureDetector(onTap:) that fires `showUserMultiSelect`; tapping the
-/// labeled "Users" InputDecorator hits that gesture detector.
+/// confirm button. The MultiSelectField wraps its InputDecorator in an
+/// opaque GestureDetector(onTap:) that fires `showUserMultiSelect`, so any
+/// point inside the labeled "Users" field hits it.
 Future<void> _selectUsers(
   WidgetTester tester,
   List<String> displayNames,
 ) async {
-  // The MultiSelectField's onTap GestureDetector wraps only the inner Wrap
-  // (which shows "No Users selected" when empty), not the whole InputDecorator,
-  // so tapping the decorator's center misses the gesture. Tap the placeholder
-  // text, which sits inside the gesture detector.
+  // The whole field is one tap target, so the decorator's center would work
+  // too. The placeholder text is kept as the tap site because it is the
+  // unambiguous locator for this field on a form full of decorators.
   await tester.tap(find.text('No Users selected'));
   await pumpUntilFound(tester, find.text('Select Users'));
 

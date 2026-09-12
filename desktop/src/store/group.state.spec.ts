@@ -122,3 +122,131 @@ describe("GroupState receipt-filter reset on group change", () => {
     expect(store.selectSnapshot(ReceiptTableState.page)).toEqual(1);
   });
 });
+
+describe("GroupState.soleGroupId", () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [NgxsModule.forRoot([GroupState, ReceiptTableState])],
+    }).compileComponents();
+
+    store = TestBed.inject(Store);
+  });
+
+  function seedGroups(groups: Partial<Group>[]): void {
+    store.reset({
+      groups: {
+        groups: groups as Group[],
+        selectedGroupId: "",
+        selectedDashboardId: "",
+      },
+    });
+  }
+
+  it("returns the id when the user belongs to exactly one group", () => {
+    seedGroups([{ id: 7, name: "My Receipts", isAllGroup: false }]);
+
+    expect(store.selectSnapshot(GroupState.soleGroupId)).toEqual(7);
+  });
+
+  it("ignores the synthetic All group when counting", () => {
+    // The All group ships alongside every real group, so a single-group user
+    // still has two entries in state — it must not make the count 2.
+    seedGroups([
+      { id: 1, name: "All Groups", isAllGroup: true },
+      { id: 7, name: "My Receipts", isAllGroup: false },
+    ]);
+
+    expect(store.selectSnapshot(GroupState.soleGroupId)).toEqual(7);
+  });
+
+  it("returns undefined when the user belongs to more than one group", () => {
+    seedGroups([
+      { id: 7, name: "My Receipts", isAllGroup: false },
+      { id: 8, name: "Household", isAllGroup: false },
+    ]);
+
+    expect(store.selectSnapshot(GroupState.soleGroupId)).toBeUndefined();
+  });
+
+  it("returns undefined when only the All group is present", () => {
+    seedGroups([{ id: 1, name: "All Groups", isAllGroup: true }]);
+
+    expect(store.selectSnapshot(GroupState.soleGroupId)).toBeUndefined();
+  });
+
+  it("returns undefined when there are no groups at all", () => {
+    seedGroups([]);
+
+    expect(store.selectSnapshot(GroupState.soleGroupId)).toBeUndefined();
+  });
+});
+
+describe("GroupState.addTargetGroupId", () => {
+  let store: Store;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [NgxsModule.forRoot([GroupState, ReceiptTableState])],
+    }).compileComponents();
+
+    store = TestBed.inject(Store);
+  });
+
+  const allGroup = { id: 1, name: "All Groups", isAllGroup: true };
+
+  function seed(groups: Partial<Group>[], selectedGroupId: string): void {
+    store.reset({
+      groups: {
+        groups: groups as Group[],
+        selectedGroupId,
+        selectedDashboardId: "",
+      },
+    });
+  }
+
+  it("returns the actively selected group when it is a real one", () => {
+    seed([allGroup, { id: 7 }, { id: 8 }], "8");
+
+    expect(store.selectSnapshot(GroupState.addTargetGroupId)).toEqual(8);
+  });
+
+  it("falls back to the only group when the All group is selected", () => {
+    // Where a fresh single-group user lands: the API sorts All first.
+    seed([allGroup, { id: 7 }], "1");
+
+    expect(store.selectSnapshot(GroupState.addTargetGroupId)).toEqual(7);
+  });
+
+  it("falls back to the only group when the selection is stale", () => {
+    // selectedGroupId is persisted, so it outlives a group the user has left.
+    seed([allGroup, { id: 7 }], "404");
+
+    expect(store.selectSnapshot(GroupState.addTargetGroupId)).toEqual(7);
+  });
+
+  it("falls back to the only group when nothing is selected", () => {
+    seed([allGroup, { id: 7 }], "");
+
+    expect(store.selectSnapshot(GroupState.addTargetGroupId)).toEqual(7);
+  });
+
+  it("is undefined on the All group when the user has several groups", () => {
+    seed([allGroup, { id: 7 }, { id: 8 }], "1");
+
+    expect(store.selectSnapshot(GroupState.addTargetGroupId)).toBeUndefined();
+  });
+
+  it("is undefined on a stale selection when the user has several groups", () => {
+    seed([allGroup, { id: 7 }, { id: 8 }], "404");
+
+    expect(store.selectSnapshot(GroupState.addTargetGroupId)).toBeUndefined();
+  });
+
+  it("is undefined when the user has no selectable group at all", () => {
+    seed([allGroup], "1");
+
+    expect(store.selectSnapshot(GroupState.addTargetGroupId)).toBeUndefined();
+  });
+});

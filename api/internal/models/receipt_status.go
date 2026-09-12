@@ -12,6 +12,7 @@ const (
 	NEEDS_ATTENTION ReceiptStatus = "NEEDS_ATTENTION"
 	RESOLVED        ReceiptStatus = "RESOLVED"
 	DRAFT           ReceiptStatus = "DRAFT"
+	DECLINED        ReceiptStatus = "DECLINED"
 )
 
 func (self *ReceiptStatus) Scan(value string) error {
@@ -20,12 +21,12 @@ func (self *ReceiptStatus) Scan(value string) error {
 }
 
 func (self ReceiptStatus) Value() (driver.Value, error) {
-	if self != OPEN && self != NEEDS_ATTENTION && self != RESOLVED && self != DRAFT && self != "" {
+	if self != OPEN && self != NEEDS_ATTENTION && self != RESOLVED && self != DRAFT && self != DECLINED && self != "" {
 		return nil, errors.New("invalid receiptStatus")
 	}
 	return string(self), nil
 }
 
 func ReceiptStatuses() []interface{} {
-	return []interface{}{OPEN, NEEDS_ATTENTION, RESOLVED, DRAFT}
+	return []interface{}{OPEN, NEEDS_ATTENTION, RESOLVED, DRAFT, DECLINED}
 }

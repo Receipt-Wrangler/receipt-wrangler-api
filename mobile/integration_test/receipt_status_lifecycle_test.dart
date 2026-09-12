@@ -14,7 +14,7 @@ import 'helpers/platform_mocks.dart';
 import 'helpers/pump.dart';
 import 'helpers/receipt_test_helpers.dart';
 
-/// Drives a receipt through the four ReceiptStatus values via the
+/// Drives a receipt through every ReceiptStatus value via the
 /// view-screen popup menu → Edit form, asserting after each transition that
 /// the server-side status matches. Catches regressions where:
 ///   - the status dropdown ignores user selection in edit mode,
@@ -54,13 +54,14 @@ void main() {
     expect(initial['status'], 'OPEN',
         reason: 'manual receipt should default to OPEN');
 
-    // OPEN is the starting point, so we drive only the three remaining
-    // transitions plus a round-trip back to OPEN to prove every value is
-    // reachable from any other.
+    // OPEN is the starting point, so we drive only the remaining transitions
+    // plus a round-trip back to OPEN to prove every value is reachable from
+    // any other.
     for (final transition in const [
       _StatusTransition('Needs Attention', 'NEEDS_ATTENTION'),
       _StatusTransition('Resolved', 'RESOLVED'),
       _StatusTransition('Draft', 'DRAFT'),
+      _StatusTransition('Declined', 'DECLINED'),
       _StatusTransition('Open', 'OPEN'),
     ]) {
       await _changeStatusViaUI(tester, transition.label);

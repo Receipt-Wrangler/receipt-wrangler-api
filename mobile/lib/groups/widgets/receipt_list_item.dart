@@ -10,8 +10,8 @@ import 'package:receipt_wrangler_mobile/shared/widgets/slidable_edit_button.dart
 import 'package:receipt_wrangler_mobile/shared/widgets/slidable_widget.dart';
 import 'package:receipt_wrangler_mobile/utils/currency.dart';
 import 'package:receipt_wrangler_mobile/utils/date.dart';
+import 'package:receipt_wrangler_mobile/utils/receipts.dart';
 
-import '../../constants/colors.dart';
 import '../../models/group_model.dart';
 import '../../models/permissions_model.dart';
 import '../../shared/functions/permissions.dart';
@@ -35,22 +35,9 @@ class _ReceiptListItem extends State<ReceiptListItem> {
   late final groupModel = Provider.of<GroupModel>(context, listen: false);
 
   Widget getStatusText() {
-    var text = "";
-
-    switch (widget.receipt.status) {
-      case api.ReceiptStatus.DRAFT:
-        text = "Draft";
-      case api.ReceiptStatus.NEEDS_ATTENTION:
-        text = "Needs Attention";
-      case api.ReceiptStatus.OPEN:
-        text = "Open";
-      case api.ReceiptStatus.RESOLVED:
-        text = "Resolved";
-      default:
-        throw Exception("Unknown status: ${widget.receipt.status}");
-    }
-
-    return ListItemTrailingStatus(color: getStatusColor(), text: text);
+    return ListItemTrailingStatus(
+        color: getStatusColor(),
+        text: receiptStatusLabel(widget.receipt.status));
   }
 
   Widget getLeadingWidget() {
@@ -59,18 +46,7 @@ class _ReceiptListItem extends State<ReceiptListItem> {
   }
 
   Color getStatusColor() {
-    switch (widget.receipt.status) {
-      case api.ReceiptStatus.DRAFT:
-        return const Color.fromRGBO(224, 224, 224, 1);
-      case api.ReceiptStatus.NEEDS_ATTENTION:
-        return errorRed;
-      case api.ReceiptStatus.OPEN:
-        return const Color.fromRGBO(255, 250, 205, 1);
-      case api.ReceiptStatus.RESOLVED:
-        return successGreen;
-      default:
-        throw Exception("Unknown status: ${widget.receipt.status}");
-    }
+    return receiptStatusColor(widget.receipt.status);
   }
 
   Widget getSubtitleText() {

@@ -10,6 +10,9 @@ import 'package:receipt_wrangler_mobile/utils/snackbar.dart';
 
 import '../../client/client.dart';
 
+/// Height of the progress bar under the toolbar while a request is in flight.
+const double _loadingIndicatorHeight = 4;
+
 class TopAppBar extends StatefulWidget implements PreferredSizeWidget {
   const TopAppBar(
       {super.key,
@@ -95,6 +98,11 @@ class _TopAppBar extends State<TopAppBar> {
       return const SizedBox.shrink();
     }
 
+    // Each item pops the menu itself and then navigates from `this.context` --
+    // the State's context, which is the *parent* of the AppBar rather than
+    // something inside its toolbar. Keep it that way: a context taken from in
+    // here would be at the mercy of the toolbar's lifetime (see
+    // [_buildLoadingIndicator]).
     return PopupMenuButton(
         key: const ValueKey('user-avatar-menu'),
         child: const UserAvatar(),
@@ -106,9 +114,19 @@ class _TopAppBar extends State<TopAppBar> {
             api.Permission.appPeriodReportsPeriodReadAll,
           ]);
 
+          // These items are TextButtons rather than the plain Text every other
+          // menu in the app uses, and a TextButton takes its foreground from
+          // `colorScheme.primary` -- so they rendered in the brand blue while
+          // every other menu rendered in ordinary text colour. Pin them to the
+          // colour a bare PopupMenuItem would have used.
+          final itemStyle = TextButton.styleFrom(
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+          );
+
           return [
             PopupMenuItem(
               child: TextButton(
+                style: itemStyle,
                 onPressed: () {
                   Navigator.pop(context);
                   this.context.push('/profile');
@@ -119,6 +137,7 @@ class _TopAppBar extends State<TopAppBar> {
             if (canViewReports)
               PopupMenuItem(
                 child: TextButton(
+                  style: itemStyle,
                   onPressed: () {
                     Navigator.pop(context);
                     this.context.push('/reports');
@@ -128,6 +147,7 @@ class _TopAppBar extends State<TopAppBar> {
               ),
             PopupMenuItem(
               child: TextButton(
+                style: itemStyle,
                 onPressed: () => _logout(),
                 child: const Text('Logout'),
               ),
@@ -136,23 +156,44 @@ class _TopAppBar extends State<TopAppBar> {
         });
   }
 
+  /// The progress bar, **always mounted** — zero-height and empty when idle.
+  ///
+  /// It must never be `null`, however tempting the conditional looks. `AppBar`
+  /// re-parents its whole toolbar into a `Column` *only* when `bottom != null`
+  /// (`material/app_bar.dart`), so a null <-> non-null swap changes that slot's
+  /// widget from a `ClipRect` to a `Column`, fails `Widget.canUpdate`, and
+  /// **unmounts `leading`, `title` and every `actions` child**. Anything in
+  /// `actions` that captured its own `BuildContext` and uses it after an
+  /// `await` then fails its `mounted` guard and silently gives up — which is
+  /// how the receipts-screen overflow menu's Quick Scan and Upload from Gallery
+  /// items broke: the AppData refresh they await is the very thing that raises
+  /// this bar.
+  ///
+  /// Keeping a constant height instead would push every screen's body down, so
+  /// the height goes to zero rather than the widget going away. The child is
+  /// still swapped out when idle: a permanently mounted `LinearProgressIndicator`
+  /// animates forever, and `pumpAndSettle` would never return.
+  ///
+  /// Pinned by `test/widgets/top_app_bar_loading_indicator_test.dart`.
+  PreferredSizeWidget _buildLoadingIndicator() {
+    final isLoading = loadingModel.isLoading;
+
+    return PreferredSize(
+      preferredSize: Size.fromHeight(isLoading ? _loadingIndicatorHeight : 0),
+      child: isLoading
+          ? const LinearProgressIndicator()
+          : const SizedBox.shrink(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    PreferredSizeWidget? getLoadingIndicator(context) {
-      if (loadingModel.isLoading) {
-        return const PreferredSize(
-            preferredSize: Size.square(4), child: LinearProgressIndicator());
-      } else {
-        return null;
-      }
-    }
-
     return AppBar(
       automaticallyImplyLeading: false,
       leading: getIconButton(),
       title: Text(widget.titleText),
       surfaceTintColor: widget.surfaceTintColor,
-      bottom: getLoadingIndicator(context),
+      bottom: _buildLoadingIndicator(),
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 16.0),

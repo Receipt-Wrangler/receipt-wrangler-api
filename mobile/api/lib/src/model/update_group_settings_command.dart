@@ -49,7 +49,7 @@ abstract class UpdateGroupSettingsCommand implements Built<UpdateGroupSettingsCo
   /// Default receipt status
   @BuiltValueField(wireName: r'emailDefaultReceiptStatus')
   ReceiptStatus? get emailDefaultReceiptStatus;
-  // enum emailDefaultReceiptStatusEnum {  OPEN,  NEEDS_ATTENTION,  RESOLVED,  DRAFT,  ,  };
+  // enum emailDefaultReceiptStatusEnum {  OPEN,  NEEDS_ATTENTION,  RESOLVED,  DRAFT,  DECLINED,  ,  };
 
   /// User foreign key
   @BuiltValueField(wireName: r'emailDefaultReceiptPaidById')

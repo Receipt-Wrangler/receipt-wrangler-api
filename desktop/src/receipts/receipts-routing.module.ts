@@ -28,6 +28,11 @@ const routes: Routes = [
     data: {
       mode: FormMode.add,
       groupPermission: Permission.GroupReceiptsCreate,
+      // Gate on the group the receipt would be created in, which is what the
+      // form seeds - not merely the group being browsed. Without this a member
+      // of exactly one group is bounced from /receipts/add whenever they are on
+      // the synthetic "All" group, which is where login lands them.
+      useAddTargetGroupId: true,
     },
     canActivate: [groupPermissionGuard],
   },

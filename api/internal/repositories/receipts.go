@@ -286,7 +286,10 @@ func (repository ReceiptRepository) AfterReceiptUpdated(updatedReceipt *models.R
 		return err
 	}
 
-	if updatedReceipt.Status == models.RESOLVED && updatedReceipt.ID > 0 {
+	// RESOLVED and DECLINED are both terminal: the receipt is done being argued about, so its
+	// items are settled and stop counting toward what members owe each other. Only RESOLVED
+	// stamps resolved_date above — a decline is not a resolution, and reports expose that column.
+	if (updatedReceipt.Status == models.RESOLVED || updatedReceipt.Status == models.DECLINED) && updatedReceipt.ID > 0 {
 		err := repository.UpdateItemsToStatus(updatedReceipt, models.ITEM_RESOLVED)
 		if err != nil {
 			return err

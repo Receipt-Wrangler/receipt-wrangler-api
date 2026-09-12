@@ -1622,3 +1622,53 @@ func TestShouldCleanupJunctionTablesForOrphanedItems(t *testing.T) {
 		utils.PrintTestError(t, totalJunctionEntries, 0)
 	}
 }
+
+// DECLINED is terminal like RESOLVED: it settles the receipt's items so the receipt stops
+// counting toward what members owe each other. Unlike RESOLVED it must NOT stamp
+// resolved_date — a decline is not a resolution, and reports expose that column.
+func TestAfterReceiptUpdatedSettlesItemsForDeclinedReceipt(t *testing.T) {
+	defer teardownReceiptTest()
+	setupReceiptTest()
+	createTestReceipts()
+	createTestItems()
+
+	repository := NewReceiptRepository(nil)
+	db := GetDB()
+
+	// Seed a resolved_date so the assertion below proves it is actively cleared.
+	alreadyResolved := time.Now().UTC()
+	err := db.Table("receipts").Where("id = ?", 1).Update("resolved_date", alreadyResolved).Error
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	var receipt models.Receipt
+	db.First(&receipt, 1)
+	receipt.Status = models.DECLINED
+	receipt.ResolvedDate = &alreadyResolved
+
+	err = repository.AfterReceiptUpdated(&receipt)
+	if err != nil {
+		utils.PrintTestError(t, err, nil)
+		return
+	}
+
+	var items []models.Item
+	db.Where("receipt_id = ?", receipt.ID).Find(&items)
+	if len(items) == 0 {
+		utils.PrintTestError(t, len(items), "at least one item")
+		return
+	}
+	for _, item := range items {
+		if item.Status != models.ITEM_RESOLVED {
+			utils.PrintTestError(t, item.Status, models.ITEM_RESOLVED)
+		}
+	}
+
+	var refreshed models.Receipt
+	db.First(&refreshed, 1)
+	if refreshed.ResolvedDate != nil {
+		utils.PrintTestError(t, refreshed.ResolvedDate, nil)
+	}
+}

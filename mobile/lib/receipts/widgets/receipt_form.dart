@@ -16,6 +16,7 @@ import 'package:receipt_wrangler_mobile/shared/widgets/tag_select_field.dart';
 import 'package:receipt_wrangler_mobile/utils/bottom_sheet.dart';
 import 'package:receipt_wrangler_mobile/utils/date.dart';
 import 'package:receipt_wrangler_mobile/utils/forms.dart';
+import 'package:receipt_wrangler_mobile/utils/group.dart';
 
 import '../../interfaces/form_item.dart';
 import '../../models/category_model.dart';
@@ -68,20 +69,63 @@ class _ReceiptForm extends State<ReceiptForm> {
 
     groupId = modifiedReceipt.groupId;
 
-    if (groupId > 0) {
-      // Seed the group's defaults on an add form that already knows its group
-      // (opened from inside a group, or prefilled). Deferred to after the first
-      // frame because applying mutates ReceiptModel, and notifying its
-      // listeners while the tree is still building throws -- and because
-      // `formState` reads the route, which needs a mounted element.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || formState != WranglerFormState.add) {
-          return;
-        }
+    // Always scheduled, not just when the receipt already knows its group: on an
+    // add form _resolveInitialGroupId can produce one the receipt does not carry
+    // (the group being browsed, or the user's only group). Deferred to after the
+    // first frame because applying the group's defaults mutates ReceiptModel, and
+    // notifying its listeners while the tree is still building throws -- and
+    // because `formState`/`getGroupId` read the route, which needs a mounted
+    // element.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || formState != WranglerFormState.add) {
+        return;
+      }
 
-        _applyGroupDefaultCustomFields(groupId);
-      });
+      // Mirrors what buildGroupField seeded the dropdown with.
+      final resolvedGroupId = _resolveInitialGroupId();
+      if (resolvedGroupId == 0) {
+        return;
+      }
+
+      // Before the setState below: it writes to ReceiptModel, and
+      // notifyListeners() must not fire from inside a setState callback.
+      _applyGroupDefaultCustomFields(resolvedGroupId);
+
+      if (resolvedGroupId != groupId) {
+        // Carry the seed into the State field the group-derived parts of the
+        // form read -- the paid-by members, the category/tag pickers and the
+        // add-share button all stay dead at 0.
+        setState(() {
+          groupId = resolvedGroupId;
+        });
+      }
+    });
+  }
+
+  /// The group the form starts on: the receipt's own group, else -- on an add
+  /// form -- the group being browsed, else the user's only group. Zero when they
+  /// genuinely have to pick one.
+  ///
+  /// Pure and stable across rebuilds, so the dropdown's `initialValue` and the
+  /// [groupId] State field cannot disagree. Reads the route, so it must not be
+  /// called from `initState`.
+  int _resolveInitialGroupId() {
+    if (modifiedReceipt.groupId > 0) {
+      return modifiedReceipt.groupId;
     }
+    if (formState != WranglerFormState.add) {
+      return 0;
+    }
+
+    // The group the user came from -- `openManualReceipt` puts it on the route's
+    // `extra`. The synthetic "All" group is not a receipt target, so it does not
+    // count (mirrors desktop's initForm).
+    final routeGroup = groupModel.getGroupById(getGroupId(context));
+    if (routeGroup != null && !routeGroup.isAllGroup) {
+      return routeGroup.id;
+    }
+
+    return groupModel.soleGroupId ?? 0;
   }
 
   Widget buildAuditDetailSection() {
@@ -140,10 +184,9 @@ class _ReceiptForm extends State<ReceiptForm> {
   }
 
   Widget buildGroupField() {
-    int? initialValue = modifiedReceipt.groupId;
-    if (formState == WranglerFormState.add && initialValue == 0) {
-      initialValue = null;
-    }
+    // Zero means "the user really does have to pick"; the dropdown wants null.
+    final resolvedGroupId = _resolveInitialGroupId();
+    final int? initialValue = resolvedGroupId == 0 ? null : resolvedGroupId;
 
     return FormBuilderDropdown(
       name: "groupId",

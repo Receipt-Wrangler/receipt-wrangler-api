@@ -46,9 +46,12 @@ bool isFieldReadOnly(WranglerFormState formState) {
 }
 
 List<DropdownMenuItem> buildGroupDropDownMenuItems(BuildContext context) {
-  var groups = Provider.of<GroupModel>(context, listen: false).groups;
+  // groupsWithoutAllGroup, not groups: the synthetic "All" group is never a
+  // receipt target, and sharing the getter keeps these options and
+  // GroupModel.soleGroupId describing the same set.
+  var groups = Provider.of<GroupModel>(context, listen: false)
+      .groupsWithoutAllGroup;
   return groups
-      .where((group) => !group.isAllGroup)
       .map((group) => DropdownMenuItem(
             value: group.id,
             child: Text(group.name),
@@ -90,6 +93,10 @@ List<DropdownMenuItem> buildReceiptStatusDropDownMenuItems() {
     DropdownMenuItem(
       value: ReceiptStatus.DRAFT,
       child: Text("Draft"),
+    ),
+    DropdownMenuItem(
+      value: ReceiptStatus.DECLINED,
+      child: Text("Declined"),
     ),
   ];
 }

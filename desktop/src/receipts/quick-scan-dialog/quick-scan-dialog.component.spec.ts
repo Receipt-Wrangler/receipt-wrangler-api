@@ -146,6 +146,59 @@ describe("QuickScanDialogComponent", () => {
     expect(component.images).toEqual([{} as any]);
   });
 
+  it("seeds the user's only group when they have no default group preference", () => {
+    // The All group ships alongside every real group and is never a quick-scan
+    // target, so a single-group user still has two entries in state.
+    store.reset({
+      auth: {},
+      groups: {
+        groups: [
+          { id: 1, name: "All Groups", isAllGroup: true },
+          { id: 7, name: "My Receipts", isAllGroup: false },
+        ],
+        selectedGroupId: "",
+        selectedDashboardId: "",
+      },
+    });
+
+    component.fileLoaded({} as any);
+
+    expect(component.groupIds.value).toEqual([7]);
+  });
+
+  it("prefers the quick-scan default group over the user's only group", () => {
+    store.reset({
+      auth: { userPreferences: { quickScanDefaultGroupId: 3 } },
+      groups: {
+        groups: [{ id: 7, name: "My Receipts", isAllGroup: false }],
+        selectedGroupId: "",
+        selectedDashboardId: "",
+      },
+    });
+
+    component.fileLoaded({} as any);
+
+    expect(component.groupIds.value).toEqual([3]);
+  });
+
+  it("leaves the group blank when the user belongs to more than one", () => {
+    store.reset({
+      auth: {},
+      groups: {
+        groups: [
+          { id: 7, name: "My Receipts", isAllGroup: false },
+          { id: 8, name: "Household", isAllGroup: false },
+        ],
+        selectedGroupId: "",
+        selectedDashboardId: "",
+      },
+    });
+
+    component.fileLoaded({} as any);
+
+    expect(component.groupIds.value).toEqual([""]);
+  });
+
   it("should drive field visibility and required-ness from the selected group's settings", () => {
     const group = {
       id: 2,

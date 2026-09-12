@@ -102,8 +102,16 @@ List<QuickScanImage> buildQuickScanImages(
   late final userPreferenceModel =
       Provider.of<UserPreferencesModel>(context, listen: false);
   final userPreferences = userPreferenceModel.userPreferences;
+  // Unset reads as 0, not null -- the generated model defaults it (see
+  // mobile/CLAUDE.md -> "Regenerating API Client Models").
+  final preferredGroupId = userPreferences.quickScanDefaultGroupId ?? 0;
   return (
-    groupId: userPreferences.quickScanDefaultGroupId,
+    // The user's own quick-scan default wins. Without one, a member of exactly
+    // one group has no choice to make, so seed it rather than handing them a
+    // picker with a single option.
+    groupId: preferredGroupId > 0
+        ? preferredGroupId
+        : Provider.of<GroupModel>(context, listen: false).soleGroupId,
     paidByUserId: userPreferences.quickScanDefaultPaidById,
     status: userPreferences.quickScanDefaultStatus,
   );
@@ -427,6 +435,12 @@ showQuickScanBottomSheet(BuildContext context,
       quickScanLabel,
       actions: actions,
       bodyPadding: EdgeInsets.zero,
+      // QuickScan sizes itself to the body and each slide scrolls its own form,
+      // so the sheet must neither add a scroll view of its own (that would make
+      // the body unbounded again and re-clip the tail of every slide) nor float
+      // the submit button over the body (that would bury the form's last field,
+      // which is exactly where a configured comment lands).
+      bodyFillsSheet: true,
       bottomSheetWidget: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

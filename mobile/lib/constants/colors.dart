@@ -3,6 +3,16 @@ import 'dart:ui';
 const successGreen = Color.fromRGBO(144, 238, 144, 1);
 const errorRed = const Color.fromRGBO(242, 191, 191, 1);
 
+/// Receipt status tint for NEEDS_ATTENTION. It gave [errorRed] up to DECLINED, so
+/// "needs attention" now reads as a warning rather than a rejection. Matches the
+/// desktop chip's `$warning-amber`; pale like every other status tint, because
+/// `ListItemTrailingStatus` paints its label in the default dark `onBackground`.
+const warningAmber = Color.fromRGBO(255, 224, 178, 1);
+
+/// Receipt status tint for DRAFT, and the fallback for a status this build does
+/// not recognize.
+const neutralStatusGrey = Color.fromRGBO(224, 224, 224, 1);
+
 /// Background for the in-page notices (the "Quick Scan unavailable" banner on
 /// the receipt form, and the queued confirmation in the Quick Scan sheet).
 ///

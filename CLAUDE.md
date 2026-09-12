@@ -29,12 +29,18 @@ Each component has its own CLAUDE.md with detailed component-specific guidance. 
   from the generated MCP TypeScript client above.
 
 ### Technology Stack
-- **Backend**: Go 1.25 with Chi router, GORM ORM, Asynq background jobs
+- **Backend**: Go 1.26 with Chi router, GORM ORM, Asynq background jobs
 - **Frontend**: Angular 19 with NGXS state management, Material + Bootstrap UI
 - **Mobile**: Flutter with Provider state management, go_router navigation
 - **Infrastructure**: Docker, nginx, PostgreSQL/MySQL/SQLite
 
 ## Docker Deployment
+
+**All Docker build config lives in `docker/` — nothing else.** Those two Dockerfiles are what CI
+builds images from (`.github/workflows/ci.yml` and `release.yml` both pass `file: ./docker/Dockerfile`
+with `context: .`). Per-component `api/Dockerfile` and `desktop/Dockerfile` used to exist and were
+removed as dead config; do not add them back. Because the build context is the repo root, a
+`.dockerignore` is only ever consulted at the repo root too.
 
 ### Production Build (Monolith)
 The `docker/Dockerfile` builds a single container with both API and web interface:
@@ -130,7 +136,7 @@ change**.
 
 `dart analyze` substitutes for `flutter analyze` here (it reports the same errors) and stays scoped to
 `mobile/api` — judge a regen by the **error** count, which must be **0**. The warnings are
-pre-existing generator noise: ~77 in `mobile/api` of 112 across `mobile/`, the split recorded in
+pre-existing generator noise: ~77 in `mobile/api` of 111 across `mobile/`, the split recorded in
 `.github/workflows/ci.yml` where the analyzer is deliberately not gated. Keep those two numbers in
 sync with that comment.
 
@@ -179,7 +185,7 @@ them instead of rediscovering:
 - **Frontend:** `desktop/CLAUDE.md` → "Running in the Claude Code Web/Cloud Sandbox"
 
 **Root cause of the friction:** the sandbox base image is **Ubuntu 24.04 (Noble)**, whereas the
-project's Docker images / setup scripts assume **Debian** (`golang:1.25-trixie`, `bullseye`). The big
+project's Docker images / setup scripts assume **Debian** (`golang:1.26-trixie`, `bullseye`). The big
 one is ImageMagick: the Go API's `imagick.v3` CGO binding needs **ImageMagick 7**, but Ubuntu only
 ships ImageMagick **6** and has no IM7 package — so `set-up-dependencies.sh` can't provide it and IM7
 has to be **built from source**. Redis is installed but not started, and Tesseract/ImageMagick native
@@ -319,6 +325,48 @@ A group can declare custom fields that are **always pre-added** to its receipts,
   inject group settings into a mocked store and so prove nothing about the wire:
   `desktop/e2e/group-default-custom-fields.spec.ts` and
   `mobile/integration_test/receipt_default_custom_fields_test.dart`.
+
+### Seeding the Group Field
+
+Both clients pre-select the receipt's group instead of handing the user a picker they have no real
+choice in. **Client-only** — no backend, swagger or generated-client involvement.
+
+- **The rule is "the picker has exactly one option", not "the user has one group".** Every user also
+  carries the synthetic **"All" group** (`Group.isAllGroup`), which the API even sorts *first*, so a
+  single-group user has two entries in state and lands on "All" by default. The count must therefore
+  come from the same filtered set the picker offers: `GroupState.soleGroupId` (desktop, built off
+  `groupsWithoutAll`) and `GroupModel.soleGroupId` (mobile, off `groupsWithoutAllGroup` — which
+  `buildGroupDropDownMenuItems` also sources, so the seed can never be an id the dropdown lacks and
+  trip `DropdownButton`'s "exactly one item with value" assert).
+- **Precedence.** Manual form: the receipt's own group → the group being browsed (never "All", and
+  still resolvable) → sole group → blank. Quick Scan: `userPreferences.quickScanDefaultGroupId` →
+  sole group → blank. The user's own quick-scan default always wins.
+- **On desktop the permission gate follows the seed.** `setReceiptPermissions()` and the
+  `/receipts/add` route guard resolve the same `GroupState.addTargetGroupId`, so a sole-group user is
+  not turned away because the group they happen to be browsing is the synthetic "All" one. Both fall
+  back to the selected group when there is no single add target, which keeps multi-group users
+  exactly as they were.
+- **Desktop's blank seed is `""`, never `0`.** `Validators.required` treats `0` as present, so a `0`
+  sentinel would let a group-less receipt submit. See `desktop/CLAUDE.md`.
+- **A seeded group is a picked group.** It applies that group's default custom fields on the add form
+  and, in Quick Scan, its show/require field config — exactly as a manual pick does.
+- **Mobile has to mirror the seed into `_ReceiptForm.groupId` too**, not just the dropdown: paid-by,
+  the category/tag pickers and the add-share button all read that State field and stay dead at `0`.
+  It happens in a post-frame callback because the resolution reads the route
+  (`getFormStateFromContext` / `getGroupId`), which is illegal in `initState`.
+- **The user-preferences "Quick Scan Default Group" control is deliberately left blank** — blank is
+  the encoded "no default", and pre-filling it would silently persist a group the user never chose.
+- **E2e per client**, because both unit suites inject a group list into a mocked store and so prove
+  nothing about the wire: `desktop/e2e/single-group-default.spec.ts` and
+  `mobile/integration_test/receipt_single_group_default_test.dart`. Both **provision their own
+  account** — a freshly created user owns exactly "My Receipts" plus "All" — since the shared e2e
+  accounts accumulate groups as other specs run.
+- **E2e helpers must work with the field already filled.** A desktop single-select autocomplete goes
+  `readonly` once it holds a value, so clicking it never opens the panel; mobile's dropdown opens
+  either way, but "wait for the option text to appear" stops meaning "the menu is up". Both suites'
+  shared pickers were hardened for this (`selectFirstOption`/`clearAutocomplete` in
+  `desktop/e2e/receipts.spec.ts`, `selectDropdown` in
+  `mobile/integration_test/helpers/form_actions.dart`).
 
 ### State Management Patterns
 - **Backend**: Service layer handles business logic, repositories handle data access

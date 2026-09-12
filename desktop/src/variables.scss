@@ -120,3 +120,8 @@ $border-radius-xl: 0.75rem;
 $border-radius-2xl: 1rem;
 
 $success-green: #10b981;
+
+// Receipt status chip tint. Statuses render as pale tints with the default dark chip
+// text; DECLINED reuses $warn-palette shade 100 (the red NEEDS_ATTENTION gave up), so
+// this is the one tint the palettes above don't already provide.
+$warning-amber: #ffe0b2;

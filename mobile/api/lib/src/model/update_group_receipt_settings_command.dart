@@ -97,7 +97,7 @@ abstract class UpdateGroupReceiptSettingsCommand implements Built<UpdateGroupRec
 
   @BuiltValueField(wireName: r'quickScanDefaultStatus')
   ReceiptStatus? get quickScanDefaultStatus;
-  // enum quickScanDefaultStatusEnum {  OPEN,  NEEDS_ATTENTION,  RESOLVED,  DRAFT,  ,  };
+  // enum quickScanDefaultStatusEnum {  OPEN,  NEEDS_ATTENTION,  RESOLVED,  DRAFT,  DECLINED,  ,  };
 
   /// Show the categories field in quick scan
   @BuiltValueField(wireName: r'quickScanCategoriesEnabled')

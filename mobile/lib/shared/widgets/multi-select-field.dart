@@ -77,17 +77,27 @@ class _MultiSelectField<T> extends State<MultiSelectField<T>> {
           }
         }
 
-        return InputDecorator(
+        final decorated = InputDecorator(
           decoration: InputDecoration(labelText: widget.label),
-          child: GestureDetector(
-              child: Wrap(
-                children: buildChipList(),
-              ),
-              onTap: () {
-                if (widget.onTap != null) {
-                  widget!.onTap!();
-                }
-              }),
+          child: Wrap(
+            children: buildChipList(),
+          ),
+        );
+
+        // View mode has nothing to open, so no tap surface is installed at all
+        // -- an opaque detector there would swallow pointers for a no-op.
+        if (widget.onTap == null) {
+          return decorated;
+        }
+
+        // The detector wraps the InputDecorator (not the other way around) and
+        // is opaque, so the label, the border and the padding gutters are one
+        // tap target. Wrapping only the inner Wrap leaves it shrink-wrapped to
+        // its text, and deferToChild drops the gaps between chips.
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: decorated,
         );
       },
     );

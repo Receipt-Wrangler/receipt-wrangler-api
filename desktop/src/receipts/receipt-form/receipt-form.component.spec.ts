@@ -98,7 +98,10 @@ describe("ReceiptFormComponent", () => {
       tags: [],
       date: mockedDate,
       paidByUserId: "",
-      groupId: 0,
+      // "" rather than the 0 this used to seed via Number(""): both read as
+      // blank in the picker, but Validators.required treats 0 as PRESENT, so
+      // the old sentinel left a group-less form valid.
+      groupId: "",
       status: ReceiptStatus.Open,
       customFields: [],
       receiptItems: [],
@@ -1045,6 +1048,117 @@ describe("ReceiptFormComponent", () => {
         expect(attachedIds()).toEqual([2]);
         expect(component.customFieldsFormArray.at(0).value.stringValue).toEqual("PO-1");
       });
+    });
+  });
+  describe("group seeding on the add form", () => {
+    let store: Store;
+
+    const group = (id: number, isAllGroup = false): any => ({
+      id,
+      name: `Group ${id}`,
+      isAllGroup,
+      groupMembers: [],
+    });
+
+    const openAddForm = (selectedGroupId: string): void => {
+      store.dispatch(new SetSelectedGroupId(selectedGroupId));
+      routeDataSubject.next({ mode: FormMode.add, customFields: [] });
+    };
+
+    beforeEach(() => {
+      store = TestBed.inject(Store);
+    });
+
+    it("seeds the user's only group when the All group is the active one", () => {
+      // The All group sorts first server-side, so it is what a fresh
+      // single-group user lands on - and it is never a receipt target.
+      store.dispatch(new SetGroups([group(1, true), group(7)]));
+
+      openAddForm("1");
+
+      expect(component.form.value.groupId).toEqual(7);
+    });
+
+    it("leaves the group blank when the user belongs to more than one", () => {
+      store.dispatch(new SetGroups([group(1, true), group(7), group(8)]));
+
+      openAddForm("1");
+
+      expect(component.form.value.groupId).toEqual("");
+      // Not 0: Validators.required treats 0 as present, so a 0 seed would let a
+      // group-less receipt submit.
+      expect(component.form.get("groupId")!.valid).toBe(false);
+    });
+
+    it("seeds the user's only group when the active selection is stale", () => {
+      // selectedGroupId is persisted, so it outlives a group the user has left.
+      // Number("404") is truthy, which used to skip the fallback and seed an id
+      // the picker does not offer.
+      store.dispatch(new SetGroups([group(1, true), group(7)]));
+
+      openAddForm("404");
+
+      expect(component.form.value.groupId).toEqual(7);
+    });
+
+    it("still leaves it blank on a stale selection with several groups", () => {
+      store.dispatch(new SetGroups([group(1, true), group(7), group(8)]));
+
+      openAddForm("404");
+
+      expect(component.form.value.groupId).toEqual("");
+      expect(component.form.get("groupId")!.valid).toBe(false);
+    });
+
+    it("gates add-mode permissions on the seeded group, not the browsed one", () => {
+      // The All group carries its own membership, which can be missing create
+      // while the user's real group has it. The gate must follow the group the
+      // receipt is actually going into.
+      store.dispatch(new SetGroups([group(1, true), group(7)]));
+      store.dispatch(
+        new SetPermissions([], { 7: [Permission.GroupReceiptsCreate] })
+      );
+
+      openAddForm("1");
+
+      expect(component.form.value.groupId).toEqual(7);
+      expect(component.canEditReceipt()).toBe(true);
+    });
+
+    it("keeps gating on the browsed group when there is no single add target", () => {
+      // Multi-group user on the All group: no add target, so the gate must stay
+      // on the All group exactly as before - resolving the blank seed instead
+      // would deny and render the whole form read-only.
+      store.dispatch(new SetGroups([group(1, true), group(7), group(8)]));
+      store.dispatch(
+        new SetPermissions([], { 1: [Permission.GroupReceiptsCreate] })
+      );
+
+      openAddForm("1");
+
+      expect(component.form.value.groupId).toEqual("");
+      expect(component.canEditReceipt()).toBe(true);
+    });
+
+    it("keeps the actively selected group over the sole-group fallback", () => {
+      store.dispatch(new SetGroups([group(1, true), group(7)]));
+
+      openAddForm("7");
+
+      expect(component.form.value.groupId).toEqual(7);
+    });
+
+    it("keeps an existing receipt's own group in edit mode", () => {
+      store.dispatch(new SetGroups([group(1, true), group(7)]));
+      store.dispatch(new SetSelectedGroupId("1"));
+
+      routeDataSubject.next({
+        mode: FormMode.edit,
+        customFields: [],
+        receipt: { id: 1, name: "R", amount: "1.00", groupId: 9 } as any,
+      });
+
+      expect(component.form.value.groupId).toEqual(9);
     });
   });
 });

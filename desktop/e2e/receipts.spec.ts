@@ -19,9 +19,33 @@ async function openAddReceipt(page: Page) {
   await expect(page.getByLabel('Name')).toBeVisible();
 }
 
+/**
+ * Picks the first option of an `app-autocomlete`, unless the field already holds
+ * a value. The Group field auto-selects when the user belongs to exactly one
+ * group — which `e2e-admin` does on a fresh database, before any spec creates
+ * one — and a single-select autocomplete goes `readonly` once it has a value, so
+ * an unconditional click would never open the option panel (the same hazard
+ * `selectImageGroup` works around in helpers/quick-scan.ts).
+ */
 async function selectFirstOption(page: Page, label: string) {
-  await page.getByLabel(label).click();
+  const field = page.getByLabel(label);
+  if (await field.inputValue()) {
+    return;
+  }
+  await field.click();
   await page.getByRole('option').first().click();
+}
+
+/**
+ * Empties an `app-autocomlete` identified by its host testid, if it holds a
+ * value. A single-select autocomplete renders its X (clear) button only once a
+ * value is selected, so its presence is the check.
+ */
+async function clearAutocomplete(page: Page, hostTestId: string) {
+  const clear = page.getByTestId(hostTestId).getByTestId('autocomplete-clear');
+  if (await clear.count()) {
+    await clear.first().click();
+  }
 }
 
 async function fillBasics(page: Page, name: string, amount = '42.00') {
@@ -274,6 +298,10 @@ test.describe('receipts', () => {
 
     test('empty form submit shows all required-field errors and does not navigate', async ({ page }) => {
       await openAddReceipt(page);
+      // Group auto-fills for a user who belongs to exactly one group (which the
+      // seeded e2e accounts do until another spec creates one), so clear it —
+      // otherwise "empty form" isn't empty and the Group error never renders.
+      await clearAutocomplete(page, 'receipt-group');
       await clickSave(page);
 
       await expect(page).toHaveURL(/\/receipts\/add$/);

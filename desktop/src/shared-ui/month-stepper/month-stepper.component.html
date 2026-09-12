@@ -1,0 +1,111 @@
+<div class="month-stepper">
+  <app-button
+    data-testid="receipts-month-prev"
+    matButtonType="iconButton"
+    icon="chevron_left"
+    color="accent"
+    tooltip="Previous month"
+    (clicked)="step(-1)"
+  ></app-button>
+  <app-button
+    cdkOverlayOrigin
+    #trigger="cdkOverlayOrigin"
+    data-testid="receipts-month-label"
+    matButtonType="basic"
+    icon="calendar_month"
+    color="accent"
+    tooltip="Filter by month"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="panelOpen()"
+    [buttonText]="label()"
+    (clicked)="togglePanel()"
+  ></app-button>
+  <app-button
+    data-testid="receipts-month-next"
+    matButtonType="iconButton"
+    icon="chevron_right"
+    color="accent"
+    tooltip="Next month"
+    (clicked)="step(1)"
+  ></app-button>
+</div>
+
+<!--
+  A dialog, not a menu: the panel holds a pager, a grid and shortcuts rather
+  than menu items, so it owns its own focus trap and Escape handling. The trap's
+  autoCapture also restores focus to the trigger when the overlay is destroyed.
+-->
+<ng-template
+  cdkConnectedOverlay
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  [cdkConnectedOverlayOrigin]="trigger"
+  [cdkConnectedOverlayOpen]="panelOpen()"
+  [cdkConnectedOverlayPositions]="panelPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  (backdropClick)="closePanel()"
+  (detach)="closePanel()"
+>
+  <div
+    class="month-stepper__panel"
+    role="dialog"
+    aria-label="Filter by month"
+    cdkTrapFocus
+    [cdkTrapFocusAutoCapture]="true"
+    (keydown.escape)="closePanel()"
+  >
+    <div class="month-stepper__year">
+      <app-button
+        data-testid="month-stepper-year-prev"
+        matButtonType="iconButton"
+        icon="chevron_left"
+        color="accent"
+        tooltip="Previous year"
+        [disabled]="!canPageBack()"
+        (clicked)="pageYear(-1)"
+      ></app-button>
+      <span class="month-stepper__year-value" data-testid="month-stepper-year">{{ pagedYear() }}</span>
+      <app-button
+        data-testid="month-stepper-year-next"
+        matButtonType="iconButton"
+        icon="chevron_right"
+        color="accent"
+        tooltip="Next year"
+        [disabled]="!canPageForward()"
+        (clicked)="pageYear(1)"
+      ></app-button>
+    </div>
+
+    <div class="month-stepper__months">
+      @for (short of shortMonthLabels; track $index) {
+        <button
+          type="button"
+          class="month-stepper__month"
+          [class.month-stepper__month--selected]="isSelected($index)"
+          [attr.data-testid]="'month-stepper-month-' + $index"
+          [attr.aria-label]="monthLabel($index) + ' ' + pagedYear()"
+          [attr.aria-pressed]="isSelected($index)"
+          (click)="pickMonth($index)"
+        >
+          {{ short }}
+        </button>
+      }
+    </div>
+
+    <div class="month-stepper__shortcuts">
+      <button type="button" data-testid="month-stepper-this-month" (click)="pickRelativeMonth(0)">
+        This month
+      </button>
+      <button type="button" data-testid="month-stepper-last-month" (click)="pickRelativeMonth(-1)">
+        Last month
+      </button>
+      <button
+        type="button"
+        class="month-stepper__shortcut--muted"
+        data-testid="month-stepper-all-time"
+        (click)="pickAllTime()"
+      >
+        All time
+      </button>
+    </div>
+  </div>
+</ng-template>

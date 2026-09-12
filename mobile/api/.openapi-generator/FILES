@@ -333,10 +333,3 @@ lib/src/model/widget.dart
 lib/src/model/widget_type.dart
 lib/src/serializers.dart
 pubspec.yaml
-test/oidc_api_test.dart
-test/oidc_connection_view_test.dart
-test/oidc_exchange_command_test.dart
-test/oidc_provider_api_test.dart
-test/oidc_provider_summary_test.dart
-test/oidc_provider_view_test.dart
-test/upsert_oidc_provider_command_test.dart

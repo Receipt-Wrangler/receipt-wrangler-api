@@ -10,8 +10,10 @@ import { AuthState, GroupState } from "../store";
  * redirects to the group dashboard.
  *
  * Group id resolution: when `route.data['useRouteGroupId']` is set the id comes
- * from the `:id` route param (own or parent), otherwise from the currently
- * selected group in `GroupState`.
+ * from the `:id` route param (own or parent); when `route.data['useAddTargetGroupId']`
+ * is set it comes from `GroupState.addTargetGroupId` (the group a new record
+ * would be created in, which is not always the one being browsed - see the
+ * selector); otherwise from the currently selected group in `GroupState`.
  */
 export const groupPermissionGuard: CanActivateFn = (route) => {
   const store: Store = inject(Store);
@@ -20,15 +22,23 @@ export const groupPermissionGuard: CanActivateFn = (route) => {
   const permission = route.data["groupPermission"] as string;
   const orApp = (route.data["orAppPermissions"] as string[]) ?? [];
 
+  const selectedGroupId = () =>
+    Number.parseInt(store.selectSnapshot(GroupState.selectedGroupId));
+
   let groupId: number;
   if (route.data["useRouteGroupId"]) {
     groupId = Number.parseInt(
       route?.params?.["id"] ?? route?.parent?.params["id"]
     );
+  } else if (route.data["useAddTargetGroupId"]) {
+    // Gate on the group the record would actually be created in, so a member of
+    // exactly one group is not turned away because the group they happen to be
+    // browsing is the synthetic "All" one. Falls back to the selected group when
+    // there is no single add target, which keeps multi-group users unchanged.
+    groupId =
+      store.selectSnapshot(GroupState.addTargetGroupId) ?? selectedGroupId();
   } else {
-    groupId = Number.parseInt(
-      store.selectSnapshot(GroupState.selectedGroupId)
-    );
+    groupId = selectedGroupId();
   }
 
   if (

@@ -2,7 +2,7 @@
   [headerText]="headerText"
   subtitle="View, filter, and manage this group's receipts."
 >
-  <div class="d-flex align-items-center">
+  <div class="d-flex align-items-center receipts-toolbar">
     <app-add-button
       *ngIf="canCreate"
       class="me-2"
@@ -11,21 +11,18 @@
       tooltip="Add Receipt"
       [buttonRouterLink]="['/receipts/add']"
     ></app-add-button>
-    <app-quick-scan-button
-      *ngIf="canQuickScan"
-      data-testid="receipts-quick-scan"
+
+    <app-month-stepper
       class="me-2"
-      (afterClosed)="getFilteredReceipts()"
-    >
-    </app-quick-scan-button>
-    @if (dataSource().data.length > 0) {
-      <app-export-button
-        [groupId]="groupId"
-        [filter]="filter() ?? undefined"
-      ></app-export-button>
-    }
+      [value]="stepperMonth()"
+      [label]="stepperLabel()"
+      (monthSelected)="monthSelected($event)"
+      (allTimeSelected)="allTimeSelected()"
+    ></app-month-stepper>
+
     <app-button
       class="me-2 filter-button"
+      data-testid="receipts-filter"
       icon="filter_alt"
       matButtonType="iconButton"
       tooltip="Filter Receipts"
@@ -35,61 +32,113 @@
       (clicked)="filterButtonClicked()"
     ></app-button>
     <app-button
-      class="me-2"
-      data-testid="configure-columns"
-      icon="view_column"
-      matButtonType="iconButton"
-      tooltip="Configure Columns"
-      color="accent"
-      (clicked)="configureColumnsButtonClicked()"
-    ></app-button>
-    <app-button
       *ngIf="(numFiltersApplied() ?? 0) > 0"
       @fadeInOut
       class="me-2"
+      data-testid="receipts-filter-reset"
       icon="restart_alt"
       matButtonType="iconButton"
       tooltip="Reset filter"
       color="accent"
       (clicked)="resetFilterButtonClicked()"
     ></app-button>
-    <ng-container *ngIf="canPollEmail && group?.groupSettings?.emailIntegrationEnabled">
-      <app-button
-        *appFeature="'aiPoweredReceipts'"
-        class="me-2"
-        icon="mail"
-        matButtonType="iconButton"
-        tooltip="Poll email(s)"
-        color="accent"
-        matBadgeColor="accent"
-        (clicked)="pollEmail()"
-      ></app-button>
-    </ng-container>
 
     @if (selectedReceiptIds().length > 1) {
       <app-queue-start-menu
+        class="me-2"
         buttonText="Start Queue"
         color="accent"
         [receiptIds]="selectedReceiptIds()"
       ></app-queue-start-menu>
     }
 
-    @if (selectedReceiptIds().length > 0) {
-      <app-button
-        matButtonType="iconButton"
-        icon="more_vert"
-        color="accent"
-        [matMenuTriggerFor]="menu"
-      ></app-button>
+    <app-button
+      data-testid="receipts-overflow-menu"
+      matButtonType="iconButton"
+      icon="more_vert"
+      tooltip="More actions"
+      color="accent"
+      [matMenuTriggerFor]="overflowMenu"
+    ></app-button>
 
-      <mat-menu #menu="matMenu">
-        <button mat-menu-item (click)="exportSelectedReceipts()">Export Selected Receipts</button>
+    <!--
+      Every item here is a plain button: MatMenu collects its items with a
+      content query, so a mat-menu-item rendered inside a child component's
+      template (app-quick-scan-button, app-export-button) would be invisible to
+      the menu and skipped by keyboard navigation. The behaviour behind each one
+      still lives in a shared place — openQuickScanDialog and
+      ReceiptExportService.
+    -->
+    <mat-menu #overflowMenu="matMenu">
+      @if (canQuickScan) {
+        <button
+          *appFeature="'aiPoweredReceipts'"
+          mat-menu-item
+          data-testid="receipts-quick-scan"
+          (click)="quickScanClicked()"
+        >
+          <mat-icon>receipt_long</mat-icon>
+          <span>Quick Scan</span>
+        </button>
+      }
+
+      @if (dataSource().data.length > 0) {
+        <button
+          mat-menu-item
+          data-testid="receipts-export-all"
+          (click)="exportAllReceipts()"
+        >
+          <mat-icon>download</mat-icon>
+          <span>Export all receipts</span>
+        </button>
+      }
+
+      <button
+        mat-menu-item
+        data-testid="configure-columns"
+        (click)="configureColumnsButtonClicked()"
+      >
+        <mat-icon>view_column</mat-icon>
+        <span>Configure Columns</span>
+      </button>
+
+      <ng-container *ngIf="canPollEmail && group?.groupSettings?.emailIntegrationEnabled">
+        <button
+          *appFeature="'aiPoweredReceipts'"
+          mat-menu-item
+          data-testid="receipts-poll-email"
+          (click)="pollEmail()"
+        >
+          <mat-icon>mail</mat-icon>
+          <span>Poll email(s)</span>
+        </button>
+      </ng-container>
+
+      @if (selectedReceiptIds().length > 0) {
+        <div class="receipts-overflow-menu__label" role="presentation">
+          {{ selectedReceiptIds().length }} selected
+        </div>
+        <button
+          mat-menu-item
+          data-testid="receipts-export-selected"
+          (click)="exportSelectedReceipts()"
+        >
+          <mat-icon>file_upload</mat-icon>
+          <span>Export Selected Receipts</span>
+        </button>
 
         @if (canEdit) {
-          <button mat-menu-item (click)="showStatusUpdateDialog()">Bulk Status Update</button>
+          <button
+            mat-menu-item
+            data-testid="receipts-bulk-status"
+            (click)="showStatusUpdateDialog()"
+          >
+            <mat-icon>fact_check</mat-icon>
+            <span>Bulk Status Update</span>
+          </button>
         }
-      </mat-menu>
-    }
+      }
+    </mat-menu>
   </div>
 </app-table-header>
 <app-summary-card
@@ -99,6 +148,27 @@
   [receiptIds]="selectedReceiptIds()"
   [groupId]="selectedGroupId() ?? ''"
 ></app-summary-card>
+
+@if (filterChips().length > 0) {
+  <mat-chip-set class="receipt-filter-chips" aria-label="Applied filters">
+    @for (chip of filterChips(); track chip.key) {
+      <mat-chip
+        [attr.data-testid]="'receipt-filter-chip-' + chip.key"
+        (removed)="filterChipCleared(chip.key)"
+      >
+        {{ chip.label }}
+        <button
+          matChipRemove
+          [attr.data-testid]="'receipt-filter-chip-clear-' + chip.key"
+          [attr.aria-label]="'Remove ' + chip.label + ' filter'"
+        >
+          <mat-icon>cancel</mat-icon>
+        </button>
+      </mat-chip>
+    }
+  </mat-chip-set>
+}
+
 <div class="table-container">
   <app-table
     [columns]="columns()"

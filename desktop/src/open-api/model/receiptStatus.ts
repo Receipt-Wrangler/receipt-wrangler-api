@@ -12,13 +12,14 @@
 /**
  * Status of a receipt
  */
-export type ReceiptStatus = 'OPEN' | 'NEEDS_ATTENTION' | 'RESOLVED' | 'DRAFT' | '';
+export type ReceiptStatus = 'OPEN' | 'NEEDS_ATTENTION' | 'RESOLVED' | 'DRAFT' | 'DECLINED' | '';
 
 export const ReceiptStatus = {
     Open: 'OPEN' as ReceiptStatus,
     NeedsAttention: 'NEEDS_ATTENTION' as ReceiptStatus,
     Resolved: 'RESOLVED' as ReceiptStatus,
     Draft: 'DRAFT' as ReceiptStatus,
+    Declined: 'DECLINED' as ReceiptStatus,
     Empty: '' as ReceiptStatus
 };
 

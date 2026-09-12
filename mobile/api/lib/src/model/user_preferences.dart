@@ -31,7 +31,7 @@ abstract class UserPreferences implements BaseModel, Built<UserPreferences, User
   /// Default quick scan status
   @BuiltValueField(wireName: r'quickScanDefaultStatus')
   ReceiptStatus? get quickScanDefaultStatus;
-  // enum quickScanDefaultStatusEnum {  OPEN,  NEEDS_ATTENTION,  RESOLVED,  DRAFT,  ,  };
+  // enum quickScanDefaultStatusEnum {  OPEN,  NEEDS_ATTENTION,  RESOLVED,  DRAFT,  DECLINED,  ,  };
 
   @BuiltValueField(wireName: r'userShortcuts')
   BuiltList<UserShortcut>? get userShortcuts;

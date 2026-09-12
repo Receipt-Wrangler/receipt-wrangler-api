@@ -22,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:provider/provider.dart';
 import 'package:receipt_wrangler_mobile/models/group_model.dart';
+import 'package:receipt_wrangler_mobile/shared/functions/receipt_entry.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/category_select_field.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/tag_select_field.dart';
 
@@ -92,6 +93,14 @@ void main() {
     // rebuilt with config A; group 2 is a clone with a fresh id + name and the
     // inverse config B. Injected via the live GroupModel (deterministic, no
     // reliance on the API persisting the new fields).
+    // This spec fabricates a second group that does not exist on the server, so
+    // it cannot persist its fixture the way the others do -- and starting a scan
+    // now re-fetches AppData, which would wipe both the synthetic group and the
+    // trimmed list below. Skip that refresh: what is under test here is the form
+    // re-reading config when the dropdown changes, not the round trip.
+    debugSkipQuickScanAppDataRefresh = true;
+    addTearDown(() => debugSkipQuickScanAppDataRefresh = false);
+
     final ctx = tester.element(find.byType(Scaffold).first);
     final groupModel = Provider.of<GroupModel>(ctx, listen: false);
     final real = groupModel.groups.firstWhere((g) => !g.isAllGroup);
@@ -277,5 +286,82 @@ void main() {
     await selectDropdown(tester, 'groupId', group.name);
 
     expect(quickScanCommentField(), findsNothing, reason: 'comment hidden');
+  });
+
+  // The two cases below assert the fields are genuinely ON SCREEN, not merely in
+  // the widget tree -- see expectQuickScanFieldOnScreen for why the obvious
+  // assertions all pass on a broken sheet. The sheet used to render its last
+  // field into a clipped, unscrollable dead zone, which shipped a Quick Scan
+  // whose configured comment box no one could see: the widget tests pump
+  // QuickScanForm directly and never exercise the sheet layout, the cases above
+  // only ever ask `findsOneWidget`, and quick_scan_submit_test reaches its
+  // comment via `tester.ensureVisible`. They deliberately do not pin a surface
+  // size -- `setSurfaceSize` is a no-op on the Linux desktop runner, whose
+  // 1280x720 window is already short enough to expose this.
+  testWidgets('a configured comment field is actually on screen',
+      (tester) async {
+    await enableAiPoweredReceiptsForTest();
+    await installDocumentScannerMock();
+    await loginAsAdmin(tester);
+
+    // Exactly the reported configuration: comment the only optional field on.
+    final group = await configureFirstGroup(tester, (b) => b
+      ..groupReceiptSettings.hideComments = false
+      ..groupReceiptSettings.quickScanPaidByEnabled = true
+      ..groupReceiptSettings.quickScanPaidByRequired = false
+      ..groupReceiptSettings.quickScanStatusEnabled = true
+      ..groupReceiptSettings.quickScanStatusRequired = false
+      ..groupReceiptSettings.quickScanCategoriesEnabled = false
+      ..groupReceiptSettings.quickScanCategoriesRequired = false
+      ..groupReceiptSettings.quickScanTagsEnabled = false
+      ..groupReceiptSettings.quickScanTagsRequired = false
+      ..groupReceiptSettings.quickScanCommentEnabled = true
+      ..groupReceiptSettings.quickScanCommentRequired = false);
+
+    await openQuickScanImageForm(tester);
+    await selectDropdown(tester, 'groupId', group.name);
+
+    await expectQuickScanFieldOnScreen(tester, quickScanCommentField(),
+        label: 'comment');
+
+    // Visible is not enough -- it has to be usable.
+    await tester.enterText(quickScanCommentField(), 'a typed quick scan note');
+    await tester.pump();
+    expect(find.text('a typed quick scan note'), findsOneWidget);
+  });
+
+  testWidgets('every optional field is actually on screen',
+      (tester) async {
+    await enableAiPoweredReceiptsForTest();
+    await installDocumentScannerMock();
+    await loginAsAdmin(tester);
+
+    // The tallest form the config can produce: every field shown at once.
+    // Comment is last in the column, so it is the first to fall off the bottom --
+    // but Categories and Tags are asserted too, so a partial regression cannot
+    // hide behind it.
+    final group = await configureFirstGroup(tester, (b) => b
+      ..groupReceiptSettings.hideComments = false
+      ..groupReceiptSettings.quickScanPaidByEnabled = true
+      ..groupReceiptSettings.quickScanPaidByRequired = false
+      ..groupReceiptSettings.quickScanStatusEnabled = true
+      ..groupReceiptSettings.quickScanStatusRequired = false
+      ..groupReceiptSettings.quickScanCategoriesEnabled = true
+      ..groupReceiptSettings.quickScanCategoriesRequired = false
+      ..groupReceiptSettings.quickScanTagsEnabled = true
+      ..groupReceiptSettings.quickScanTagsRequired = false
+      ..groupReceiptSettings.quickScanCommentEnabled = true
+      ..groupReceiptSettings.quickScanCommentRequired = false);
+
+    await openQuickScanImageForm(tester);
+    await selectDropdown(tester, 'groupId', group.name);
+
+    await expectQuickScanFieldOnScreen(
+        tester, find.byType(CategorySelectField),
+        label: 'categories');
+    await expectQuickScanFieldOnScreen(tester, find.byType(TagSelectField),
+        label: 'tags');
+    await expectQuickScanFieldOnScreen(tester, quickScanCommentField(),
+        label: 'comment');
   });
 }

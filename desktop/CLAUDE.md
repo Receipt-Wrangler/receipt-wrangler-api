@@ -62,6 +62,36 @@ await page.getByRole('button', { name: 'Login' }).click();
 await page.waitForURL(/\/dashboard\/group\/\d+/);
 ```
 
+**Running the whole `npm run e2e` suite in the sandbox — bridge the build numbers with symlinks.**
+The `executablePath` trick above only helps ad-hoc scripts; `playwright.config.ts` has no
+`launchOptions` hook, so the suite resolves the 1217 paths and fails. Bridge them to the installed
+build with symlinks (outside the repo, so nothing is committed). Alongside the `chromium` convenience
+symlink, the image ships two **versioned directories** — `chromium-1194/` and
+`chromium_headless_shell-1194/` — and those are what you point at; confirm the number first, since it
+moves with the sandbox image:
+
+```bash
+ls -d /opt/pw-browsers/chromium*   # chromium, chromium-1194, chromium_headless_shell-1194
+SRC=1194                           # installed build, from the listing above
+WANT=1217                          # build @playwright/test 1.59.1 resolves
+
+# full chromium: the installed layout already matches what $WANT expects
+ln -sfn /opt/pw-browsers/chromium-$SRC /opt/pw-browsers/chromium-$WANT
+
+# headless shell: the directory AND the binary are named differently, so build the shape by hand
+mkdir -p /opt/pw-browsers/chromium_headless_shell-$WANT
+ln -sfn /opt/pw-browsers/chromium_headless_shell-$SRC/chrome-linux \
+        /opt/pw-browsers/chromium_headless_shell-$WANT/chrome-headless-shell-linux64
+ln -sfn headless_shell \
+        /opt/pw-browsers/chromium_headless_shell-$SRC/chrome-linux/chrome-headless-shell
+touch /opt/pw-browsers/chromium_headless_shell-$WANT/{INSTALLATION_COMPLETE,DEPENDENCIES_VALIDATED}
+```
+
+`devices['Desktop Chrome']` runs headless, so it is the **headless shell** path that actually fails
+first — symlinking only `chromium-$WANT` is not enough. Then export the four `E2E_*` credential vars
+and run `npx playwright test`; leaving `E2E_BASE_URL` at `http://localhost:4200` keeps the config's
+`webServer` block active, which reuses an `ng serve` you already have running.
+
 ## Code Architecture
 
 ### Application Structure
@@ -140,6 +170,79 @@ do not undo them without re-checking `npm audit`:
   cache). Bump these deliberately — update the consuming code / reinstall browsers in the same change.
 - Stay on the Angular `21.2.x` patch line for security fixes; a jump to Angular 22 is a separate,
   breaking upgrade and out of scope for audit hygiene.
+
+**Never regenerate `package-lock.json` from scratch to fix an audit finding.** Deleting the lockfile
+and reinstalling re-resolves *every* package to the newest version its range allows, which breaks CI
+in two ways that `npm install` and `npm audit` both report as clean:
+
+1. **`npm ci` refuses the result (`EUSAGE`).** A fresh resolve can *hoist* a package that the
+   committed tree deliberately keeps nested. The real case: `pkijs` (via `selfsigned` ←
+   `webpack-dev-server`) hard-depends on `@noble/hashes@1.4.0`, while `@exodus/bytes` (via `jsdom`)
+   declares an *optional* peer `@noble/hashes@^1.8.0 || ^2.0.0`. The committed tree keeps 1.4.0 at
+   `node_modules/pkijs/node_modules/@noble/hashes` and installs nothing at the root. A from-scratch
+   install hoisted 1.4.0 to the root, where the optional peer then wants 2.4.0 — so `npm ci` fails
+   with `Invalid: lock file's @noble/hashes@1.4.0 does not satisfy @noble/hashes@2.4.0` /
+   `Missing: @noble/hashes@1.4.0 from lock file`. `npm install` accepts that lockfile happily; only
+   `npm ci` rejects it.
+2. **It drifts the tree past CI's Node floor.** CI pins Node **20.19.6** (`ci.yml`, `release.yml`,
+   `e2e.yml`). A fresh resolve pulled `jsdom` 29→30, `whatwg-url` 16→17 and `@asamuzakjp/*`, all of
+   which declare `node: ^22.x || >=24` and emit `EBADENGINE` on Node 20.
+
+**Do this instead** — update the lockfile incrementally, and when npm refuses to move a
+peer-coupled family in place (the Angular packages are one), delete just those entries and let it
+re-resolve that subtree only:
+
+```bash
+# 1. start from the committed lockfile; edit package.json pins/overrides as needed
+# 2. drop the entries npm will not move on its own: the peer-coupled family it
+#    ERESOLVEs on, AND every `overrides` target (an override is ignored unless its
+#    entry is re-resolved), at any nesting depth
+python3 - <<'EOF'
+import json, re
+NAMESPACES = ('@angular/', '@angular-devkit/', '@ngtools/')   # the peer-coupled family
+OVERRIDES  = ('@babel/core', 'esbuild', 'http-proxy-middleware',
+              'qs', 'undici', 'uuid')                          # keep in sync with package.json
+pat = re.compile(
+    r'(^|/)node_modules/(?:' + '|'.join(map(re.escape, NAMESPACES)) + r')[^/]+$'
+    r'|(^|/)node_modules/(?:' + '|'.join(map(re.escape, OVERRIDES)) + r')$')
+d = json.load(open('package-lock.json'))
+gone = [k for k in d['packages'] if pat.search(k)]
+for k in gone:
+    del d['packages'][k]
+json.dump(d, open('package-lock.json', 'w'), indent=2)
+open('package-lock.json', 'a').write('\n')
+print(f'dropped {len(gone)} entries')
+EOF
+# 3. rebuild; npm re-resolves only what was dropped and leaves the rest of the tree pinned
+rm -rf node_modules && npm install
+```
+
+**Always gate on `npm ci`, not `npm install`.** `npm ci` applies a stricter sync check, so a lockfile
+that installs fine locally can still fail the build. Run the full gate before pushing any dependency
+change — a lockfile can satisfy `npm ci` and still break the app, so the build and tests are part of
+it, not an afterthought:
+
+```bash
+npm ci                    # real install, exactly what CI runs — must exit 0
+npm audit                 # must report 0 vulnerabilities
+npm run test:ci           # must pass
+npm run build             # must succeed
+
+# Every package's engines.node must admit the Node version CI pins (`node-version`
+# in .github/workflows/ci.yml). semver is NOT a direct dependency — it resolves out
+# of the tree the `npm ci` above installed, so this step must come last. After
+# `npm ci --dry-run`, which writes nothing, it fails with MODULE_NOT_FOUND.
+node -e '
+const semver = require("semver");
+const lock = require("./package-lock.json");
+const NODE = "20.19.6";
+const bad = Object.entries(lock.packages)
+  .filter(([, p]) => p.engines?.node && !semver.satisfies(NODE, p.engines.node))
+  .map(([k, p]) => k.replace("node_modules/", "") + "@" + p.version + " needs " + p.engines.node);
+console.log(bad.length ? "INCOMPATIBLE:\n  " + bad.join("\n  ") : "engines OK for Node " + NODE);
+process.exit(bad.length ? 1 : 0);
+'
+```
 
 ### API Integration
 - Backend API proxied through development server
@@ -439,6 +542,35 @@ gated by `appPermissionGuard` requiring `app.roles.read` (see **Permission-based
     `e2e/group-delete-any.spec.ts`.
 
 
+### Receipt status colors
+
+Everything visual for a receipt status is the ~20 lines of
+`src/shared-ui/status-chip/status-chip.component.scss` plus the `[ngClass]` map in its template. The
+options themselves need no code: `RECEIPT_STATUS_OPTIONS` (`src/constants/receipt-status-options.ts`)
+derives from `Object.keys(ReceiptStatus)` and `formatStatus` (`src/utils/status.utils.ts`)
+snake→title-cases the label, so **a status added to `swagger.yml` reaches the receipt form, the
+filters, bulk status update and both "default status" settings on regeneration alone** — only a color
+has to be authored.
+
+The convention is a **pale tint carrying the default (dark) `mat-chip` text**:
+
+| Status | Background |
+|---|---|
+| `NEEDS_ATTENTION` | `variables.$warning-amber` (`#ffe0b2`) |
+| `DECLINED` | `map.get(variables.$warn-palette, 100)` (`#f2bfbf`) — the red NEEDS_ATTENTION gave up |
+| `OPEN` | `#fffacd` |
+| `RESOLVED` | `lightgreen` |
+| `DRAFT` | *(no rule — the default chip surface)* |
+
+**Do not set an explicit `color` on these rules.** `.needs-attention` and `.open` used to declare
+`color: white`, i.e. white on `#f2bfbf` / `#fffacd` — about 1.6:1 and 1.2:1, an effectively invisible
+label. The tints are chosen to be legible under the dark default.
+
+The chip is also driven by an unrelated `customStatusColor` input (`"red" | "green" | "gray" |
+"yellow"`) for **system-task** status in the activity list; `'red'` maps to `.declined`, so red still
+means failure there. (`'gray'` maps to no class — a pre-existing dead value.)
+`status-chip.component.spec.ts` pins the whole status → class map, including that repoint.
+
 ### Custom fields
 
 The Manage Custom Fields page (`src/custom-fields/`) is a paged `app-table` plus a single
@@ -481,6 +613,58 @@ holder renames a field through the dialog and it persists with the type untouche
 non-editable and saved options expose no delete while an appended one does, the non-holder sees no
 control and its direct `PUT /api/customField/:id` 403s, and a type change 400s even for the holder).
 `e2e/legacy-user-visibility.spec.ts` pins that Legacy User sees neither edit nor delete.
+
+### Seeding the receipt group
+
+The Group field is a default, not a lock: when there is only one group to pick, both the receipt form
+and the Quick Scan dialog pre-select it. See the root `CLAUDE.md` → "Seeding the Group Field" for the
+cross-client contract.
+
+- **`GroupState.soleGroupId`** (`src/store/group.state.ts`) is the shared rule, declared as
+  `@Selector([GroupState.groupsWithoutAll])` so it counts exactly the set `app-group-autocomplete`
+  offers. That selector-array form is new to this repo (everything else uses bare `@Selector()` or
+  `createSelector`) but is correct here: with a non-empty dependency list NGXS does **not** prepend
+  the container state, so the function receives the groups directly.
+- **`GroupState.addTargetGroupId`** is the group a *new* receipt would land in: the selected group,
+  or — when that is the "All" group, unset, or **no longer resolvable** — `soleGroupId`. Because it
+  resolves off `groupsWithoutAll`, all three of those are one lookup miss rather than three checks.
+  `selectedGroupId` is persisted to localStorage and `setAppData` only overwrites a *falsy* one
+  (`app-data.utill.ts`), so it genuinely outlives a group the user has left — that stale case is why
+  the resolution is a lookup rather than a `Number()` coercion.
+- **`receipt-form.component.ts` `initForm()`** seeds `addTargetGroupId ?? ""`. No
+  `syncSingleDisplay()` is needed: the seed is written while the parent builds the form, which is
+  *before* the child autocomplete's `ngOnInit` seeds its display from the control (unlike Magic Fill,
+  which patches after init).
+  - **The blank sentinel must stay `""` — never `0`.** `Validators.required` calls Angular's
+    `isEmptyInputValue`, which counts only `null`/`undefined` and zero-length string/array as empty,
+    so a `0` seed leaves a group-less form **valid** and POSTs `groupId: 0`. `0` is also what
+    `app-autocomlete` filters its options by (`_filter` does `value.toString()`), so the dropdown
+    would silently show only groups whose name contains a zero, while `!!0` still suppresses the
+    clear button the e2e helpers rely on. Pinned by an explicit `form.get("groupId").valid === false`
+    assertion in the spec.
+- **`setReceiptPermissions()` and the `/receipts/add` route guard both gate on
+  `addTargetGroupId ?? Number.parseInt(selectedGroupId)`** — the same group the form seeds. Without
+  this a sole-group user whose *All*-group membership lacks `group.receipts.create` is bounced off
+  `/receipts/add` even though they can create in their real group, which is where login lands them.
+  The `??` tail is load-bearing: a multi-group user on the All dashboard has no add target and must
+  keep gating on the All group, because `Number.parseInt("")` is `NaN` and `groupPermissions[NaN]` is
+  empty — gating on the seed alone would render the add form read-only. The guard opts in per route
+  via `data: { useAddTargetGroupId: true }` (a third mode beside `useRouteGroupId`), so a future
+  route that wants "the group being browsed" keeps that by default; `/receipts/add` is the only
+  consumer of the plain selected-group branch today.
+- **`quick-scan-dialog.component.ts` `fileLoaded()`** puts it *after* the user's
+  `quickScanDefaultGroupId`. `configureImages()` already runs at the end of `fileLoaded`, so the
+  seeded group's show/require config lands on that image with no interaction.
+- **The e2e helpers had to learn the field can already be filled.** A single-select `app-autocomlete`
+  binds `[readonly]="readonly || singleOptionSelected()"`, and Material's `_canOpen()` refuses to open
+  a readonly input — so an unconditional `click()` + pick simply times out. `selectFirstOption`
+  (`e2e/receipts.spec.ts`) now skips a filled field, the empty-form validation case clears it first via
+  `clearAutocomplete` (`data-testid="autocomplete-clear"`), and `quick-scan-dialog.spec.ts` routes its
+  pick through the shared `selectImageGroup`. This matters on a **fresh** database, where
+  `api/dev/seed-e2e-users.sh` leaves `e2e-admin`/`e2e-user` with exactly one group until another spec
+  creates one.
+- **E2e:** `e2e/single-group-default.spec.ts` provisions its own Legacy User (a new account owns only
+  "My Receipts" + "All") and asserts both the receipt form and the Quick Scan dialog arrive pre-filled.
 
 ### Per-group default custom fields
 
@@ -914,8 +1098,9 @@ End-to-end tests live in `e2e/` and use **Playwright**. They drive the real Angu
 ### Running locally
 
 1. **One-time:** install browsers — `npm run e2e:install`. (In the Claude Code web sandbox the browser
-   is pre-installed and `e2e:install` is blocked — use the `executablePath: '/opt/pw-browsers/chromium'`
-   workaround from "Running in the Claude Code Web/Cloud Sandbox" above instead.)
+   is pre-installed and `e2e:install` is blocked — apply the `chromium-1217` /
+   `chromium_headless_shell-1217` symlinks from "Running in the Claude Code Web/Cloud Sandbox" above
+   instead.)
 2. **One-time:** sign up the two e2e accounts against your local DB. The **first** signup is auto-promoted to admin, so order matters. With the API running, go to `http://localhost:4200/auth/sign-up` and create:
    - Admin first: username `e2e-admin`, password `e2e-admin-password`
    - Then user: username `e2e-user`, password `e2e-user-password`
@@ -1094,6 +1279,111 @@ helpers `withAdminApi` + `apiDeleteUserByName` / `apiDeleteGroupById` / `apiDele
   asserted at the route level, not button absence. (`receipt-action-gating.spec.ts` is a standalone
   spec rather than an extension of `group-viewer-visibility.spec.ts`, whose serial block has a known
   pre-existing failure — a Legacy User can't load `/groups` — that would skip any test appended to it.)
+
+## Receipts table filtering
+
+The receipts table (`src/receipts/receipts-table/`) offers three ways into **one** filter —
+`ReceiptTableState.filter`, which is persisted to localStorage. The advanced dialog
+(`app-receipt-filter`), the month stepper and the filter chips all read and write that single slice,
+so they can never disagree.
+
+- **Field metadata is shared.** `RECEIPT_FILTER_FIELDS` (`src/constants/receipt-filter-fields.constant.ts`)
+  is the one definition of each field's key, label and operation type. The dialog's
+  `setupAutoOperationSelection()` and the chip builder both read it, and `OperationsPipe` now reads
+  the extracted `FILTER_OPERATION_DISPLAY_VALUES`, so a chip cannot describe a condition differently
+  from the row that produced it.
+- **`isFilterEntryActive`** (`src/utils/receipt-filter-entry.ts`) is the shared "does this field
+  narrow anything" predicate: any non-empty stringified value, **or** the operation
+  `WITHIN_CURRENT_MONTH` (the one operation that carries no value). **Zero counts** — no field
+  defaults to `0` (they default to `null`/`[]`), and the API applies an `amount EQUALS 0`, so
+  excluding it would leave a filter that narrows the table with no badge and no clearable chip. `ReceiptTableState.numFiltersApplied`
+  and the chip builder both call it, so the Filter badge and the chip set always agree.
+- **Single-field writes go through `SetReceiptFilterField`**, whose handler spreads a new filter
+  object and rebuilds a cleared field from a **fresh** `buildDefaultReceiptFilter()`. That factory
+  replaced the shared `defaultReceiptFilter` constant inside `@State` defaults and `ResetReceiptFilter`
+  for the same reason: the old code wrote the module-level object straight into state, where a later
+  in-place edit would have corrupted the default for the rest of the session.
+  `ReceiptsTableComponent.applyFilterField()` is the only caller — it dispatches the action, then
+  `SetPage(1)`, then refetches, so narrowing a filter from page 7 can never land on an empty page.
+- **Refreshes go through one `switchMap`** (`listenForRefreshRequests()`, wired in the constructor;
+  `getFilteredReceipts()` just pushes onto its `Subject`). Each refresh used to be its own
+  subscription, so the last *response* won rather than the last *request* — and the quick date
+  arrows put those one click apart, so a slow earlier page could repaint the table with a month the
+  user had already stepped past. The inner observable carries a `catchError(() => EMPTY)`: an error
+  surfacing *through* `switchMap` would complete the outer subscription and silently kill every
+  later refresh. `getInitialData()` deliberately stays on its own one-shot subscription, because it
+  owns the single `setColumns()` call and that reads `viewChild.required` template refs.
+
+### The month stepper is the Date filter
+
+`app-month-stepper` (`src/shared-ui/month-stepper/`, standalone, deliberately presentational) emits
+months; `receipts-table` translates them with `src/utils/receipt-date-filter.ts`.
+
+**Its panel is a CDK overlay, not a `mat-menu` — do not "simplify" it back.** The panel holds a year
+pager, a month grid and three shortcuts, and **none of them is a `mat-menu-item`**. Inside a menu
+that makes the `FocusKeyManager`'s item list empty, so arrow keys are no-ops, and
+`ListKeyManager.onKeydown` turns **Tab** into `tabOut`, which `MatMenu` wires to `closed.emit('tab')`
+— so Tab *dismissed* the panel instead of entering it, leaving the whole picker mouse-only
+(verified in a browser: the grid is gone after one Tab). It is now
+`cdkConnectedOverlay` + `cdkTrapFocus [cdkTrapFocusAutoCapture]` with `role="dialog"`, an
+`aria-label`, `(keydown.escape)` and a transparent backdrop; the trap restores focus to the trigger
+when the overlay is destroyed. The year pager's old `$event.stopPropagation()` is gone with it — it
+only existed because a menu closes on any click inside itself.
+
+The same rule applies to the two house alternatives, which is why neither was used: `cdkMenu` (the
+`filtered-stateful-menu` precedent) has the identical empty-key-manager problem, and `ngbPopover`
+(the header notifications precedent) hard-codes `role="tooltip"` on `NgbPopoverWindow`'s host, which
+is equally wrong for interactive content and cannot be overridden. `e2e/receipt-quick-date-filter.spec.ts`
+pins the keyboard path — it fails against a `mat-menu` implementation. A month is written
+as `BETWEEN [startOfMonth, endOfMonth]` — the one operation that can express *any* month, which is
+why this feature needed no API change. Picking a month **overwrites** whatever the Date filter held.
+
+- **The stepper and the chips never show the same condition twice.** While `monthFromFilterEntry`
+  resolves the Date filter to a month, the label names it and the chip row omits `date`. When it
+  cannot (a partial range, a `GREATER_THAN`, `WITHIN_CURRENT_MONTH`) the label reads **"Custom"** and
+  the Date chip renders, so the filter stays visible and clearable.
+- **`monthFromFilterEntry` must accept ISO strings, not just `Date`s.** The filter is persisted and
+  NGXS serializes through JSON, so after a reload `filter.date.value` is two ISO strings. It matches
+  on calendar fields (day 1, same year+month, `getDaysInMonth` on the end) rather than on the
+  serialized text, which also makes it tolerate the local-midnight pair the dialog's datepickers
+  write. Get this wrong and the label silently degrades to "Custom" after every refresh —
+  `e2e/receipt-quick-date-filter.spec.ts` covers it because the Jest specs cannot.
+- **`WITHIN_CURRENT_MONTH` is a no-op on the backend for `date` today.** `BuildGormFilterQuery` guards
+  every field with `if Filter.Date.Value != nil` and the dialog stores `value: null` for that
+  operation, so it never reaches the query builder — the badge counts it and nothing is filtered.
+  Pre-existing; the chip just surfaces it for the first time.
+- **Arrow steps from "All time"/"Custom" seed the current month** and then apply the delta, so `‹`
+  and `›` never do the same thing.
+
+### The overflow menu
+
+Quick Scan, Export all receipts, Configure Columns, Poll email(s) and the selection actions live in a
+`⋮` `mat-menu` (`data-testid="receipts-overflow-menu"`), always collapsed — not breakpoint-driven.
+
+**Every entry is a plain `<button mat-menu-item>` in `receipts-table.component.html`, never a shared
+component that renders one.** `MatMenu` collects items with a **content** query
+(`@ContentChildren(MatMenuItem, { descendants: true })`), which does not cross a child component's
+**view** boundary — so a `mat-menu-item` rendered inside `app-quick-scan-button`'s own template would
+be invisible to the menu and silently skipped by its `FocusKeyManager` (no arrow-key navigation, no
+typeahead, no open-focus). `display: contents` does not help. The behaviour still lives in one place:
+export calls `ReceiptExportService` directly, and Quick Scan calls the shared
+`openQuickScanDialog(matDialog)` (`src/receipts/quick-scan-dialog/open-quick-scan-dialog.ts`), which
+`app-quick-scan-button` uses too.
+
+Two consequences for tests and styles:
+- **A `mat-menu-item`'s role is `menuitem`, not `button`.** A `getByRole('button', { name: 'Quick Scan' })`
+  negative would pass whether or not the entry rendered, so `receipt-feature-gating.spec.ts` asserts
+  those absences by `data-testid` **with the menu open** (`openReceiptsOverflowMenu` in
+  `e2e/helpers/receipts-table.ts`). Any new negative assertion about a menu entry must do the same.
+- **Menu content renders in a CDK overlay**, outside `app-receipts-table`, so the
+  `ViewEncapsulation.None` + `app-receipts-table { … }` nesting in the component's SCSS cannot reach
+  it — the `N selected` section label is styled at the top level of that file instead.
+
+The chips row is inline markup (`mat-chip-set` / `matChipRemove`) with every label built by the pure
+`buildReceiptFilterChips` util, so `ReceiptsModule` must import **`MatChipsModule`** — `SharedUiModule`
+imports it but does not export it. An id the caller cannot resolve (a category outside their grants,
+a group they have left) renders as the raw id rather than dropping the chip, so a filter that is
+actively removing rows is never invisible.
 
 ## Quick Scan Configuration
 

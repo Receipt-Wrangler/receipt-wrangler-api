@@ -1,14 +1,19 @@
 @use "../../variables.scss" as variables;
 @use "sass:map";
 
+// Every status is a pale tint carrying the default (dark) mat-chip text. `color: white`
+// used to be set on .needs-attention and .open, which put white on #f2bfbf / #fffacd —
+// roughly 1.2:1 and 1.6:1 contrast, i.e. an invisible label.
 .needs-attention {
+  background-color: variables.$warning-amber !important;
+}
+
+.declined {
   background-color: map.get(variables.$warn-palette, 100) !important;
-  color: white !important;
 }
 
 .open {
   background-color: #fffacd !important;
-  color: white !important;
 }
 
 .resolved {

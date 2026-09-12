@@ -76,9 +76,14 @@ class FilterMultiSelectState<T> extends State<FilterMultiSelect<T>> {
     );
   }
 
+  /// Owns its own scrolling, so it must be given a **bounded** height (the
+  /// [Expanded] in [build]). It is deliberately not `shrinkWrap`: a
+  /// shrink-wrapped grid sizes itself to its content, so its own scroll extent
+  /// is zero -- yet it still claims the vertical drag, which then reaches no
+  /// scrollable at all and a long catalog becomes unreachable. Dropping it also
+  /// restores lazy chip building.
   Widget buildChoiceChipGrid() {
     return MasonryGridView.count(
-      shrinkWrap: true,
       itemCount: filteredOptions.length,
       itemBuilder: (BuildContext context, int index) {
         return buildChoiceChip(filteredOptions[index], index);
@@ -91,13 +96,15 @@ class FilterMultiSelectState<T> extends State<FilterMultiSelect<T>> {
   Widget build(BuildContext context) {
     return FormBuilder(
         key: formKey,
-        child: Container(
-          padding: EdgeInsets.all(10),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
           child: Column(
             children: [
               buildFilterBar(),
-              SizedBox(height: 10),
-              buildChoiceChipGrid(),
+              const SizedBox(height: 10),
+              // Takes the height the filter bar leaves, which is what gives the
+              // grid something to scroll against.
+              Expanded(child: buildChoiceChipGrid()),
             ],
           ),
         ));

@@ -49,6 +49,46 @@ export class GroupState {
     return state.groups.filter((g) => !g.isAllGroup);
   }
 
+  /**
+   * The user's only real group, when they belong to exactly one -- a picker with
+   * a single option is not a choice, so the receipt form and quick scan seed it
+   * rather than making the user pick it. Undefined when they have several (or
+   * none): built off `groupsWithoutAll` so the auto-selected set and the set the
+   * pickers offer cannot drift apart.
+   */
+  @Selector([GroupState.groupsWithoutAll])
+  static soleGroupId(groups: Group[]): number | undefined {
+    return groups.length === 1 ? groups[0].id : undefined;
+  }
+
+  /**
+   * The group a new receipt would land in when that is not a choice: the
+   * actively selected group, or -- when that is the synthetic "All" group, or
+   * nothing is selected, or the selection no longer resolves (`selectedGroupId`
+   * is persisted, so it outlives a group the user has left) -- the user's only
+   * group. Undefined when they genuinely have to pick.
+   *
+   * Resolved off `groupsWithoutAll`, so "not a real, still-current group" is a
+   * single lookup miss rather than three separate checks. Callers that must
+   * always name a group (the permission gate, the route guard) fall back to
+   * `selectedGroupId` themselves; the form treats undefined as "leave blank".
+   */
+  @Selector([
+    GroupState.groupsWithoutAll,
+    GroupState.selectedGroupId,
+    GroupState.soleGroupId,
+  ])
+  static addTargetGroupId(
+    selectableGroups: Group[],
+    selectedGroupId: string,
+    soleGroupId: number | undefined
+  ): number | undefined {
+    const selected = selectableGroups.find(
+      (g) => g.id.toString() === selectedGroupId
+    );
+    return selected?.id ?? soleGroupId;
+  }
+
   @Selector()
   static groupsWithoutSelectedGroup(state: GroupStateInterface): Group[] {
     return state.groups.filter(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openapi/openapi.dart' as api;
@@ -64,5 +65,33 @@ void main() {
     // The menu did open — the ungated items are present.
     expect(find.text('User Profile'), findsOneWidget);
     expect(find.text('Logout'), findsOneWidget);
+  });
+
+  testWidgets('renders the items in text colour, not the brand blue',
+      (tester) async {
+    await pumpBar(tester, [Permission.appPeriodReportsPeriodRead]);
+
+    // Read the scheme actually in force rather than hardcoding colours, so the
+    // assertion keeps meaning if the app's palette changes.
+    final scheme = Theme.of(tester.element(find.byType(Scaffold))).colorScheme;
+    expect(scheme.onSurface, isNot(scheme.primary),
+        reason: 'the two must differ or this test proves nothing');
+
+    // The items are TextButtons, which default their foreground to
+    // colorScheme.primary — that is what made them render blue. They must use
+    // the colour a bare PopupMenuItem would have used instead.
+    //
+    // Assert the colour the RenderParagraph actually paints, not the declared
+    // ButtonStyle: the style is only the mechanism, and a theme or a wrapping
+    // DefaultTextStyle could still override what the user ends up seeing.
+    for (final label in ['User Profile', 'Reports', 'Logout']) {
+      final painted = tester
+          .renderObject<RenderParagraph>(find.text(label))
+          .text
+          .style
+          ?.color;
+      expect(painted, scheme.onSurface,
+          reason: '"$label" is not painted in the ordinary text colour');
+    }
   });
 }

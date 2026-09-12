@@ -43,7 +43,7 @@ abstract class SearchResult implements Built<SearchResult, SearchResultBuilder> 
 
   @BuiltValueField(wireName: r'receiptStatus')
   ReceiptStatus? get receiptStatus;
-  // enum receiptStatusEnum {  OPEN,  NEEDS_ATTENTION,  RESOLVED,  DRAFT,  ,  };
+  // enum receiptStatusEnum {  OPEN,  NEEDS_ATTENTION,  RESOLVED,  DRAFT,  DECLINED,  ,  };
 
   @BuiltValueField(wireName: r'paidByUserId')
   int? get paidByUserId;

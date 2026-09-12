@@ -20,6 +20,16 @@ import '../../helpers/receipt_form_test_helpers.dart';
 /// and four possible destinations (camera, gallery fallback, manual form,
 /// refusal), and picking the wrong one either hides a capability the user has or
 /// offers one they don't.
+///
+/// What these cases **cannot** see is the `context.mounted` guard after
+/// `_refreshBeforeQuickScan`. `TokenRefreshService.reloadAppData()` returns
+/// immediately while the service is uninitialized -- which it always is outside
+/// `main()` -- so the refresh finishes in a microtask, `tester.pump()` drains
+/// microtasks before it builds a frame, and the loading bar the guard trips over
+/// never gets one. That is how the receipts-screen overflow menu shipped with
+/// two dead items despite this file exercising every gate. The frame-level seam
+/// lives in `test/widgets/top_app_bar_loading_indicator_test.dart` and the
+/// user-visible behaviour in `integration_test/quick_scan_entry_test.dart`.
 void main() {
   const quickScan = api.Permission.groupPeriodReceiptsPeriodQuickScan;
   const create = api.Permission.groupPeriodReceiptsPeriodCreate;

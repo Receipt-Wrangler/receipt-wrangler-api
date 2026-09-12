@@ -60,7 +60,13 @@ class _ReceiptForm extends State<ReceiptForm> {
   /// selected group declares them as defaults. Only these are candidates for
   /// removal when the group changes -- anything the user added by hand, or
   /// typed a value into, is theirs (see [_applyGroupDefaultCustomFields]).
-  final Set<int> _autoAppliedCustomFieldIds = {};
+  ///
+  /// Held by [ReceiptModel], not this State: the form is remounted against the
+  /// same working copy on a view -> edit navigation, and provenance has to
+  /// survive that or a field the user removed and re-added by hand is reclaimed
+  /// as the form's and dropped on the next group change.
+  Set<int> get _autoAppliedCustomFieldIds =>
+      receiptModel.autoAppliedCustomFieldIds;
 
   @override
   void initState() {
@@ -92,7 +98,7 @@ class _ReceiptForm extends State<ReceiptForm> {
 
       // Before the setState below: it writes to ReceiptModel, and
       // notifyListeners() must not fire from inside a setState callback.
-      _applyGroupDefaultCustomFields(resolvedGroupId, onLoad: true);
+      _applyGroupDefaultCustomFields(resolvedGroupId);
 
       if (resolvedGroupId != groupId) {
         // Carry the seed into the State field the group-derived parts of the
@@ -483,7 +489,7 @@ class _ReceiptForm extends State<ReceiptForm> {
   /// Applies [newGroupId]'s default custom fields to the form, swapping out the
   /// ones the previously selected group put there. Each group is effectively
   /// its own receipt template, so this runs on every group change and once on
-  /// load, in every form state ([onLoad]).
+  /// load, in every form state.
   ///
   /// The swap is deliberately conservative. It only removes a field this form
   /// added itself ([_autoAppliedCustomFieldIds]) that is still **empty**; a
@@ -494,7 +500,7 @@ class _ReceiptForm extends State<ReceiptForm> {
   /// is empty for a caller without `app.custom-fields.read` (the 403 is
   /// swallowed into an empty list), which is exactly the gate we want here: the
   /// backend's `enforceReceiptCustomFieldSelection` would 403 their save.
-  void _applyGroupDefaultCustomFields(int newGroupId, {bool onLoad = false}) {
+  void _applyGroupDefaultCustomFields(int newGroupId) {
     var knownCustomFieldIds =
         customFieldModel.customFields.map((cf) => cf.id).toSet();
     var defaultIds = <int>[
@@ -518,16 +524,7 @@ class _ReceiptForm extends State<ReceiptForm> {
     var attachedIds =
         modifiedReceipt.customFields.map((cfv) => cfv.customFieldId).toSet();
     var toAdd = defaultIds.difference(attachedIds);
-
-    // On load the form owns every default the SAVED receipt does not carry, not
-    // just the ones added on this pass: ReceiptModel outlives the screen, so a
-    // view -> edit navigation arrives with the previous mount's defaults
-    // already attached (receipt_form_screen.dart only re-hydrates for a
-    // different receipt). Claiming only `toAdd` would mistake them for the
-    // own data and never swap them out on a later group change.
-    var savedIds = receipt.customFields.map((cfv) => cfv.customFieldId).toSet();
-    _autoAppliedCustomFieldIds
-        .addAll(onLoad ? defaultIds.difference(savedIds) : toAdd);
+    _autoAppliedCustomFieldIds.addAll(toAdd);
 
     if (toRemove.isEmpty && toAdd.isEmpty) {
       return;

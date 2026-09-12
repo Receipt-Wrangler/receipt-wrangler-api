@@ -17,6 +17,24 @@ class ReceiptModel extends ChangeNotifier {
 
   Receipt get modifiedReceipt => _modifiedReceipt;
 
+  /// Custom field ids the receipt form attached on the user's behalf from the
+  /// selected group's default set, as opposed to ones the user added by hand.
+  /// Only the former are candidates for removal when the group changes.
+  ///
+  /// Provenance lives here rather than in the form's State because this model
+  /// outlives the screen: the app bar menu's Edit entry is a plain `go`
+  /// (`receipt_app_bar_action_builder.dart`), so a view -> edit navigation
+  /// remounts the form against this same [modifiedReceipt]. A fresh State could
+  /// only guess, and would reclaim -- then silently drop on the next group
+  /// change -- a default the user had removed and re-added themselves.
+  ///
+  /// Cleared wherever the working copy is replaced ([setReceipt], [resetModel])
+  /// so the two can never disagree. Deliberately does not notify: nothing
+  /// renders from it.
+  final Set<int> _autoAppliedCustomFieldIds = {};
+
+  Set<int> get autoAppliedCustomFieldIds => _autoAppliedCustomFieldIds;
+
   List<Comment> _comments = [];
 
   List<Comment> get comments => _comments;
@@ -71,6 +89,8 @@ class ReceiptModel extends ChangeNotifier {
 
     _modifiedReceipt = receipt;
 
+    _autoAppliedCustomFieldIds.clear();
+
     _comments = (receipt.comments)?.toList() ?? [];
 
     _items = FormItem.fromItems((receipt.receiptItems)?.toList() ?? []);
@@ -111,6 +131,7 @@ class ReceiptModel extends ChangeNotifier {
   void resetModel() {
     _receipt = getDefaultReceipt();
     _modifiedReceipt = getDefaultReceipt();
+    _autoAppliedCustomFieldIds.clear();
     _comments = [];
     _items = [];
     _imageBehaviorSubject = BehaviorSubject<List<FileDataView?>>.seeded([]);

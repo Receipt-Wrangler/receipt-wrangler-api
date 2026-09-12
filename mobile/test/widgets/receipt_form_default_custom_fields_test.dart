@@ -535,31 +535,80 @@ void main() {
     _expectNoUiErrors(tester);
   });
 
+  // The view -> edit navigation, for real: the app bar menu's Edit entry is a
+  // plain `go`, so the form is remounted (fresh State) against the same
+  // ReceiptModel. Provenance lives on the model precisely so these next two
+  // cases can disagree -- the form's field is still the form's, the user's is
+  // still the user's.
   testWidgets('takes back a default a previous mount of the form attached',
       (tester) async {
-    // The view -> edit navigation: ReceiptModel outlives the screen, so the
-    // edit form mounts with the view form's default on the working copy but
-    // absent from the saved receipt. It is still the form's, not the user's.
-    final saved = _receiptInGroup(_groupOneId, id: 5);
+    final viewHarness = await pumpReceiptForm(
+      tester,
+      groups: _groups(),
+      customFields: _catalog,
+      users: _users,
+      receipt: _receiptInGroup(_groupOneId, id: 5),
+      formState: WranglerFormState.view,
+    );
+    expect(_attachedIds(viewHarness), [_fieldAId]);
+
     final harness = await pumpReceiptForm(
       tester,
       groups: _groups(),
       customFields: _catalog,
       users: _users,
-      receipt: saved,
-      modifiedReceipt: saved.rebuild((b) => b
-        ..customFields = ListBuilder<api.CustomFieldValue>([
-          buildCustomFieldValue(customFieldId: _fieldAId, receiptId: 5),
-        ])),
+      receiptModel: viewHarness.receiptModel,
       formState: WranglerFormState.edit,
     );
-
     expect(_attachedIds(harness), [_fieldAId]);
+    _expectNoUiErrors(tester);
 
     await _selectGroup(tester, 'Group Two');
 
     expect(_customFieldWidget(_fieldAId), findsNothing);
     expect(_attachedIds(harness), [_fieldBId]);
+    _expectNoUiErrors(tester);
+  });
+
+  testWidgets('a default re-added by hand stays the user\'s across a remount',
+      (tester) async {
+    // Removing an auto-applied default and adding it straight back makes it the
+    // user's, and leaves it empty -- so only provenance separates it from one
+    // the form just attached. A remount must not forget that and swap it out.
+    final first = await pumpReceiptForm(
+      tester,
+      groups: _groups(),
+      customFields: _catalog,
+      users: _users,
+      receipt: _receiptInGroup(_groupOneId, id: 5),
+      formState: WranglerFormState.edit,
+    );
+    expect(_attachedIds(first), [_fieldAId]);
+
+    await _removeCustomField(tester, _fieldAId);
+    expect(_attachedIds(first), isEmpty);
+    await _addCustomFieldNamed(tester, 'Cost Centre');
+    expect(_attachedIds(first), [_fieldAId]);
+    _expectNoUiErrors(tester);
+
+    final harness = await pumpReceiptForm(
+      tester,
+      groups: _groups(),
+      customFields: _catalog,
+      users: _users,
+      receiptModel: first.receiptModel,
+      formState: WranglerFormState.edit,
+    );
+    expect(_attachedIds(harness), [_fieldAId]);
+
+    await _selectGroup(tester, 'Group Two');
+
+    expect(
+      _customFieldWidget(_fieldAId),
+      findsOneWidget,
+      reason: 'the user put this field back by hand; the swap does not own it',
+    );
+    expect(_attachedIds(harness), [_fieldAId, _fieldBId]);
     _expectNoUiErrors(tester);
   });
 }

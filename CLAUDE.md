@@ -266,6 +266,12 @@ A group can declare custom fields that are **always pre-added** to its receipts,
     both clients already submit one per attached field because the backend replaces the whole
     association on update. And **a default applied on load stays auto-managed**, so changing the
     group on that form drops it again while it is still empty.
+  - **Each client tracks that "the form added this, the user didn't" differently**, because their
+    form lifecycles differ. Desktop re-derives it every `initForm()`, which rebuilds the custom-field
+    `FormArray` from the saved receipt, so an unsaved manual edit never survives a navigation.
+    Mobile's `ReceiptModel` *does* outlive its screen, so the provenance set lives on the model
+    (`ReceiptModel.autoAppliedCustomFieldIds`) — see `mobile/CLAUDE.md`. Inferring it from the saved
+    receipt instead reclaims a field the user removed and re-added by hand, and then drops it.
 - **Both clients gate on `app.custom-fields.read`.** The server's
   `enforceReceiptCustomFieldSelection` **403s** any save that changes the set of attached custom
   field ids for a caller without it, so auto-adding fields for such a user would make their receipts

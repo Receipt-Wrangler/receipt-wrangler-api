@@ -62,6 +62,20 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 				}
 			}()
 
+			// The scope gate. It sits AFTER the last-used stamp on purpose: that
+			// write is authentication bookkeeping, not the caller's operation, so a
+			// read-only key must still be able to record that it was used. Deriving
+			// the predicate from "does this request write anything" would get that
+			// backwards.
+			if !apiKeyScopePermits(dbApiKey.Scope, classifyRequest(r)) {
+				logging.LogStd(
+					logging.LOG_LEVEL_ERROR,
+					"API key with scope \""+dbApiKey.Scope+"\" refused for "+r.Method+" "+r.URL.Path,
+				)
+				utils.WriteCustomErrorResponse(w, "API key scope does not permit this operation", http.StatusForbidden)
+				return
+			}
+
 			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &claims))
 			next.ServeHTTP(w, r)
 			return

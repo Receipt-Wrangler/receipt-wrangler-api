@@ -10,7 +10,7 @@
 
 
 /**
- * Scope/permissions for API keys
+ * What an API key may do, enforced on every request. The values are literal - \"r\" permits reads and denies writes, \"w\" permits writes and denies reads, \"rw\" permits both. \"Read\" means data is returned to the caller, not that a row was read internally, so a \"w\" key may update freely. Reads are GET/HEAD/OPTIONS plus the endpoints that answer a query over POST because their filter arrives in the request body (the paged lists, the report endpoints, the exports, the pie chart, the receipt summary). A few endpoints both return data and change it - duplicating a receipt or a report template answers with the source\'s contents - and those require \"rw\". A request outside the key\'s scope is refused with 403.
  */
 export type ApiKeyScope = 'r' | 'w' | 'rw';
 

@@ -15,8 +15,6 @@
 package oauth
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 )
@@ -41,18 +39,6 @@ const (
 	// and is reported to clients so they know when to refresh.
 	accessTokenExpiresIn = 20 * 60
 )
-
-// randomToken returns an unpadded base64url random string safe to embed in URL
-// query parameters (used for client ids and authorization codes). Unpadded
-// encoding avoids '=' characters that would otherwise need URL escaping.
-func randomToken(byteLength int) (string, error) {
-	bytes := make([]byte, byteLength)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-
-	return base64.RawURLEncoding.EncodeToString(bytes), nil
-}
 
 // writeJson writes a value as an application/json response with the given
 // status code.

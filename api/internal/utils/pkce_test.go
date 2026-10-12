@@ -1,4 +1,4 @@
-package oauth
+package utils
 
 import (
 	"crypto/sha256"
@@ -30,8 +30,8 @@ func TestVerifyPkceS256(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := verifyPkceS256(test.verifier, test.challenge); got != test.want {
-				t.Errorf("verifyPkceS256(%q, %q) = %v, want %v", test.verifier, test.challenge, got, test.want)
+			if got := VerifyPkceS256(test.verifier, test.challenge); got != test.want {
+				t.Errorf("VerifyPkceS256(%q, %q) = %v, want %v", test.verifier, test.challenge, got, test.want)
 			}
 		})
 	}

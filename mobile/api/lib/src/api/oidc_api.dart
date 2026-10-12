@@ -26,7 +26,7 @@ class OidcApi {
   const OidcApi(this._dio, this._serializers);
 
   /// Disconnect a provider from the caller&#39;s account
-  /// Refused when it is the caller&#39;s last connection and the account was created by that provider, because such an account has no password to fall back on.
+  /// Refused when it is the caller&#39;s last connection and the account was created by that provider, because such an account has no password to fall back on.  Like connecting one, this needs an interactive session and is refused to an API key. Which identity providers may sign into an account is for that account&#39;s own session to decide.
   ///
   /// Parameters:
   /// * [name] - The provider's slug
@@ -57,11 +57,6 @@ class OidcApi {
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {
-            'type': 'apiKey',
-            'name': 'apiKeyAuth',
-            'keyName': 'Authorization',
-            'where': 'header',
-          },{
             'type': 'http',
             'scheme': 'bearer',
             'name': 'bearerAuth',
@@ -374,7 +369,7 @@ class OidcApi {
   }
 
   /// Connect a provider to the signed-in account
-  /// Starts the same flow as a login, but the session proves who the caller is, so the callback links the identity directly instead of matching or provisioning. Requires app.account.update, the same permission as disconnecting one.  A browser navigates to this URL and is redirected (302) to the identity provider. A native client passes client&#x3D;mobile and gets a launch URL as JSON instead, because it authenticates with a bearer token and the external user agent it must use cannot carry one. It opens that launch URL in the external browser, which is what actually starts the flow - and what receives the binding cookie the callback checks. The app then waits on its private-use scheme, which the callback returns to with ?linked&#x3D;{name} or ?error&#x3D;{code}.
+  /// Starts the same flow as a login, but the session proves who the caller is, so the callback links the identity directly instead of matching or provisioning. Requires app.account.update, the same permission as disconnecting one.  A browser navigates to this URL and is redirected (302) to the identity provider. A native client passes client&#x3D;mobile and gets a launch URL as JSON instead, because it authenticates with a bearer token and the external user agent it must use cannot carry one. It opens that launch URL in the external browser, which is what actually starts the flow - and what receives the binding cookie the callback checks. The app then waits on its private-use scheme, which the callback returns to with ?linked&#x3D;{name} or ?error&#x3D;{code}.  An API key cannot start a link, whatever its scope - this needs an interactive session. Connecting a provider adds a permanent way to sign in, so a key that could do it would be able to mint a credential wider and longer-lived than itself, and one that outlives revoking it.
   ///
   /// Parameters:
   /// * [name] - The provider's slug
@@ -407,11 +402,6 @@ class OidcApi {
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {
-            'type': 'apiKey',
-            'name': 'apiKeyAuth',
-            'keyName': 'Authorization',
-            'where': 'header',
-          },{
             'type': 'http',
             'scheme': 'bearer',
             'name': 'bearerAuth',

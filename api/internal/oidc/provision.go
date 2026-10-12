@@ -209,20 +209,38 @@ func provisionUser(provider models.OidcProvider, claims idTokenClaims) (structs.
 		displayName = username
 	}
 
-	created, err := repositories.NewUserRepository(nil).CreateUser(commands.SignUpCommand{
-		Username:    username,
-		Password:    password,
-		DisplayName: displayName,
-		IsDummyUser: false,
-		// Nil so the account picks up the configured default app role, exactly as a
-		// local sign-up does. A provisioned user is deliberately never an admin.
-		AppRoleID: nil,
-	})
-	if err != nil {
-		return structs.UserView{}, err
-	}
+	// ONE transaction, and the reason is not merely tidiness: an account created
+	// without its link row is unreachable FOREVER. deriveUsername is deterministic,
+	// so the next login for this subject derives the same name, GetUserByUsername
+	// finds the orphan, and provisionUser refuses with ErrAccountExists -- which
+	// cannot tell an orphan apart from a real local account of that name, and must
+	// not try. The identity insert is far from unfailable: two first logins for one
+	// subject (two tabs, a double-tapped button) race on the
+	// (oidc_provider_id, subject) unique index, and the loser lands here.
+	//
+	// CreateUser opens its own db.Transaction off repository.GetDB(), which is this
+	// tx, so GORM nests it as a SAVEPOINT -- the same nesting
+	// UpdateGroupReceiptSettings relies on.
+	var created models.User
 
-	err = createIdentity(provider, created.ID, claims, true)
+	err = repositories.GetDB().Transaction(func(tx *gorm.DB) error {
+		var txErr error
+
+		created, txErr = repositories.NewUserRepository(tx).CreateUser(commands.SignUpCommand{
+			Username:    username,
+			Password:    password,
+			DisplayName: displayName,
+			IsDummyUser: false,
+			// Nil so the account picks up the configured default app role, exactly as a
+			// local sign-up does. A provisioned user is deliberately never an admin.
+			AppRoleID: nil,
+		})
+		if txErr != nil {
+			return txErr
+		}
+
+		return createIdentityTx(tx, provider, created.ID, claims, true)
+	})
 	if err != nil {
 		return structs.UserView{}, err
 	}
@@ -237,7 +255,17 @@ func provisionUser(provider models.OidcProvider, claims idTokenClaims) (structs.
 	}, nil
 }
 
+// createIdentity writes the link row on its own connection. Every caller but one
+// writes exactly this single row, so there is nothing for a transaction to hold
+// together.
 func createIdentity(provider models.OidcProvider, userId uint, claims idTokenClaims, provisioned bool) error {
+	return createIdentityTx(nil, provider, userId, claims, provisioned)
+}
+
+// createIdentityTx is the same write on a caller's transaction, for the one
+// caller -- provisionUser -- whose user row must not be able to survive a failed
+// link.
+func createIdentityTx(tx *gorm.DB, provider models.OidcProvider, userId uint, claims idTokenClaims, provisioned bool) error {
 	now := time.Now()
 
 	identity := models.OidcIdentity{
@@ -250,7 +278,7 @@ func createIdentity(provider models.OidcProvider, userId uint, claims idTokenCla
 		LastLoginAt:       &now,
 	}
 
-	return repositories.NewOidcIdentityRepository(nil).CreateIdentity(&identity)
+	return repositories.NewOidcIdentityRepository(tx).CreateIdentity(&identity)
 }
 
 // deriveUsername builds a candidate username from the claims, preferring the

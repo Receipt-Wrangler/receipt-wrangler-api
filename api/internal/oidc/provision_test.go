@@ -616,3 +616,59 @@ func TestUnlinkRepairsALegacyAccountThatPredatesTheInvariant(t *testing.T) {
 		t.Fatalf("expected ErrWouldLockOut on the last identity, got %v", err)
 	}
 }
+
+// TestProvisionLeavesNoOrphanWhenTheIdentityInsertFails is the lockout
+// regression, and it is permanent rather than transient.
+//
+// CreateUser and the link insert used to be two separate statements. Lose the
+// second and the account survives with nothing pointing at it -- and because
+// deriveUsername is deterministic, the very next login for that subject derives
+// the same name, GetUserByUsername finds the orphan, and provisionUser answers
+// ErrAccountExists. Forever: it cannot tell an orphan from a real local account
+// of that name, and must not try, since guessing is how you hand someone else's
+// account to an identity provider.
+//
+// The failure forced here is the realistic one rather than a contrived fault.
+// Two first logins for one subject -- two tabs, a double-tapped button, a retried
+// callback -- race on the (oidc_provider_id, subject) unique index, and the loser
+// lands exactly here, with its user row already written.
+func TestProvisionLeavesNoOrphanWhenTheIdentityInsertFails(t *testing.T) {
+	defer teardownOidcTest()
+	_, provider := setupOidcTest(t, oidcTestOptions{allowProvisioning: true})
+
+	// Stand in for the login that won the race: this subject is already linked.
+	winner := createTestUser(t, "winner")
+	if err := createIdentity(provider, winner.ID, claims("contested-subject", "winner"), true); err != nil {
+		t.Fatalf("failed to seed the winning identity: %v", err)
+	}
+
+	// The loser derives a username of its own, so nothing stops it getting as far
+	// as the identity insert -- which is the point. A collision on the USERNAME
+	// would be refused earlier and prove nothing.
+	_, err := provisionUser(provider, claims("contested-subject", "loser"))
+	if err == nil {
+		t.Fatal("expected the duplicate identity to fail provisioning")
+	}
+
+	var orphans int64
+	if err := repositories.GetDB().
+		Model(&models.User{}).
+		Where("username = ?", "loser").
+		Count(&orphans).Error; err != nil {
+		t.Fatalf("failed to count users: %v", err)
+	}
+
+	if orphans != 0 {
+		t.Errorf("a failed identity insert left %d orphaned account(s) behind", orphans)
+	}
+
+	// And the account is still reachable next time, which is the behaviour the
+	// orphan destroyed: retrying now provisions cleanly.
+	if err := repositories.NewOidcIdentityRepository(nil).DeleteIdentity(1, winner.ID); err != nil {
+		t.Fatalf("failed to clear the winning identity: %v", err)
+	}
+
+	if _, err := provisionUser(provider, claims("contested-subject", "loser")); err != nil {
+		t.Errorf("expected a retry to provision cleanly, got %v", err)
+	}
+}

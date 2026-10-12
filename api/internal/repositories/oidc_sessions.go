@@ -61,6 +61,31 @@ func (repository OidcSessionRepository) ConsumeAuthSession(stateHash string) (mo
 	return session, true, nil
 }
 
+// GetPendingAuthSessionClientType reports which client started a still-pending
+// session, WITHOUT consuming it, so the callback can answer a failure in the
+// shape that client can receive rather than assuming a browser.
+//
+// It reads one column and nothing else, and it is scoped to a LIVE session, so a
+// replayed callback learns nothing about a session that was already spent. A miss
+// of any kind -- unknown, expired, already used -- returns "", which the caller
+// must treat as "assume the default client": the value only ever chooses between
+// two fixed, server-side redirect constants, so an unknown state can degrade but
+// can never point a user agent somewhere new.
+func (repository OidcSessionRepository) GetPendingAuthSessionClientType(stateHash string) (string, error) {
+	var clientTypes []string
+
+	err := repository.GetDB().
+		Model(&models.OidcAuthSession{}).
+		Where("state_hash = ? AND used = ? AND expires_at > ?", stateHash, false, time.Now()).
+		Limit(1).
+		Pluck("client_type", &clientTypes).Error
+	if err != nil || len(clientTypes) == 0 {
+		return "", err
+	}
+
+	return clientTypes[0], nil
+}
+
 func (repository OidcSessionRepository) CreateExchangeCode(code *models.OidcExchangeCode) error {
 	return repository.GetDB().Create(code).Error
 }

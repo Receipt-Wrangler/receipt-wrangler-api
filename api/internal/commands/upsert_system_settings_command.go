@@ -153,10 +153,15 @@ func (command *UpsertSystemSettingsCommand) Validate() structs.ValidatorError {
 	}
 
 	// A nil pointer means the key was omitted, which leaves the stored value alone
-	// and is always valid. An explicit empty string clears it, which is allowed —
-	// it is only required once an OIDC provider is enabled, and that cross-setting
-	// rule is enforced where providers are saved (OidcProviderService), so an admin
-	// cannot save a provider that has no redirect URI to register.
+	// and is always valid. An explicit empty string clears it, which is allowed
+	// HERE: it is only required once an OIDC provider is enabled, and that is a
+	// cross-setting rule a pure validator cannot see.
+	//
+	// That rule is enforced from BOTH directions, and it needs to be. Enabling a
+	// provider without the URL is refused by OidcProviderService; clearing the URL
+	// while one is enabled is refused by handlers.serverPublicUrlStillNeeded. Only
+	// the first existed at first, so the same broken configuration was reachable by
+	// doing the two steps in the other order.
 	if command.ServerPublicUrl != nil {
 		trimmedServerPublicUrl := strings.TrimSpace(*command.ServerPublicUrl)
 		if len(trimmedServerPublicUrl) > 0 && !isValidAbsoluteUrl(trimmedServerPublicUrl) {

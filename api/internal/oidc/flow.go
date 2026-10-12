@@ -88,11 +88,42 @@ func Login(w http.ResponseWriter, r *http.Request) {
 // this route answers with a redirect, not JSON: HandleRequest's 403 would drop a
 // raw error object into a browser the user navigated here. Same shape as
 // GetPagedApiKeys' app.api-keys.read-any check.
+//
+// An API KEY MAY NOT START A LINK, whatever its scope. This is the one gate here
+// that is about the credential rather than the user, and it closes a privilege
+// escalation: the route is a GET, so middleware.classifyRequest reads it as a
+// read and a plain "r" key satisfies the scope gate; Legacy User holds
+// app.account.update, so the permission check below passes too. The holder then
+// opens the returned launch URL (or follows the 302) in their own browser,
+// authenticates at the identity provider as THEMSELVES, and the callback writes
+// that identity against the key owner's account. "Log in with X" afterwards is a
+// full interactive session -- one that survives revoking the key, and that shows
+// up only as an extra Connected Accounts row.
+//
+// There is no existing equivalent to fall back on, which is why this is worth a
+// gate of its own rather than accepting it as inherent to holding a key: a
+// non-admin's key cannot reach ResetPassword (app.users.update, which Legacy User
+// lacks) and UpdateProfileCommand carries no password. A key is a scoped,
+// revocable credential and must not be able to mint an unscoped, unrevocable one.
 func LinkStart(w http.ResponseWriter, r *http.Request) {
 	claims := structs.GetClaims(r)
 	userId := claims.UserId
 
 	clientType := resolveClientType(r)
+
+	// Phrased as "must be an interactive session", never "must not be an API key".
+	// The zero AuthSource is neither, so anything that reaches this handler without
+	// having gone through UnifiedAuthMiddleware is denied rather than waved past.
+	// Checked before the permission read because it is a property of the request,
+	// not of the user, and it costs no query.
+	if claims.AuthSource != structs.AuthSourceJwt {
+		logging.LogStd(
+			logging.LOG_LEVEL_ERROR,
+			"Refused an OIDC link start that was not authenticated by an interactive session",
+		)
+		failFlowStart(w, r, clientType, true, errForbidden)
+		return
+	}
 
 	allowed, err := services.NewPermissionService(nil).HasAppPermissions(userId, permissions.AppAccountUpdate)
 	if err != nil {
@@ -285,9 +316,24 @@ func startFlow(w http.ResponseWriter, r *http.Request, linkUserId *uint, clientT
 func Callback(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
+	state := r.URL.Query().Get("state")
+	code := r.URL.Query().Get("code")
+
+	// Which client is waiting, for the failures below that happen BEFORE a session
+	// is in hand. The identity provider appends only code/state/error to the fixed
+	// redirect URI, so there is no ?client= to read here and the state is the only
+	// thing that can answer it. Anything unknown reads as desktop.
+	//
+	// It matters most for the branch that is not an attack at all: a user who
+	// declines consent. Answered as desktop, a mobile flow lands the external
+	// browser on the web login page while the app sits waiting on its private-use
+	// scheme -- so the one ordinary way to back out is also the one that strands
+	// you.
+	pending := pendingClientType(state)
+
 	providerRow, err := repositories.NewOidcProviderRepository(nil).GetEnabledOidcProviderByName(name)
 	if err != nil {
-		redirectWithError(w, r, models.OidcClientDesktop, errUnknownProvider)
+		redirectWithError(w, r, pending, errUnknownProvider)
 		return
 	}
 
@@ -295,16 +341,13 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 	// session simply expires. Never echo the upstream text.
 	if len(r.URL.Query().Get("error")) > 0 {
 		clearBindingCookie(w, r)
-		redirectWithError(w, r, models.OidcClientDesktop, errProviderError)
+		redirectWithError(w, r, pending, errProviderError)
 		return
 	}
 
-	state := r.URL.Query().Get("state")
-	code := r.URL.Query().Get("code")
-
 	if len(state) == 0 || len(code) == 0 {
 		clearBindingCookie(w, r)
-		redirectWithError(w, r, models.OidcClientDesktop, errInvalidRequest)
+		redirectWithError(w, r, pending, errInvalidRequest)
 		return
 	}
 
@@ -320,17 +363,18 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Unlike the branches above, this one cannot do better than the default: a
+	// session that was already spent, expired or never existed is precisely what
+	// pendingClientType can report nothing about.
 	if !claimed {
 		redirectWithError(w, r, models.OidcClientDesktop, errInvalidState)
 		return
 	}
 
-	clientType := session.ClientType
-
 	// 3. The state must belong to THIS provider. Otherwise a state minted for a
 	// permissive provider could be redeemed at a stricter one's callback.
 	if session.OidcProviderId != providerRow.ID {
-		redirectWithError(w, r, clientType, errInvalidState)
+		failCallback(w, r, session, errInvalidState)
 		return
 	}
 
@@ -347,28 +391,28 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 	// any more, so an empty hash is a bug rather than a mode, and it must fail
 	// closed here rather than wave the callback through.
 	if !bindingMatches(r, session.BindingHash) {
-		redirectWithError(w, r, clientType, errInvalidState)
+		failCallback(w, r, session, errInvalidState)
 		return
 	}
 
 	verifier, err := decryptVerifier(session)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to decrypt OIDC code verifier: "+err.Error())
-		redirectWithError(w, r, clientType, errServerError)
+		failCallback(w, r, session, errServerError)
 		return
 	}
 
 	discovered, err := GetProvider(providerRow)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "OIDC discovery failed on callback: "+err.Error())
-		redirectWithError(w, r, clientType, errProviderError)
+		failCallback(w, r, session, errProviderError)
 		return
 	}
 
 	config, err := buildOauthConfig(providerRow, discovered, services.BuildOidcRedirectUri(providerRow.Name))
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to build OIDC config on callback: "+err.Error())
-		redirectWithError(w, r, clientType, errServerError)
+		failCallback(w, r, session, errServerError)
 		return
 	}
 
@@ -380,7 +424,7 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 	token, err := config.Exchange(ctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "OIDC code exchange failed: "+err.Error())
-		redirectWithError(w, r, clientType, errProviderError)
+		failCallback(w, r, session, errProviderError)
 		return
 	}
 
@@ -389,7 +433,7 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 	// userinfo, which is not signed.
 	rawIdToken, ok := token.Extra("id_token").(string)
 	if !ok || len(rawIdToken) == 0 {
-		redirectWithError(w, r, clientType, errNoIdToken)
+		failCallback(w, r, session, errNoIdToken)
 		return
 	}
 
@@ -397,7 +441,7 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 	idToken, err := discovered.Verifier(&oidc.Config{ClientID: providerRow.ClientId}).Verify(ctx, rawIdToken)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "OIDC ID token verification failed: "+err.Error())
-		redirectWithError(w, r, clientType, errProviderError)
+		failCallback(w, r, session, errProviderError)
 		return
 	}
 
@@ -406,19 +450,19 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 	// re-opens ID token replay. The empty check matters independently: an empty
 	// nonce hashes to a fixed value, and must never be allowed to match.
 	if len(idToken.Nonce) == 0 || !utils.SecureCompare(hashSecret(idToken.Nonce), session.NonceHash) {
-		redirectWithError(w, r, clientType, errNonceMismatch)
+		failCallback(w, r, session, errNonceMismatch)
 		return
 	}
 
 	claims, err := extractClaims(ctx, discovered, config, token, idToken)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to read OIDC claims: "+err.Error())
-		redirectWithError(w, r, clientType, errProviderError)
+		failCallback(w, r, session, errProviderError)
 		return
 	}
 
 	if len(claims.Subject) == 0 {
-		redirectWithError(w, r, clientType, errProviderError)
+		failCallback(w, r, session, errProviderError)
 		return
 	}
 
@@ -501,6 +545,29 @@ func finishLink(
 	}
 
 	redirectLinkSuccess(w, r, session.ClientType, providerRow.Name)
+}
+
+// failCallback reports a post-consume failure to wherever the flow actually
+// started from.
+//
+// The client type alone is not enough: a desktop LINK and a desktop LOGIN are
+// both "desktop", and sending the link to the login screen is exactly what
+// redirectLinkError exists to prevent -- its caller is already signed in, so a
+// login form reads as "you have been signed out" rather than "that provider
+// could not be connected". Only finishLink used to get this right, leaving every
+// check between the provider match and the nonce compare landing a link on the
+// login page.
+//
+// Both branches target fixed, server-side constants, and session is our own row,
+// consumed atomically a few lines earlier -- so nothing a caller supplies reaches
+// a redirect target here.
+func failCallback(w http.ResponseWriter, r *http.Request, session models.OidcAuthSession, code string) {
+	if session.IsLink() {
+		redirectLinkError(w, r, session.ClientType, code)
+		return
+	}
+
+	redirectWithError(w, r, session.ClientType, code)
 }
 
 // redirectLinkSuccess returns a completed "connect account" flow to wherever it
@@ -650,6 +717,33 @@ func redirectWithError(w http.ResponseWriter, r *http.Request, clientType string
 	}
 
 	http.Redirect(w, r, desktopLoginPath+"?oidcError="+url.QueryEscape(code), http.StatusFound)
+}
+
+// pendingClientType recovers which client is waiting on a flow we have not
+// consumed yet, so a pre-session failure can answer in a shape that client can
+// receive. Anything it cannot establish -- an absent state, an unknown, expired
+// or already-spent one, a failed read -- degrades to desktop.
+//
+// The value chooses between two fixed redirect constants and nothing else, so an
+// attacker who feeds it a state they already hold learns only that it is live.
+// Nothing is consumed, so a failed callback still leaves the real one able to
+// complete.
+func pendingClientType(state string) string {
+	if len(state) == 0 {
+		return models.OidcClientDesktop
+	}
+
+	clientType, err := repositories.NewOidcSessionRepository(nil).GetPendingAuthSessionClientType(hashSecret(state))
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to read a pending OIDC session's client type: "+err.Error())
+		return models.OidcClientDesktop
+	}
+
+	if clientType != models.OidcClientMobile {
+		return models.OidcClientDesktop
+	}
+
+	return models.OidcClientMobile
 }
 
 func buildBindingCookie(value string) *http.Cookie {

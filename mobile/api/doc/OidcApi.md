@@ -23,15 +23,11 @@ Method | HTTP request | Description
 
 Disconnect a provider from the caller's account
 
-Refused when it is the caller's last connection and the account was created by that provider, because such an account has no password to fall back on.
+Refused when it is the caller's last connection and the account was created by that provider, because such an account has no password to fall back on.  Like connecting one, this needs an interactive session and is refused to an API key. Which identity providers may sign into an account is for that account's own session to decide.
 
 ### Example
 ```dart
 import 'package:openapi/api.dart';
-// TODO Configure API key authorization: apiKeyAuth
-//defaultApiClient.getAuthentication<ApiKeyAuth>('apiKeyAuth').apiKey = 'YOUR_API_KEY';
-// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-//defaultApiClient.getAuthentication<ApiKeyAuth>('apiKeyAuth').apiKeyPrefix = 'Bearer';
 
 final api = Openapi().getOidcApi();
 final String name = name_example; // String | The provider's slug
@@ -55,7 +51,7 @@ void (empty response body)
 
 ### Authorization
 
-[apiKeyAuth](../README.md#apiKeyAuth), [bearerAuth](../README.md#bearerAuth)
+[bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 
@@ -243,15 +239,11 @@ No authorization required
 
 Connect a provider to the signed-in account
 
-Starts the same flow as a login, but the session proves who the caller is, so the callback links the identity directly instead of matching or provisioning. Requires app.account.update, the same permission as disconnecting one.  A browser navigates to this URL and is redirected (302) to the identity provider. A native client passes client=mobile and gets a launch URL as JSON instead, because it authenticates with a bearer token and the external user agent it must use cannot carry one. It opens that launch URL in the external browser, which is what actually starts the flow - and what receives the binding cookie the callback checks. The app then waits on its private-use scheme, which the callback returns to with ?linked={name} or ?error={code}.
+Starts the same flow as a login, but the session proves who the caller is, so the callback links the identity directly instead of matching or provisioning. Requires app.account.update, the same permission as disconnecting one.  A browser navigates to this URL and is redirected (302) to the identity provider. A native client passes client=mobile and gets a launch URL as JSON instead, because it authenticates with a bearer token and the external user agent it must use cannot carry one. It opens that launch URL in the external browser, which is what actually starts the flow - and what receives the binding cookie the callback checks. The app then waits on its private-use scheme, which the callback returns to with ?linked={name} or ?error={code}.  An API key cannot start a link, whatever its scope - this needs an interactive session. Connecting a provider adds a permanent way to sign in, so a key that could do it would be able to mint a credential wider and longer-lived than itself, and one that outlives revoking it.
 
 ### Example
 ```dart
 import 'package:openapi/api.dart';
-// TODO Configure API key authorization: apiKeyAuth
-//defaultApiClient.getAuthentication<ApiKeyAuth>('apiKeyAuth').apiKey = 'YOUR_API_KEY';
-// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-//defaultApiClient.getAuthentication<ApiKeyAuth>('apiKeyAuth').apiKeyPrefix = 'Bearer';
 
 final api = Openapi().getOidcApi();
 final String name = name_example; // String | The provider's slug
@@ -278,7 +270,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-[apiKeyAuth](../README.md#apiKeyAuth), [bearerAuth](../README.md#bearerAuth)
+[bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 

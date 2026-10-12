@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/constants"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 
@@ -108,6 +109,72 @@ func nonceFromAuthUrl(t *testing.T, recorder *httptest.ResponseRecorder) string 
 	}
 
 	return location.Query().Get("nonce")
+}
+
+// TestCallbackIdpErrorReturnsToTheClientThatStartedTheFlow covers the one
+// callback failure that is not an attack: the user declined consent.
+//
+// Nothing has been consumed at that point, so the handler has no session to read
+// the client type from -- and the identity provider appends only code/state/error
+// to the fixed redirect URI, so there is no ?client= either. Answered as desktop,
+// a mobile flow lands the external browser on the web login page while the app
+// waits on its private-use scheme, which means the ordinary way to back out is
+// also the one that strands you. The pending state is the only thing that can say
+// who is waiting, and reading it consumes nothing.
+func TestCallbackIdpErrorReturnsToTheClientThatStartedTheFlow(t *testing.T) {
+	defer teardownOidcTest()
+	_, provider := setupOidcTest(t, oidcTestOptions{})
+
+	for _, testCase := range []struct {
+		name        string
+		loginQuery  string
+		wantsPrefix string
+	}{
+		{name: "mobile", loginQuery: "client=mobile&codeChallenge=" + challengeFor("verifier-for-the-mobile-app-1234567890"), wantsPrefix: mobileCallbackScheme},
+		{name: "desktop", loginQuery: "", wantsPrefix: desktopLoginPath},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			state, cookies := loginAndExtract(t, provider, testCase.loginQuery)
+
+			recorder := runCallback(t, provider.Name, url.Values{
+				"state": {state},
+				"error": {"access_denied"},
+			}, cookies)
+
+			location := recorder.Header().Get("Location")
+			if !strings.HasPrefix(location, testCase.wantsPrefix) {
+				t.Errorf("expected a return to %s, got %s", testCase.wantsPrefix, location)
+			}
+
+			if code := oidcErrorCode(t, recorder); code != errProviderError {
+				t.Errorf("expected the %q error code, got %q", errProviderError, code)
+			}
+
+			// The upstream text is never echoed -- "access_denied" is the identity
+			// provider's wording and must not reach the client.
+			if strings.Contains(location, "access_denied") {
+				t.Errorf("the identity provider's own error text leaked into %s", location)
+			}
+		})
+	}
+}
+
+// TestCallbackIdpErrorWithAnUnknownStateFallsBackToDesktop pins the degradation.
+// pendingClientType chooses between two fixed server-side constants and nothing
+// else, so a state it cannot resolve must land on the default rather than
+// anywhere a caller could influence.
+func TestCallbackIdpErrorWithAnUnknownStateFallsBackToDesktop(t *testing.T) {
+	defer teardownOidcTest()
+	_, provider := setupOidcTest(t, oidcTestOptions{})
+
+	recorder := runCallback(t, provider.Name, url.Values{
+		"state": {"a-state-that-was-never-minted"},
+		"error": {"access_denied"},
+	}, nil)
+
+	if location := recorder.Header().Get("Location"); !strings.HasPrefix(location, desktopLoginPath) {
+		t.Errorf("expected the desktop default, got %s", location)
+	}
 }
 
 func TestLoginRedirectsWithStateNonceAndPkce(t *testing.T) {
@@ -563,7 +630,11 @@ func TestCallbackMobileReturnsCodeNotTokens(t *testing.T) {
 	// Asserted against the TOKEN cookies rather than against any cookie at all:
 	// the mobile leg is now bound like every other one, so the callback
 	// legitimately emits the expiry that retires the binding cookie.
-	for _, name := range []string{"jwt", "refreshToken"} {
+	//
+	// Named through the constants rather than as literals. The refresh cookie is
+	// "refresh_token"; spelled "refreshToken" this half of the assertion passed
+	// whether or not the callback set it, which is the one thing it exists to deny.
+	for _, name := range []string{constants.JwtKey, constants.RefreshTokenKey} {
 		if findCookie(recorder.Result().Cookies(), name) != nil {
 			t.Errorf("the mobile leg must not set the %s cookie", name)
 		}

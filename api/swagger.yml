@@ -3493,6 +3493,12 @@ paths:
         browser, which is what actually starts the flow - and what receives the
         binding cookie the callback checks. The app then waits on its private-use
         scheme, which the callback returns to with ?linked={name} or ?error={code}.
+
+
+        An API key cannot start a link, whatever its scope - this needs an
+        interactive session. Connecting a provider adds a permanent way to sign in,
+        so a key that could do it would be able to mint a credential wider and
+        longer-lived than itself, and one that outlives revoking it.
       operationId: oidcLinkStart
       parameters:
         - name: name
@@ -3532,7 +3538,6 @@ paths:
           $ref: "#/components/responses/OidcFlowError"
       security:
         - bearerAuth: [ ]
-        - apiKeyAuth: [ ]
   /oidc/link/{name}/launch:
     get:
       tags:
@@ -3600,6 +3605,11 @@ paths:
       description:
         Refused when it is the caller's last connection and the account was created by
         that provider, because such an account has no password to fall back on.
+
+
+        Like connecting one, this needs an interactive session and is refused to an
+        API key. Which identity providers may sign into an account is for that
+        account's own session to decide.
       operationId: deleteOidcConnection
       parameters:
         - name: name
@@ -3621,7 +3631,6 @@ paths:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
-        - apiKeyAuth: [ ]
   /oidcProvider/:
     post:
       tags:

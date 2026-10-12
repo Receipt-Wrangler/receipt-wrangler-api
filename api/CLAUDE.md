@@ -1232,6 +1232,16 @@ including plain GETs, from a goroutine in the same function — it is authentica
 the caller's operation, so a read-only key must still stamp its own last use. Phrasing the predicate
 as "does this request write anything" gets that backwards.
 
+**Scope is not the only thing a credential decides.** Some operations are ordinary for a signed-in
+human and an escalation for a key, whatever its scope, so `UnifiedAuthMiddleware` also stamps
+**`structs.Claims.AuthSource`** (`AuthSourceJwt` / `AuthSourceApiKey`) — it is the only thing that
+knows which branch ran, and the only writer. Today's one consumer is the OIDC link pair; see "OIDC
+(OpenID Connect) login" → "Linking an existing account" for the escalation it closes. Three rules
+travel with it: the field is **`json:"-"`**, so it cannot ride on a token, be set by whoever minted
+one, or be inherited by a legacy one; a check is written as **"require `AuthSourceJwt`"**, never
+"reject `AuthSourceApiKey`", so the zero value denies rather than slips through; and it is **not**
+inferred from `ApiKeyScope` being non-empty, which happens to hold, is serialized, and fails open.
+
 **Out of scope by construction:** login, logout, token-refresh and signup never mount this
 middleware, so an API key cannot reach them; MCP authenticates an audience-bound bearer token rather
 than an API key.
@@ -1249,6 +1259,9 @@ including fail-closed on an unknown scope — the invalid set carries the substr
 read, and a JWT caller being unaffected.
 `TestUnifiedAuthMiddleware_ApiKeyScopes` used to assert a `w` key succeeding on a **GET** — it
 documented the gap, and its name is a large part of why the gap survived review.
+`middleware/auth_source_test.go` covers the marker: both JWT shapes (header and cookie) and every
+key scope, plus `TestAuthSourceNeverRidesOnAToken`, which signs a JWT that *claims* to be an API key
+and asserts the request is still read as the session it is.
 
 **Per-create role assignment (done):** a new account (signup or admin-create) is assigned the
 default app role, and a group's creator is assigned the default group role, via the default-role
@@ -1395,6 +1408,18 @@ re-point an existing account. `Subject` is capped at 255 so the composite index 
 one IdP the collision is almost always the same person who has not linked yet. Uniqueness is normally
 enforced by `middleware.ValidateUserData`, which this path does not go through.
 
+**The account and its link row are written in ONE transaction**, and the failure mode is why.
+`CreateUser` and the identity insert used to be separate statements, so losing the second left an
+account with nothing pointing at it — and `deriveUsername` is deterministic, so the next login for
+that subject derives the same name, `GetUserByUsername` finds the orphan, and `provisionUser`
+answers `ErrAccountExists`. Permanently: it cannot tell an orphan from a real local account of that
+name, and must not try. The identity insert is far from unfailable — two first logins for one
+subject (two tabs, a double-tapped button, a retried callback) race on the
+`(oidc_provider_id, subject)` unique index, and the loser lands exactly there. `CreateUser` opens
+its own `db.Transaction` off `repository.GetDB()`, which is the injected tx, so GORM nests it as a
+**savepoint**. Guarded by `TestProvisionLeavesNoOrphanWhenTheIdentityInsertFails`, whose second
+assertion reproduces the lockout itself.
+
 **A provisioned account's password is real randomness, generated and discarded.**
 `UserRepository.CreateUser` bcrypts whatever it is handed, so a sentinel such as `"!oidc"` would
 become a *working* password for anyone who knew it — through the normal login form and through the
@@ -1422,6 +1447,20 @@ MCP OAuth login form, which shares `services.LoginUser`. Guarded by
 7. `Verify` (signature via JWKS, `iss`, `aud`, `exp`).
 8. **Compare the nonce ourselves.** go-oidc documents that `Verify` does *not* validate it. An empty
    nonce is rejected before the compare, because it hashes to a fixed value and must never match.
+
+**A failure returns to where the flow started, which is not the same as "to the right client".**
+After the session is consumed, `failCallback` routes by `session.IsLink()` — a link's caller is
+already signed in, so the login screen reads as "you have been signed out" rather than "that
+provider could not be connected" (the rule `redirectLinkError`'s own comment states). Only
+`finishLink` honored it at first, leaving every check between the provider match and the nonce
+compare bouncing a signed-in user to a login form; a desktop LINK and a desktop LOGIN are both
+"desktop", so the client type alone cannot tell them apart. **Before** the consume there is no
+session to read, and the identity provider appends only `code`/`state`/`error` to the fixed
+redirect URI, so `pendingClientType(state)` recovers the client type from the pending row —
+read-only, scoped to a LIVE session, one column, and anything unknown degrades to desktop. It
+matters for the branch that is not an attack at all: a user who declines consent. Answered as
+desktop, a mobile flow strands the app waiting on its private-use scheme while the external browser
+sits on the web login page.
 
 **Redirect targets are fixed server-side constants.** No `redirect_uri` or `returnUrl` is ever taken
 from the request — that is the open-redirect hole this design does not have.
@@ -1480,6 +1519,31 @@ still add one, which is not a coherent thing to be able to configure. The check 
 body rather than on a `structs.Handler` because this route answers with a redirect — `HandleRequest`'s
 403 would drop a raw error object into a browser the user navigated here. Same shape as
 `GetPagedApiKeys`' `app.api-keys.read-any` check.
+
+**Neither linking nor unlinking may be done with an API KEY** — both require an interactive
+session (`structs.Claims.AuthSource == AuthSourceJwt`, stamped per request by
+`UnifiedAuthMiddleware`). This is a privilege escalation, not a tidiness rule. `GET
+/oidc/link/{name}` is a GET, so `middleware.classifyRequest` reads it as a read and the weakest
+possible key — scope `r` — clears the scope gate; Legacy User holds `app.account.update`, so the
+permission check clears too. From there the holder opens the launch URL (or follows the 302) in
+their **own** browser, authenticates at the identity provider as themselves, and the callback
+writes that identity against the key owner's account. "Log in with X" afterwards is a full
+interactive session — one that survives revoking the key, and that surfaces only as an extra
+Connected Accounts row. There is no pre-existing equivalent to shrug it off against: a non-admin's
+key cannot reach `ResetPassword` (`app.users.update`, which Legacy User lacks) and
+`UpdateProfileCommand` carries no password, so this would be the **first** route from a scoped,
+revocable credential to an unscoped, unrevocable one. `DELETE /oidc/connections/{name}` carries the
+same rule for the reason it already carries the same permission.
+
+**The check is phrased as a REQUIREMENT, never as a rejection**, and `Claims.AuthSource` is
+`json:"-"`. Both matter. `AuthSource`'s zero value is neither source, so "require `AuthSourceJwt`"
+denies anything that reached a handler without passing through `UnifiedAuthMiddleware`, while
+"reject `AuthSourceApiKey`" would wave it through. And a serialized field would be settable by
+whoever minted the token and inheritable by any legacy one — "how did THIS request arrive" is not a
+property of a token at all. Do **not** infer the same thing from `ApiKeyScope` being non-empty:
+it happens to hold today, it *is* serialized, and the inference fails open. `swagger.yml` drops
+`apiKeyAuth` from both operations; `GET /oidc/connections` deliberately keeps it, since listing the
+caller's own providers is what a read key is for.
 
 **A mobile link start answers with JSON, not a 302** — `GET /oidc/link/{name}?client=mobile` returns
 `structs.OidcLinkStartView{launchUrl}`. This is not a stylistic split: the app authenticates with a
@@ -1562,6 +1626,19 @@ lifetimes) builds each provider's redirect URI, `{serverPublicUrl}/api/oidc/{nam
 read-only on the provider form. It is kept **separate from `mcpPublicUrl`** so an OIDC deployment
 tweak cannot invalidate live MCP connector tokens.
 
+**That dependency is enforced from BOTH directions, and it has to be.**
+`OidcProviderService.validateCrossSettingRules` refuses to *enable* a provider with no
+`serverPublicUrl`; `handlers.serverPublicUrlStillNeeded` refuses to *clear* it while any enabled
+provider exists (a 400 under `serverPublicUrl`, reusing `services.ErrServerPublicUrlRequired`). Only
+the first existed at first, so the same broken configuration was reachable by doing the two steps in
+the other order — and the result is invisible from here: `GetServerPublicUrl` falls back to
+`http://localhost:8081`, every provider starts sending a `redirect_uri` nobody registered, and the
+rejection happens at the identity provider. The check lives in the **handler**: there is no system
+settings service, and the repository cannot import `services`. It triggers on a blank value only —
+the same `len(TrimSpace(...)) > 0` test `IsServerPublicUrlConfigured` applies, so the two halves
+cannot disagree about what "configured" means — leaving a *change* allowed (a deployment moves) and
+an omitted key untouched.
+
 `UpdateOidcProvider` uses the **map form** of `Updates`: GORM's struct form skips zero values, so
 turning `allowProvisioning` / `linkByUsername` / `enabled` **off** would be silently ignored — and
 each is a security toggle. For the same reason `OidcProvider.Enabled` carries **no `default:true`
@@ -1599,10 +1676,13 @@ because go-oidc solves that internally with an unexported `stringAsBool`.
 (`fake_idp_test.go`: an `httptest` server serving discovery, a JWKS, and genuinely RS256-signed ID
 tokens via `golang-jwt`, already a dependency), so go-oidc is exercised rather than stubbed. Cases:
 replayed / expired / cross-provider state, missing and foreign binding cookie, nonce mismatch, absent
-nonce, missing `id_token`, a signature from a key not in the JWKS, a foreign audience, and both happy
-paths. Plus `provision_test.go` (the resolution matrix, `TestSecondLoginUsesSubjectNotUsername`,
+nonce, missing `id_token`, a signature from a key not in the JWKS, a foreign audience, both happy
+paths, and the IdP-error branch returning to the client that started the flow (with an unknown state
+degrading to desktop). Plus `provision_test.go` (the resolution matrix, `TestSecondLoginUsesSubjectNotUsername`,
 `TestProvisionedPasswordIsUnusable`, `TestUsernameMatchesClaim` and
-`TestLinkByUsernameRequiresAnExactUsernameMatch`), `link_test.go` (the `app.account.update` gate, the
+`TestLinkByUsernameRequiresAnExactUsernameMatch`), `link_test.go` (the `app.account.update` gate, the API-key
+refusal across all three scopes plus the unmarked-claims case, every callback failure landing a link
+on the profile rather than the login page — with a login as the contrast — the
 mobile JSON start and its denial/unknown-provider shapes, the `codeChallenge` split between login and
 link, and the callback returning to the app's scheme), `exchange_test.go`, `store_test.go` (atomic
 consume under 20 concurrent callers), `provider_cache_test.go`, `claims_test.go`. Elsewhere:

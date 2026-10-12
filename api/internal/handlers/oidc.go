@@ -94,6 +94,17 @@ func DeleteOidcConnection(w http.ResponseWriter, r *http.Request) {
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetClaims(r)
 
+			// Managing which identity providers can sign into an account is for the
+			// account's own session, not for a key it issued. oidc.LinkStart refuses an
+			// API key because adding a sign-in method escalates a scoped credential into
+			// a permanent one; this endpoint carries the same permission for the stated
+			// reason that removing one is no less privileged than adding it, so it
+			// carries the same rule. Required-to-be-a-session, not
+			// refused-if-a-key, so an unmarked caller is denied too.
+			if token.AuthSource != structs.AuthSourceJwt {
+				return http.StatusForbidden, errors.New("an OIDC connection may only be removed by an interactive session")
+			}
+
 			err := oidc.UnlinkIdentity(token.UserId, chi.URLParam(r, "name"))
 			if err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {

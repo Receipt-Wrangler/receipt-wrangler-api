@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/utils"
 	"time"
 )
 
 // createClient persists a dynamically registered OAuth client and returns it.
 func createClient(clientName string, redirectUris []string) (models.OAuthClient, error) {
-	clientId, err := randomToken(24)
+	clientId, err := utils.GetRandomUrlSafeString(24)
 	if err != nil {
 		return models.OAuthClient{}, err
 	}
@@ -70,7 +71,7 @@ func createAuthorizationCode(
 	scope string,
 	resource string,
 ) (string, error) {
-	code, err := randomToken(32)
+	code, err := utils.GetRandomUrlSafeString(32)
 	if err != nil {
 		return "", err
 	}

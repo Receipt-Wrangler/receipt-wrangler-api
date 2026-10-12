@@ -59,7 +59,7 @@ func handleAuthorizationCodeGrant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !verifyPkceS256(codeVerifier, authCode.CodeChallenge) {
+	if !utils.VerifyPkceS256(codeVerifier, authCode.CodeChallenge) {
 		writeOAuthError(w, http.StatusBadRequest, "invalid_grant", "PKCE verification failed")
 		return
 	}

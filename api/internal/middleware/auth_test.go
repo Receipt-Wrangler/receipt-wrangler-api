@@ -346,7 +346,15 @@ func TestUnifiedAuthMiddleware_MalformedAuthHeader(t *testing.T) {
 	}
 }
 
-// Test API Key with Different Scopes
+// TestUnifiedAuthMiddleware_ApiKeyScopes asserts the scope is ENFORCED, not
+// merely carried.
+//
+// It used to give a "w" key a GET and expect 200, and a "rw" key a GET and expect
+// 200 — i.e. it documented the vulnerability rather than a rule, because at the
+// time nothing read the scope and every key behaved identically. Its name reads
+// like enforcement coverage, which is a large part of why the gap survived
+// review. The full matrix lives in api_key_scope_test.go; this keeps the
+// headline case where it will be looked for.
 func TestUnifiedAuthMiddleware_ApiKeyScopes(t *testing.T) {
 	t.Setenv("ENCRYPTION_KEY", "test-key")
 	defer teardownAuthTest()
@@ -354,38 +362,43 @@ func TestUnifiedAuthMiddleware_ApiKeyScopes(t *testing.T) {
 
 	user := createTestUser()
 
-	// Test with 'write' scope
 	_, writeKey, err := createTestApiKey(user.ID, "w")
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
 	}
 
-	r := httptest.NewRequest(http.MethodGet, "/api/test", nil)
-	r.Header.Set("Authorization", writeKey)
-	w := httptest.NewRecorder()
-
-	handler := UnifiedAuthMiddleware(createFakeHandler())
-	handler.ServeHTTP(w, r)
-
-	if w.Result().StatusCode != http.StatusOK {
-		utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+	// A write-only key may write.
+	if status := scopeRequest(t, writeKey, http.MethodPost, "/api/receipt/"); status != http.StatusOK {
+		utils.PrintTestError(t, status, http.StatusOK)
 	}
 
-	// Test with 'admin' scope
-	_, adminKey, err := createTestApiKey(user.ID, "rw")
+	// And may NOT read. This is the assertion that used to be inverted.
+	if status := scopeRequest(t, writeKey, http.MethodGet, "/api/receipt/1"); status != http.StatusForbidden {
+		utils.PrintTestError(t, status, http.StatusForbidden)
+	}
+
+	_, readWriteKey, err := createTestApiKey(user.ID, "rw")
 	if err != nil {
 		utils.PrintTestError(t, err, "no error")
 	}
 
-	r2 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
-	r2.Header.Set("Authorization", adminKey)
-	w2 := httptest.NewRecorder()
+	// A read/write key may do both.
+	if status := scopeRequest(t, readWriteKey, http.MethodGet, "/api/receipt/1"); status != http.StatusOK {
+		utils.PrintTestError(t, status, http.StatusOK)
+	}
 
-	handler2 := UnifiedAuthMiddleware(createFakeHandler())
-	handler2.ServeHTTP(w2, r2)
+	if status := scopeRequest(t, readWriteKey, http.MethodPost, "/api/receipt/"); status != http.StatusOK {
+		utils.PrintTestError(t, status, http.StatusOK)
+	}
 
-	if w2.Result().StatusCode != http.StatusOK {
-		utils.PrintTestError(t, w2.Result().StatusCode, http.StatusOK)
+	_, readKey, err := createTestApiKey(user.ID, "r")
+	if err != nil {
+		utils.PrintTestError(t, err, "no error")
+	}
+
+	// A read-only key may not write — the finding itself.
+	if status := scopeRequest(t, readKey, http.MethodDelete, "/api/receipt/1"); status != http.StatusForbidden {
+		utils.PrintTestError(t, status, http.StatusForbidden)
 	}
 }
 

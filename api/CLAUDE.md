@@ -1170,6 +1170,71 @@ desktop receipt form sources its pickers from there.
 `commands/paged_api_key_request_command.go` was removed. Legacy Admin auto-includes the new permission
 (its set is every app permission); Legacy User does not.
 
+### API key scopes
+
+An API key carries a scope — `r`, `w` or `rw` — and it is **enforced in
+`middleware.UnifiedAuthMiddleware`**, the one place a key becomes `structs.Claims`. The scopes are
+**literal**: `r` denies writes, `w` denies reads, `rw` allows both.
+
+It was not enforced anywhere until this change. The value was stored on the key, copied into the
+claims, and validated for well-formedness — and then read by nothing. Both `IsValid()` calls check
+that the value is one of the three, never that the request is allowed, and `enforcePermissions`
+resolves everything from the caller's user id without consulting it. So a key created as "Read" could
+create, update and delete anything its owner could. That was not a dormant field: the desktop form
+presents a required Read / Write / Read-Write picker and **defaults to Read**, so the most restrictive
+label was the default and it meant nothing.
+
+**The HTTP method decides, with an allowlist.** GET/HEAD/OPTIONS are reads; everything else is a
+write unless the path is on `readOnlyPostPaths` / `readOnlyPostPatterns`
+(`middleware/api_key_scope.go`). This fails closed — a write endpoint added later is denied to an `r`
+key with nobody having to remember — and the opposite mistake, a new read-over-POST wrongly denied,
+surfaces as a broken call rather than a silent hole.
+
+**The allowlist is 23 entries, not a handful.** This API serves that many reads over POST because
+`PagedRequestCommand` and friends read their filter from a JSON body: every paged list, five report
+endpoints, both exports, the pie chart, the receipt summary and `convertToJpg`.
+
+**"Read" means DISCLOSURE to the caller, never "touched a row".** The gate operates on HTTP
+requests, not on queries. `UpdateReceipt` internally reads the receipt, re-resolves permissions and
+merges hidden associations — none of that is a read in this sense, because none of it reaches the
+caller. A `w` key may PUT all day and the server reads whatever it needs to serve it.
+
+**The corollary is the one easy to miss: a write that RETURNS data is a read too.** The method-based
+model takes for granted that a write does not disclose, and that is an assumption rather than a
+guarantee. `POST /api/receipt/{id}/duplicate` and `POST /api/report/template/{id}/duplicate` break
+it — each takes nothing but an id, supplies no content of its own, and answers with the **source's**
+contents. Classified as plain writes, a `w`-only key could read any receipt or template it may
+duplicate simply by duplicating it and reading the answer, which defeats the one thing
+write-without-read exists for. Both are named in `readWritePostPatterns` and classify as
+`classReadWrite`, which only `rw` satisfies. An endpoint that both discloses and changes belongs on
+that list rather than forced into a binary that does not fit it.
+
+**Do not derive read-vs-write from the declared permissions.** It is the obvious shortcut and it
+fails OPEN. Both `checkConnectivity` endpoints persist a `SystemTask` while carrying a `.read`
+permission (`services/ai.go`, `services/system_email.go`), and `app.reports.generate` sits on a pure
+read. `createDefaultPrompt`, `pollGroupEmail` and `rerunActivity` are likewise writes with read-ish
+names.
+
+**`UpdateApiKeyLastUsedDate` must stay outside the gate.** It fires on every API-key request
+including plain GETs, from a goroutine in the same function — it is authentication bookkeeping, not
+the caller's operation, so a read-only key must still stamp its own last use. Phrasing the predicate
+as "does this request write anything" gets that backwards.
+
+**Out of scope by construction:** login, logout, token-refresh and signup never mount this
+middleware, so an API key cannot reach them; MCP authenticates an audience-bound bearer token rather
+than an API key.
+
+This is an **enforcement change with teeth** — an existing `r` key being used for writes starts
+getting 403s. That is the promise finally being kept, but it will break integrations on upgrade.
+
+Tests: `middleware/api_key_scope_test.go` — a table over the whole route inventory × all three
+scopes (expectations stated as an explicit matrix, not derived from the function under test), the
+classifier's near-misses for both pattern lists, the path matcher's near-misses, the literal rule
+including fail-closed on an unknown scope, the last-used stamp surviving on a read, and a JWT caller
+being unaffected.
+`TestUnifiedAuthMiddleware_ApiKeyScopes` used to assert a `w` key succeeding on a **GET** — it
+documented the gap, and its name is a large part of why the gap survived review.
+
 **Per-create role assignment (done):** a new account (signup or admin-create) is assigned the
 default app role, and a group's creator is assigned the default group role, via the default-role
 wiring (see "Default roles" above), so accounts created after the one-time migration are no longer

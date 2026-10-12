@@ -23,7 +23,7 @@ import { InputModule } from '../../input';
 import { PipesModule } from '../../pipes/pipes.module';
 import { AppInitService } from '../../services/app-init.service';
 import { SnackbarService } from '../../services/snackbar.service';
-import { AuthForm } from './auth-form.component';
+import { AuthForm, buildOidcLoginUrl } from './auth-form.component';
 import { AuthState } from '../../store/auth.state';
 import { FeatureConfigState } from '../../store/feature-config.state';
 import { AuthFormUtil } from './auth-form.util';
@@ -56,6 +56,7 @@ describe('AuthForm', () => {
             provide: ActivatedRoute,
             useValue: {
                 data: of(undefined),
+                snapshot: { queryParams: {} },
             },
         },
         provideHttpClient(withInterceptorsFromDi()),
@@ -192,6 +193,85 @@ describe('AuthForm', () => {
       fixture.nativeElement.querySelector('img.login-qr-code')
     ).toBeNull();
   });
+
+  it('renders no OIDC buttons when no providers are configured', () => {
+    expect(
+      fixture.nativeElement.querySelector('.oidc-section')
+    ).toBeNull();
+  });
+
+  it('renders one login button per configured provider', () => {
+    const store = TestBed.inject(Store);
+
+    store.dispatch(
+      new SetFeatureConfig({
+        enableLocalSignUp: false,
+        aiPoweredReceipts: false,
+        oidcProviders: [
+          { name: 'google', displayName: 'Google' },
+          { name: 'keycloak', displayName: 'Keycloak' },
+        ],
+      })
+    );
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.oidc-section app-button');
+    expect(buttons.length).toBe(2);
+    expect(fixture.nativeElement.textContent).toContain('Log in with Google');
+    expect(fixture.nativeElement.textContent).toContain('Log in with Keycloak');
+  });
+
+  // A full-page navigation, not an HttpClient call: the browser has to follow
+  // the redirect chain to the identity provider itself.
+  it('navigates the whole page to the provider login URL', () => {
+    const navigateSpy = jest
+      .spyOn(component as any, 'navigateToUrl')
+      .mockImplementation(() => undefined);
+
+    component.loginWithOidc({ name: 'google', displayName: 'Google' });
+
+    expect(navigateSpy).toHaveBeenCalledWith('/api/oidc/google/login');
+  });
+
+  it('escapes a provider name in the login URL', () => {
+    expect(buildOidcLoginUrl('my provider/../evil')).toBe(
+      '/api/oidc/my%20provider%2F..%2Fevil/login'
+    );
+  });
+
+  it('surfaces an oidcError query param as a snackbar', () => {
+    const snackbarService = TestBed.inject(SnackbarService);
+    const errorSpy = jest.spyOn(snackbarService, 'error').mockImplementation(() => undefined as any);
+    const route = TestBed.inject(ActivatedRoute) as any;
+    route.snapshot.queryParams = { oidcError: 'no_account' };
+
+    const localFixture = TestBed.createComponent(AuthForm);
+    localFixture.detectChanges();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('No Receipt Wrangler account is linked')
+    );
+  });
+
+  it.each(['constructor', 'toString', '__proto__'])(
+    'falls back to the default copy for the inherited key %s',
+    (code) => {
+      const snackbarService = TestBed.inject(SnackbarService);
+      const errorSpy = jest
+        .spyOn(snackbarService, 'error')
+        .mockImplementation(() => undefined as any);
+      const route = TestBed.inject(ActivatedRoute) as any;
+      route.snapshot.queryParams = { oidcError: code };
+
+      const localFixture = TestBed.createComponent(AuthForm);
+      localFixture.detectChanges();
+
+      // A bare lookup resolves these off Object.prototype, and ?? passes the
+      // function straight through -- the user would read the source of
+      // Object() out of a snackbar.
+      expect(errorSpy).toHaveBeenCalledWith('Sign in failed. Please try again.');
+    }
+  );
 
   it('renders the login QR when loginQrUrl is set', async () => {
     (QRCode.toDataURL as jest.Mock).mockResolvedValue(

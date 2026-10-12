@@ -1,0 +1,60 @@
+<app-table-header
+  headerText="OIDC Providers"
+  subtitle="Let users sign in with an external identity provider such as Google, Keycloak or Authentik."
+>
+  <app-add-button
+    *hasAppPermission="Permission.AppOidcProvidersCreate"
+    data-testid="oidc-provider-add"
+    buttonText="Add OIDC Provider"
+    tooltip="Add OIDC Provider"
+    (clicked)="openProviderDialog()"
+  >
+  </app-add-button>
+</app-table-header>
+<div class="table-container">
+  <app-table
+    [columns]="columns"
+    [dataSource]="dataSource()"
+    [displayedColumns]="displayedColumns"
+    [length]="totalCount()"
+    [pageSize]="state()?.pageSize ?? 1"
+    [page]="(state()?.page ?? 1) - 1"
+    [pagination]="true"
+    (pageChange)="updatePageData($event)"
+    (sorted)="sorted({sortState : $event})"
+  ></app-table>
+</div>
+
+<ng-template #displayNameCell let-element="element">
+  <a class="cursor-pointer" (click)="openProviderDialog(element)">{{ element.displayName }}</a>
+</ng-template>
+
+<ng-template #issuerCell let-element="element">
+  {{ element.issuerUrl }}
+</ng-template>
+
+<ng-template #statusCell let-element="element">
+  @if (element.enabled) {
+    <span class="oidc-status oidc-status--on">Enabled</span>
+  } @else {
+    <span class="oidc-status oidc-status--off">Disabled</span>
+  }
+</ng-template>
+
+<ng-template #actionsCell let-element="element">
+  <app-edit-button
+    *hasAppPermission="Permission.AppOidcProvidersUpdate"
+    color="accent"
+    data-testid="oidc-provider-edit"
+    tooltip="Edit OIDC provider"
+    (clicked)="openProviderDialog(element, FormMode.edit)"
+  >
+  </app-edit-button>
+  <app-delete-button
+    *hasAppPermission="Permission.AppOidcProvidersDelete"
+    data-testid="oidc-provider-delete"
+    tooltip="Delete OIDC provider"
+    (clicked)="openDeleteConfirmationDialog(element)"
+  >
+  </app-delete-button>
+</ng-template>

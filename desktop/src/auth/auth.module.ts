@@ -8,10 +8,11 @@ import { InputModule } from "../input/input.module";
 import { PipesModule } from "../pipes/pipes.module";
 import { LoginQrComponent } from "../shared-ui/login-qr/login-qr.component";
 import { AuthRoutingModule } from "./auth-routing.module";
+import { OidcCallbackComponent } from "./oidc-callback/oidc-callback.component";
 import { AuthForm } from "./sign-up/auth-form.component";
 
 @NgModule({
-  declarations: [AuthForm],
+  declarations: [AuthForm, OidcCallbackComponent],
   imports: [
     AuthRoutingModule,
     ButtonModule,

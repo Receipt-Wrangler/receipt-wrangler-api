@@ -1,0 +1,15 @@
+.loading-container {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  justify-content: center;
+}
+
+.loading-gif {
+  width: 120px;
+}
+
+.loading-text {
+  margin-top: 1rem;
+}

@@ -1,0 +1,41 @@
+.oidc-redirect {
+  margin-bottom: 1rem;
+
+  &__label {
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+
+  &__row {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  &__value {
+    background-color: var(--mat-sys-surface-variant, #f1f3f4);
+    border-radius: 0.25rem;
+    flex: 1;
+    overflow-x: auto;
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+  }
+
+  &__hint {
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+}
+
+.oidc-hint {
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  font-size: 0.75rem;
+  margin: -0.5rem 0 1rem 0;
+
+  &--warning {
+    border-left: 3px solid var(--mat-sys-error, #d93025);
+    padding-left: 0.75rem;
+  }
+}

@@ -11,7 +11,7 @@ import { PipesModule } from "src/pipes/pipes.module";
 import { DirectivesModule } from "../../directives";
 import { ApiModule, Permission, UserService } from "../../open-api";
 import { TokenRefreshService } from "../../services";
-import { AuthState, Logout, UserState } from "../../store";
+import { AuthState, FeatureConfigState, Logout, UserState } from "../../store";
 import { SetPermissions } from "../../store/auth.state.actions";
 import { UserProfileComponent } from "./user-profile.component";
 import { DeleteAccountDialogComponent } from "../delete-account-dialog/delete-account-dialog.component";
@@ -29,7 +29,7 @@ describe("UserProfileComponent", () => {
         PipesModule,
         MatDialogModule,
         MatSnackBarModule,
-        NgxsModule.forRoot([AuthState, UserState]),
+        NgxsModule.forRoot([AuthState, FeatureConfigState, UserState]),
         PipesModule,
         ReactiveFormsModule],
     providers: [

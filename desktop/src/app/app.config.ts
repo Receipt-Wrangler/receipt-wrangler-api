@@ -22,6 +22,7 @@ import { ApiKeyTableState } from "../store/api-key-table.state";
 import { AuthState } from "../store/auth.state";
 import { CategoryTableState } from "../store/category-table.state";
 import { CustomFieldTableState } from "../store/custom-field-table.state";
+import { OidcProviderTableState } from "../store/oidc-provider-table.state";
 import { DashboardState } from "../store/dashboard.state";
 import { FeatureConfigState } from "../store/feature-config.state";
 import { GroupTableState } from "../store/group-table.state";
@@ -47,6 +48,7 @@ const ngxsStates = [
   AuthState,
   CategoryTableState,
   CustomFieldTableState,
+  OidcProviderTableState,
   DashboardState,
   FeatureConfigState,
   GroupState,
@@ -72,6 +74,7 @@ const ngxsStorageKeys = [
   "auth",
   "categoryTable",
   "customFieldTable",
+  "oidcProviderTable",
   "dashboards",
   "groupTable",
   "groups",

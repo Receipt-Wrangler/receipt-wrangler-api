@@ -1,0 +1,16 @@
+.oidc-status {
+  border-radius: 1rem;
+  font-size: 0.8125rem;
+  padding: 0.125rem 0.625rem;
+  white-space: nowrap;
+
+  &--on {
+    background-color: var(--mat-sys-secondary-container, #e6f4ea);
+    color: var(--mat-sys-on-secondary-container, #1e4620);
+  }
+
+  &--off {
+    background-color: var(--mat-sys-surface-variant, #eceff1);
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+  }
+}

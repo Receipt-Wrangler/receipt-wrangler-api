@@ -15,6 +15,7 @@ import 'package:receipt_wrangler_mobile/models/permissions_model.dart';
 import 'package:receipt_wrangler_mobile/models/tag_model.dart';
 import 'package:receipt_wrangler_mobile/models/user_model.dart';
 import 'package:receipt_wrangler_mobile/models/user_preferences_model.dart';
+import 'package:receipt_wrangler_mobile/services/oidc_service.dart';
 import 'package:receipt_wrangler_mobile/utils/auth.dart';
 import 'package:receipt_wrangler_mobile/utils/snackbar.dart';
 
@@ -22,7 +23,12 @@ import '../../../models/system_settings_model.dart';
 import '../../../utils/currency.dart';
 
 class AuthForm extends StatefulWidget {
-  const AuthForm({super.key});
+  const AuthForm({super.key, this.signIn});
+
+  /// Injectable for tests: runs the OIDC sign-in and returns the app data.
+  /// Defaults to [signInWithOidc].
+  final Future<api.AppData> Function(
+      {required String basePath, required String providerName})? signIn;
 
   @override
   State<AuthForm> createState() => _Login();
@@ -88,6 +94,101 @@ class _Login extends State<AuthForm> {
             });
   }
 
+  /// Signs in through an external identity provider.
+  ///
+  /// The whole OIDC exchange happens on the server; this only opens the system
+  /// browser and redeems the one-time code that comes back. The response has the
+  /// same shape as a password login with tokensInBody, so it goes through the
+  /// same _onLoginSuccess path.
+  Future<void> loginWithOidc(api.OidcProviderSummary provider) async {
+    // Synchronous re-entrancy guard. isLoading swaps the whole form for a
+    // spinner, which does make the buttons untappable -- but only on the frame
+    // AFTER setState, so two taps inside that window both get here. The second
+    // one's toggleIsLoading() would then flip the form back ON while the first
+    // browser session is still open, leaving it tappable again and starting a
+    // second authenticate() the package documents no behaviour for. Same shape
+    // as the guard in receipts/nav/receipt_bottom_sheet_builder.dart.
+    if (isLoading) {
+      return;
+    }
+
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final basePath = authModel.basePath;
+
+    if (basePath.isEmpty) {
+      showErrorSnackbar(context, "Connect to a server first.");
+      return;
+    }
+
+    try {
+      toggleIsLoading();
+      final appData = await (widget.signIn ?? signInWithOidc)(
+        basePath: basePath,
+        providerName: provider.name,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      await _onLoginSuccess(appData);
+    } on OidcSignInCancelled {
+      // The user dismissed the browser. Nothing to report.
+      if (mounted) {
+        toggleIsLoading();
+      }
+    } on OidcSignInException catch (e) {
+      if (mounted) {
+        toggleIsLoading();
+        showErrorSnackbar(context, e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        toggleIsLoading();
+        showErrorSnackbar(context, "Sign in failed. Please try again.");
+      }
+    }
+  }
+
+  /// One button per enabled provider, or nothing when none is configured.
+  ///
+  /// The list rides the public feature config, which the Connect-to-Server
+  /// screen already fetches before this screen is reachable, so there is no
+  /// extra request here.
+  Widget _getOidcButtons(AuthModel auth) {
+    final providers = auth.featureConfig.oidcProviders?.toList() ?? const [];
+
+    if (isSignUp || providers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        Row(children: [
+          const Expanded(child: Divider()),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text("or", style: Theme.of(context).textTheme.bodySmall),
+          ),
+          const Expanded(child: Divider()),
+        ]),
+        const SizedBox(height: 8),
+        for (final provider in providers) ...[
+          Row(children: [
+            Expanded(
+              child: CupertinoButton(
+                key: ValueKey("oidc-login-${provider.name}"),
+                onPressed: () => loginWithOidc(provider),
+                child: Text("Log in with ${provider.displayName}"),
+              ),
+            )
+          ]),
+        ],
+      ],
+    );
+  }
+
   void toggleIsLoading() {
     setState(() {
       isLoading = !isLoading;
@@ -109,6 +210,15 @@ class _Login extends State<AuthForm> {
 
     await storeAppData(authModel, groupModel, userModel, userPreferencesModel,
         categoryModel, tagModel, systemSettingsModel, permissionsModel, appData);
+
+    // Both calls below take this context, and storeAppData is a real await --
+    // the widget can be gone by now. Shared with the password login path, so
+    // this guards both. (Nothing would have flagged it: analysis_options.yaml
+    // is empty, so use_build_context_synchronously is off.)
+    if (!mounted) {
+      return;
+    }
+
     registerCustomCurrency(context);
     context.go("/groups");
   }
@@ -258,6 +368,9 @@ class _Login extends State<AuthForm> {
                   return const SizedBox.shrink();
                 }
               },
+            ),
+            Consumer<AuthModel>(
+              builder: (context, auth, child) => _getOidcButtons(auth),
             ),
             _getChangeServerButton(),
           ],

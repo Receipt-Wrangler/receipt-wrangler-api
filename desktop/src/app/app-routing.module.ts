@@ -92,6 +92,7 @@ const routes: Routes = [
             Permission.AppPromptsRead,
             Permission.AppReceiptProcessingSettingsRead,
             Permission.AppSystemEmailsRead,
+            Permission.AppOidcProvidersRead,
             Permission.AppSystemTasksRead,
           ],
         },

@@ -68,6 +68,12 @@ import 'package:openapi/src/model/logout_command.dart';
 import 'package:openapi/src/model/magic_fill_command.dart';
 import 'package:openapi/src/model/notification.dart';
 import 'package:openapi/src/model/ocr_engine.dart';
+import 'package:openapi/src/model/oidc_connection_view.dart';
+import 'package:openapi/src/model/oidc_exchange_command.dart';
+import 'package:openapi/src/model/oidc_flow_error_view.dart';
+import 'package:openapi/src/model/oidc_link_start_view.dart';
+import 'package:openapi/src/model/oidc_provider_summary.dart';
+import 'package:openapi/src/model/oidc_provider_view.dart';
 import 'package:openapi/src/model/paged_activity_request_command.dart';
 import 'package:openapi/src/model/paged_api_key_request_command.dart';
 import 'package:openapi/src/model/paged_data.dart';
@@ -134,6 +140,7 @@ import 'package:openapi/src/model/upsert_dashboard_command.dart';
 import 'package:openapi/src/model/upsert_group_command.dart';
 import 'package:openapi/src/model/upsert_group_member_command.dart';
 import 'package:openapi/src/model/upsert_item_command.dart';
+import 'package:openapi/src/model/upsert_oidc_provider_command.dart';
 import 'package:openapi/src/model/upsert_prompt_command.dart';
 import 'package:openapi/src/model/upsert_receipt_command.dart';
 import 'package:openapi/src/model/upsert_receipt_processing_settings_command.dart';
@@ -207,6 +214,12 @@ part 'serializers.g.dart';
   MagicFillCommand,
   Notification,
   OcrEngine,
+  OidcConnectionView,
+  OidcExchangeCommand,
+  OidcFlowErrorView,
+  OidcLinkStartView,
+  OidcProviderSummary,
+  OidcProviderView,
   PagedActivityRequestCommand,
   PagedApiKeyRequestCommand,
   PagedData,
@@ -273,6 +286,7 @@ part 'serializers.g.dart';
   UpsertGroupCommand,
   UpsertGroupMemberCommand,
   UpsertItemCommand,
+  UpsertOidcProviderCommand,
   UpsertPromptCommand,
   UpsertReceiptCommand,
   UpsertReceiptProcessingSettingsCommand,
@@ -305,6 +319,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(Receipt)]),
         () => ListBuilder<Receipt>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(OidcConnectionView)]),
+        () => ListBuilder<OidcConnectionView>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(Role)]),

@@ -62,6 +62,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(MagicFillCommand.serializer)
       ..add(Notification.serializer)
       ..add(OcrEngine.serializer)
+      ..add(OidcConnectionView.serializer)
+      ..add(OidcExchangeCommand.serializer)
+      ..add(OidcFlowErrorView.serializer)
+      ..add(OidcLinkStartView.serializer)
+      ..add(OidcProviderSummary.serializer)
+      ..add(OidcProviderView.serializer)
       ..add(PagedActivityRequestCommand.serializer)
       ..add(PagedApiKeyRequestCommand.serializer)
       ..add(PagedData.serializer)
@@ -132,6 +138,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(UpsertGroupCommand.serializer)
       ..add(UpsertGroupMemberCommand.serializer)
       ..add(UpsertItemCommand.serializer)
+      ..add(UpsertOidcProviderCommand.serializer)
       ..add(UpsertPromptCommand.serializer)
       ..add(UpsertReceiptCommand.serializer)
       ..add(UpsertReceiptProcessingSettingsCommand.serializer)
@@ -222,6 +229,10 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(Tag)]),
           () => ListBuilder<Tag>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(OidcProviderSummary)]),
+          () => ListBuilder<OidcProviderSummary>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(PagedDataDataInner)]),
           () => ListBuilder<PagedDataDataInner>())

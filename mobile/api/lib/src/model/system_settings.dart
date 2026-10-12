@@ -37,6 +37,7 @@ part 'system_settings.g.dart';
 /// * [taskQueueConfigurations] 
 /// * [mcpEnabled] - Whether the OAuth 2.1-protected MCP server is enabled
 /// * [mcpPublicUrl] - Externally reachable origin used for MCP OAuth/metadata/redirect URLs and token audience
+/// * [serverPublicUrl] - Externally reachable origin of this API, used to build each OIDC provider's redirect URI. Separate from mcpPublicUrl, which is bound into the MCP token audience.
 /// * [showLoginQr] - Whether to show the mobile-setup QR code on the desktop login page
 /// * [mobileServerUrl] - Server/API URL mobile clients connect to; encoded into the login QR's deep link
 /// * [refreshTokenValidForHours] - How long a refresh token stays valid, in hours. Refresh tokens rotate on every use, so this is how long a user can be away and still return signed in, not an absolute session cap. 1-720 (30 days); 0 means unset and falls back to the default.
@@ -68,6 +69,10 @@ abstract class SystemSettings implements BaseModel, Built<SystemSettings, System
   /// Whether to show the mobile-setup QR code on the desktop login page
   @BuiltValueField(wireName: r'showLoginQr')
   bool? get showLoginQr;
+
+  /// Externally reachable origin of this API, used to build each OIDC provider's redirect URI. Separate from mcpPublicUrl, which is bound into the MCP token audience.
+  @BuiltValueField(wireName: r'serverPublicUrl')
+  String? get serverPublicUrl;
 
   /// The app time zone, an IANA name such as America/New_York. Every calendar boundary (which day an Added At or Resolved Date falls on, \"today\", \"this month\", report periods) is worked out in it. A receipt's Date is a calendar day and never shifts with it.
   @BuiltValueField(wireName: r'timeZone')
@@ -280,6 +285,13 @@ class _$SystemSettingsSerializer implements PrimitiveSerializer<SystemSettings> 
         specifiedType: const FullType(bool),
       );
     }
+    if (object.serverPublicUrl != null) {
+      yield r'serverPublicUrl';
+      yield serializers.serialize(
+        object.serverPublicUrl,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.timeZone != null) {
       yield r'timeZone';
       yield serializers.serialize(
@@ -489,6 +501,13 @@ class _$SystemSettingsSerializer implements PrimitiveSerializer<SystemSettings> 
             specifiedType: const FullType(bool),
           ) as bool;
           result.showLoginQr = valueDes;
+          break;
+        case r'serverPublicUrl':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.serverPublicUrl = valueDes;
           break;
         case r'timeZone':
           final valueDes = serializers.deserialize(

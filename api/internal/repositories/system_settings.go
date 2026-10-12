@@ -135,8 +135,8 @@ func (repository SystemSettingsRepository) UpdateSystemSettings(command commands
 	// (so a concurrent update that DID set one is never clobbered by a value we
 	// read before the write), and the in-memory copy is back-filled so the
 	// response echoes the stored value rather than a 0.
-	omittedColumns := append([]string{"TaskQueueConfigurations"}, command.OmittedLifetimeColumns()...)
-	command.ApplyOmittedLifetimes(existingSettings, &updatedSettings)
+	omittedColumns := append([]string{"TaskQueueConfigurations"}, command.OmittedColumns()...)
+	command.ApplyOmittedValues(existingSettings, &updatedSettings)
 
 	err = db.Transaction(func(tx *gorm.DB) error {
 		txErr := tx.Model(&updatedSettings).Select("*").Omit(omittedColumns...).Where("id = ?", existingSettings.ID).Updates(&updatedSettings).Error

@@ -79,6 +79,14 @@ func BuildRootRouter() *chi.Mux {
 	featureConfigRouter := BuildFeatureConfigRouter(tokenValidatorMiddleware)
 	rootRouter.Mount("/api/featureConfig", featureConfigRouter)
 
+	// OIDC relying party (sign in with an external identity provider)
+	oidcRouter := BuildOidcRouter()
+	rootRouter.Mount("/api/oidc", oidcRouter)
+
+	// OIDC provider administration
+	oidcProviderRouter := BuildOidcProviderRouter()
+	rootRouter.Mount("/api/oidcProvider", oidcProviderRouter)
+
 	// Migration router
 	migrationRouter := chi.NewRouter()
 	migrationRouter.Use(middleware.UnifiedAuthMiddleware)

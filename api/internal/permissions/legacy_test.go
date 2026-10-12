@@ -164,6 +164,43 @@ func TestLegacyAppUserExcludesDeleteAnyGroup(t *testing.T) {
 	}
 }
 
+func TestLegacyAppAdminIncludesOidcProviderPermissions(t *testing.T) {
+	// Legacy Admin is every app permission, so the four app.oidc-providers.* keys
+	// flow into it automatically on the next boot via SeedSystemRoles' add-only
+	// reconciliation — an upgrading install's admin can configure OIDC with no
+	// manual role edit and no data migration.
+	admin := LegacyAppAdminKeys()
+
+	for _, key := range oidcProviderKeys() {
+		if !slices.Contains(admin, key) {
+			utilPrint(t, "Legacy Admin missing "+key, "present")
+		}
+	}
+}
+
+func TestLegacyAppUserDoesNotGetOidcProviderPermissions(t *testing.T) {
+	// Legacy User is a fixed list. Registering an identity provider decides who
+	// can sign in to the whole install and whether unknown users are provisioned
+	// accounts, so it is administrative by definition and must never flow into
+	// the ordinary-user set.
+	user := LegacyAppUserKeys()
+
+	for _, key := range oidcProviderKeys() {
+		if slices.Contains(user, key) {
+			utilPrint(t, "Legacy User contains "+key, "absent")
+		}
+	}
+}
+
+func oidcProviderKeys() []string {
+	return []string{
+		AppOidcProvidersCreate,
+		AppOidcProvidersRead,
+		AppOidcProvidersUpdate,
+		AppOidcProvidersDelete,
+	}
+}
+
 func TestLegacyAppUserExcludesUsersRead(t *testing.T) {
 	// app.users.read gates only the admin "Manage Users" listing (GET /user/),
 	// which no client calls. Legacy User must NOT hold it, so normal users don't

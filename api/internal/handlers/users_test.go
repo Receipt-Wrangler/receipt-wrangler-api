@@ -973,6 +973,75 @@ func TestShouldAllowAdminToGetPagedUsers(t *testing.T) {
 	}
 }
 
+// TestResetPasswordClearsTheOidcProvisionedFlag pins the wiring behind the
+// lockout guard's own advice.
+//
+// An account created by an OIDC provisioning login holds only a random,
+// discarded password, so unlinking its last provider is refused with "ask an
+// administrator to set one before disconnecting". That advice was a dead end:
+// the administrator could comply and the unlink stayed refused, because nothing
+// observed the reset. This is the observation.
+func TestResetPasswordClearsTheOidcProvisionedFlag(t *testing.T) {
+	defer tearDownUserTest()
+
+	db := repositories.GetDB()
+
+	provisioned := models.User{Username: "provisioned-user", Password: "unusable"}
+	if err := db.Create(&provisioned).Error; err != nil {
+		t.Fatalf("failed to create the user: %v", err)
+	}
+
+	provider := models.OidcProvider{
+		Name:        "resetidp",
+		DisplayName: "Reset IdP",
+		IssuerUrl:   "https://idp.example.com",
+		ClientId:    "client",
+		Scope:       "openid",
+	}
+	if err := db.Create(&provider).Error; err != nil {
+		t.Fatalf("failed to create the provider: %v", err)
+	}
+
+	identity := models.OidcIdentity{
+		Subject:         "reset-subject",
+		OidcProviderId:  provider.ID,
+		UserId:          provisioned.ID,
+		ProvisionedUser: true,
+	}
+	if err := db.Create(&identity).Error; err != nil {
+		t.Fatalf("failed to create the identity: %v", err)
+	}
+
+	admin := uint(9001)
+	grantAppPerms(t, admin, permissions.AppUsersUpdate)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/user/"+strconv.Itoa(int(provisioned.ID))+"/resetPassword", strings.NewReader(""))
+
+	chiContext := chi.NewRouteContext()
+	chiContext.URLParams.Add("id", strconv.Itoa(int(provisioned.ID)))
+	ctx := context.WithValue(request.Context(), chi.RouteCtxKey, chiContext)
+	ctx = context.WithValue(ctx, "reset_password", structs.ResetPasswordCommand{Password: "a-real-password"})
+	ctx = context.WithValue(ctx, jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{
+		CustomClaims: &structs.Claims{UserId: admin},
+	})
+
+	ResetPassword(recorder, request.WithContext(ctx))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d (%s)", recorder.Code, recorder.Body.String())
+	}
+
+	var refreshed models.OidcIdentity
+	if err := db.First(&refreshed, identity.ID).Error; err != nil {
+		t.Fatalf("failed to reload the identity: %v", err)
+	}
+
+	if refreshed.ProvisionedUser {
+		t.Error("setting a password must clear the provisioned flag, or the unlink stays refused forever")
+	}
+}
+
 // The all-group amount-owed view must NOT fold in a group the caller cannot read.
 // A member of a group with no receipts.read role there must not have that group's
 // settlement leak through "All". Regression guard for the All-group read gate.

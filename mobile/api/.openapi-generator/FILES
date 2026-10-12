@@ -66,6 +66,14 @@ doc/MagicFillCommand.md
 doc/Notification.md
 doc/NotificationsApi.md
 doc/OcrEngine.md
+doc/OidcApi.md
+doc/OidcConnectionView.md
+doc/OidcExchangeCommand.md
+doc/OidcFlowErrorView.md
+doc/OidcLinkStartView.md
+doc/OidcProviderApi.md
+doc/OidcProviderSummary.md
+doc/OidcProviderView.md
 doc/PagedActivityRequestCommand.md
 doc/PagedApiKeyRequestCommand.md
 doc/PagedData.md
@@ -144,6 +152,7 @@ doc/UpsertDashboardCommand.md
 doc/UpsertGroupCommand.md
 doc/UpsertGroupMemberCommand.md
 doc/UpsertItemCommand.md
+doc/UpsertOidcProviderCommand.md
 doc/UpsertPromptCommand.md
 doc/UpsertReceiptCommand.md
 doc/UpsertReceiptProcessingSettingsCommand.md
@@ -175,6 +184,8 @@ lib/src/api/feature_config_api.dart
 lib/src/api/groups_api.dart
 lib/src/api/import_api.dart
 lib/src/api/notifications_api.dart
+lib/src/api/oidc_api.dart
+lib/src/api/oidc_provider_api.dart
 lib/src/api/permission_api.dart
 lib/src/api/prompt_api.dart
 lib/src/api/receipt_api.dart
@@ -252,6 +263,12 @@ lib/src/model/logout_command.dart
 lib/src/model/magic_fill_command.dart
 lib/src/model/notification.dart
 lib/src/model/ocr_engine.dart
+lib/src/model/oidc_connection_view.dart
+lib/src/model/oidc_exchange_command.dart
+lib/src/model/oidc_flow_error_view.dart
+lib/src/model/oidc_link_start_view.dart
+lib/src/model/oidc_provider_summary.dart
+lib/src/model/oidc_provider_view.dart
 lib/src/model/paged_activity_request_command.dart
 lib/src/model/paged_api_key_request_command.dart
 lib/src/model/paged_data.dart
@@ -318,6 +335,7 @@ lib/src/model/upsert_dashboard_command.dart
 lib/src/model/upsert_group_command.dart
 lib/src/model/upsert_group_member_command.dart
 lib/src/model/upsert_item_command.dart
+lib/src/model/upsert_oidc_provider_command.dart
 lib/src/model/upsert_prompt_command.dart
 lib/src/model/upsert_receipt_command.dart
 lib/src/model/upsert_receipt_processing_settings_command.dart

@@ -13,6 +13,8 @@ class _$FeatureConfig extends FeatureConfig {
   final bool enableLocalSignUp;
   @override
   final String? loginQrUrl;
+  @override
+  final BuiltList<OidcProviderSummary>? oidcProviders;
 
   factory _$FeatureConfig([void Function(FeatureConfigBuilder)? updates]) =>
       (FeatureConfigBuilder()..update(updates))._build();
@@ -20,7 +22,8 @@ class _$FeatureConfig extends FeatureConfig {
   _$FeatureConfig._(
       {required this.aiPoweredReceipts,
       required this.enableLocalSignUp,
-      this.loginQrUrl})
+      this.loginQrUrl,
+      this.oidcProviders})
       : super._();
   @override
   FeatureConfig rebuild(void Function(FeatureConfigBuilder) updates) =>
@@ -35,7 +38,8 @@ class _$FeatureConfig extends FeatureConfig {
     return other is FeatureConfig &&
         aiPoweredReceipts == other.aiPoweredReceipts &&
         enableLocalSignUp == other.enableLocalSignUp &&
-        loginQrUrl == other.loginQrUrl;
+        loginQrUrl == other.loginQrUrl &&
+        oidcProviders == other.oidcProviders;
   }
 
   @override
@@ -44,6 +48,7 @@ class _$FeatureConfig extends FeatureConfig {
     _$hash = $jc(_$hash, aiPoweredReceipts.hashCode);
     _$hash = $jc(_$hash, enableLocalSignUp.hashCode);
     _$hash = $jc(_$hash, loginQrUrl.hashCode);
+    _$hash = $jc(_$hash, oidcProviders.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -53,7 +58,8 @@ class _$FeatureConfig extends FeatureConfig {
     return (newBuiltValueToStringHelper(r'FeatureConfig')
           ..add('aiPoweredReceipts', aiPoweredReceipts)
           ..add('enableLocalSignUp', enableLocalSignUp)
-          ..add('loginQrUrl', loginQrUrl))
+          ..add('loginQrUrl', loginQrUrl)
+          ..add('oidcProviders', oidcProviders))
         .toString();
   }
 }
@@ -76,6 +82,12 @@ class FeatureConfigBuilder
   String? get loginQrUrl => _$this._loginQrUrl;
   set loginQrUrl(String? loginQrUrl) => _$this._loginQrUrl = loginQrUrl;
 
+  ListBuilder<OidcProviderSummary>? _oidcProviders;
+  ListBuilder<OidcProviderSummary> get oidcProviders =>
+      _$this._oidcProviders ??= ListBuilder<OidcProviderSummary>();
+  set oidcProviders(ListBuilder<OidcProviderSummary>? oidcProviders) =>
+      _$this._oidcProviders = oidcProviders;
+
   FeatureConfigBuilder() {
     FeatureConfig._defaults(this);
   }
@@ -86,6 +98,7 @@ class FeatureConfigBuilder
       _aiPoweredReceipts = $v.aiPoweredReceipts;
       _enableLocalSignUp = $v.enableLocalSignUp;
       _loginQrUrl = $v.loginQrUrl;
+      _oidcProviders = $v.oidcProviders?.toBuilder();
       _$v = null;
     }
     return this;
@@ -105,14 +118,28 @@ class FeatureConfigBuilder
   FeatureConfig build() => _build();
 
   _$FeatureConfig _build() {
-    final _$result = _$v ??
-        _$FeatureConfig._(
-          aiPoweredReceipts: BuiltValueNullFieldError.checkNotNull(
-              aiPoweredReceipts, r'FeatureConfig', 'aiPoweredReceipts'),
-          enableLocalSignUp: BuiltValueNullFieldError.checkNotNull(
-              enableLocalSignUp, r'FeatureConfig', 'enableLocalSignUp'),
-          loginQrUrl: loginQrUrl,
-        );
+    _$FeatureConfig _$result;
+    try {
+      _$result = _$v ??
+          _$FeatureConfig._(
+            aiPoweredReceipts: BuiltValueNullFieldError.checkNotNull(
+                aiPoweredReceipts, r'FeatureConfig', 'aiPoweredReceipts'),
+            enableLocalSignUp: BuiltValueNullFieldError.checkNotNull(
+                enableLocalSignUp, r'FeatureConfig', 'enableLocalSignUp'),
+            loginQrUrl: loginQrUrl,
+            oidcProviders: _oidcProviders?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'oidcProviders';
+        _oidcProviders?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'FeatureConfig', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

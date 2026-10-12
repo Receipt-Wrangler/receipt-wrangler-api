@@ -265,6 +265,20 @@ func (repository UserRepository) GetUserById(userId uint) (structs.UserView, err
 	return user, nil
 }
 
+// GetUserByUsername resolves a user by their unique username. Mirrors
+// GetUserById's view type so callers that only need identity do not have to
+// handle the password hash.
+func (repository UserRepository) GetUserByUsername(username string) (structs.UserView, error) {
+	var user structs.UserView
+
+	err := repository.GetDB().Model(models.User{}).Where("username = ?", username).First(&user).Error
+	if err != nil {
+		return structs.UserView{}, err
+	}
+
+	return user, nil
+}
+
 func (repository UserRepository) UpdateUserLastLoginDate(userId uint) (time.Time, error) {
 	now := time.Now()
 	err := repository.GetDB().Model(models.User{}).Where("id = ?", userId).Update("last_login_date", now).Error

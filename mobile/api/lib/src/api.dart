@@ -20,6 +20,8 @@ import 'package:openapi/src/api/feature_config_api.dart';
 import 'package:openapi/src/api/groups_api.dart';
 import 'package:openapi/src/api/import_api.dart';
 import 'package:openapi/src/api/notifications_api.dart';
+import 'package:openapi/src/api/oidc_api.dart';
+import 'package:openapi/src/api/oidc_provider_api.dart';
 import 'package:openapi/src/api/permission_api.dart';
 import 'package:openapi/src/api/prompt_api.dart';
 import 'package:openapi/src/api/receipt_api.dart';
@@ -154,6 +156,18 @@ class Openapi {
   /// by doing that all interceptors will not be executed
   NotificationsApi getNotificationsApi() {
     return NotificationsApi(dio, serializers);
+  }
+
+  /// Get OidcApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  OidcApi getOidcApi() {
+    return OidcApi(dio, serializers);
+  }
+
+  /// Get OidcProviderApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  OidcProviderApi getOidcProviderApi() {
+    return OidcProviderApi(dio, serializers);
   }
 
   /// Get PermissionApi instance, base route and serializer can be overridden by a given but be careful,

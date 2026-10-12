@@ -74,6 +74,7 @@ func BuildMux() *asynq.ServeMux {
 	// idempotent, so running it under either name is harmless.
 	mux.HandleFunc(EmailProcessImageCleanUp, HandleTempFileCleanUpTask)
 	mux.HandleFunc(RefreshTokenCleanUp, HandleRefreshTokenCleanupTask)
+	mux.HandleFunc(OidcSessionCleanUp, HandleOidcCleanupTask)
 
 	return mux
 }

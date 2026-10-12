@@ -54,15 +54,23 @@ func GetMcpResourceUrl() string {
 // issuer/metadata/redirect URLs derived from it, so they are dropped. An empty
 // or unparseable value falls back to DefaultMcpPublicUrl.
 func NormalizeMcpPublicUrl(raw string) string {
+	return normalizePublicOrigin(raw, DefaultMcpPublicUrl, "MCP public URL")
+}
+
+// normalizePublicOrigin is the shared body of NormalizeMcpPublicUrl and
+// NormalizeServerPublicUrl. Both settings are operator-supplied origins that
+// downstream code concatenates paths onto, so they must normalize identically —
+// keeping one implementation is what stops them drifting.
+func normalizePublicOrigin(raw string, fallback string, label string) string {
 	raw = strings.TrimSpace(raw)
 	if len(raw) == 0 {
-		return DefaultMcpPublicUrl
+		return fallback
 	}
 
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, "MCP public URL must be an absolute origin like https://host (got "+raw+"); falling back to "+DefaultMcpPublicUrl)
-		return DefaultMcpPublicUrl
+		logging.LogStd(logging.LOG_LEVEL_ERROR, label+" must be an absolute origin like https://host (got "+raw+"); falling back to "+fallback)
+		return fallback
 	}
 
 	return parsed.Scheme + "://" + parsed.Host

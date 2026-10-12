@@ -130,7 +130,7 @@ func TestUpdateSystemSettingsOmitsUnsentLifetimeColumns(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			omitted := append([]string{"TaskQueueConfigurations"}, test.command.OmittedLifetimeColumns()...)
+			omitted := append([]string{"TaskQueueConfigurations"}, test.command.OmittedColumns()...)
 			sql := GetDB().Session(&gorm.Session{DryRun: true}).
 				Model(&settings).Select("*").Omit(omitted...).
 				Where("id = ?", 1).Updates(&settings).Statement.SQL.String()

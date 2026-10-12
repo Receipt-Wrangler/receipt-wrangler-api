@@ -32,6 +32,28 @@ func isRefreshToken(validated interface{}) bool {
 	return claims.IsRefreshToken()
 }
 
+// setAuthSource records how this request authenticated, on the claims the
+// handlers will read. This middleware is the only thing that knows which branch
+// ran, so it is the only thing that may set it -- and the field is json:"-", so
+// nothing a caller sends can reach it.
+//
+// A shape it does not recognize is left unmarked, which denies: structs.Claims'
+// zero AuthSource matches neither source, and the checks are written as "require
+// AuthSourceJwt" rather than "reject AuthSourceApiKey" for exactly that reason.
+func setAuthSource(validated interface{}, source string) {
+	validatedClaims, ok := validated.(*validator.ValidatedClaims)
+	if !ok {
+		return
+	}
+
+	claims, ok := validatedClaims.CustomClaims.(*structs.Claims)
+	if !ok {
+		return
+	}
+
+	claims.AuthSource = source
+}
+
 func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		const unauthorized = "Unauthorized"
@@ -76,6 +98,8 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 
+			setAuthSource(&claims, structs.AuthSourceApiKey)
+
 			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, &claims))
 			next.ServeHTTP(w, r)
 			return
@@ -97,6 +121,8 @@ func UnifiedAuthMiddleware(next http.Handler) http.Handler {
 				utils.WriteCustomErrorResponse(w, unauthorized, http.StatusForbidden)
 				return
 			}
+
+			setAuthSource(claims, structs.AuthSourceJwt)
 
 			r = r.Clone(context.WithValue(r.Context(), jwtmiddleware.ContextKey{}, claims))
 			next.ServeHTTP(w, r)

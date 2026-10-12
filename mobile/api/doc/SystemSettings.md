@@ -29,6 +29,7 @@ Name | Type | Description | Notes
 **taskQueueConfigurations** | [**BuiltList&lt;TaskQueueConfiguration&gt;**](TaskQueueConfiguration.md) |  | 
 **mcpEnabled** | **bool** | Whether the OAuth 2.1-protected MCP server is enabled | [optional] [default to false]
 **mcpPublicUrl** | **String** | Externally reachable origin used for MCP OAuth/metadata/redirect URLs and token audience | [optional] 
+**serverPublicUrl** | **String** | Externally reachable origin of this API, used to build each OIDC provider's redirect URI. Separate from mcpPublicUrl, which is bound into the MCP token audience. | [optional] 
 **showLoginQr** | **bool** | Whether to show the mobile-setup QR code on the desktop login page | [optional] [default to false]
 **mobileServerUrl** | **String** | Server/API URL mobile clients connect to; encoded into the login QR's deep link | [optional] 
 **refreshTokenValidForHours** | **int** | How long a refresh token stays valid, in hours. Refresh tokens rotate on every use, so this is how long a user can be away and still return signed in, not an absolute session cap. 1-720 (30 days); 0 means unset and falls back to the default. | [optional] [default to 24]

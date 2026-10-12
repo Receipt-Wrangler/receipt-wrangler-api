@@ -410,6 +410,21 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 				return http.StatusInternalServerError, err
 			}
 
+			// The account now has a password, so it is no longer at risk of being
+			// stranded by unlinking its last OIDC provider. Without this the lockout
+			// guard's own advice -- "ask an administrator to set one before
+			// disconnecting" -- is a dead end: the administrator complies and the unlink
+			// is still refused, because nothing observed the reset.
+			userId, err := utils.StringToUint(id)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
+			err = repositories.NewOidcIdentityRepository(nil).ClearProvisionedFlagForUser(userId)
+			if err != nil {
+				return http.StatusInternalServerError, err
+			}
+
 			w.WriteHeader(http.StatusOK)
 			return 0, nil
 		},

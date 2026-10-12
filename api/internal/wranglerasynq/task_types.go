@@ -11,4 +11,5 @@ const (
 	EmailProcessImageCleanUp = "email:process_image_cleanup"
 	TempFileCleanUp          = "system_clean_up:temp_files"
 	RefreshTokenCleanUp      = "system_clean_up:refresh_token"
+	OidcSessionCleanUp       = "system_clean_up:oidc"
 )

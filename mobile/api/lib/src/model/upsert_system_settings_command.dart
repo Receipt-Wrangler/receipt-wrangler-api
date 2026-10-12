@@ -31,6 +31,7 @@ part 'upsert_system_settings_command.g.dart';
 /// * [taskQueueConfigurations] 
 /// * [mcpEnabled] - Whether the OAuth 2.1-protected MCP server is enabled
 /// * [mcpPublicUrl] - Externally reachable origin used for MCP OAuth/metadata/redirect URLs and token audience
+/// * [serverPublicUrl] - Externally reachable origin of this API, used to build each OIDC provider's redirect URI. Separate from mcpPublicUrl, which is bound into the MCP token audience.
 /// * [showLoginQr] - Whether to show the mobile-setup QR code on the desktop login page
 /// * [mobileServerUrl] - Server/API URL mobile clients connect to; encoded into the login QR's deep link
 /// * [refreshTokenValidForHours] - How long a refresh token stays valid, in hours. Accepted values are 1-720 (30 days), or 0 meaning unset, which falls back to the default of 24. Omit the key entirely to leave the currently configured value unchanged.
@@ -100,6 +101,10 @@ abstract class UpsertSystemSettingsCommand implements Built<UpsertSystemSettings
   /// Externally reachable origin used for MCP OAuth/metadata/redirect URLs and token audience
   @BuiltValueField(wireName: r'mcpPublicUrl')
   String? get mcpPublicUrl;
+
+  /// Externally reachable origin of this API, used to build each OIDC provider's redirect URI. Separate from mcpPublicUrl, which is bound into the MCP token audience.
+  @BuiltValueField(wireName: r'serverPublicUrl')
+  String? get serverPublicUrl;
 
   /// Whether to show the mobile-setup QR code on the desktop login page
   @BuiltValueField(wireName: r'showLoginQr')
@@ -248,6 +253,13 @@ class _$UpsertSystemSettingsCommandSerializer implements PrimitiveSerializer<Ups
       yield r'mcpPublicUrl';
       yield serializers.serialize(
         object.mcpPublicUrl,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.serverPublicUrl != null) {
+      yield r'serverPublicUrl';
+      yield serializers.serialize(
+        object.serverPublicUrl,
         specifiedType: const FullType(String),
       );
     }
@@ -427,6 +439,13 @@ class _$UpsertSystemSettingsCommandSerializer implements PrimitiveSerializer<Ups
             specifiedType: const FullType(String),
           ) as String;
           result.mcpPublicUrl = valueDes;
+          break;
+        case r'serverPublicUrl':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.serverPublicUrl = valueDes;
           break;
         case r'showLoginQr':
           final valueDes = serializers.deserialize(

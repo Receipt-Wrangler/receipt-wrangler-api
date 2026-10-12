@@ -109,8 +109,8 @@ jobs:
   # Flutter unit/widget tests. Fast and hermetic -- no emulator, no backend --
   # so unlike the advisory mobile-e2e workflow this one is gating.
   #
-  # `flutter analyze` is deliberately NOT run here: it currently exits 1 on 106
-  # pre-existing issues (0 errors), 73 of which are inside the generated client
+  # `flutter analyze` is deliberately NOT run here: it currently exits 1 on 111
+  # pre-existing issues (0 errors), 78 of which are inside the generated client
   # under mobile/api/, which the repo forbids hand-editing. Gating on it would
   # fail the build for reasons unrelated to the change under test. Enabling it
   # means first excluding api/** in mobile/analysis_options.yaml (empty today)

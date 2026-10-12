@@ -141,6 +141,18 @@ class Permission extends EnumClass {
   @BuiltValueEnumConst(wireName: r'app.api-keys.delete-any')
   static const Permission appPeriodApiKeysPeriodDeleteAny = _$appPeriodApiKeysPeriodDeleteAny;
   /// All permission keys the API recognizes.
+  @BuiltValueEnumConst(wireName: r'app.oidc-providers.create')
+  static const Permission appPeriodOidcProvidersPeriodCreate = _$appPeriodOidcProvidersPeriodCreate;
+  /// All permission keys the API recognizes.
+  @BuiltValueEnumConst(wireName: r'app.oidc-providers.read')
+  static const Permission appPeriodOidcProvidersPeriodRead = _$appPeriodOidcProvidersPeriodRead;
+  /// All permission keys the API recognizes.
+  @BuiltValueEnumConst(wireName: r'app.oidc-providers.update')
+  static const Permission appPeriodOidcProvidersPeriodUpdate = _$appPeriodOidcProvidersPeriodUpdate;
+  /// All permission keys the API recognizes.
+  @BuiltValueEnumConst(wireName: r'app.oidc-providers.delete')
+  static const Permission appPeriodOidcProvidersPeriodDelete = _$appPeriodOidcProvidersPeriodDelete;
+  /// All permission keys the API recognizes.
   @BuiltValueEnumConst(wireName: r'app.roles.create')
   static const Permission appPeriodRolesPeriodCreate = _$appPeriodRolesPeriodCreate;
   /// All permission keys the API recognizes.

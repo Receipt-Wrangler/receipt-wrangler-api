@@ -281,11 +281,15 @@ func TestUpsertSystemSettingsCommand_Validate_InvalidInputs(t *testing.T) {
 			expectedError: "mcpRefreshTokenValidForHours",
 		},
 		"temp file retention below the floor": {
-			modify:        func(cmd *UpsertSystemSettingsCommand) { cmd.TempFileRetentionHours = intPtr(MinTempFileRetentionHours - 1) },
+			modify: func(cmd *UpsertSystemSettingsCommand) {
+				cmd.TempFileRetentionHours = intPtr(MinTempFileRetentionHours - 1)
+			},
 			expectedError: "tempFileRetentionHours",
 		},
 		"temp file retention above the ceiling": {
-			modify:        func(cmd *UpsertSystemSettingsCommand) { cmd.TempFileRetentionHours = intPtr(MaxTempFileRetentionHours + 1) },
+			modify: func(cmd *UpsertSystemSettingsCommand) {
+				cmd.TempFileRetentionHours = intPtr(MaxTempFileRetentionHours + 1)
+			},
 			expectedError: "tempFileRetentionHours",
 		},
 		"negative temp file retention": {
@@ -404,42 +408,43 @@ func stringPtr(value string) *string {
 	return &value
 }
 
-// OmittedLifetimeColumns is what keeps a partial PUT from resetting a field it
+// OmittedColumns is what keeps a partial PUT from resetting a field it
 // never mentioned: the repository writes every column (Select("*")), so a value
 // that is not excluded here is silently overwritten with zero.
-func TestOmittedLifetimeColumnsNamesEveryUnsentField(t *testing.T) {
+func TestOmittedColumnsNamesEveryUnsentField(t *testing.T) {
 	tests := map[string]struct {
 		modify   func(cmd *UpsertSystemSettingsCommand)
 		expected []string
 	}{
 		"all omitted": {
 			modify:   func(cmd *UpsertSystemSettingsCommand) {},
-			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours", "TimeZone"},
+			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours", "ServerPublicUrl", "TimeZone"},
 		},
 		"retention sent, lifetimes omitted": {
 			modify: func(cmd *UpsertSystemSettingsCommand) {
 				cmd.TempFileRetentionHours = intPtr(48)
 			},
-			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TimeZone"},
+			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "ServerPublicUrl", "TimeZone"},
 		},
 		"lifetimes sent, retention omitted": {
 			modify: func(cmd *UpsertSystemSettingsCommand) {
 				cmd.RefreshTokenValidForHours = intPtr(24)
 				cmd.McpRefreshTokenValidForHours = intPtr(24)
 			},
-			expected: []string{"TempFileRetentionHours", "TimeZone"},
+			expected: []string{"TempFileRetentionHours", "ServerPublicUrl", "TimeZone"},
 		},
 		"only time zone sent": {
 			modify: func(cmd *UpsertSystemSettingsCommand) {
 				cmd.TimeZone = stringPtr("America/New_York")
 			},
-			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours"},
+			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours", "ServerPublicUrl"},
 		},
 		"all sent": {
 			modify: func(cmd *UpsertSystemSettingsCommand) {
 				cmd.RefreshTokenValidForHours = intPtr(24)
 				cmd.McpRefreshTokenValidForHours = intPtr(24)
 				cmd.TempFileRetentionHours = intPtr(48)
+				cmd.ServerPublicUrl = stringPtr("https://receipts.example.com")
 				cmd.TimeZone = stringPtr("UTC")
 			},
 			expected: []string{},
@@ -451,7 +456,7 @@ func TestOmittedLifetimeColumnsNamesEveryUnsentField(t *testing.T) {
 			command := UpsertSystemSettingsCommand{}
 			test.modify(&command)
 
-			got := command.OmittedLifetimeColumns()
+			got := command.OmittedColumns()
 			if len(got) != len(test.expected) {
 				t.Fatalf("expected %v, got %v", test.expected, got)
 			}
@@ -464,20 +469,21 @@ func TestOmittedLifetimeColumnsNamesEveryUnsentField(t *testing.T) {
 	}
 }
 
-// ApplyOmittedLifetimes exists so the response echoes the stored value rather
+// ApplyOmittedValues exists so the response echoes the stored value rather
 // than the misleading zero that ToSystemSettings' JSON round trip produces for a
 // nil pointer.
-func TestApplyOmittedLifetimesEchoesStoredValues(t *testing.T) {
+func TestApplyOmittedValuesEchoesStoredValues(t *testing.T) {
 	existing := models.SystemSettings{
 		RefreshTokenValidForHours:    100,
 		McpRefreshTokenValidForHours: 200,
 		TempFileRetentionHours:       300,
+		ServerPublicUrl:              "https://receipts.example.com",
 	}
 
 	command := UpsertSystemSettingsCommand{TempFileRetentionHours: intPtr(48)}
 	updated := models.SystemSettings{TempFileRetentionHours: 48}
 
-	command.ApplyOmittedLifetimes(existing, &updated)
+	command.ApplyOmittedValues(existing, &updated)
 
 	if updated.RefreshTokenValidForHours != 100 || updated.McpRefreshTokenValidForHours != 200 {
 		t.Errorf("expected the omitted lifetimes to be carried forward, got %+v", updated)
@@ -485,22 +491,25 @@ func TestApplyOmittedLifetimesEchoesStoredValues(t *testing.T) {
 	if updated.TempFileRetentionHours != 48 {
 		t.Errorf("expected the sent retention to survive, got %d", updated.TempFileRetentionHours)
 	}
+	if updated.ServerPublicUrl != "https://receipts.example.com" {
+		t.Errorf("expected the omitted server public url to be carried forward, got %q", updated.ServerPublicUrl)
+	}
 }
 
 // An omitted time zone echoes the stored one; a sent one survives.
-func TestApplyOmittedLifetimesEchoesTheStoredTimeZone(t *testing.T) {
+func TestApplyOmittedValuesEchoesTheStoredTimeZone(t *testing.T) {
 	existing := models.SystemSettings{TimeZone: "America/New_York"}
 
 	omitted := UpsertSystemSettingsCommand{}
 	updated := models.SystemSettings{}
-	omitted.ApplyOmittedLifetimes(existing, &updated)
+	omitted.ApplyOmittedValues(existing, &updated)
 	if updated.TimeZone != "America/New_York" {
 		t.Errorf("omitted time zone = %q, want the stored America/New_York", updated.TimeZone)
 	}
 
 	sent := UpsertSystemSettingsCommand{TimeZone: stringPtr("Europe/Berlin")}
 	updated = models.SystemSettings{TimeZone: "Europe/Berlin"}
-	sent.ApplyOmittedLifetimes(existing, &updated)
+	sent.ApplyOmittedValues(existing, &updated)
 	if updated.TimeZone != "Europe/Berlin" {
 		t.Errorf("sent time zone = %q, want Europe/Berlin", updated.TimeZone)
 	}

@@ -24,6 +24,12 @@ func StartSystemCleanUpTasks() error {
 		return err
 	}
 
+	oidcSessionTask := asynq.NewTask(OidcSessionCleanUp, nil)
+	_, err = RegisterTask("@every 24h", oidcSessionTask, cleanUpQueue, 0)
+	if err != nil {
+		return err
+	}
+
 	// The temp sweep lives here rather than in StartEmailPolling, where it used
 	// to be, for two reasons. main.go only calls StartEmailPolling when email
 	// polling is configured, so an install that never set it up ran no temp

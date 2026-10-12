@@ -13,6 +13,8 @@ api/featureConfig.service.ts
 api/groups.service.ts
 api/import.service.ts
 api/notifications.service.ts
+api/oidc.service.ts
+api/oidcProvider.service.ts
 api/permission.service.ts
 api/prompt.service.ts
 api/receipt.service.ts
@@ -87,6 +89,12 @@ model/magicFillCommand.ts
 model/models.ts
 model/notification.ts
 model/ocrEngine.ts
+model/oidcConnectionView.ts
+model/oidcExchangeCommand.ts
+model/oidcFlowErrorView.ts
+model/oidcLinkStartView.ts
+model/oidcProviderSummary.ts
+model/oidcProviderView.ts
 model/pagedActivityRequestCommand.ts
 model/pagedApiKeyRequestCommand.ts
 model/pagedData.ts
@@ -153,6 +161,7 @@ model/upsertDashboardCommand.ts
 model/upsertGroupCommand.ts
 model/upsertGroupMemberCommand.ts
 model/upsertItemCommand.ts
+model/upsertOidcProviderCommand.ts
 model/upsertPromptCommand.ts
 model/upsertReceiptCommand.ts
 model/upsertReceiptProcessingSettingsCommand.ts

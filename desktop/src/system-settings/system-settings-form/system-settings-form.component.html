@@ -180,6 +180,22 @@
     </div>
   </app-form-section>
   <app-form-section
+    headerText="Server"
+  >
+    <p class="text-muted mb-3">
+      The externally reachable address of this server. Used to build the redirect
+      URI that each OIDC identity provider must be configured with, so it has to
+      match how users actually reach Receipt Wrangler.
+    </p>
+    <app-input
+      label="Server Public URL"
+      hint="Origin only, e.g. https://receipts.example.com"
+      data-testid="server-public-url"
+      [readonly]="formConfig.mode | inputReadonly"
+      [inputFormControl]="form | formGet:'serverPublicUrl'"
+    ></app-input>
+  </app-form-section>
+  <app-form-section
     headerText="Temporary Files"
   >
     <p class="text-muted mb-3">

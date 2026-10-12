@@ -13,3 +13,34 @@
     margin: 0.5rem 0 1rem;
   }
 }
+
+.connected-accounts {
+  margin-top: 1rem;
+
+  &__row {
+    align-items: center;
+    border-bottom: 1px solid var(--mat-sys-outline-variant, #dee2e6);
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+
+    &:last-of-type {
+      border-bottom: none;
+    }
+  }
+
+  &__name {
+    font-weight: 500;
+  }
+
+  &__meta {
+    color: var(--mat-sys-on-surface-variant, #6c757d);
+    font-size: 0.8125rem;
+  }
+
+  &__locked {
+    color: var(--mat-sys-on-surface-variant, #6c757d);
+    font-size: 0.8125rem;
+  }
+}

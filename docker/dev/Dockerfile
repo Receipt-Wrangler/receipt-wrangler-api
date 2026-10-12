@@ -82,10 +82,15 @@ EXPOSE 80
 # Apt deps: unzip/zip + clang/cmake/ninja/gtk are Flutter's Linux desktop
 # build toolchain; libsecret-1-dev is required to build the
 # flutter_secure_storage_linux plugin (pkg-config fails CMake without it);
+# libwebkit2gtk-4.1-dev + libsoup-3.0-dev are required by desktop_webview_window,
+# which flutter_web_auth_2 pulls in transitively -- its Linux CMakeLists
+# pkg_check_modules on both, so without them `flutter test -d linux`
+# (mobile/run-e2e.sh) fails to build every plugin, not just that one;
 # xvfb lets the integration_test suite run headlessly under `xvfb-run`.
 # See mobile/CLAUDE.md > E2E Testing for the full rationale.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      unzip zip clang cmake ninja-build libgtk-3-dev libsecret-1-dev xvfb \
+      unzip zip clang cmake ninja-build libgtk-3-dev libsecret-1-dev \
+      libwebkit2gtk-4.1-dev libsoup-3.0-dev xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Flutter SDK. Pin at image-build time; to bump, read the current

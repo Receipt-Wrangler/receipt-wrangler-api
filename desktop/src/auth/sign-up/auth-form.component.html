@@ -68,6 +68,29 @@
         </div>
       </form>
 
+      <!--
+        Sign in with an external identity provider. Gated on the list actually
+        having entries rather than *appFeature, because that directive's
+        hasFeature is a truthiness check and an empty array is truthy -- which
+        would render a bare divider on an install with no providers configured.
+      -->
+      @if (!(isSignUp | async) && oidcProviders().length) {
+        <div class="oidc-section">
+          <div class="oidc-divider"><span>or</span></div>
+
+          @for (provider of oidcProviders(); track provider.name) {
+            <app-button
+              buttonClass="w-100 oidc-button"
+              matButtonType="basic"
+              type="button"
+              [attr.data-testid]="'oidc-login-' + provider.name"
+              [buttonText]="'Log in with ' + provider.displayName"
+              (clicked)="loginWithOidc(provider)"
+            ></app-button>
+          }
+        </div>
+      }
+
       <!-- Mobile app setup QR (shown only when configured in System Settings) -->
       <app-login-qr headerText="Set up the mobile app"></app-login-qr>
     </div>

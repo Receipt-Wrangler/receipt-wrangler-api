@@ -51,6 +51,12 @@ export class SystemSettingsComponent implements OnInit {
         readPermission: Permission.AppSystemEmailsRead,
       },
       {
+        label: "OIDC Providers",
+        routerLink: "oidc-providers",
+        name: "oidc-providers",
+        readPermission: Permission.AppOidcProvidersRead,
+      },
+      {
         label: "System Tasks",
         routerLink: "system-tasks",
         name: "system-tasks",

@@ -193,6 +193,11 @@ export class SystemSettingsFormComponent extends BaseFormComponent implements On
       taskQueueConfigurations: this.formBuilder.array(this.buildAsynqQueueConfigurations()),
       mcpEnabled: [this.originalSystemSettings?.mcpEnabled],
       mcpPublicUrl: [this.originalSystemSettings?.mcpPublicUrl],
+      // Always sent, never conditionally required: the backend accepts a blank
+      // value, and the cross-setting rule ("required once a provider is
+      // enabled") is enforced where providers are saved so an admin cannot
+      // register one that has no redirect URI to publish.
+      serverPublicUrl: [this.originalSystemSettings?.serverPublicUrl, [absoluteUrlValidator()]],
       showLoginQr: [this.originalSystemSettings?.showLoginQr],
       mobileServerUrl: [this.originalSystemSettings?.mobileServerUrl],
       // Form-only controls. The API stores hours; the unit is presentation and
@@ -215,6 +220,7 @@ export class SystemSettingsFormComponent extends BaseFormComponent implements On
       this.form.get("timeZone")?.disable();
       this.form.get("mcpEnabled")?.disable();
       this.form.get("mcpPublicUrl")?.disable();
+      this.form.get("serverPublicUrl")?.disable();
       this.form.get("showLoginQr")?.disable();
       this.form.get("mobileServerUrl")?.disable();
       this.form.get("refreshTokenValidForValue")?.disable();

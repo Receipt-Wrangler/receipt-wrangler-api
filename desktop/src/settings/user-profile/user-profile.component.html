@@ -29,6 +29,61 @@
   </app-form-section>
 </ng-template>
 
+@if (showConnectedAccounts()) {
+  <div class="connected-accounts">
+    <app-form-section headerText="Connected accounts" [indent]="false">
+      <p class="text-muted">
+        Sign in with an identity provider instead of your password. Connecting
+        here is the safe way to attach an existing account &mdash; your current
+        session proves who you are, so nothing has to be matched by name.
+      </p>
+
+      @for (connection of connections(); track connection.providerName) {
+        <div class="connected-accounts__row">
+          <div class="connected-accounts__details">
+            <div class="connected-accounts__name">{{ connection.providerDisplayName }}</div>
+            <div class="connected-accounts__meta">
+              {{ connection.email || connection.preferredUsername || "Connected" }}
+            </div>
+          </div>
+
+          @if (canDisconnect(connection)) {
+            <app-button
+              matButtonType="basic"
+              type="button"
+              buttonText="Disconnect"
+              [attr.data-testid]="'oidc-disconnect-' + connection.providerName"
+              (clicked)="disconnectProvider(connection)"
+            ></app-button>
+          } @else {
+            <span
+              class="connected-accounts__locked"
+              matTooltip="This account was created by this provider and has no password to sign in with. Ask an administrator to set one before disconnecting."
+            >Required</span>
+          }
+        </div>
+      }
+
+      @for (provider of availableProviders(); track provider.name) {
+        <div class="connected-accounts__row">
+          <div class="connected-accounts__details">
+            <div class="connected-accounts__name">{{ provider.displayName }}</div>
+            <div class="connected-accounts__meta">Not connected</div>
+          </div>
+
+          <app-button
+            matButtonType="basic"
+            type="button"
+            buttonText="Connect"
+            [attr.data-testid]="'oidc-connect-' + provider.name"
+            (clicked)="connectProvider(provider.name)"
+          ></app-button>
+        </div>
+      }
+    </app-form-section>
+  </div>
+}
+
 <div class="danger-zone" *hasAppPermission="Permission.AppAccountDelete">
   <strong>Danger Zone</strong>
   <p>Account deletion is irreversible. This will permanently remove all associated data including receipts, group memberships, and preferences.</p>

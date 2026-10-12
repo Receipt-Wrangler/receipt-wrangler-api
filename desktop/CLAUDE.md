@@ -1071,6 +1071,77 @@ divider-only-with-`headerText`, turned back off, and the stale-generation guard)
 `feature-config.state.spec.ts`, `auth-form.component.spec.ts` and `about.component.spec.ts` (each
 pinning that its page wires the shared component up), and `system-settings-form.component.spec.ts`.
 
+## OIDC sign-in (external identity providers)
+
+Users can sign in with an external identity provider; administrators register providers in System
+Settings. The **backend owns the whole OIDC exchange** (see `api/CLAUDE.md` → "OIDC (OpenID Connect)
+login"), so the desktop's job is three things: render the buttons, bootstrap the session after the
+redirect, and administer the provider rows.
+
+- **Login buttons** (`src/auth/sign-up/auth-form.component.*`): one `app-button` per
+  `FeatureConfigState.oidcProviders`, which `AppInitService` already loads pre-login off the public
+  `GET /featureConfig`. The click is
+  **`window.location.href = /api/oidc/{name}/login`** — a full-page navigation, not an `HttpClient`
+  call: the browser has to follow the redirect chain to the identity provider, and an XHR would just
+  fetch its HTML into JavaScript. The URL is built by the exported pure `buildOidcLoginUrl`, and the
+  navigation itself goes through a `navigateToUrl` seam so a spec can assert where it goes (jsdom
+  refuses to let `window.location` be replaced).
+  **The section is gated on `oidcProviders().length`, NOT `*appFeature`** — `FeatureConfigState.hasFeature`
+  is a truthiness check and `[]` is truthy, so the directive would render a bare "or" divider on an
+  install with no providers configured.
+- **`/auth/callback`** (`src/auth/oidc-callback/`) is the piece that is easy to miss.
+  `AppInitService.initAppData()` only loads app data when `isLoggedIn || hadSession`, both of which
+  read persisted NGXS state out of `localStorage`. A **first-ever** OIDC login has perfectly valid
+  `jwt` / `refresh_token` cookies but an **empty store**, so the initializer takes its unauthenticated
+  branch and the app boots signed-out while holding a working session. The component calls
+  `getAppData()` → `setAppData(...)` → navigates to `GroupState.dashboardLink`.
+  It lives under `/auth` deliberately: `AuthGuard` lets an unauthenticated user through any route whose
+  URL contains `auth`. **Rejected alternative:** making the initializer always attempt `getAppData()` —
+  that adds a guaranteed 403 to every anonymous page load.
+  A corollary: because `AuthGuard` also *bounces an already logged-in user away* from those routes, the
+  **link** flow must not return through `/auth/callback`; its success target is the profile page.
+- **Login error reporting:** the backend redirects failures to `/auth/login?oidcError=<code>` from a
+  small fixed vocabulary (it never echoes an identity provider's own text). `auth-form.component.ts`
+  maps those to copy in `OIDC_ERROR_MESSAGES`, with a fallback for an unrecognized code.
+- **Admin CRUD** — a new **OIDC Providers** tab in System Settings
+  (`src/system-settings/oidc-provider-table/` + `oidc-provider-form/`, following the
+  `custom-fields` shape: a paged table plus one dialog serving add/view/edit). As with every
+  system-settings tab, the entry must be added to **both** `system-settings.component.ts`'s `allTabs`
+  **and** `guards/system-settings-landing.guard.ts` **at the same index** — the guard's contract is
+  that it redirects in the order the tab bar renders.
+  - The dialog shows the **exact redirect URI** to register with the provider (read-only, with a copy
+    button). Providers match it exactly, so a near miss fails at their end where this app never sees it.
+  - **The name is disabled outside add mode** — it is part of that redirect URI, so a rename would
+    break every subsequent login. The server rejects it too.
+  - **The client secret renders blank on edit and is omitted from the payload when untouched.** That is
+    the client half of the server's `ClientSecret *string` contract (omitted = keep the stored one), and
+    it is why the secret is never sent to the browser at all; `hasClientSecret` reports whether one
+    exists.
+  - The **username-linking** checkbox carries a plain-language warning that it is only safe for a
+    provider you control — see the backend doc for why it defaults off.
+  - The actions column is gated on `hasAnyAppPermission([Update, Delete])`; gating on delete alone
+    would hide the whole column, and with it the edit button, from an update-only holder.
+- **Profile → Connected accounts** (`src/settings/user-profile/`): link and unlink providers from an
+  authenticated session — `window.location.href = /api/oidc/link/{name}` again. This is the safe way to
+  attach a pre-existing password account, and what makes the server's username-matching toggle
+  comfortable to leave off. **Unlink is hidden for a provisioned account's last connection**, mirroring
+  the server's lockout guard (the server refuses it either way). A failed load yields no section rather
+  than an error, so an older server degrades quietly.
+- **`serverPublicUrl`** is a new field in the System Settings form's **Server** section — the
+  externally reachable origin the redirect URIs are built from. It carries the shared
+  `absoluteUrlValidator()` and is deliberately **never conditionally required** here: the backend
+  accepts a blank value, and the "required once a provider is enabled" rule is enforced where providers
+  are saved, so an admin cannot register one with no redirect URI to publish.
+- **Specs:** `auth-form.component.spec.ts` (buttons per provider, none when empty, URL escaping,
+  `?oidcError=` snackbar), `oidc-callback.component.spec.ts` (bootstrap, failure, and the error-code
+  passthrough that must **not** call the API), `oidc-provider-form.component.spec.ts` (name disabled on
+  edit, blank secret omitted / typed secret included, scope must contain `openid`, reserved and
+  malformed names, the warning renders), `oidc-provider-table.component.spec.ts` (the actions-column
+  gating in all three permission shapes), and `feature-config.state.spec.ts` (defaults to `[]`, and
+  survives a payload that omits the key). Note the table specs use **`detectChanges(false)`**, the
+  existing convention for these tables — `setColumns()` runs in `ngAfterViewInit` and mutates a plain
+  property, which trips NG0100 in the dev-mode check-no-changes pass.
+
 ## Duration settings (Hours/Days selector over an hours-based API)
 
 The System Settings form exposes two configurable refresh-token lifetimes (see `api/CLAUDE.md` →

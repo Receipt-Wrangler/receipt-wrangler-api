@@ -156,7 +156,7 @@ change**.
 
 `dart analyze` substitutes for `flutter analyze` here (it reports the same errors) and stays scoped to
 `mobile/api` — judge a regen by the **error** count, which must be **0**. The warnings are
-pre-existing generator noise: 73 in `mobile/api` of 106 across `mobile/`, the split recorded in
+pre-existing generator noise: ~78 in `mobile/api` of 111 across `mobile/`, the split recorded in
 `.github/workflows/ci.yml` where the analyzer is deliberately not gated. Keep those two numbers in
 sync with that comment.
 
@@ -243,6 +243,71 @@ dev libs must be installed by hand.
   size their 15-minute proactive refresh timer against it, and neither client needed any change for
   this. See `api/CLAUDE.md` → "Session lifetime" and `desktop/CLAUDE.md` → "Session lifetime
   settings".
+
+### OIDC Login (external identity providers)
+
+Administrators can register one or more OIDC providers (Keycloak, Authentik, Google, Twitch, …)
+in **System Settings → OIDC Providers**; both login screens then render a `Log in with
+{{ displayName }}` button per enabled provider. This is a three-component feature, and the
+pieces have to agree:
+
+- **The Go API is the Relying Party — the clients are not.** Discovery, PKCE, `state`, `nonce`,
+  the code exchange and ID-token verification all happen server-side. Neither client ever sees an
+  IdP token or the client secret. Do not "simplify" this by moving the exchange into a client.
+  This is the mirror image of the OAuth 2.1 **authorization server** the API already hosts for
+  MCP (`internal/oauth/`); the two share no code paths beyond two primitives in `internal/utils`
+  (`VerifyPkceS256`, `GetRandomUrlSafeString`). See `api/CLAUDE.md` → "OIDC (OpenID Connect)
+  login".
+- **The identity anchor is `(provider, sub)`**, in the `oidc_identities` link table. `sub` is the
+  only claim OIDC guarantees stable and unique. `preferred_username` matching is a **first-login
+  only** convenience behind a per-provider `linkByUsername` toggle that defaults **off** —
+  usernames are user-changeable (and recycled) at most IdPs, so an always-on match is an
+  account-takeover path for `admin`.
+- **The redirect URI is derived from a System Setting**, `serverPublicUrl` →
+  `{serverPublicUrl}/api/oidc/{name}/callback`. It is deliberately **not** `mcpPublicUrl` —
+  changing that value invalidates live connector tokens. The provider form shows the computed URI
+  read-only so it can be pasted into the IdP. A provider's `name` is **immutable after create**
+  for the same reason.
+- **Both clients gate on `app.oidc-providers.*`** for the admin CRUD. Legacy Admin picks the four
+  new permissions up for free (its key set is dynamic over every APP key); Legacy User's list is
+  fixed and must stay without them.
+- **Pre-existing password accounts link from the profile page**, not by matching — *Connected
+  accounts* on both `desktop/` and `mobile/` profiles runs the OIDC flow from an
+  authenticated session, so the server is *told* the identity rather than inferring it. That is
+  the escape hatch which makes `linkByUsername = false` a safe default, and it is why the feature
+  is usable end-to-end from the phone alone. It is gated on **`app.account.update`**, the same
+  permission as disconnecting one — adding a way to sign in is at least as privileged as removing
+  one. **The two clients start it differently and must**: the desktop navigates and gets a 302,
+  while mobile calls it as an authenticated API request, because a bearer token cannot ride into the
+  external user agent RFC 8252 requires. Wiring mobile's Connect button to the *login* flow instead
+  — which is how it first shipped — silently provisions a second account rather than linking.
+- **Every OIDC flow is bound to the user agent that started it**, by a cookie, mobile included. The
+  mobile link start is the one request an app rather than a browser makes, so it creates no session:
+  it returns a single-use **launch URL** on this API, and the browser following that is what mints
+  the session and receives the binding. Two earlier shortcuts here were both holes — skipping the
+  binding for mobile (the callback check was `len(hash) > 0 && …`, a no-op for exactly those
+  sessions) and handing the app the IdP's authorization URL directly (providers leak it by Referer,
+  and the callback could not tell the app's browser from an attacker's). Neither is fixable with
+  PKCE, which defends a different thing: binding stops an attacker **driving** your flow, PKCE stops
+  a rogue app **stealing its result**. See `api/CLAUDE.md` → "Linking an existing account".
+- **`FeatureConfig.oidcProviders` must serialize as `[]`, never `null`**, and
+  `OidcProviderSummary.name` must stay `type: string` and **never become an enum** — the
+  generated Dart deserializer has no null guard and closed enums throw on unknown values, the
+  documented cause of two production login outages.
+- **Mobile uses an external user agent, never a WebView.** `flutter_web_auth_2` on the private-use
+  scheme `io.receiptwrangler://oidc` (RFC 8252 §7.1), carrying a one-time **PKCE-bound exchange
+  code** — never a token. Any installed Android app can claim a private-use scheme, so the PKCE
+  binding is what makes an intercepted code worthless. See `mobile/CLAUDE.md` → "OIDC sign-in".
+- **Desktop lands on `/auth/callback`**, which bootstraps app data before routing — a first-ever
+  OIDC login has valid cookies but an empty NGXS store, so landing anywhere else bounces back to
+  the login screen. See `desktop/CLAUDE.md` → "OIDC sign-in".
+
+**No e2e specs yet, deliberately.** The Go suite (with a local fake-IdP `httptest` server serving
+discovery, JWKS and a real RS256 ID token) plus the Jest and Flutter widget specs are the safety
+net; the flow has not been pinned against a real IdP or a real device. The two specs to add later
+are a Playwright provider-CRUD spec and a Flutter `integration_test` login-button spec — both
+mutate **global** System Settings, so they need `login-qr.spec.ts`'s capture-and-restore pattern
+and the `e2e-shared-backend` concurrency group.
 
 ### Authorization (Roles & Permissions)
 - A configurable role system layers on top of auth: administrators define **app-level** and

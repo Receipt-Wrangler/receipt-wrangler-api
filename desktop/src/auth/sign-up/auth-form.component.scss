@@ -291,3 +291,28 @@ app-auth-form {
   }
 }
 
+
+// Third-party sign-in section, below the local login form.
+.oidc-section {
+  margin-top: 1.5rem;
+
+  .oidc-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    color: var(--mat-sys-on-surface-variant, #6c757d);
+    font-size: 0.875rem;
+
+    &::before,
+    &::after {
+      content: "";
+      flex: 1;
+      border-top: 1px solid var(--mat-sys-outline-variant, #dee2e6);
+    }
+  }
+
+  .oidc-button {
+    margin-bottom: 0.5rem;
+  }
+}

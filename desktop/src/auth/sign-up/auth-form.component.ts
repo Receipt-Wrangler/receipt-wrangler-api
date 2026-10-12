@@ -4,11 +4,11 @@ import { FormBuilder, FormControl, FormGroup, Validators, } from "@angular/forms
 import { ActivatedRoute, Router } from "@angular/router";
 import { Store } from "@ngxs/store";
 import { BehaviorSubject, catchError, EMPTY, finalize, switchMap, tap, } from "rxjs";
-import { AppData, AuthService } from "src/open-api";
+import { AppData, AuthService, OidcProviderSummary } from "src/open-api";
 import { SnackbarService } from "src/services";
 import { setAppData } from "src/utils";
 import { fadeIn, fadeInOut } from "../../animations";
-import { GroupState } from "../../store";
+import { FeatureConfigState, GroupState } from "../../store";
 import { UserValidators } from "../../validators";
 
 @Component({
@@ -30,6 +30,9 @@ export class AuthForm implements OnInit {
   public secondaryButtonText: string = "";
   public secondaryButtonRouterLink: string[] = [];
   public readonly isLoading = signal<boolean>(false);
+  public readonly oidcProviders = this.store.selectSignal(
+    FeatureConfigState.oidcProviders
+  );
 
   constructor(
     private authSerivce: AuthService,
@@ -46,6 +49,37 @@ export class AuthForm implements OnInit {
     this.initForm();
     this.listenForRouteChanges();
     this.listenForIsSignUpChanges();
+    this.showOidcErrorIfPresent();
+  }
+
+  /**
+   * Starts an OIDC login.
+   *
+   * This is a full-page navigation, not an HttpClient call: the browser has to
+   * follow the redirect chain to the identity provider itself, and an XHR would
+   * just fetch the provider's HTML into JavaScript.
+   */
+  public loginWithOidc(provider: OidcProviderSummary): void {
+    this.navigateToUrl(buildOidcLoginUrl(provider.name));
+  }
+
+  /** Seam for the full-page navigation, so a spec can assert where it goes. */
+  protected navigateToUrl(url: string): void {
+    window.location.href = url;
+  }
+
+  /**
+   * Surfaces a failure the backend redirected back with. The backend only ever
+   * sends a code from a small fixed vocabulary -- an identity provider's own
+   * error text is never echoed through -- so this maps it to our own copy.
+   */
+  private showOidcErrorIfPresent(): void {
+    const code = this.route.snapshot?.queryParams?.["oidcError"];
+    if (!code) {
+      return;
+    }
+
+    this.snackbarService.error(OIDC_ERROR_MESSAGES[code] ?? OIDC_ERROR_MESSAGES["default"]);
   }
 
   private listenForRouteChanges(): void {
@@ -150,3 +184,28 @@ export class AuthForm implements OnInit {
       .subscribe();
   }
 }
+
+/** Builds a provider's sign-in URL. Pure, so it can be asserted directly. */
+export function buildOidcLoginUrl(providerName: string): string {
+  return `/api/oidc/${encodeURIComponent(providerName)}/login`;
+}
+
+/**
+ * Copy for the error codes the OIDC callback can redirect back with. Keyed by
+ * the backend's fixed vocabulary so an unknown code still gets a sensible
+ * message rather than nothing.
+ */
+const OIDC_ERROR_MESSAGES: Record<string, string> = {
+  unknown_provider: "That sign-in provider is not available.",
+  no_account:
+    "No Receipt Wrangler account is linked to that identity. Sign in and connect it from your profile, or ask an administrator.",
+  account_exists:
+    "An account with that username already exists. Sign in with your password and connect the provider from your profile.",
+  already_linked: "That identity is already connected to another account.",
+  invalid_state: "That sign-in attempt expired. Please try again.",
+  nonce_mismatch: "That sign-in attempt could not be verified. Please try again.",
+  no_id_token: "The provider did not return an identity token.",
+  provider_error: "The sign-in provider reported an error.",
+  invalid_request: "That sign-in request was not valid.",
+  default: "Sign in failed. Please try again.",
+};

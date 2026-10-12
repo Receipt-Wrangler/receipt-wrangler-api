@@ -2294,6 +2294,100 @@ Native / platform notes:
   covered by `test/widgets/set_homeserver_url_test.dart` (injectable `scanQrCode` seam) and
   `test/utils/url_test.dart`. The live-camera path is exercised only on Android/iOS + manual runs.
 
+### OIDC sign-in (external identity providers)
+
+The login screen renders a "Log in with X" button per enabled provider, and the profile screen lets a
+user connect/disconnect providers. The **whole OIDC exchange happens on the server** — this app opens
+the system browser and redeems the one-time code that comes back. See `api/CLAUDE.md` → "OIDC
+(OpenID Connect) login" for the flow and its security checks.
+
+- **Dependency: `flutter_web_auth_2` `^5.1.0`.** Uses `ASWebAuthenticationSession` on iOS and a Chrome
+  Auth Tab on Android — the external user agent RFC 8252 requires. An embedded `WebView` is **not** an
+  option even though `webview_flutter` is already a dependency: Google actively rejects embedded
+  user-agents with `disallowed_useragent`, and it would expose IdP credentials to the app.
+  **Pinned to the 5.x line for the same reason `app_links` is pinned to 6.x**: 5.1.0 needs Dart
+  `>=3.5.0` / Flutter `>=3.24.0`, both satisfied by this app's `>=3.7.0` floor, while 6.x requires
+  Dart `^3.12.0` and is still alpha. Bumping it means raising the Dart floor — do that deliberately.
+  `crypto` is declared explicitly because `lib/utils/pkce.dart` imports it directly.
+- **PKCE padding is the one thing that only fails on a device.** `codeChallengeS256`
+  (`lib/utils/pkce.dart`) **strips the padding**: Dart's `base64UrlEncode` pads with `=`, Go's
+  `base64.RawURLEncoding` does not, and `utils.VerifyPkceS256` compares the two strings directly. A
+  padded challenge passes every unit test on each side independently. Pinned with the RFC 7636
+  Appendix B vector in `test/utils/pkce_test.dart`.
+- **Scheme: `io.receiptwrangler`** — reverse-DNS of a domain the project owns (RFC 8252 §7.1),
+  matching the `applicationId`. It only ever carries a single-use, PKCE-bound **code**, never tokens:
+  a private-use scheme is unverifiable on Android, so any installed app can claim it; the verifier
+  this app kept is what makes an interception useless.
+- **Android** (`android/app/src/main/AndroidManifest.xml`): the plugin's
+  `com.linusu.flutter_web_auth_2.CallbackActivity` is declared as a **sibling of `MainActivity`**
+  (`android:exported="true"`, `android:taskAffinity=""`) with an intent filter on the scheme.
+  **Do not** hang the scheme off `MainActivity` — that routes the callback into the launcher activity,
+  bypasses the plugin's completer, and competes with the `/app/setup` App Link filter. The class name
+  is verified against the installed 5.1.0 source (its *own* manifest declares a different activity,
+  `AuthenticationManagementActivity`, which is not the one the host app registers).
+- **iOS needs NO `Info.plist` change.** `ASWebAuthenticationSession` registers the callback scheme
+  with the OS **for the lifetime of the session**, so a `CFBundleURLTypes` entry is unnecessary — and
+  strictly worse, since it would let the scheme be routed to the app outside a session. The plugin's
+  README says the same ("nothing special to do"). `Runner.entitlements` is untouched; the
+  associated-domains setup for `/app/setup` is unrelated and keeps working.
+- **`desktop_webview_window` is pulled in transitively**, and its Linux CMakeLists
+  `pkg_check_modules` on `webkit2gtk` and `libsoup`. Without those headers `flutter test -d linux`
+  (`run-e2e.sh`) fails to build **every** plugin, not just that one — so `libwebkit2gtk-4.1-dev` and
+  `libsoup-3.0-dev` are in `docker/dev/Dockerfile` beside `libsecret-1-dev`. **CI is unaffected**:
+  mobile e2e runs on Android and iOS, and `ci.yml` runs plain `flutter test`, which builds no native
+  plugins.
+- **Service** (`lib/services/oidc_service.dart`): `signInWithOidc` generates the verifier, opens the
+  browser at `{basePath}/oidc/{name}/login?client=mobile&codeChallenge=…` (`basePath` already ends in
+  `/api`), parses the code out of the callback, and POSTs it with the verifier. The response is
+  `AppData` with `jwt` + `refreshToken` — the same shape as `login?tokensInBody=true` — so it goes
+  through **`storeAppData` unchanged**. A `PlatformException` with code `CANCELED` becomes
+  `OidcSignInCancelled` and is swallowed; the backend's error codes map to user copy in
+  `oidcErrorMessage` (it only ever sends a small fixed vocabulary, never an IdP's own text).
+- **Buttons** render in `lib/auth/login/widgets/auth_form.dart` from
+  `authModel.featureConfig.oidcProviders`, already populated — the Connect-to-Server screen fetches
+  `/featureConfig` unauthenticated before `/login`, so there is no extra request.
+- **Connected accounts** (`lib/profile/widgets/connected_accounts.dart`): Connect calls
+  **`linkWithOidc`, never `signInWithOidc`** — and the difference is the whole feature. A login flow
+  asks the server *"who is this?"*, so running one from the profile screen provisions a brand-new
+  account (or, with `linkByUsername` on, attaches the identity to whichever account holds that
+  username) instead of connecting this one — and the button is only ever rendered for providers this
+  account has **not** connected, which is exactly the case where that happens. It shipped wired to
+  the login flow and reported "Account connected" while doing it.
+  - **The start is an API call, not a navigation.** `GET /oidc/link/{name}?client=mobile` returns
+    `{launchUrl}` as JSON. It cannot be a redirect: this app authenticates with a **bearer token**
+    (`auth_interceptor.dart`), which the browser RFC 8252 requires has no way to carry, so a 302 into
+    it arrives unauthenticated.
+  - **What comes back points at OUR API, not the identity provider, and that matters.** It first
+    shipped returning the provider's authorization URL for the app to open directly, which meant the
+    browser never touched our server before the callback — so the server had nothing to bind the flow
+    to. Providers leak that URL by Referer from their own login pages, and anyone holding it could
+    authenticate as themselves and have their identity attached to this account. Opening a launch URL
+    instead lets the server set a binding cookie on the browser that will return with the callback.
+    Do not "simplify" this back into one hop. See `api/CLAUDE.md` → "Linking an existing account" for
+    why PKCE cannot substitute (the challenge would be the victim's own, and Android's `exported`
+    `CallbackActivity` lets an attacker deep-link a result into the waiting flow).
+  - The callback returns to `io.receiptwrangler://oidc?linked={name}`, parsed by
+    `extractLinkedProviderFromCallback` — a **link carries no `code`**, because it mints no session.
+  - **No `codeChallenge` is sent**, unlike a login — but not because the bearer token on the start
+    "already proved who the caller is", which was the original and wrong reasoning. It is because a
+    link hands the app back nothing redeemable; the flow is bound by cookie instead.
+  - Disconnect is hidden for a provisioned account's **last** connection, matching the server's
+    lockout guard; the server refuses it either way. The flag is an **account** fact replicated onto
+    every identity, so this per-connection predicate is also the account-level one — see
+    `api/CLAUDE.md`. A failed load yields no section rather than an
+    error, so an older server or a caller without `app.account.read` degrades quietly.
+- **`app_links` is not involved** — `flutter_web_auth_2` captures the callback itself, so the existing
+  deep-link handler in `lib/main.dart` and its test seams are untouched.
+- **Tests:** `test/utils/pkce_test.dart` (the cross-language contract),
+  `test/services/oidc_service_test.dart` (URL composition, escaping, callback parsing for **both** the
+  login and link shapes — including that a bare `code` is not a successful link — and error mapping),
+  `test/widgets/auth_form_test.dart` (a button per provider; none when the list is empty **or
+  absent**), and `test/models/feature_config_oidc_ingest_test.dart` — which deserializes
+  `featureConfig` with `oidcProviders` **absent, empty and populated**. That last one matters because
+  the payload is fetched unauthenticated before login: a shape this client cannot read does not fail
+  one screen, it reports itself as "Failed to connect to server", the same blast radius as the two
+  documented login outages.
+
 ### App Links / Universal Links — server-URL pre-fill (login)
 
 The desktop login page shows a QR encoding a **deep link** to

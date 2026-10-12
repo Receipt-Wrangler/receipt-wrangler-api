@@ -16,6 +16,7 @@ import {
   ReceiptProcessingSettingsTableComponent
 } from "../receipt-processing-settings/receipt-processing-settings-table/receipt-processing-settings-table.component";
 import { receiptProcessingSettingsResolver } from "../receipt-processing-settings/receipt-processing-settings.resolver";
+import { OidcProviderTableComponent } from "./oidc-provider-table/oidc-provider-table.component";
 import { allReceiptProcessingSettingsResolver } from "./resolvers/receipt-processing-settings.resolver";
 import { systemEmailResolver } from "./resolvers/system-email.resolver";
 import { systemSettingsResolver } from "./resolvers/system-settings.resolver";
@@ -37,6 +38,14 @@ const routes: Routes = [
     path: "",
     component: SystemSettingsComponent,
     children: [
+      {
+        path: "oidc-providers",
+        component: OidcProviderTableComponent,
+        canActivate: [appPermissionGuard],
+        data: {
+          appPermissions: [Permission.AppOidcProvidersRead],
+        },
+      },
       {
         path: "system-emails",
         component: SystemEmailTableComponent,

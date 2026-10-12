@@ -45,12 +45,23 @@ void main() {
   Future<void> pumpForm(
     WidgetTester tester, {
     bool enableLocalSignUp = false,
+    List<({String name, String displayName})> oidcProviders = const [],
   }) async {
     final authModel = AuthModel();
-    authModel.setFeatureConfig((api.FeatureConfigBuilder()
-          ..aiPoweredReceipts = false
-          ..enableLocalSignUp = enableLocalSignUp)
-        .build());
+    final builder = api.FeatureConfigBuilder()
+      ..aiPoweredReceipts = false
+      ..enableLocalSignUp = enableLocalSignUp;
+
+    if (oidcProviders.isNotEmpty) {
+      builder.oidcProviders.addAll(oidcProviders.map(
+        (p) => (api.OidcProviderSummaryBuilder()
+              ..name = p.name
+              ..displayName = p.displayName)
+            .build(),
+      ));
+    }
+
+    authModel.setFeatureConfig(builder.build());
 
     await tester.pumpWidget(
       ChangeNotifierProvider<AuthModel>.value(
@@ -167,5 +178,37 @@ void main() {
       tester.widget<FormBuilderTextField>(find.byKey(passwordFieldKey)).name,
       'password',
     );
+  });
+
+  // The provider list rides the public feature config, which the
+  // Connect-to-Server screen already fetches before this screen is reachable.
+  testWidgets('renders no OIDC buttons when none are configured',
+      (tester) async {
+    await pumpForm(tester);
+
+    expect(find.textContaining('Log in with'), findsNothing);
+  });
+
+  testWidgets('renders one login button per configured provider',
+      (tester) async {
+    await pumpForm(tester, oidcProviders: const [
+      (name: 'google', displayName: 'Google'),
+      (name: 'keycloak', displayName: 'Keycloak'),
+    ]);
+
+    expect(find.text('Log in with Google'), findsOneWidget);
+    expect(find.text('Log in with Keycloak'), findsOneWidget);
+    expect(find.byKey(const ValueKey('oidc-login-google')), findsOneWidget);
+    expect(find.byKey(const ValueKey('oidc-login-keycloak')), findsOneWidget);
+  });
+
+  testWidgets('renders no OIDC buttons when the payload omits the field',
+      (tester) async {
+    // A server that predates the feature sends nothing, and the generated model
+    // leaves the field null. Iterating it must not throw.
+    await pumpForm(tester, oidcProviders: const []);
+
+    expect(find.textContaining('Log in with'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

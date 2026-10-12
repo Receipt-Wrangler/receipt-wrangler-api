@@ -1,0 +1,113 @@
+<app-dialog [headerText]="headerText">
+  <form [formGroup]="form">
+    <div class="d-flex flex-column">
+      <app-form-section headerText="Details" [indent]="false">
+        <app-input
+          label="Name"
+          hint="Used in this provider's sign-in URL. Cannot be changed later."
+          data-testid="oidc-provider-name"
+          [readonly]="nameReadonly"
+          [inputFormControl]="form | formGet : 'name'"
+        ></app-input>
+        <app-input
+          label="Display Name"
+          hint="Shown to users as &quot;Log in with ...&quot;."
+          data-testid="oidc-provider-display-name"
+          [readonly]="mode | inputReadonly"
+          [inputFormControl]="form | formGet : 'displayName'"
+        ></app-input>
+        <app-input
+          label="Client ID"
+          data-testid="oidc-provider-client-id"
+          [readonly]="mode | inputReadonly"
+          [inputFormControl]="form | formGet : 'clientId'"
+        ></app-input>
+        <app-input
+          label="Client Secret"
+          type="password"
+          data-testid="oidc-provider-client-secret"
+          [hint]="clientSecretHint"
+          [showVisibilityEye]="true"
+          [readonly]="mode | inputReadonly"
+          [inputFormControl]="form | formGet : 'clientSecret'"
+        ></app-input>
+        <app-input
+          label="Issuer URL"
+          hint="The provider's discovery base, e.g. https://accounts.google.com"
+          data-testid="oidc-provider-issuer-url"
+          [readonly]="mode | inputReadonly"
+          [inputFormControl]="form | formGet : 'issuerUrl'"
+        ></app-input>
+        <app-input
+          label="Scope"
+          hint="Space-separated OIDC scopes. Must include openid."
+          data-testid="oidc-provider-scope"
+          [readonly]="mode | inputReadonly"
+          [inputFormControl]="form | formGet : 'scope'"
+        ></app-input>
+
+        @if (redirectUri) {
+          <div class="oidc-redirect">
+            <div class="oidc-redirect__label">Redirect URI</div>
+            <div class="oidc-redirect__row">
+              <code class="oidc-redirect__value" data-testid="oidc-provider-redirect-uri">{{ redirectUri }}</code>
+              <app-button
+                matButtonType="iconButton"
+                icon="content_copy"
+                data-testid="oidc-provider-copy-redirect-uri"
+                tooltip="Copy redirect URI"
+                (clicked)="copyRedirectUri()"
+              ></app-button>
+            </div>
+            <div class="oidc-redirect__hint">
+              Register this exact URL with the provider. Providers match it
+              exactly, so a near miss fails at their end.
+            </div>
+          </div>
+        }
+      </app-form-section>
+
+      <app-form-section headerText="Sign-in behavior" [indent]="false">
+        <app-checkbox
+          label="Enabled"
+          data-testid="oidc-provider-enabled"
+          [readonly]="mode | inputReadonly"
+          [inputFormControl]="form | formGet : 'enabled'"
+        ></app-checkbox>
+        <app-checkbox
+          label="Create accounts for new users"
+          data-testid="oidc-provider-allow-provisioning"
+          [readonly]="mode | inputReadonly"
+          [inputFormControl]="form | formGet : 'allowProvisioning'"
+        ></app-checkbox>
+        <div class="oidc-hint">
+          When off, someone who has never signed in here is refused rather than
+          given an account.
+        </div>
+
+        <app-checkbox
+          label="Link to existing accounts by username"
+          data-testid="oidc-provider-link-by-username"
+          [readonly]="mode | inputReadonly"
+          [inputFormControl]="form | formGet : 'linkByUsername'"
+        ></app-checkbox>
+        <div class="oidc-hint oidc-hint--warning">
+          <strong>Only enable this for a provider you control.</strong>
+          On a first sign-in it attaches the identity to whichever local account
+          has a matching username. OIDC does not guarantee usernames are stable
+          or unique, and some providers let users change theirs and recycle
+          released names &mdash; so a provider you do not run could be used to
+          take over a matching account. Users can always connect an existing
+          account safely from their own profile instead.
+        </div>
+      </app-form-section>
+    </div>
+
+    @if (mode !== FormMode.view) {
+      <app-dialog-footer
+        (cancelClicked)="closeDialog()"
+        (submitClicked)="submit()"
+      ></app-dialog-footer>
+    }
+  </form>
+</app-dialog>

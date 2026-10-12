@@ -56,6 +56,18 @@ dependencies:
   # (rather than via go_router) so the desktop login QR / OS-opened deep link
   # can pre-fill the Connect-to-Server URL. See lib/main.dart's deep-link handler.
   app_links: ^6.4.1
+  # Signs users in with an external identity provider through the system browser
+  # (ASWebAuthenticationSession on iOS, a Chrome Auth Tab on Android) rather than
+  # an embedded WebView, which RFC 8252 requires and Google actively rejects.
+  #
+  # Pinned to the 5.x line deliberately, the same check that keeps app_links on
+  # 6.x: 5.1.0 needs Dart >=3.5.0 and Flutter >=3.24.0, both satisfied by this
+  # app's >=3.7.0 floor, while 6.x requires Dart ^3.12.0 and is still alpha.
+  # Raising it would mean raising the Dart floor -- do that deliberately.
+  flutter_web_auth_2: ^5.1.0
+  # Declared explicitly (not just transitively) because lib/utils/pkce.dart
+  # imports it directly for the S256 code challenge.
+  crypto: ^3.0.3
   file_selector: ^1.0.3
   rxdart: ^0.28.0
   flutter_launcher_icons: ^0.14.1

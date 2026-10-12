@@ -1,11 +1,16 @@
 import { Injectable } from "@angular/core";
 import { Action, createSelector, Selector, State, StateContext, } from "@ngxs/store";
-import { FeatureConfig } from "../open-api";
+import { FeatureConfig, OidcProviderSummary } from "../open-api";
 import { SetFeatureConfig } from "./feature-config.state.actions";
 
 @State<FeatureConfig>({
   name: "featureConfig",
-  defaults: { enableLocalSignUp: true, aiPoweredReceipts: false, loginQrUrl: "" },
+  defaults: {
+    enableLocalSignUp: true,
+    aiPoweredReceipts: false,
+    loginQrUrl: "",
+    oidcProviders: [],
+  },
 })
 @Injectable()
 export class FeatureConfigState {
@@ -22,6 +27,11 @@ export class FeatureConfigState {
   @Selector()
   static loginQrUrl(state: FeatureConfig): string | undefined {
     return state.loginQrUrl;
+  }
+
+  @Selector()
+  static oidcProviders(state: FeatureConfig): OidcProviderSummary[] {
+    return state.oidcProviders ?? [];
   }
 
   @Selector()
@@ -44,6 +54,10 @@ export class FeatureConfigState {
       aiPoweredReceipts: payload.config?.aiPoweredReceipts,
       enableLocalSignUp: payload.config?.enableLocalSignUp,
       loginQrUrl: payload.config?.loginQrUrl,
+      // Coalesced rather than assigned straight through: the field is optional on
+      // the contract, so a server that predates it sends nothing, and consumers
+      // should still get an array to iterate.
+      oidcProviders: payload.config?.oidcProviders ?? [],
     });
   }
 }

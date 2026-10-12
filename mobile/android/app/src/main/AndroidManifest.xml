@@ -36,6 +36,26 @@
                       android:pathPrefix="/app/setup"/>
             </intent-filter>
         </activity>
+        <!-- Captures the OIDC sign-in callback on the app's private-use scheme.
+             A sibling of MainActivity, not an intent-filter on it: routing the
+             callback into the launcher activity would bypass the plugin's
+             completer and compete with the App Link filter above.
+             Class name verified against flutter_web_auth_2 5.1.0.
+             The scheme is reverse-DNS of a domain the project owns (RFC 8252
+             section 7.1) and matches the applicationId. It only ever carries a
+             one-time, PKCE-bound code (never a token), because a private-use
+             scheme is unverifiable and any installed app can claim it. -->
+        <activity
+                android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+                android:exported="true"
+                android:taskAffinity="">
+            <intent-filter android:label="flutter_web_auth_2">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="io.receiptwrangler"/>
+            </intent-filter>
+        </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

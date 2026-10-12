@@ -5,6 +5,7 @@ import 'package:openapi/openapi.dart' as api;
 import 'package:provider/provider.dart';
 import 'package:receipt_wrangler_mobile/client/client.dart';
 import 'package:receipt_wrangler_mobile/models/auth_model.dart';
+import 'package:receipt_wrangler_mobile/profile/widgets/connected_accounts.dart';
 import 'package:receipt_wrangler_mobile/profile/widgets/crash_reporting_toggle.dart';
 import 'package:receipt_wrangler_mobile/profile/widgets/delete_account_dialog.dart';
 import 'package:receipt_wrangler_mobile/shared/widgets/screen_wrapper.dart';
@@ -60,6 +61,7 @@ class UserProfileScreen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const CrashReportingToggle(),
+            const ConnectedAccounts(),
             const SizedBox(height: 24),
             Container(
               width: double.infinity,

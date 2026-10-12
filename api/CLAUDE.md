@@ -1767,6 +1767,37 @@ so validation and the clamp cannot drift. `BuildTokenCookies` resolves the app l
 the refresh cookie's `Expires` — both its call sites (login, token refresh) are REST-only, never
 MCP.
 
+### Cookie `Secure` is deliberately off in production
+
+`BuildTokenCookies` sets `Secure=false` + `SameSite=Strict` in production, and `Secure=true` +
+`SameSite=None` **only** in `dev` — which reads backwards and is not. Two separate reasons, and
+both have to hold:
+
+- **`SameSite=None` is what forces `Secure` in dev.** Browsers reject a `None` cookie without it,
+  so the dev branch cannot set one without the other. Production uses `Strict`, which carries no
+  such requirement.
+- **Plain-http self-hosting is supported**, on a LAN or a bare IP (the same reason
+  `isValidAbsoluteUrl` accepts `http`). A browser silently drops a `Secure` cookie over http, so
+  setting it unconditionally **breaks login on those installs** — that has happened before, which
+  is why this is written down rather than left to be rediscovered.
+
+`GetEmptyAccessTokenCookie` / `GetEmptyRefreshTokenCookie` and `oidc.clearBindingCookie` set no
+`Secure` at all, for the same reason; they are expiry cookies carrying an empty value.
+
+**CodeQL flags all of this** as `go/insecure-cookie` (alerts #119-#122, medium), and the alerts are
+**known and accepted**, not unnoticed. They land on `internal/oidc/flow.go` rather than on
+`services/auth.go` because CodeQL reports at the `http.SetCookie` call, and `flow.go` is the newest
+file to make those calls — two of the four are the shared builder's own cookies. Do not "fix" them
+by flipping the flag.
+
+**The agreed fix is a System Settings toggle, in its own change** — per-install, like
+`mcpEnabled` and `showLoginQr`, so an operator serving over TLS can turn it on and a LAN install
+stays working. Worth knowing when that lands: `docker/default.conf` already sets
+`proxy_set_header X-Forwarded-Proto $scheme` on every `/api/` location, so the toggle can offer an
+**auto-detect** default (`r.TLS != nil || X-Forwarded-Proto == "https"`) rather than making every
+operator reason about it. That detection degrades to `false` wherever the header is absent, so it
+cannot reintroduce the breakage above.
+
 The `@every 24h` refresh-token cleanup cron is unaffected: it deletes on `is_used = true` as well as
 expiry, and rotation marks the previous token used immediately, so the table stays small at any TTL.
 

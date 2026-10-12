@@ -277,7 +277,10 @@ pieces have to agree:
   the escape hatch which makes `linkByUsername = false` a safe default, and it is why the feature
   is usable end-to-end from the phone alone. It is gated on **`app.account.update`**, the same
   permission as disconnecting one — adding a way to sign in is at least as privileged as removing
-  one. **The two clients start it differently and must**: the desktop navigates and gets a 302,
+  one — and on an **interactive session**: neither linking nor unlinking may be done with an API
+  key, whatever its scope, because a key that could add a sign-in method would be minting a
+  credential wider and longer-lived than itself (the link outlives revoking the key). See
+  `api/CLAUDE.md` → "Linking an existing account". **The two clients start it differently and must**: the desktop navigates and gets a 302,
   while mobile calls it as an authenticated API request, because a bearer token cannot ride into the
   external user agent RFC 8252 requires. Wiring mobile's Connect button to the *login* flow instead
   — which is how it first shipped — silently provisions a second account rather than linking.

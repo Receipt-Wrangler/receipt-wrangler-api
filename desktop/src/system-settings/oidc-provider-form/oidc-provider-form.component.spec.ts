@@ -7,7 +7,7 @@ import { MatSnackBarModule } from "@angular/material/snack-bar";
 import { NoopAnimationsModule } from "@angular/platform-browser/animations";
 import { RouterTestingModule } from "@angular/router/testing";
 import { NgxsModule } from "@ngxs/store";
-import { of } from "rxjs";
+import { config, of, Subject, throwError } from "rxjs";
 import { ButtonModule } from "../../button";
 import { CheckboxModule } from "../../checkbox/checkbox.module";
 import { FormMode } from "../../enums/form-mode.enum";
@@ -185,5 +185,130 @@ describe("OidcProviderFormComponent", () => {
 
     expect(component.redirectUri).toBe(provider.redirectUri);
     expect(fixture.nativeElement.textContent).toContain(provider.redirectUri);
+  });
+
+  describe("submit re-entrancy", () => {
+    it("issues one request when submit runs again while the save is in flight", () => {
+      initEdit();
+      const pending = new Subject<OidcProviderView>();
+      const updateSpy = jest
+        .spyOn(oidcProviderService, "updateOidcProvider")
+        .mockReturnValue(pending as any);
+
+      component.submit();
+      component.submit();
+
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+
+      pending.next(provider);
+      pending.complete();
+    });
+
+    it("accepts a new submit once the save has landed", () => {
+      initEdit();
+      const pending = new Subject<OidcProviderView>();
+      const updateSpy = jest
+        .spyOn(oidcProviderService, "updateOidcProvider")
+        .mockReturnValue(pending as any);
+
+      component.submit();
+      pending.next(provider);
+      pending.complete();
+      component.submit();
+
+      expect(updateSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("becomes submittable again after a failed save", () => {
+      initEdit();
+      const updateSpy = jest
+        .spyOn(oidcProviderService, "updateOidcProvider")
+        .mockReturnValue(throwError(() => new Error("boom")) as any);
+
+      // subscribe() takes no error handler -- the interceptor is what reports
+      // a failed save -- so RxJS routes the error here rather than throwing
+      // out of submit(). Swallow it so it does not surface as an unhandled
+      // error in a later test.
+      const originalOnUnhandledError = config.onUnhandledError;
+      config.onUnhandledError = () => undefined;
+
+      try {
+        // The dialog stays open on a failure, so the form has to be usable
+        // again -- which is why the flag clears in finalize, not in tap.
+        component.submit();
+        component.submit();
+      } finally {
+        config.onUnhandledError = originalOnUnhandledError;
+      }
+
+      expect(updateSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("copying the redirect URI", () => {
+    const originalClipboard = Object.getOwnPropertyDescriptor(
+      window.navigator,
+      "clipboard"
+    );
+
+    function setClipboard(value: unknown): void {
+      Object.defineProperty(window.navigator, "clipboard", {
+        value,
+        configurable: true,
+      });
+    }
+
+    afterEach(() => {
+      if (originalClipboard) {
+        Object.defineProperty(window.navigator, "clipboard", originalClipboard);
+      } else {
+        delete (window.navigator as any).clipboard;
+      }
+    });
+
+    it("reports success", async () => {
+      initEdit();
+      const writeText = jest.fn().mockResolvedValue(undefined);
+      setClipboard({ writeText });
+      const successSpy = jest
+        .spyOn(TestBed.inject(SnackbarService), "success")
+        .mockImplementation(() => undefined as any);
+
+      await component.copyRedirectUri();
+
+      expect(writeText).toHaveBeenCalledWith(provider.redirectUri);
+      expect(successSpy).toHaveBeenCalledWith("Redirect URI copied");
+    });
+
+    it("reports a rejected write instead of leaving it unhandled", async () => {
+      initEdit();
+      setClipboard({ writeText: jest.fn().mockRejectedValue(new Error("nope")) });
+      const errorSpy = jest
+        .spyOn(TestBed.inject(SnackbarService), "error")
+        .mockImplementation(() => undefined as any);
+
+      await expect(component.copyRedirectUri()).resolves.toBeUndefined();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Could not copy the redirect URI")
+      );
+    });
+
+    it("reports an absent clipboard rather than throwing", async () => {
+      // What a plain-http self-hosted install actually looks like: outside a
+      // secure context navigator.clipboard is undefined, so the old code threw
+      // synchronously and the button did nothing at all.
+      initEdit();
+      setClipboard(undefined);
+      const errorSpy = jest
+        .spyOn(TestBed.inject(SnackbarService), "error")
+        .mockImplementation(() => undefined as any);
+
+      await expect(component.copyRedirectUri()).resolves.toBeUndefined();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Could not copy the redirect URI")
+      );
+    });
   });
 });

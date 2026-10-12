@@ -1121,6 +1121,26 @@ redirect, and administer the provider rows.
     provider you control — see the backend doc for why it defaults off.
   - The actions column is gated on `hasAnyAppPermission([Update, Delete])`; gating on delete alone
     would hide the whole column, and with it the edit button, from an update-only holder.
+  - **It is the one dialog form in the app that guards against a double submit** — a private
+    `isSubmitting` field checked in `submit()` and cleared in `finalize()`. Do not "tidy" it back
+    into line with the other eleven, all of which are `take(1) → tap → close` with the button
+    live for the whole request. `take(1)` caps one subscription; it does not stop a second click
+    starting a second request. The shared `disableWhenProgressBarIsShown` input on
+    `app-dialog-footer` looks like the house answer and is not: the only dispatcher of
+    `ShowProgressBar` anywhere is Magic Fill (`receipt-form.component.ts`), so the three call
+    sites that opt in are protected by nothing. Here it mattered because `oidc_providers.name`
+    carries a DB unique index — the duplicate request cannot create a second provider, it just
+    fails, and `MatSnackBar.open()` dismisses the success toast to show that error, so the admin
+    is left reading a failure for a save that worked. It clears in `finalize` rather than `tap`
+    because a failed save leaves the dialog open for the interceptor to report.
+  - **The redirect URI's copy button handles an absent clipboard, not just a rejected write.**
+    `navigator.clipboard` is `undefined` outside a secure context, so the call throws
+    *synchronously* — and plain-http LAN self-hosting is a deployment this project supports. This
+    is the one string an admin has to hand to their identity provider, so a dead button gets a
+    message rather than silence. It is deliberately **not** the shared `app-copy-button`, which is
+    silent on failure by design (pinned by `copy-button.component.spec.ts`); the model here is
+    `api-key-form-dialog`, the other hand-rolled `content_copy` button in a dialog, which toasts
+    both outcomes.
 - **Profile → Connected accounts** (`src/settings/user-profile/`): link and unlink providers from an
   authenticated session — `window.location.href = /api/oidc/link/{name}` again. This is the safe way to
   attach a pre-existing password account, and what makes the server's username-matching toggle

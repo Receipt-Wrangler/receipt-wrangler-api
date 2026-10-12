@@ -23,7 +23,12 @@ import '../../../models/system_settings_model.dart';
 import '../../../utils/currency.dart';
 
 class AuthForm extends StatefulWidget {
-  const AuthForm({super.key});
+  const AuthForm({super.key, this.signIn});
+
+  /// Injectable for tests: runs the OIDC sign-in and returns the app data.
+  /// Defaults to [signInWithOidc].
+  final Future<api.AppData> Function(
+      {required String basePath, required String providerName})? signIn;
 
   @override
   State<AuthForm> createState() => _Login();
@@ -96,6 +101,17 @@ class _Login extends State<AuthForm> {
   /// same shape as a password login with tokensInBody, so it goes through the
   /// same _onLoginSuccess path.
   Future<void> loginWithOidc(api.OidcProviderSummary provider) async {
+    // Synchronous re-entrancy guard. isLoading swaps the whole form for a
+    // spinner, which does make the buttons untappable -- but only on the frame
+    // AFTER setState, so two taps inside that window both get here. The second
+    // one's toggleIsLoading() would then flip the form back ON while the first
+    // browser session is still open, leaving it tappable again and starting a
+    // second authenticate() the package documents no behaviour for. Same shape
+    // as the guard in receipts/nav/receipt_bottom_sheet_builder.dart.
+    if (isLoading) {
+      return;
+    }
+
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final basePath = authModel.basePath;
 
@@ -106,7 +122,7 @@ class _Login extends State<AuthForm> {
 
     try {
       toggleIsLoading();
-      final appData = await signInWithOidc(
+      final appData = await (widget.signIn ?? signInWithOidc)(
         basePath: basePath,
         providerName: provider.name,
       );
@@ -194,6 +210,15 @@ class _Login extends State<AuthForm> {
 
     await storeAppData(authModel, groupModel, userModel, userPreferencesModel,
         categoryModel, tagModel, systemSettingsModel, permissionsModel, appData);
+
+    // Both calls below take this context, and storeAppData is a real await --
+    // the widget can be gone by now. Shared with the password login path, so
+    // this guards both. (Nothing would have flagged it: analysis_options.yaml
+    // is empty, so use_build_context_synchronously is off.)
+    if (!mounted) {
+      return;
+    }
+
     registerCustomCurrency(context);
     context.go("/groups");
   }

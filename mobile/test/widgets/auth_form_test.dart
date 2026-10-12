@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,7 +48,19 @@ void main() {
     WidgetTester tester, {
     bool enableLocalSignUp = false,
     List<({String name, String displayName})> oidcProviders = const [],
+    Future<api.AppData> Function(
+            {required String basePath, required String providerName})?
+        signIn,
+    String basePath = '',
   }) async {
+    if (basePath.isNotEmpty) {
+      // Written through the live instance rather than AuthModel.setBasePath,
+      // which also rebuilds OpenApiClient.client. Note re-running
+      // GlobalSharedPreferences.initialize() would NOT work: it no-ops once
+      // its static instance is set.
+      await GlobalSharedPreferences.instance.setString('basePath', basePath);
+    }
+
     final authModel = AuthModel();
     final builder = api.FeatureConfigBuilder()
       ..aiPoweredReceipts = false
@@ -66,9 +80,9 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider<AuthModel>.value(
         value: authModel,
-        child: const MaterialApp(
+        child: MaterialApp(
           home: Scaffold(
-            body: SingleChildScrollView(child: AuthForm()),
+            body: SingleChildScrollView(child: AuthForm(signIn: signIn)),
           ),
         ),
       ),
@@ -210,5 +224,42 @@ void main() {
 
     expect(find.textContaining('Log in with'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a second tap does not start a second OIDC sign-in',
+      (tester) async {
+    // isLoading swaps the form for a spinner, but only on the frame AFTER
+    // setState -- so without the guard two taps inside that window both run,
+    // and the second toggleIsLoading() flips the form back on mid-flight.
+    var started = 0;
+    final neverCompletes = Completer<api.AppData>();
+
+    await pumpForm(
+      tester,
+      oidcProviders: const [(name: 'google', displayName: 'Google')],
+      basePath: 'https://receipts.example.com/api',
+      signIn: ({required basePath, required providerName}) {
+        started += 1;
+        return neverCompletes.future;
+      },
+    );
+
+    final button = find.byKey(const ValueKey('oidc-login-google'));
+
+    // The OIDC buttons sit below the fold on the default test surface.
+    await tester.ensureVisible(button);
+    await tester.pump();
+
+    // Both taps are delivered before any frame is pumped, which is exactly the
+    // window the guard exists to close. warnIfMissed is left on: a tap that
+    // silently misses would make this pass for the wrong reason.
+    await tester.tap(button);
+    await tester.tap(button);
+    await tester.pump();
+
+    expect(started, 1);
+    // ...and the form really did go to its loading state and stay there.
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(button, findsNothing);
   });
 }

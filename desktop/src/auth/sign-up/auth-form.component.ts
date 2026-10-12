@@ -79,7 +79,14 @@ export class AuthForm implements OnInit {
       return;
     }
 
-    this.snackbarService.error(OIDC_ERROR_MESSAGES[code] ?? OIDC_ERROR_MESSAGES["default"]);
+    // Own-property check, not a bare lookup: the query param is whatever the
+    // address bar holds, and an inherited key like "constructor" or "toString"
+    // resolves to a function that ?? happily passes through to the snackbar.
+    this.snackbarService.error(
+      Object.hasOwn(OIDC_ERROR_MESSAGES, code)
+        ? OIDC_ERROR_MESSAGES[code]
+        : OIDC_ERROR_MESSAGES["default"]
+    );
   }
 
   private listenForRouteChanges(): void {

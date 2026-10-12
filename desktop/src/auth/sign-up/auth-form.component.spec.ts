@@ -253,6 +253,26 @@ describe('AuthForm', () => {
     );
   });
 
+  it.each(['constructor', 'toString', '__proto__'])(
+    'falls back to the default copy for the inherited key %s',
+    (code) => {
+      const snackbarService = TestBed.inject(SnackbarService);
+      const errorSpy = jest
+        .spyOn(snackbarService, 'error')
+        .mockImplementation(() => undefined as any);
+      const route = TestBed.inject(ActivatedRoute) as any;
+      route.snapshot.queryParams = { oidcError: code };
+
+      const localFixture = TestBed.createComponent(AuthForm);
+      localFixture.detectChanges();
+
+      // A bare lookup resolves these off Object.prototype, and ?? passes the
+      // function straight through -- the user would read the source of
+      // Object() out of a snackbar.
+      expect(errorSpy).toHaveBeenCalledWith('Sign in failed. Please try again.');
+    }
+  );
+
   it('renders the login QR when loginQrUrl is set', async () => {
     (QRCode.toDataURL as jest.Mock).mockResolvedValue(
       'data:image/png;base64,QR'

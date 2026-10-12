@@ -1,7 +1,7 @@
 import { Component, Input, OnInit } from "@angular/core";
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from "@angular/forms";
 import { MatDialogRef } from "@angular/material/dialog";
-import { Observable, take, tap } from "rxjs";
+import { finalize, Observable, take, tap } from "rxjs";
 import { FormMode } from "../../enums/form-mode.enum";
 import { OidcProviderService, OidcProviderView, UpsertOidcProviderCommand } from "../../open-api/index";
 import { SnackbarService } from "../../services/index";
@@ -12,6 +12,10 @@ import { absoluteUrlValidator, trimmedRequiredValidator } from "../../validators
  * ReservedOidcProviderNames so the user gets inline feedback rather than a 400.
  */
 const RESERVED_PROVIDER_NAMES = ["login", "callback", "link", "exchange", "connections"];
+
+/** Shown when the clipboard is unavailable or refuses the write. */
+const COPY_FAILED_MESSAGE =
+  "Could not copy the redirect URI. Select it and copy it manually.";
 
 /** Mirrors the backend's oidcProviderNameRegex. */
 const PROVIDER_NAME_PATTERN = /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$/;
@@ -76,6 +80,13 @@ export class OidcProviderFormComponent implements OnInit {
 
   public form!: FormGroup;
 
+  /**
+   * True while a save is in flight. A plain field rather than a signal: it is
+   * read only by submit(), never by the template, so zoneless change detection
+   * is not involved.
+   */
+  private isSubmitting = false;
+
   protected readonly FormMode = FormMode;
 
   constructor(
@@ -118,7 +129,16 @@ export class OidcProviderFormComponent implements OnInit {
   }
 
   public submit(): void {
-    if (!this.form.valid) {
+    // Synchronous re-entrancy guard. The submit button is never disabled -- no
+    // dialog form in this app disables one, and the shared
+    // disableWhenProgressBarIsShown machinery only reacts to a progress bar
+    // that nothing but Magic Fill ever raises -- so a second click during the
+    // save lands here. The name carries a DB unique index, so the duplicate
+    // request cannot create a second provider; it just fails, and MatSnackBar
+    // dismisses the success toast to show that error, leaving the user looking
+    // at a failure for a save that worked. Same shape as the guard in mobile's
+    // receipts/nav/receipt_bottom_sheet_builder.dart.
+    if (!this.form.valid || this.isSubmitting) {
       return;
     }
 
@@ -132,13 +152,18 @@ export class OidcProviderFormComponent implements OnInit {
     const successMessage =
       this.mode === FormMode.edit ? "OIDC provider updated" : "OIDC provider created";
 
+    this.isSubmitting = true;
+
     request$
       .pipe(
         take(1),
         tap(() => {
           this.snackbarService.success(successMessage);
           this.matDialogRef.close(true);
-        })
+        }),
+        // finalize, not tap: a failed save leaves the dialog open for the
+        // interceptor to report, so the form has to become submittable again.
+        finalize(() => (this.isSubmitting = false))
       )
       .subscribe();
   }
@@ -152,8 +177,22 @@ export class OidcProviderFormComponent implements OnInit {
       return;
     }
 
-    await navigator.clipboard.writeText(this.redirectUri);
-    this.snackbarService.success("Redirect URI copied");
+    // navigator.clipboard is undefined outside a secure context, and this app
+    // is deliberately deployable over plain http on a LAN, so the call can
+    // throw synchronously as well as reject. This is the one string an admin
+    // has to hand to their identity provider, so a dead button is worth a
+    // message rather than silence.
+    if (!navigator?.clipboard?.writeText) {
+      this.snackbarService.error(COPY_FAILED_MESSAGE);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(this.redirectUri);
+      this.snackbarService.success("Redirect URI copied");
+    } catch {
+      this.snackbarService.error(COPY_FAILED_MESSAGE);
+    }
   }
 
   private buildCommand(): UpsertOidcProviderCommand {

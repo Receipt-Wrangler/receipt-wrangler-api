@@ -13,7 +13,11 @@ import 'package:receipt_wrangler_mobile/utils/snackbar.dart';
 /// connecting from here proves identity with the current session, so the backend
 /// never has to guess which account an unseen identity belongs to.
 class ConnectedAccounts extends StatefulWidget {
-  const ConnectedAccounts({super.key});
+  const ConnectedAccounts({super.key, this.link});
+
+  /// Injectable for tests: runs the OIDC link flow and returns the provider
+  /// that was connected. Defaults to [linkWithOidc].
+  final Future<String> Function({required String providerName})? link;
 
   @override
   State<ConnectedAccounts> createState() => _ConnectedAccountsState();
@@ -21,7 +25,16 @@ class ConnectedAccounts extends StatefulWidget {
 
 class _ConnectedAccountsState extends State<ConnectedAccounts> {
   List<api.OidcConnectionView> _connections = [];
+
+  /// The INITIAL load of the connection list only -- it is set false once and
+  /// never again, so it says nothing about a connect or disconnect in flight.
   bool _isLoading = true;
+
+  /// A link flow is open. Unlike the login form, this widget keeps its buttons
+  /// mounted and enabled for the whole external browser session, so without
+  /// this every extra tap starts another flow and burns another single-use
+  /// launch handle on the server.
+  bool _isLinking = false;
 
   @override
   void initState() {
@@ -70,6 +83,10 @@ class _ConnectedAccountsState extends State<ConnectedAccounts> {
   }
 
   Future<void> _connect(String providerName) async {
+    if (_isLinking) {
+      return;
+    }
+
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final basePath = authModel.basePath;
 
@@ -78,12 +95,14 @@ class _ConnectedAccountsState extends State<ConnectedAccounts> {
       return;
     }
 
+    setState(() => _isLinking = true);
+
     try {
       // linkWithOidc, NOT signInWithOidc. A login flow asks the server "who is
       // this?", so from here it would provision a second account rather than
       // connect this one -- and this button is only ever shown for providers
       // this account has not connected, which is exactly when that happens.
-      await linkWithOidc(providerName: providerName);
+      await (widget.link ?? linkWithOidc)(providerName: providerName);
 
       if (!mounted) return;
 
@@ -95,6 +114,11 @@ class _ConnectedAccountsState extends State<ConnectedAccounts> {
       if (mounted) showErrorSnackbar(context, e.message);
     } catch (_) {
       if (mounted) showErrorSnackbar(context, 'Could not connect that account.');
+    } finally {
+      // A finally is right here where loginWithOidc cannot use one: this stays
+      // on the page after a successful link, so the flag has to clear on the
+      // success path too.
+      if (mounted) setState(() => _isLinking = false);
     }
   }
 
@@ -187,7 +211,7 @@ class _ConnectedAccountsState extends State<ConnectedAccounts> {
                 subtitle: const Text('Not connected'),
                 trailing: TextButton(
                   key: ValueKey('oidc-connect-${provider.name}'),
-                  onPressed: () => _connect(provider.name),
+                  onPressed: _isLinking ? null : () => _connect(provider.name),
                   child: const Text('Connect'),
                 ),
               ),

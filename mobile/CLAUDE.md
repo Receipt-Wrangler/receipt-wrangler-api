@@ -2378,11 +2378,42 @@ the system browser and redeems the one-time code that comes back. See `api/CLAUD
     error, so an older server or a caller without `app.account.read` degrades quietly.
 - **`app_links` is not involved** — `flutter_web_auth_2` captures the callback itself, so the existing
   deep-link handler in `lib/main.dart` and its test seams are untouched.
+- **Both OIDC entry points carry a synchronous re-entrancy guard, and "the button disappears while
+  loading" is not one.** On the login form `isLoading` swaps the whole form for a spinner — but only
+  on the frame **after** `setState`, so two taps inside that window both enter `loginWithOidc`, and
+  the second `toggleIsLoading()` (a *flip*, not a setter) turns the form back **on** while the first
+  browser session is still open. `flutter_web_auth_2` documents no behaviour for overlapping
+  `authenticate` calls. `connected_accounts.dart` is worse rather than better: its `_isLoading`
+  tracks the **initial** connection-list fetch only, so its Connect buttons stay mounted and enabled
+  for the entire external session, and every extra tap burns another single-use launch handle on the
+  server. Hence `if (isLoading) return;` and `if (_isLinking) return;` — the same shape, and the same
+  reasoning, as the guard in `receipts/nav/receipt_bottom_sheet_builder.dart`. `_connect` clears its
+  flag in a `finally` where `loginWithOidc` cannot: it stays on the page after a successful link,
+  where a login navigates away.
+- **Each widget takes an injectable seam for its flow** — `AuthForm.signIn` and
+  `ConnectedAccounts.link`, resolved `widget.x ?? theRealFunction` at the call site, mirroring
+  `SetHomeserverUrl.scanQrCode`. `signInWithOidc` / `linkWithOidc` are top-level functions with I/O,
+  so `oidc_service_test.dart` can only reach the pure helpers; without the seam neither guard above
+  is testable at all.
+  - **A widget test for either must write `basePath` through
+    `GlobalSharedPreferences.instance.setString`**, not `AuthModel.setBasePath` (which rebuilds
+    `OpenApiClient.client` and throws away a mock) and not a second
+    `GlobalSharedPreferences.initialize()` (which **no-ops** once its static instance is set).
+    Without a base path both handlers early-return and the test passes while exercising nothing.
+- **`_onLoginSuccess` guards `mounted` after `await storeAppData`**, before
+  `registerCustomCurrency(context)` and `context.go`. It is shared with the password login path, so
+  the one line covers both. Nothing would ever have flagged it: `mobile/analysis_options.yaml` is a
+  **0-byte** file and `flutter_lints` is a dev_dependency nothing includes, so
+  `use_build_context_synchronously` is off — not disabled, simply never enabled. It is deliberately
+  untested; reaching it needs the widget disposed mid-`storeAppData`, which would mean a seam over
+  all eight providers for a defensive one-liner.
 - **Tests:** `test/utils/pkce_test.dart` (the cross-language contract),
   `test/services/oidc_service_test.dart` (URL composition, escaping, callback parsing for **both** the
   login and link shapes — including that a bare `code` is not a successful link — and error mapping),
   `test/widgets/auth_form_test.dart` (a button per provider; none when the list is empty **or
-  absent**), and `test/models/feature_config_oidc_ingest_test.dart` — which deserializes
+  absent**; and a second tap not starting a second sign-in),
+  `test/widgets/connected_accounts_test.dart` (the link guard, the button disabling while a link is
+  open, and a failed link re-enabling it), and `test/models/feature_config_oidc_ingest_test.dart` — which deserializes
   `featureConfig` with `oidcProviders` **absent, empty and populated**. That last one matters because
   the payload is fetched unauthenticated before login: a shape this client cannot read does not fail
   one screen, it reports itself as "Failed to connect to server", the same blast radius as the two

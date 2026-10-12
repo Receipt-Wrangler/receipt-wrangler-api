@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"receipt-wrangler/api/internal/models"
 	"strings"
 )
 
@@ -73,12 +74,36 @@ func classifyRequest(r *http.Request) requestClass {
 
 // apiKeyScopePermits applies the scope to a request already classified.
 //
-// An unrecognized or empty scope permits nothing -- UpsertApiKeyCommand and
-// Claims.Validate both reject anything outside the three values, so reaching here
-// with something else is a bug, and a bug must not widen access.
+// The match is EXACT, against the three values models.ApiKeyScope declares, and
+// anything else permits nothing. That is not belt-and-braces -- it is the only
+// check that runs at request time:
+//
+//   - Claims.Validate does NOT run on this path. It is the
+//     validator.WithCustomClaims hook, which fires when a JWT is parsed;
+//     ApiKeyService.GetClaimsFromApiKey hand-builds the claims for an API key.
+//   - models.ApiKey.Scope is a plain string column, not models.ApiKeyScope, and
+//     that type has no driver.Valuer, so GORM never checks it on read or write.
+//
+// So UpsertApiKeyCommand.Validate at create/update time is the only other guard,
+// and anything that writes the column by another route -- a migration, a seed,
+// manual SQL -- arrives here unvalidated.
+//
+// Do NOT "simplify" this back to strings.Contains. That read the "r" in "rx",
+// and both letters in "wr", "rww", "read", "write" and "r,w" -- the last of
+// which granted every request class.
 func apiKeyScopePermits(scope string, class requestClass) bool {
-	reads := strings.Contains(scope, "r")
-	writes := strings.Contains(scope, "w")
+	var reads, writes bool
+
+	switch models.ApiKeyScope(scope) {
+	case models.API_KEY_SCOPE_READ:
+		reads = true
+	case models.API_KEY_SCOPE_WRITE:
+		writes = true
+	case models.API_KEY_SCOPE_READ_WRITE:
+		reads, writes = true, true
+	default:
+		return false
+	}
 
 	switch class {
 	case classRead:

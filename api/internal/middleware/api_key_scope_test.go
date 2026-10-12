@@ -224,9 +224,17 @@ func TestApiKeyScopePermitsIsLiteral(t *testing.T) {
 		}
 	}
 
-	// Neither the command validator nor Claims.Validate lets these through, so
-	// reaching here with one is a bug -- and a bug must not widen access.
-	for _, scope := range []string{"", "x", "R", "W"} {
+	// Reaching here with anything else is a bug, and a bug must not widen
+	// access. The near-misses are the ones that matter: a substring test would
+	// read the "r" in "rx", and both letters in "wr", "rww", "read" and "write".
+	// The last three come from the invalid table in
+	// models/api_key_scope_test.go, so the two layers cannot disagree about what
+	// "invalid" means.
+	for _, scope := range []string{
+		"", "x", "R", "W",
+		"rx", "wr", "rww",
+		"read", "write", "r,w",
+	} {
 		for _, class := range []requestClass{classRead, classWrite, classReadWrite} {
 			if apiKeyScopePermits(scope, class) {
 				t.Errorf("scope %q permitted a %s request", scope, className(class))

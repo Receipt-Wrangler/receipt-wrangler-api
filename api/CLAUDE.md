@@ -1184,6 +1184,18 @@ create, update and delete anything its owner could. That was not a dormant field
 presents a required Read / Write / Read-Write picker and **defaults to Read**, so the most restrictive
 label was the default and it meant nothing.
 
+**The match on the scope string is EXACT, and that is load-bearing rather than tidy.** It was
+`strings.Contains(scope, "r")` / `"w"`, which read the `r` in `rx` and both letters in `wr`, `rww`,
+`read`, `write` and `r,w` — the last of which granted every request class. `apiKeyScopePermits`
+switches on `models.ApiKeyScope`'s three constants and denies anything else, because this gate is
+the **only** check that runs at request time: `Claims.Validate` is the
+`validator.WithCustomClaims` hook and never fires on the API-key path (`GetClaimsFromApiKey`
+hand-builds the claims), and `models.ApiKey.Scope` is a plain `string` column — not
+`models.ApiKeyScope` — with no `driver.Valuer`, so GORM never checks it either. That leaves
+`UpsertApiKeyCommand.Validate` at create/update time as the only other guard, and anything writing
+that column by another route (a migration, a seed, manual SQL) arrives here unvalidated. Do not
+"simplify" it back to a substring test.
+
 **The HTTP method decides, with an allowlist.** GET/HEAD/OPTIONS are reads; everything else is a
 write unless the path is on `readOnlyPostPaths` / `readOnlyPostPatterns`
 (`middleware/api_key_scope.go`). This fails closed — a write endpoint added later is denied to an `r`
@@ -1230,8 +1242,11 @@ getting 403s. That is the promise finally being kept, but it will break integrat
 Tests: `middleware/api_key_scope_test.go` — a table over the whole route inventory × all three
 scopes (expectations stated as an explicit matrix, not derived from the function under test), the
 classifier's near-misses for both pattern lists, the path matcher's near-misses, the literal rule
-including fail-closed on an unknown scope, the last-used stamp surviving on a read, and a JWT caller
-being unaffected.
+including fail-closed on an unknown scope — the invalid set carries the substring near-misses
+(`rx`, `wr`, `rww`) and the plausible values (`read`, `write`, `r,w`, borrowed from
+`models/api_key_scope_test.go`'s own invalid table) rather than only values that never contained an
+`r` or a `w`, which is why the original four passed trivially — the last-used stamp surviving on a
+read, and a JWT caller being unaffected.
 `TestUnifiedAuthMiddleware_ApiKeyScopes` used to assert a `w` key succeeding on a **GET** — it
 documented the gap, and its name is a large part of why the gap survived review.
 

@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
+import 'package:openapi/src/model/oidc_provider_summary.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -14,6 +16,7 @@ part 'feature_config.g.dart';
 /// * [aiPoweredReceipts] - Whether AI powered receipts are enabled
 /// * [enableLocalSignUp] - Whether local sign up is enabled
 /// * [loginQrUrl] - Composed deep link the desktop login page encodes as a QR; empty unless the login QR is enabled with a mobile server URL
+/// * [oidcProviders] - Enabled OIDC identity providers, so a login screen can render one button per provider. Always present as an array (never null) and carries only the slug and display name -- never the issuer, client id, or any secret.
 @BuiltValue()
 abstract class FeatureConfig implements Built<FeatureConfig, FeatureConfigBuilder> {
   /// Whether AI powered receipts are enabled
@@ -27,6 +30,10 @@ abstract class FeatureConfig implements Built<FeatureConfig, FeatureConfigBuilde
   /// Composed deep link the desktop login page encodes as a QR; empty unless the login QR is enabled with a mobile server URL
   @BuiltValueField(wireName: r'loginQrUrl')
   String? get loginQrUrl;
+
+  /// Enabled OIDC identity providers, so a login screen can render one button per provider. Always present as an array (never null) and carries only the slug and display name -- never the issuer, client id, or any secret.
+  @BuiltValueField(wireName: r'oidcProviders')
+  BuiltList<OidcProviderSummary>? get oidcProviders;
 
   FeatureConfig._();
 
@@ -66,6 +73,13 @@ class _$FeatureConfigSerializer implements PrimitiveSerializer<FeatureConfig> {
       yield serializers.serialize(
         object.loginQrUrl,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.oidcProviders != null) {
+      yield r'oidcProviders';
+      yield serializers.serialize(
+        object.oidcProviders,
+        specifiedType: const FullType(BuiltList, [FullType(OidcProviderSummary)]),
       );
     }
   }
@@ -111,6 +125,13 @@ class _$FeatureConfigSerializer implements PrimitiveSerializer<FeatureConfig> {
             specifiedType: const FullType(String),
           ) as String;
           result.loginQrUrl = valueDes;
+          break;
+        case r'oidcProviders':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(OidcProviderSummary)]),
+          ) as BuiltList<OidcProviderSummary>;
+          result.oidcProviders.replace(valueDes);
           break;
         default:
           unhandled.add(key);

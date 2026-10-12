@@ -63,6 +63,10 @@ export interface UpsertSystemSettingsCommand {
      */
     mcpPublicUrl?: string;
     /**
+     * Externally reachable origin of this API, used to build each OIDC provider\'s redirect URI. Separate from mcpPublicUrl, which is bound into the MCP token audience.
+     */
+    serverPublicUrl?: string;
+    /**
      * Whether to show the mobile-setup QR code on the desktop login page
      */
     showLoginQr?: boolean;

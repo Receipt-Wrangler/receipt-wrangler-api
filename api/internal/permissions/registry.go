@@ -71,6 +71,11 @@ const (
 	AppApiKeysDelete    = "app.api-keys.delete"
 	AppApiKeysDeleteAny = "app.api-keys.delete-any"
 
+	AppOidcProvidersCreate = "app.oidc-providers.create"
+	AppOidcProvidersRead   = "app.oidc-providers.read"
+	AppOidcProvidersUpdate = "app.oidc-providers.update"
+	AppOidcProvidersDelete = "app.oidc-providers.delete"
+
 	AppRolesCreate = "app.roles.create"
 	AppRolesRead   = "app.roles.read"
 	AppRolesUpdate = "app.roles.update"
@@ -201,6 +206,11 @@ var registry = []Descriptor{
 	{AppApiKeysUpdate, "Update API Keys", "Edit the calling user's API keys.", "Security", ScopeApp},
 	{AppApiKeysDelete, "Delete API Keys", "Revoke the calling user's API keys.", "Security", ScopeApp},
 	{AppApiKeysDeleteAny, "Delete Any API Key", "Revoke API keys belonging to other users.", "Security", ScopeApp},
+
+	{AppOidcProvidersCreate, "Create OIDC Providers", "Register a new OpenID Connect identity provider users can sign in with.", "Security", ScopeApp},
+	{AppOidcProvidersRead, "Read OIDC Providers", "View configured OpenID Connect identity providers. Client secrets are never returned.", "Security", ScopeApp},
+	{AppOidcProvidersUpdate, "Update OIDC Providers", "Edit a configured OpenID Connect identity provider, including its provisioning and account-linking behavior.", "Security", ScopeApp},
+	{AppOidcProvidersDelete, "Delete OIDC Providers", "Remove an OpenID Connect identity provider. Accounts linked to it lose the ability to sign in with it.", "Security", ScopeApp},
 
 	{AppRolesCreate, "Create Roles", "Create new app or group roles.", "Access Control", ScopeApp},
 	{AppRolesRead, "Read Roles", "List roles and view the permission catalog.", "Access Control", ScopeApp},

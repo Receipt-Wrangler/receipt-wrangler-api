@@ -3373,6 +3373,401 @@ paths:
       security:
         - bearerAuth: [ ]
         - apiKeyAuth: [ ]
+  /oidc/{name}/login:
+    get:
+      tags:
+        - Oidc
+      summary: Start an OIDC login
+      description:
+        Redirects the user agent to the configured identity provider. The API acts as
+        the relying party, so the whole exchange (PKCE, state, nonce, code exchange,
+        ID token verification) happens server-side and no client ever handles an
+        identity provider token. Navigate to this URL; do not fetch it.
+      operationId: oidcLogin
+      parameters:
+        - name: name
+          in: path
+          description: The provider's slug
+          required: true
+          schema:
+            type: string
+        - name: client
+          in: query
+          description:
+            Which client is signing in. Mobile receives a single-use exchange code on
+            the app's private-use URL scheme instead of session cookies.
+          required: false
+          schema:
+            type: string
+            enum:
+              - desktop
+              - mobile
+            default: desktop
+        - name: codeChallenge
+          in: query
+          description:
+            The mobile app's own PKCE S256 challenge. Required when client is mobile;
+            it binds the resulting exchange code to the app that started the flow.
+          required: false
+          schema:
+            type: string
+      responses:
+        302:
+          description: Redirect to the identity provider, or back to the client on error
+      security: []
+  /oidc/{name}/callback:
+    get:
+      tags:
+        - Oidc
+      summary: OIDC redirect URI
+      description:
+        Where the identity provider returns the user. This is the exact URL that must
+        be registered with the provider. Not called by clients directly.
+      operationId: oidcCallback
+      parameters:
+        - name: name
+          in: path
+          description: The provider's slug
+          required: true
+          schema:
+            type: string
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        302:
+          description: Redirect back to the client, signed in or carrying an error code
+      security: []
+  /oidc/exchange:
+    post:
+      tags:
+        - Oidc
+      summary: Redeem a mobile sign-in code
+      description:
+        Trades the single-use code the app received on its private-use URL scheme for
+        a session. The PKCE verifier is what proves this is the app that started the
+        flow, so an app that intercepted the redirect cannot redeem the code. Returns
+        the same payload as login with tokensInBody, and never sets a cookie.
+      operationId: oidcExchange
+      requestBody:
+        description: The code and the app's PKCE verifier
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OidcExchangeCommand"
+      responses:
+        200:
+          description: App data, including the token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppData"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/Internal"
+      security: []
+  /oidc/link/{name}:
+    get:
+      tags:
+        - Oidc
+      summary: Connect a provider to the signed-in account
+      description:
+        Starts the same flow as a login, but the session proves who the caller is, so
+        the callback links the identity directly instead of matching or provisioning.
+        Requires app.account.update, the same permission as disconnecting one.
+
+
+        A browser navigates to this URL and is redirected (302) to the identity
+        provider. A native client passes client=mobile and gets a launch URL as JSON
+        instead, because it authenticates with a bearer token and the external user
+        agent it must use cannot carry one. It opens that launch URL in the external
+        browser, which is what actually starts the flow - and what receives the
+        binding cookie the callback checks. The app then waits on its private-use
+        scheme, which the callback returns to with ?linked={name} or ?error={code}.
+      operationId: oidcLinkStart
+      parameters:
+        - name: name
+          in: path
+          description: The provider's slug
+          required: true
+          schema:
+            type: string
+        - name: client
+          in: query
+          description:
+            Which client is connecting. Mobile receives a launch URL as JSON rather
+            than a redirect. No codeChallenge is needed here, unlike a mobile login -
+            a link's callback hands back only ?linked={name}, which is not a
+            credential, so there is nothing for the app to bind.
+          required: false
+          schema:
+            type: string
+            enum:
+              - desktop
+              - mobile
+            default: desktop
+      responses:
+        200:
+          description: The launch URL, for client=mobile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcLinkStartView"
+        302:
+          description: Redirect to the identity provider, for a browser
+        400:
+          $ref: "#/components/responses/OidcFlowError"
+        403:
+          $ref: "#/components/responses/OidcFlowError"
+        404:
+          $ref: "#/components/responses/OidcFlowError"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
+  /oidc/link/{name}/launch:
+    get:
+      tags:
+        - Oidc
+      summary: Open a mobile "connect account" flow in the browser
+      description:
+        The browser-facing half of a mobile link. A mobile client opens this URL, from
+        oidcLinkStart's launchUrl, in the external user agent; it is never called as an
+        API request.
+
+
+        Unauthenticated because it has to be reachable by that browser, which cannot
+        carry a bearer token. The single-use handle in the query is the authorization -
+        oidcLinkStart minted it moments earlier for the caller it had already
+        authenticated and permission-checked. Letting the browser make this request is
+        what allows the flow to be bound to it, which is the defense the callback
+        relies on.
+      operationId: oidcLinkLaunch
+      parameters:
+        - name: name
+          in: path
+          description: The provider's slug
+          required: true
+          schema:
+            type: string
+        - name: h
+          in: query
+          description: The single-use launch handle from oidcLinkStart
+          required: true
+          schema:
+            type: string
+      responses:
+        302:
+          description:
+            Redirect to the identity provider, or back to the app's scheme with an
+            error code if the handle is unknown, spent or expired
+      security: []
+  /oidc/connections:
+    get:
+      tags:
+        - Oidc
+      summary: List the caller's connected accounts
+      operationId: getOidcConnections
+      responses:
+        200:
+          description: The caller's linked identity providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OidcConnectionView"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
+  /oidc/connections/{name}:
+    delete:
+      tags:
+        - Oidc
+      summary: Disconnect a provider from the caller's account
+      description:
+        Refused when it is the caller's last connection and the account was created by
+        that provider, because such an account has no password to fall back on.
+      operationId: deleteOidcConnection
+      parameters:
+        - name: name
+          in: path
+          description: The provider's slug
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
+  /oidcProvider/:
+    post:
+      tags:
+        - OidcProvider
+      summary: Create an OIDC provider
+      operationId: createOidcProvider
+      requestBody:
+        description: The provider configuration
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertOidcProviderCommand"
+      responses:
+        200:
+          description: The created provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcProviderView"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
+  /oidcProvider/{oidcProviderId}:
+    get:
+      tags:
+        - OidcProvider
+      summary: Get an OIDC provider
+      description: The client secret is never returned; hasClientSecret reports whether one is stored.
+      operationId: getOidcProviderById
+      parameters:
+        - name: oidcProviderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: The provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcProviderView"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
+    put:
+      tags:
+        - OidcProvider
+      summary: Update an OIDC provider
+      description:
+        Omit clientSecret to keep the stored one. The name cannot be changed -- it is
+        part of the redirect URI already registered with the identity provider.
+      operationId: updateOidcProvider
+      parameters:
+        - name: oidcProviderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The provider configuration
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertOidcProviderCommand"
+      responses:
+        200:
+          description: The updated provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcProviderView"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
+    delete:
+      tags:
+        - OidcProvider
+      summary: Delete an OIDC provider
+      description: Accounts linked to it lose the ability to sign in with it.
+      operationId: deleteOidcProvider
+      parameters:
+        - name: oidcProviderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          $ref: "#/components/responses/Ok"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
+  /oidcProvider/getPagedOidcProviders:
+    post:
+      tags:
+        - OidcProvider
+      summary: Get paged OIDC providers
+      operationId: getPagedOidcProviders
+      requestBody:
+        description: Paging and sorting data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PagedRequestCommand"
+      responses:
+        200:
+          description: Paged OIDC providers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PagedData"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+        - apiKeyAuth: [ ]
   /permission:
     get:
       tags:
@@ -3564,6 +3959,12 @@ components:
       name: Authorization
       description: API Key in format v1.xxx.xxx.xxx
   responses:
+    OidcFlowError:
+      description: The flow could not be started
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OidcFlowErrorView"
     Ok:
       description: Request was successfully processed
     BadRequest:
@@ -3681,6 +4082,10 @@ components:
         - "app.api-keys.update"
         - "app.api-keys.delete"
         - "app.api-keys.delete-any"
+        - "app.oidc-providers.create"
+        - "app.oidc-providers.read"
+        - "app.oidc-providers.update"
+        - "app.oidc-providers.delete"
         - "app.roles.create"
         - "app.roles.read"
         - "app.roles.update"
@@ -5215,6 +5620,178 @@ components:
         loginQrUrl:
           type: string
           description: Composed deep link the desktop login page encodes as a QR; empty unless the login QR is enabled with a mobile server URL
+        oidcProviders:
+          type: array
+          description:
+            Enabled OIDC identity providers, so a login screen can render one button
+            per provider. Always present as an array (never null) and carries only the
+            slug and display name -- never the issuer, client id, or any secret.
+          items:
+            $ref: "#/components/schemas/OidcProviderSummary"
+    OidcLinkStartView:
+      type: object
+      description:
+        The URL a mobile client opens in the external browser to begin a "connect
+        account" flow. It points back at this API, not at the identity provider, and
+        that indirection is the point - following it is what lets the server bind the
+        flow to the browser that will return with the callback.
+      properties:
+        launchUrl:
+          type: string
+      required:
+        - launchUrl
+    OidcFlowErrorView:
+      type: object
+      description:
+        A failure from a flow start that answers with JSON rather than a redirect. The
+        code comes from the same small fixed vocabulary the redirect form puts in its
+        query string, so one client-side table maps both. An identity provider's own
+        error text is never echoed through.
+      properties:
+        errorCode:
+          type: string
+      required:
+        - errorCode
+    OidcProviderSummary:
+      required:
+        - name
+        - displayName
+      type: object
+      properties:
+        name:
+          type: string
+          description: The provider's slug, used to build its login URL
+        displayName:
+          type: string
+          description: Rendered to users as "Log in with {displayName}"
+    OidcProviderView:
+      required:
+        - id
+        - name
+        - displayName
+        - issuerUrl
+        - clientId
+        - scope
+        - allowProvisioning
+        - linkByUsername
+        - enabled
+        - hasClientSecret
+        - redirectUri
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          description: URL slug for this provider; immutable after creation
+        displayName:
+          type: string
+        issuerUrl:
+          type: string
+          description: OIDC discovery base, e.g. https://accounts.google.com
+        clientId:
+          type: string
+        scope:
+          type: string
+          description: Space-separated OIDC scopes; must include openid
+        allowProvisioning:
+          type: boolean
+          description: Create a local account for an identity we have never seen
+        linkByUsername:
+          type: boolean
+          description:
+            On a first login only, attach to an existing local account whose username
+            equals the preferred_username claim. Off by default; that claim is neither
+            stable nor unique, and some providers recycle released usernames.
+        enabled:
+          type: boolean
+        hasClientSecret:
+          type: boolean
+          description: Whether a secret is stored. The secret itself is never returned.
+        redirectUri:
+          type: string
+          description: The exact redirect URI to register with the identity provider
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UpsertOidcProviderCommand:
+      required:
+        - name
+        - displayName
+        - issuerUrl
+        - clientId
+        - scope
+      type: object
+      properties:
+        name:
+          type: string
+          description:
+            URL slug. Lowercase letters, numbers and dashes. Cannot be changed after
+            creation, and cannot be one of the reserved words login, callback, link,
+            exchange or connections.
+        displayName:
+          type: string
+        issuerUrl:
+          type: string
+          description: Must use https unless the host is localhost
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+          description:
+            Omit on update to keep the stored secret. Required on create.
+        scope:
+          type: string
+          description: Space-separated OIDC scopes; must include openid
+        allowProvisioning:
+          type: boolean
+        linkByUsername:
+          type: boolean
+        enabled:
+          type: boolean
+    OidcConnectionView:
+      required:
+        - providerName
+        - providerDisplayName
+        - provisionedUser
+        - linkedAt
+      type: object
+      properties:
+        providerName:
+          type: string
+        providerDisplayName:
+          type: string
+        preferredUsername:
+          type: string
+        email:
+          type: string
+        provisionedUser:
+          type: boolean
+          description:
+            Whether this connection created the local account. Such an account has no
+            usable password, so its last connection cannot be removed.
+        linkedAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+    OidcExchangeCommand:
+      required:
+        - code
+        - codeVerifier
+      type: object
+      properties:
+        code:
+          type: string
+          description: The single-use code delivered to the app's callback URL
+        codeVerifier:
+          type: string
+          description: The PKCE verifier the app generated before starting the flow
     MagicFillCommand:
       required:
         - imageData
@@ -6236,6 +6813,9 @@ components:
             mcpPublicUrl:
               type: string
               description: Externally reachable origin used for MCP OAuth/metadata/redirect URLs and token audience
+            serverPublicUrl:
+              type: string
+              description: Externally reachable origin of this API, used to build each OIDC provider's redirect URI. Separate from mcpPublicUrl, which is bound into the MCP token audience.
             showLoginQr:
               type: boolean
               description: Whether to show the mobile-setup QR code on the desktop login page
@@ -6329,6 +6909,9 @@ components:
         mcpPublicUrl:
           type: string
           description: Externally reachable origin used for MCP OAuth/metadata/redirect URLs and token audience
+        serverPublicUrl:
+          type: string
+          description: Externally reachable origin of this API, used to build each OIDC provider's redirect URI. Separate from mcpPublicUrl, which is bound into the MCP token audience.
         showLoginQr:
           type: boolean
           description: Whether to show the mobile-setup QR code on the desktop login page

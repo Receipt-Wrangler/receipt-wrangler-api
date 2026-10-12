@@ -7,6 +7,7 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { OidcProviderSummary } from './oidcProviderSummary';
 
 
 export interface FeatureConfig { 
@@ -22,5 +23,9 @@ export interface FeatureConfig {
      * Composed deep link the desktop login page encodes as a QR; empty unless the login QR is enabled with a mobile server URL
      */
     loginQrUrl?: string;
+    /**
+     * Enabled OIDC identity providers, so a login screen can render one button per provider. Always present as an array (never null) and carries only the slug and display name -- never the issuer, client id, or any secret.
+     */
+    oidcProviders?: Array<OidcProviderSummary>;
 }
 

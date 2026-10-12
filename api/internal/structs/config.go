@@ -25,6 +25,15 @@ type FeatureConfig struct {
 	// encodes as a QR. Empty unless an admin enabled the login QR and set a
 	// mobile server URL. This is the only login-QR value exposed pre-auth.
 	LoginQrUrl string `json:"loginQrUrl"`
+	// OidcProviders lets a login screen render one "Log in with X" button per
+	// enabled identity provider. It carries only the slug and the display name --
+	// never the issuer, the client id, or anything else about the configuration.
+	//
+	// It MUST always serialize as [] and never null: this payload is fetched
+	// unauthenticated by the mobile Connect screen, and the generated Dart
+	// deserializer has no null guard, so a null would fail the whole payload on
+	// every already-released build.
+	OidcProviders []OidcProviderSummary `json:"oidcProviders"`
 }
 
 type DatabaseConfig struct {

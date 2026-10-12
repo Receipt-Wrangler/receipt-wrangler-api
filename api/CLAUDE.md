@@ -1344,6 +1344,273 @@ Claude can read a user's data. It is **off by default** and Go-native (no separa
 - **Production**: `docker/default.conf` proxies the new root paths to the backend; the `/mcp`
   location disables buffering and raises the read timeout for SSE streams.
 
+## OIDC (OpenID Connect) login
+
+Users can sign in with an external identity provider. The API is the **relying party** — a
+confidential client that owns the whole exchange (discovery, PKCE, state, nonce, code exchange, ID
+token verification), so no desktop or mobile client ever handles an IdP token or the client secret.
+This is the mirror image of `internal/oauth`, which is an OAuth 2.1 **authorization server** for MCP;
+they share no flow, only two primitives in `internal/utils`.
+
+- **Package**: `internal/oidc/` (`flow.go` login/callback, `provision.go` identity resolution,
+  `exchange.go` the mobile handoff, `store.go` session/code storage, `provider_cache.go`,
+  `claims.go`). Provider CRUD follows the usual chain:
+  `routers/oidc.go` (both the flow and the CRUD routers) → `handlers/oidc_providers.go` →
+  `services/oidc_provider.go` →
+  `repositories/oidc_providers.go`, gated by `app.oidc-providers.{create,read,update,delete}`.
+- **Library**: `github.com/coreos/go-oidc/v3` + `golang.org/x/oauth2`.
+
+### The identity anchor: (provider, subject)
+
+`models.OidcIdentity` is unique on **both** `(oidc_provider_id, subject)` and
+`(oidc_provider_id, user_id)`. `sub` is the only claim OIDC guarantees stable and unique within an
+issuer, so every login after the first resolves through that one lookup and consults no other claim.
+A user renaming themselves at the IdP — or an IdP recycling a released username — therefore cannot
+re-point an existing account. `Subject` is capped at 255 so the composite index stays under MySQL's
+3072-byte limit; that is also why `PreferredUsername` is deliberately outside it.
+
+**First login only**, when no link row exists yet, `resolveUser` may:
+
+1. attach to an existing local account whose `username` equals the `preferred_username` claim, if the
+   provider's **`LinkByUsername`** is on — **default false, deliberately**. OIDC does not promise that
+   claim is stable or unique, and public providers (Twitch notably) let users change their username
+   and recycle released names, so an always-on match is an account-takeover path against a local
+   `admin`. The safe way to attach an existing account is the authenticated link flow below.
+
+   **The match is re-asserted byte for byte in Go** (`usernameMatchesClaim`), not left to the SQL
+   lookup that found the row. `users.username` pins no collation, so the same claim resolves
+   differently per engine: MySQL and MariaDB default to a case-**insensitive** collation, where an
+   identity provider account named `ADMIN` resolves the local `admin`, while SQLite and Postgres
+   compare case-sensitively and would not. A boundary that holds on one supported engine and not
+   another is not a boundary. An inexact match is treated as a **miss**, so it falls through to
+   provisioning — where `deriveUsername` lower-cases the candidate, collides, and refuses with
+   `ErrAccountExists` rather than quietly creating a lookalike account. It is a named function
+   precisely because the test database is SQLite: inlined, the rule would be unreachable there and
+   would ship with no test that can fail on it.
+2. **provision** a new account, if `AllowProvisioning` is on.
+3. otherwise refuse (`ErrNoAccount` → a `no_account` error redirect).
+
+**A username collision refuses rather than suffixing** (`ErrAccountExists`). Silently creating
+`bob-2` is indistinguishable from data loss from the user's side, and on a self-hosted install with
+one IdP the collision is almost always the same person who has not linked yet. Uniqueness is normally
+enforced by `middleware.ValidateUserData`, which this path does not go through.
+
+**A provisioned account's password is real randomness, generated and discarded.**
+`UserRepository.CreateUser` bcrypts whatever it is handed, so a sentinel such as `"!oidc"` would
+become a *working* password for anyone who knew it — through the normal login form and through the
+MCP OAuth login form, which shares `services.LoginUser`. Guarded by
+`TestProvisionedPasswordIsUnusable`.
+
+### The callback's security checks, in order
+
+`internal/oidc/flow.go` `Callback`, failing closed at every step:
+
+1. An IdP-reported `error` → error redirect. Never echo the upstream text.
+2. **Consume the auth session atomically** (`UPDATE ... WHERE state_hash = ? AND used = false AND
+   expires_at > ?`, checking `RowsAffected`) — **before any network call**, so a replayed state cannot
+   even reach the identity provider. Unknown, expired and used states are indistinguishable.
+3. The session's provider must match the callback's provider.
+4. **Browser binding.** A short-lived HttpOnly cookie set at login start, compared by hash in
+   constant time. Without it, state alone does not stop an attacker starting a flow, harvesting the
+   state and code, and planting them in a victim's browser — silently signing the victim into the
+   *attacker's* account. **The cookie is `SameSite=Lax`, deliberately unlike `BuildTokenCookies`'
+   `Strict`**: the callback is a cross-site top-level GET, and Strict would drop the cookie on exactly
+   the request that needs it — a failure that appears only in production.
+5. `Exchange` with our PKCE verifier.
+6. **A missing `id_token` is a hard failure** — an OAuth-only response carries no verified identity,
+   and userinfo is not signed.
+7. `Verify` (signature via JWKS, `iss`, `aud`, `exp`).
+8. **Compare the nonce ourselves.** go-oidc documents that `Verify` does *not* validate it. An empty
+   nonce is rejected before the compare, because it hashes to a fixed value and must never match.
+
+**Redirect targets are fixed server-side constants.** No `redirect_uri` or `returnUrl` is ever taken
+from the request — that is the open-redirect hole this design does not have.
+
+### Storage
+
+State, nonce and the mobile exchange code are stored **hashed** (`utils.Sha256Hash`), like
+`RefreshToken.Token`: they are bearer secrets we only compare, so a database dump cannot complete a
+pending login. The PKCE **verifier cannot be hashed** — it must be replayed to the IdP verbatim — so
+it is AES-GCM encrypted, as is the provider's client secret (the `SystemEmail.Password` precedent).
+TTLs: auth session **10 min** (must cover an MFA prompt), exchange code **2 min** (the app already
+holds the browser result). Both are swept by an `@every 24h` cron, which is hygiene only — `expires_at`
+is inside the consume statement's WHERE clause.
+
+### Mobile handoff
+
+`GET /oidc/{name}/login?client=mobile&codeChallenge=…` → the callback redirects to
+`io.receiptwrangler://oidc?code=…` carrying a single-use, PKCE-bound code, **never tokens**: a
+private-use scheme is unverifiable on Android, so any installed app can read the redirect; the
+verifier the app kept is what makes an interception useless. `POST /oidc/exchange` then returns the
+full `AppData` with `jwt` + `refreshToken` — byte-identical in shape to `POST /login/?tokensInBody=true`,
+so mobile reuses `storeAppData` unchanged, and **no cookie is ever set** on that route.
+
+The code is **loaded, verified, then burned** (never burned first): otherwise anyone who intercepted
+the redirect could destroy a valid code just by presenting a wrong verifier. Pinned by
+`TestExchangeDoesNotConsumeTheCodeOnAWrongVerifier`.
+
+### Linking an existing account
+
+`GET /oidc/link/{name}` (authenticated) runs the same flow with `LinkUserId` set, so the callback
+**skips the whole match/provision tree** and writes the link directly — the session proves identity,
+nothing is inferred from a claim. This is what makes `linkByUsername = false` a comfortable default.
+`middleware.UnifiedAuthMiddleware` reads the `jwt` **cookie** before the header, so a plain top-level
+link navigation authenticates. Unlinking refuses when it is the caller's last identity *and* the
+**account** is passwordless — that account has only the discarded random password.
+
+**`ProvisionedUser` is an account fact held on every identity, not a per-row one**, and that is load
+bearing. It used to mean "this identity created the account", so exactly one row carried it — and
+unlinking *that* row first destroyed the only record that the account had no password, letting the
+next unlink strand it. Provisioned by Google, link GitHub, drop Google, drop GitHub, locked out. Three
+places now maintain the invariant: `provisionUser` sets it, `resolveLink` **inherits** it when
+attaching a second provider, and `ClearProvisionedFlagForUser` clears it across all of them when a
+password is actually set. `UnlinkIdentity` also re-asserts it across what remains before deleting a
+flagged row, so an account whose rows predate the invariant heals the first time it is touched rather
+than needing a data migration. The wire name stays `provisionedUser` — it is `required` and
+non-nullable in the generated Dart client, so renaming it would break released builds for nothing.
+
+Clearing on password-set is what makes the refusal's own advice work. The message says "ask an
+administrator to set one before disconnecting"; before this, the administrator could comply and the
+unlink stayed refused, because nothing observed the reset (`handlers.ResetPassword`).
+
+**It is gated on `app.account.update`**, the same permission as `DeleteOidcConnection`. Connecting a
+provider ADDS a way to sign into an account, so it is at least as privileged as disconnecting one;
+without the check an administrator could build a role that cannot remove a sign-in method but can
+still add one, which is not a coherent thing to be able to configure. The check sits in the handler
+body rather than on a `structs.Handler` because this route answers with a redirect — `HandleRequest`'s
+403 would drop a raw error object into a browser the user navigated here. Same shape as
+`GetPagedApiKeys`' `app.api-keys.read-any` check.
+
+**A mobile link start answers with JSON, not a 302** — `GET /oidc/link/{name}?client=mobile` returns
+`structs.OidcLinkStartView{launchUrl}`. This is not a stylistic split: the app authenticates with a
+**bearer token**, and the external user agent RFC 8252 requires cannot carry one, so a redirect into
+that browser arrives unauthenticated and is refused. The whole flow-start error vocabulary follows it
+(`structs.OidcFlowError{errorCode}`, mapped to 404/400/403/502 by `writeOidcFlowError`), so a failure
+reaches the app in the same shape as a success instead of as an unparseable redirect.
+`resolveClientType` therefore runs **before** the provider lookup — otherwise an unknown-provider
+failure took the desktop branch and the app got HTML.
+
+**That start creates NO session — it hands out a launch handle, and the browser starts the session.**
+This is the one genuinely subtle part of the feature, and it exists because of a real hole. It first
+shipped returning the IdP's **authorization URL** directly, reasoned as "safe, because the caller
+already proved who they are with a bearer token on the start request". That is true of the *start* and
+false of the *callback*, which is a separate unauthenticated browser request — and the callback is
+where the link is written. Identity providers leak the authorization URL by Referer from their own
+login pages, so anyone who obtained it could authenticate as **themselves**, drive the callback, and
+have their identity grafted onto the caller's account.
+
+PKCE cannot fix that, and it is worth knowing why, because it looks like it should. Binding the link
+to the app's own challenge is circular: the challenge would come from the victim's session, so the
+victim's app holds a matching verifier by construction, and on Android the attacker can deep-link
+their result into the victim's waiting `flutter_web_auth_2` (the manifest's `CallbackActivity` is
+`exported` + `BROWSABLE`). **A post-callback artifact cannot retroactively bind an unbound callback.**
+
+So: `LinkStart` creates a single-use `models.OidcLinkLaunch` and returns
+`{serverPublicUrl}/api/oidc/link/{name}/launch?h=…`. The app opens *that*, the external browser
+follows it to `oidc.LinkLaunch` (unauthenticated — the handle is the authorization), and **that**
+request creates the auth session and sets the binding cookie. The handle never reaches the IdP: a 302
+does not make the redirecting URL the next request's Referer.
+
+**Every session is bound, mobile included** (`store.go`, `flow.go`). This too was wrong at first:
+`BindingHash` was skipped for all mobile sessions because "an external user agent may not carry the
+cookie", and the callback's check read `len(session.BindingHash) > 0 && …`, which turned it into a
+no-op for exactly those sessions. The premise was false for **mobile login** — the app hands the login
+URL itself to `flutter_web_auth_2`, so the browser fetches the start and round-trips the cookie fine,
+and the gap was a live session-fixation bug there too. The check is now unconditional and fails closed
+on an empty hash.
+
+**KNOWN RESIDUAL — the launch endpoint can be pointed at someone else's browser.** `LinkLaunch` is
+unauthenticated by necessity, and the handle it consumes names the account to link. So an attacker
+holding a handle *for their own account* can send that URL to a victim: the victim's browser gets the
+binding, the victim authenticates at the identity provider, and their identity is attached to the
+**attacker's** account. The victim's later "Log in with X" then lands in the attacker's account.
+
+It is narrower than what it replaced — it needs active phishing plus an identity-provider login,
+where the previous shape needed only a leaked URL — and it fails outright if either party has already
+linked that provider (`ErrAlreadyLinked` / `ErrIdentityLinkedElsewhere`). The 2-minute single-use TTL
+raises the bar further. It is **not** closed.
+
+Closing it needs the app to prove it ran the flow, and note *which* proof works. A handle-only
+confirmation does not: the attacker holds the handle too. What cuts the attacker out is a secret the
+**callback** mints and hands to the browser that completed the flow — they never receive it. So:
+the callback stops linking inline for mobile, mints a completion code against the launch row, and
+redirects with it; the app redeems it on an authenticated call that checks the caller owns the row
+(and a PKCE challenge carried from the start, so a rogue app on the device that grabs the private-use
+redirect cannot redeem it either). Note this only works **on top of** the launch hop: without the
+binding, the same completion code is redeemable by the victim's own app on the attacker's behalf,
+because the challenge would be the victim's own.
+
+**A mobile link needs no `codeChallenge`**, unlike a mobile login — but for a different reason than
+first documented. The challenge binds the login's one-time exchange code to the app that started the
+flow; a link's callback hands back only `?linked={name}`, which is not a credential, so there is
+nothing to bind. Binding and PKCE defend different things: binding stops an attacker **driving** your
+flow, PKCE stops a rogue app **stealing its result**. `startFlow` requires the challenge only when
+`linkUserId == nil`. The callback returns to `io.receiptwrangler://oidc?linked={name}` (or
+`?error={code}`) — **never** the desktop profile path, which would strand the external browser on a
+page the app never sees.
+
+The static route segments (`link`, `exchange`, `connections`) come first so chi's resolution stays
+unambiguous, and `commands.ReservedOidcProviderNames` rejects them as slugs from the other direction.
+The provider **name is immutable on update**: it is baked into the redirect URI already registered at
+the IdP.
+
+### Configuration
+
+Providers are rows in `oidc_providers`, administered from System Settings. `serverPublicUrl` (a new
+System Setting, `*string` on the command with the same omitted-key semantics as the refresh-token
+lifetimes) builds each provider's redirect URI, `{serverPublicUrl}/api/oidc/{name}/callback`, shown
+read-only on the provider form. It is kept **separate from `mcpPublicUrl`** so an OIDC deployment
+tweak cannot invalidate live MCP connector tokens.
+
+`UpdateOidcProvider` uses the **map form** of `Updates`: GORM's struct form skips zero values, so
+turning `allowProvisioning` / `linkByUsername` / `enabled` **off** would be silently ignored — and
+each is a security toggle. For the same reason `OidcProvider.Enabled` carries **no `default:true`
+tag**: GORM skips zero-value fields on Create when the column has a default, so a provider registered
+with `enabled: false` came back enabled. Both are pinned by tests.
+
+`GET /featureConfig` (public, unauthenticated) publishes `oidcProviders` as `{name, displayName}`
+only — never the issuer, client id or anything else — and **always as `[]`, never `null`**, because
+the generated Dart deserializer has no null guard and that payload is fetched before login.
+
+### Provider cache
+
+`oidc.NewProvider` makes a network round trip on every call, and the `*oidc.Provider` is what owns the
+cached JWKS key set, so it is cached per provider id. A hit is valid only when the issuer URL **and
+the row's `UpdatedAt`** match what was just read from the database — GORM bumps `UpdatedAt` on every
+write and the row is read fresh per request, so an admin's edit invalidates the entry **by
+construction, including on other replicas**. Do not add cross-process invalidation. Discovery uses a
+fresh `context.Background()` with a timeout, never `r.Context()`: `NewProvider` stores the context's
+`http.Client` inside the Provider for later JWKS fetches, so a cancelled request-scoped context would
+poison the entry. `ClearProviderCacheForTests()` exists because the test DB reuses row ids.
+
+### Off-spec providers
+
+Twitch will not put `email` in the ID token from a scope alone — it needs a `claims` request
+parameter. Since identity anchors on `sub` and provisioning falls back through `preferred_username`,
+**Twitch works without email**; email is stored only for display on the Connected Accounts row. If it
+is ever needed, the fix is one nullable `extraAuthParams` column fed through `oauth2.SetAuthURLParam`.
+
+The claims decoder carries its own tolerant `email_verified` type (accepts `true` and `"true"`),
+because go-oidc solves that internally with an unexported `stringAsBool`.
+
+### Tests
+
+`internal/oidc/` — `flow_test.go` is the security suite, run against a **real fake identity provider**
+(`fake_idp_test.go`: an `httptest` server serving discovery, a JWKS, and genuinely RS256-signed ID
+tokens via `golang-jwt`, already a dependency), so go-oidc is exercised rather than stubbed. Cases:
+replayed / expired / cross-provider state, missing and foreign binding cookie, nonce mismatch, absent
+nonce, missing `id_token`, a signature from a key not in the JWKS, a foreign audience, and both happy
+paths. Plus `provision_test.go` (the resolution matrix, `TestSecondLoginUsesSubjectNotUsername`,
+`TestProvisionedPasswordIsUnusable`, `TestUsernameMatchesClaim` and
+`TestLinkByUsernameRequiresAnExactUsernameMatch`), `link_test.go` (the `app.account.update` gate, the
+mobile JSON start and its denial/unknown-provider shapes, the `codeChallenge` split between login and
+link, and the callback returning to the app's scheme), `exchange_test.go`, `store_test.go` (atomic
+consume under 20 concurrent callers), `provider_cache_test.go`, `claims_test.go`. Elsewhere:
+`handlers/oidc_providers_test.go` (permission gating, the secret never in a response body, the
+boolean-flag regression), `repositories/oidc_providers_test.go` (the unique indexes, cascades, the
+`enabled:false` regression), `services/oidc_feature_config_test.go` (the `[]`-not-`null` guard),
+`commands/upsert_oidc_provider_command_test.go`, `permissions/legacy_test.go`.
+
 ## Session lifetime (configurable refresh-token expiry)
 
 How long a signed-in user stays signed in is an admin setting rather than a compile-time constant.
@@ -1365,14 +1632,14 @@ and the difference matters:
   `UpdateGroupReceiptSettingsCommand` (see the root `CLAUDE.md` → "Group Default Custom Fields").
 
   **An omitted lifetime is dropped from the UPDATE entirely**, via
-  `OmittedLifetimeColumns()` feeding the existing `Omit(...)` on that statement — *not* by copying
+  `OmittedColumns()` feeding the existing `Omit(...)` on that statement — *not* by copying
   the stored value onto the row. The distinction matters under concurrency: `existingSettings` is
   read before the transaction, so two admins each setting one lifetime and omitting the other would
   both write a full row and clobber each other's explicit value. A column that is never written
   cannot be clobbered. This is deliberately **not** a `SELECT ... FOR UPDATE` row lock — SQLite is a
   supported engine and rejects that syntax, there is no locking precedent anywhere in the codebase,
   and a lock would only protect these two fields while every other column on this full-object upsert
-  stays last-write-wins. `ApplyOmittedLifetimes` still runs, but only so the response body echoes the
+  stays last-write-wins. `ApplyOmittedValues` still runs, but only so the response body echoes the
   stored value instead of a misleading `0`.
 
   Guarded by `TestUpdateSystemSettingsPreservesOmittedRefreshTokenLifetimes` (a **raw JSON body**
@@ -1462,7 +1729,7 @@ Unchanged: log timestamps, token expiry, `@every` schedules and sort order.
 - **The setting.** `SystemSettings.TimeZone` (IANA name, `gorm:"default:UTC"`, so an existing install
   behaves exactly as before). `UpsertSystemSettingsCommand.TimeZone` is a `*string` and joins the
   pointer-field machinery of the lifetimes (see "Session lifetime"): `nil` ⇒ the column is in
-  `OmittedLifetimeColumns()` and dropped from the UPDATE, and `ApplyOmittedLifetimes` echoes the
+  `OmittedColumns()` and dropped from the UPDATE, and `ApplyOmittedValues` echoes the
   stored value. A sent value must load with `time.LoadLocation`; `""` and `"Local"` are refused too
   (one reads as UTC, the other as the process zone). Failures are a 400 under `timeZone`.
   `main.go` imports `_ "time/tzdata"`, so a name that validates resolves identically on an image
@@ -1657,9 +1924,11 @@ task stops advertising its upload).
 
 A System Setting, default **720** (30 days), bounds **24-8760** (1 year), `0`
 means unset. It follows the `RefreshTokenValidForHours` machinery exactly — see
-"Session lifetime" above for the `*int` command field, `OmittedLifetimeColumns`
-and why an omitted key is *dropped from the UPDATE* rather than copied. Despite
-their names, both helpers now cover every pointer-backed field, the time zone included.
+"Session lifetime" above for the `*int` command field, `OmittedColumns`
+and why an omitted key is *dropped from the UPDATE* rather than copied. Both helpers
+cover every pointer-backed field — the lifetimes, this retention window, the server
+public URL and the time zone — which is why neither is named for the lifetimes they
+started out holding.
 
 `tempFileRetention()` is the read-side clamp, the same shape as
 `repositories.pdfRasterizationDpi`: **the clamp, not the validator, is the real

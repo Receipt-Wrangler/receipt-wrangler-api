@@ -24,6 +24,12 @@ type SystemSettings struct {
 	// McpPublicUrl is the externally reachable origin (scheme + host) used to
 	// build the OAuth issuer/metadata/redirect URLs and the MCP token audience.
 	McpPublicUrl string `json:"mcpPublicUrl"`
+	// ServerPublicUrl is the externally reachable origin (scheme + host) of this
+	// API, used to build the OIDC redirect URI registered at each identity
+	// provider: {ServerPublicUrl}/api/oidc/{name}/callback. It is deliberately
+	// separate from McpPublicUrl — that value is bound into the MCP token
+	// audience, so repurposing it would invalidate live connector tokens.
+	ServerPublicUrl string `json:"serverPublicUrl"`
 	// ShowLoginQr toggles the self-contained setup QR on the desktop login page.
 	ShowLoginQr bool `json:"showLoginQr" gorm:"default:false"`
 	// MobileServerUrl is the server/API URL mobile clients connect to. It is

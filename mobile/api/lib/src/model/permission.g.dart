@@ -92,6 +92,14 @@ const Permission _$appPeriodApiKeysPeriodDelete =
     const Permission._('appPeriodApiKeysPeriodDelete');
 const Permission _$appPeriodApiKeysPeriodDeleteAny =
     const Permission._('appPeriodApiKeysPeriodDeleteAny');
+const Permission _$appPeriodOidcProvidersPeriodCreate =
+    const Permission._('appPeriodOidcProvidersPeriodCreate');
+const Permission _$appPeriodOidcProvidersPeriodRead =
+    const Permission._('appPeriodOidcProvidersPeriodRead');
+const Permission _$appPeriodOidcProvidersPeriodUpdate =
+    const Permission._('appPeriodOidcProvidersPeriodUpdate');
+const Permission _$appPeriodOidcProvidersPeriodDelete =
+    const Permission._('appPeriodOidcProvidersPeriodDelete');
 const Permission _$appPeriodRolesPeriodCreate =
     const Permission._('appPeriodRolesPeriodCreate');
 const Permission _$appPeriodRolesPeriodRead =
@@ -276,6 +284,14 @@ Permission _$valueOf(String name) {
       return _$appPeriodApiKeysPeriodDelete;
     case 'appPeriodApiKeysPeriodDeleteAny':
       return _$appPeriodApiKeysPeriodDeleteAny;
+    case 'appPeriodOidcProvidersPeriodCreate':
+      return _$appPeriodOidcProvidersPeriodCreate;
+    case 'appPeriodOidcProvidersPeriodRead':
+      return _$appPeriodOidcProvidersPeriodRead;
+    case 'appPeriodOidcProvidersPeriodUpdate':
+      return _$appPeriodOidcProvidersPeriodUpdate;
+    case 'appPeriodOidcProvidersPeriodDelete':
+      return _$appPeriodOidcProvidersPeriodDelete;
     case 'appPeriodRolesPeriodCreate':
       return _$appPeriodRolesPeriodCreate;
     case 'appPeriodRolesPeriodRead':
@@ -423,6 +439,10 @@ final BuiltSet<Permission> _$values = BuiltSet<Permission>(const <Permission>[
   _$appPeriodApiKeysPeriodUpdate,
   _$appPeriodApiKeysPeriodDelete,
   _$appPeriodApiKeysPeriodDeleteAny,
+  _$appPeriodOidcProvidersPeriodCreate,
+  _$appPeriodOidcProvidersPeriodRead,
+  _$appPeriodOidcProvidersPeriodUpdate,
+  _$appPeriodOidcProvidersPeriodDelete,
   _$appPeriodRolesPeriodCreate,
   _$appPeriodRolesPeriodRead,
   _$appPeriodRolesPeriodUpdate,
@@ -542,6 +562,14 @@ class _$PermissionMeta {
   Permission get appPeriodApiKeysPeriodDelete => _$appPeriodApiKeysPeriodDelete;
   Permission get appPeriodApiKeysPeriodDeleteAny =>
       _$appPeriodApiKeysPeriodDeleteAny;
+  Permission get appPeriodOidcProvidersPeriodCreate =>
+      _$appPeriodOidcProvidersPeriodCreate;
+  Permission get appPeriodOidcProvidersPeriodRead =>
+      _$appPeriodOidcProvidersPeriodRead;
+  Permission get appPeriodOidcProvidersPeriodUpdate =>
+      _$appPeriodOidcProvidersPeriodUpdate;
+  Permission get appPeriodOidcProvidersPeriodDelete =>
+      _$appPeriodOidcProvidersPeriodDelete;
   Permission get appPeriodRolesPeriodCreate => _$appPeriodRolesPeriodCreate;
   Permission get appPeriodRolesPeriodRead => _$appPeriodRolesPeriodRead;
   Permission get appPeriodRolesPeriodUpdate => _$appPeriodRolesPeriodUpdate;
@@ -684,6 +712,10 @@ class _$PermissionSerializer implements PrimitiveSerializer<Permission> {
     'appPeriodApiKeysPeriodUpdate': 'app.api-keys.update',
     'appPeriodApiKeysPeriodDelete': 'app.api-keys.delete',
     'appPeriodApiKeysPeriodDeleteAny': 'app.api-keys.delete-any',
+    'appPeriodOidcProvidersPeriodCreate': 'app.oidc-providers.create',
+    'appPeriodOidcProvidersPeriodRead': 'app.oidc-providers.read',
+    'appPeriodOidcProvidersPeriodUpdate': 'app.oidc-providers.update',
+    'appPeriodOidcProvidersPeriodDelete': 'app.oidc-providers.delete',
     'appPeriodRolesPeriodCreate': 'app.roles.create',
     'appPeriodRolesPeriodRead': 'app.roles.read',
     'appPeriodRolesPeriodUpdate': 'app.roles.update',
@@ -783,6 +815,10 @@ class _$PermissionSerializer implements PrimitiveSerializer<Permission> {
     'app.api-keys.update': 'appPeriodApiKeysPeriodUpdate',
     'app.api-keys.delete': 'appPeriodApiKeysPeriodDelete',
     'app.api-keys.delete-any': 'appPeriodApiKeysPeriodDeleteAny',
+    'app.oidc-providers.create': 'appPeriodOidcProvidersPeriodCreate',
+    'app.oidc-providers.read': 'appPeriodOidcProvidersPeriodRead',
+    'app.oidc-providers.update': 'appPeriodOidcProvidersPeriodUpdate',
+    'app.oidc-providers.delete': 'appPeriodOidcProvidersPeriodDelete',
     'app.roles.create': 'appPeriodRolesPeriodCreate',
     'app.roles.read': 'appPeriodRolesPeriodRead',
     'app.roles.update': 'appPeriodRolesPeriodUpdate',

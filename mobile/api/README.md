@@ -108,6 +108,18 @@ Class | Method | HTTP request | Description
 [*NotificationsApi*](doc/NotificationsApi.md) | [**deleteNotificationById**](doc/NotificationsApi.md#deletenotificationbyid) | **DELETE** /notifications/{notificationId} | Delete notification by id
 [*NotificationsApi*](doc/NotificationsApi.md) | [**getNotificationCount**](doc/NotificationsApi.md#getnotificationcount) | **GET** /notifications/notificationCount | Notification count
 [*NotificationsApi*](doc/NotificationsApi.md) | [**getNotificationsForuser**](doc/NotificationsApi.md#getnotificationsforuser) | **GET** /notifications/ | Get all user notifications
+[*OidcApi*](doc/OidcApi.md) | [**deleteOidcConnection**](doc/OidcApi.md#deleteoidcconnection) | **DELETE** /oidc/connections/{name} | Disconnect a provider from the caller&#39;s account
+[*OidcApi*](doc/OidcApi.md) | [**getOidcConnections**](doc/OidcApi.md#getoidcconnections) | **GET** /oidc/connections | List the caller&#39;s connected accounts
+[*OidcApi*](doc/OidcApi.md) | [**oidcCallback**](doc/OidcApi.md#oidccallback) | **GET** /oidc/{name}/callback | OIDC redirect URI
+[*OidcApi*](doc/OidcApi.md) | [**oidcExchange**](doc/OidcApi.md#oidcexchange) | **POST** /oidc/exchange | Redeem a mobile sign-in code
+[*OidcApi*](doc/OidcApi.md) | [**oidcLinkLaunch**](doc/OidcApi.md#oidclinklaunch) | **GET** /oidc/link/{name}/launch | Open a mobile \&quot;connect account\&quot; flow in the browser
+[*OidcApi*](doc/OidcApi.md) | [**oidcLinkStart**](doc/OidcApi.md#oidclinkstart) | **GET** /oidc/link/{name} | Connect a provider to the signed-in account
+[*OidcApi*](doc/OidcApi.md) | [**oidcLogin**](doc/OidcApi.md#oidclogin) | **GET** /oidc/{name}/login | Start an OIDC login
+[*OidcProviderApi*](doc/OidcProviderApi.md) | [**createOidcProvider**](doc/OidcProviderApi.md#createoidcprovider) | **POST** /oidcProvider/ | Create an OIDC provider
+[*OidcProviderApi*](doc/OidcProviderApi.md) | [**deleteOidcProvider**](doc/OidcProviderApi.md#deleteoidcprovider) | **DELETE** /oidcProvider/{oidcProviderId} | Delete an OIDC provider
+[*OidcProviderApi*](doc/OidcProviderApi.md) | [**getOidcProviderById**](doc/OidcProviderApi.md#getoidcproviderbyid) | **GET** /oidcProvider/{oidcProviderId} | Get an OIDC provider
+[*OidcProviderApi*](doc/OidcProviderApi.md) | [**getPagedOidcProviders**](doc/OidcProviderApi.md#getpagedoidcproviders) | **POST** /oidcProvider/getPagedOidcProviders | Get paged OIDC providers
+[*OidcProviderApi*](doc/OidcProviderApi.md) | [**updateOidcProvider**](doc/OidcProviderApi.md#updateoidcprovider) | **PUT** /oidcProvider/{oidcProviderId} | Update an OIDC provider
 [*PermissionApi*](doc/PermissionApi.md) | [**getPermissions**](doc/PermissionApi.md#getpermissions) | **GET** /permission | List all permission descriptors
 [*PromptApi*](doc/PromptApi.md) | [**createDefaultPrompt**](doc/PromptApi.md#createdefaultprompt) | **POST** /prompt/createDefaultPrompt | Create default prompt
 [*PromptApi*](doc/PromptApi.md) | [**createPrompt**](doc/PromptApi.md#createprompt) | **POST** /prompt/ | Create prompt
@@ -251,6 +263,12 @@ Class | Method | HTTP request | Description
  - [MagicFillCommand](doc/MagicFillCommand.md)
  - [Notification](doc/Notification.md)
  - [OcrEngine](doc/OcrEngine.md)
+ - [OidcConnectionView](doc/OidcConnectionView.md)
+ - [OidcExchangeCommand](doc/OidcExchangeCommand.md)
+ - [OidcFlowErrorView](doc/OidcFlowErrorView.md)
+ - [OidcLinkStartView](doc/OidcLinkStartView.md)
+ - [OidcProviderSummary](doc/OidcProviderSummary.md)
+ - [OidcProviderView](doc/OidcProviderView.md)
  - [PagedActivityRequestCommand](doc/PagedActivityRequestCommand.md)
  - [PagedApiKeyRequestCommand](doc/PagedApiKeyRequestCommand.md)
  - [PagedData](doc/PagedData.md)
@@ -317,6 +335,7 @@ Class | Method | HTTP request | Description
  - [UpsertGroupCommand](doc/UpsertGroupCommand.md)
  - [UpsertGroupMemberCommand](doc/UpsertGroupMemberCommand.md)
  - [UpsertItemCommand](doc/UpsertItemCommand.md)
+ - [UpsertOidcProviderCommand](doc/UpsertOidcProviderCommand.md)
  - [UpsertPromptCommand](doc/UpsertPromptCommand.md)
  - [UpsertReceiptCommand](doc/UpsertReceiptCommand.md)
  - [UpsertReceiptProcessingSettingsCommand](doc/UpsertReceiptProcessingSettingsCommand.md)

@@ -236,6 +236,8 @@ func InitTestDb() {
 // UseTestDbWithoutForeignKeysForTests points the package database at a second
 // connection pool on the same test database, opened with foreign key
 // enforcement OFF, and returns a function restoring the original. Tests only.
+// Calling restore more than once is harmless, so a test may both defer it and
+// call it early.
 //
 // It lets a test tell an explicit delete apart from an ON DELETE CASCADE that
 // would otherwise have done the work. SQLite's foreign_keys pragma is per

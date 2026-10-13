@@ -34,9 +34,11 @@ func TestUseTestDbWithoutForeignKeysForTests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UseTestDbWithoutForeignKeysForTests failed: %v", err)
 	}
+	// Deferred as well as called below: a t.Fatalf in between, including one
+	// inside foreignKeysPragma, must not leave later tests on this handle.
+	defer restore()
 
 	if foreignKeysPragma(t) != 0 {
-		restore()
 		t.Fatalf("expected foreign keys to be off while the hook is in effect")
 	}
 

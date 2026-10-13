@@ -107,6 +107,62 @@ func TestLogin_DummyUserRejected(t *testing.T) {
 	}
 }
 
+// An account with no password of its own is refused even with the stored
+// password, and the refusal must read exactly like a wrong password: anything
+// else would tell a caller which usernames belong to identity provider accounts.
+func TestLogin_PasswordlessOidcAccountLooksLikeWrongPassword(t *testing.T) {
+	defer teardownLoginTests()
+
+	user, err := repositories.NewUserRepository(nil).CreateUser(commands.SignUpCommand{
+		Username:    "oidc-only",
+		Password:    "correctpassword",
+		DisplayName: "OIDC Only",
+	})
+	if err != nil {
+		t.Fatalf("failed to create the user: %v", err)
+	}
+
+	provider := models.OidcProvider{
+		Name:         "keycloak",
+		DisplayName:  "Keycloak",
+		IssuerUrl:    "https://idp.example.com",
+		ClientId:     "client",
+		ClientSecret: "secret",
+		Enabled:      true,
+	}
+	if err := repositories.GetDB().Create(&provider).Error; err != nil {
+		t.Fatalf("failed to create the provider: %v", err)
+	}
+
+	identity := models.OidcIdentity{
+		OidcProviderId:  provider.ID,
+		Subject:         "a-subject",
+		UserId:          user.ID,
+		ProvisionedUser: true,
+	}
+	if err := repositories.GetDB().Create(&identity).Error; err != nil {
+		t.Fatalf("failed to create the identity: %v", err)
+	}
+
+	wrong := httptest.NewRecorder()
+	Login(wrong, loginRequest(commands.LoginCommand{Username: "oidc-only", Password: "not-the-password"}, "", ""))
+
+	refused := httptest.NewRecorder()
+	Login(refused, loginRequest(commands.LoginCommand{Username: "oidc-only", Password: "correctpassword"}, "", ""))
+
+	if refused.Code != wrong.Code {
+		t.Errorf("expected the refusal to answer %d like a wrong password, got %d", wrong.Code, refused.Code)
+	}
+
+	if refused.Body.String() != wrong.Body.String() {
+		t.Errorf("expected the refusal body %q to match a wrong password's %q", refused.Body.String(), wrong.Body.String())
+	}
+
+	if len(refused.Result().Cookies()) != 0 {
+		t.Errorf("a refused login set cookies: %v", refused.Result().Cookies())
+	}
+}
+
 func TestLogin_SuccessFirstAdminSetsCookies(t *testing.T) {
 	defer teardownLoginTests()
 

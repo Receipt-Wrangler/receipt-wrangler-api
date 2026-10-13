@@ -9,6 +9,46 @@ import (
 func teardownDbTests() {
 }
 
+// foreignKeysPragma reads SQLite's foreign_keys pragma through the package
+// database as it currently stands.
+func foreignKeysPragma(t *testing.T) int {
+	t.Helper()
+
+	var enabled int
+	if err := GetDB().Raw("PRAGMA foreign_keys").Scan(&enabled).Error; err != nil {
+		t.Fatalf("failed to read the foreign_keys pragma: %v", err)
+	}
+
+	return enabled
+}
+
+// The hook must really switch enforcement off, or a cleanup test built on it
+// passes on the cascade it exists to rule out, and its restore must put the
+// enforcing pool back for every test after it.
+func TestUseTestDbWithoutForeignKeysForTests(t *testing.T) {
+	if foreignKeysPragma(t) != 1 {
+		t.Fatalf("expected the test database to enforce foreign keys")
+	}
+
+	restore, err := UseTestDbWithoutForeignKeysForTests()
+	if err != nil {
+		t.Fatalf("UseTestDbWithoutForeignKeysForTests failed: %v", err)
+	}
+	// Deferred as well as called below: a t.Fatalf in between, including one
+	// inside foreignKeysPragma, must not leave later tests on this handle.
+	defer restore()
+
+	if foreignKeysPragma(t) != 0 {
+		t.Fatalf("expected foreign keys to be off while the hook is in effect")
+	}
+
+	restore()
+
+	if foreignKeysPragma(t) != 1 {
+		t.Fatalf("expected foreign keys to be enforced again after restore")
+	}
+}
+
 func TestShouldCreateTheCorrectMariaDbString(t *testing.T) {
 	defer teardownDbTests()
 

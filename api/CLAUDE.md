@@ -282,6 +282,9 @@ Each package typically has:
 - `main_test.go` - Test setup and teardown
 - `*_test.go` - Unit tests for specific functionality
 - Test utilities in `internal/utils/testing.go` and `internal/repositories/testing.go`
+- The test database enforces foreign keys, so a cleanup test passes on `ON DELETE CASCADE` alone.
+  To prove an explicit delete, run it under `repositories.UseTestDbWithoutForeignKeysForTests()`
+  (`repositories/db.go`) and `defer` the restore it returns
 
 Tests use dependency injection patterns and mock implementations for external services.
 
@@ -1235,8 +1238,9 @@ as "does this request write anything" gets that backwards.
 **Scope is not the only thing a credential decides.** Some operations are ordinary for a signed-in
 human and an escalation for a key, whatever its scope, so `UnifiedAuthMiddleware` also stamps
 **`structs.Claims.AuthSource`** (`AuthSourceJwt` / `AuthSourceApiKey`) — it is the only thing that
-knows which branch ran, and the only writer. Today's one consumer is the OIDC link pair; see "OIDC
-(OpenID Connect) login" → "Linking an existing account" for the escalation it closes. Three rules
+knows which branch ran, and the only writer. Its consumers are the OIDC link pair — see "OIDC
+(OpenID Connect) login" → "Linking an existing account" for the escalation it closes — and
+self-delete (`handlers.DeleteAccount`), so a key cannot destroy the account that issued it. Three rules
 travel with it: the field is **`json:"-"`**, so it cannot ride on a token, be set by whoever minted
 one, or be inherited by a legacy one; a check is written as **"require `AuthSourceJwt`"**, never
 "reject `AuthSourceApiKey`", so the zero value denies rather than slips through; and it is **not**
@@ -1315,7 +1319,8 @@ Claude can read a user's data. It is **off by default** and Go-native (no separa
       neither — a dummy user (stored as `bcrypt("")`) could obtain an MCP token with an empty password.
       Centralizing the guard in `LoginUser` covers every caller. Tests: `services/auth_test.go`
       (`TestLoginUserRejectsDummyUser`, `TestLoginUserRejectsEmptyPassword`), `oauth/oauth_test.go`
-      (`TestAuthorizeRejectsDummyUserAndEmptyPassword`).
+      (`TestAuthorizeRejectsDummyUserAndEmptyPassword`). It also refuses an **OIDC-only account** with
+      no password of its own — see "OIDC (OpenID Connect) login" → "A provisioned account's password".
   - `/mcp` — Streamable HTTP MCP endpoint, guarded by bearer-token auth (401 +
     `WWW-Authenticate` advertising the protected-resource metadata)
 - **Auth model**: the OAuth tokens are Receipt Wrangler HS512 JWTs, but **MCP-audience bound**.
@@ -1425,6 +1430,39 @@ assertion reproduces the lockout itself.
 become a *working* password for anyone who knew it — through the normal login form and through the
 MCP OAuth login form, which shares `services.LoginUser`. Guarded by
 `TestProvisionedPasswordIsUnusable`.
+
+**And `LoginUser` refuses such an account outright** (`ErrPasswordLoginUnavailable`), whatever
+password is presented. The randomness makes the password unguessable; the refusal makes the rule hold
+even if that ever changed. "Such an account" is the passwordless fact below,
+`OidcIdentityRepository.IsAccountPasswordless`, the same question the unlink guard asks. Two details:
+
+- **The check runs AFTER the password verifies**, and both callers replace the error with their
+  generic wrong-password text. Run first, it would answer faster than a bcrypt compare and tell
+  anyone which usernames belong to identity provider accounts.
+- **An administrator's password reset is the way back in**: `ResetPassword` clears the flag, so the
+  account has a password of its own and signs in either way.
+
+Tests: `TestLoginUserRejectsPasswordlessOidcAccount` and
+`TestLoginUserAllowsLinkedAccountWithItsOwnPassword` (`services/auth_test.go`), and
+`TestLogin_PasswordlessOidcAccountLooksLikeWrongPassword` (`handlers/login_test.go`), which asserts
+the refusal's status and body match a wrong password's.
+
+**Known gap: deleting a provider deletes the passwordless fact with it.** The flag lives on identity
+rows, and `DeleteOidcProvider` removes that provider's rows. An OIDC-only account that only had that
+provider then reads as a local account: password login is no longer refused, though nobody knows the
+password, and only an administrator's reset gets the user back in. The fix is to hold the fact on
+`User` instead, which needs a schema change and a migration. Deferred.
+
+**Deleting a user removes its OIDC rows explicitly** (`services.DeleteUser`): its identities, any
+pending link session (`link_user_id`), link launches and exchange codes. Do not leave these to
+`ON DELETE CASCADE`. Two of those tables have no foreign key at all. And an orphaned identity is an
+account-takeover path: it would sign its subject into whichever account later reuses the id.
+`TestDeleteUser_RemovesOidcRecords` runs the delete with foreign keys **off**, so it fails if the
+cascade is the only thing doing the work. It does that through
+`repositories.UseTestDbWithoutForeignKeysForTests`, a second pool on the test database opened with
+the pragma off. The obvious alternative, pinning the existing pool to one connection and running
+`PRAGMA foreign_keys = OFF`, **deadlocks**: `DeleteUser` opens a second connection mid-transaction
+(`GroupService.GetGroupIdsForUser` reads through a repository built without the transaction).
 
 ### The callback's security checks, in order
 

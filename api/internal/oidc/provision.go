@@ -362,24 +362,12 @@ func resolveLink(provider models.OidcProvider, claims idTokenClaims, userId uint
 	// unlinking that row first destroyed the only record that the account has no
 	// password, letting the next unlink strand it. Held on every identity, the fact
 	// survives until the last one goes.
-	passwordless, err := accountIsPasswordless(userId)
+	passwordless, err := identityRepository.IsAccountPasswordless(userId)
 	if err != nil {
 		return err
 	}
 
 	return createIdentity(provider, userId, claims, passwordless)
-}
-
-// accountIsPasswordless reports whether this account still has no password of its
-// own -- it was created by an OIDC provisioning login and nobody has set one
-// since. Such an account cannot afford to lose its last identity.
-func accountIsPasswordless(userId uint) (bool, error) {
-	count, err := repositories.NewOidcIdentityRepository(nil).CountProvisionedIdentitiesForUser(userId)
-	if err != nil {
-		return false, err
-	}
-
-	return count > 0, nil
 }
 
 // UnlinkIdentity removes one of the caller's connected providers.
@@ -412,7 +400,7 @@ func UnlinkIdentity(userId uint, providerName string) error {
 	}
 
 	if count <= 1 {
-		passwordless, passwordlessErr := accountIsPasswordless(userId)
+		passwordless, passwordlessErr := identityRepository.IsAccountPasswordless(userId)
 		if passwordlessErr != nil {
 			return passwordlessErr
 		}

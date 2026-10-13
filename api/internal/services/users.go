@@ -59,6 +59,31 @@ func DeleteUser(userId string) error {
 			return txErr
 		}
 
+		// Remove OIDC rows explicitly rather than leaving them to ON DELETE CASCADE.
+		// The auth session and exchange code tables carry no foreign key at all, and
+		// an orphaned identity would sign its subject into whichever account later
+		// reuses this id. A pending link session goes too, or its callback would
+		// write a fresh identity against the deleted user.
+		txErr = tx.Where("user_id = ?", userId).Delete(&models.OidcIdentity{}).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Where("link_user_id = ?", userId).Delete(&models.OidcAuthSession{}).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Where("user_id = ?", userId).Delete(&models.OidcLinkLaunch{}).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Where("user_id = ?", userId).Delete(&models.OidcExchangeCode{}).Error
+		if txErr != nil {
+			return txErr
+		}
+
 		// Remove API keys (first nullify SystemTask.ApiKeyId references)
 		var apiKeyIds []string
 		txErr = tx.Model(&models.ApiKey{}).Where("user_id = ?", userId).Pluck("id", &apiKeyIds).Error

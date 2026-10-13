@@ -374,6 +374,9 @@ func TestGetEmptyAccessTokenCookie(t *testing.T) {
 	if cookie.HttpOnly {
 		utils.PrintTestError(t, cookie.HttpOnly, false)
 	}
+	if cookie.Secure {
+		utils.PrintTestError(t, cookie.Secure, false)
+	}
 }
 
 func TestGetEmptyRefreshTokenCookie(t *testing.T) {
@@ -393,6 +396,57 @@ func TestGetEmptyRefreshTokenCookie(t *testing.T) {
 	}
 	if !cookie.HttpOnly {
 		utils.PrintTestError(t, cookie.HttpOnly, true)
+	}
+	if cookie.Secure {
+		utils.PrintTestError(t, cookie.Secure, false)
+	}
+}
+
+func TestUseSecureCookiesFollowsTheSystemSetting(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	if UseSecureCookies() {
+		utils.PrintTestError(t, true, "off by default")
+	}
+
+	if err := repositories.SetSecureCookiesForTests(true); err != nil {
+		utils.PrintTestError(t, err, nil)
+	}
+	if !UseSecureCookies() {
+		utils.PrintTestError(t, false, "on once the setting is saved on")
+	}
+
+	if err := repositories.SetSecureCookiesForTests(false); err != nil {
+		utils.PrintTestError(t, err, nil)
+	}
+	if UseSecureCookies() {
+		utils.PrintTestError(t, true, "off again once the setting is saved off")
+	}
+}
+
+// Every cookie the services layer builds -- the session pair and the two
+// cookies that expire them -- follows the setting, and SameSite is untouched.
+func TestCookiesAreSecureWhenTheSettingIsOn(t *testing.T) {
+	defer repositories.TruncateTestDb()
+
+	if err := repositories.SetSecureCookiesForTests(true); err != nil {
+		utils.PrintTestError(t, err, nil)
+	}
+
+	access, refresh := BuildTokenCookies("jwt-token-value", "refresh-token-value")
+	cookies := []http.Cookie{access, refresh, GetEmptyAccessTokenCookie(), GetEmptyRefreshTokenCookie()}
+
+	for _, cookie := range cookies {
+		if !cookie.Secure {
+			utils.PrintTestError(t, cookie.Name+" Secure=false", "Secure=true")
+		}
+	}
+
+	if access.SameSite != http.SameSiteStrictMode {
+		utils.PrintTestError(t, access.SameSite, http.SameSiteStrictMode)
+	}
+	if refresh.SameSite != http.SameSiteStrictMode {
+		utils.PrintTestError(t, refresh.SameSite, http.SameSiteStrictMode)
 	}
 }
 

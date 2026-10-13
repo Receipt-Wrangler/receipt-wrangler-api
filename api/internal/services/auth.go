@@ -164,14 +164,36 @@ func LoginUser(loginAttempt commands.LoginCommand) (models.User, bool, error) {
 	return dbUser, firstAdminToLogin, nil
 }
 
-func BuildTokenCookies(jwt string, refreshToken string) (http.Cookie, http.Cookie) {
-	var env = config.GetDeployEnv()
-	var sameSite = http.SameSiteStrictMode
-	var secure = false
+// UseSecureCookies reports whether the cookies the API sets should carry the
+// Secure attribute. Every cookie builder asks this one function, so the session
+// cookies, their expiry cookies and the OIDC binding cookie can never disagree.
+//
+// It is always true in dev, where BuildTokenCookies uses SameSite=None and
+// browsers reject a None cookie without Secure. Everywhere else it is the
+// secureCookies System Setting, read live (the IsMcpEnabled pattern) so a save
+// applies on the next response. It is off by default because a browser drops a
+// Secure cookie set over plain http, which would break login on a LAN install;
+// a failed read falls back to that same default.
+func UseSecureCookies() bool {
+	if config.GetDeployEnv() == "dev" {
+		return true
+	}
 
-	if env == "dev" {
+	systemSettings, err := repositories.NewSystemSettingsRepository(nil).GetSystemSettings()
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Could not read secure cookies setting, leaving cookies non-secure: "+err.Error())
+		return false
+	}
+
+	return systemSettings.SecureCookies
+}
+
+func BuildTokenCookies(jwt string, refreshToken string) (http.Cookie, http.Cookie) {
+	var sameSite = http.SameSiteStrictMode
+	var secure = UseSecureCookies()
+
+	if config.GetDeployEnv() == "dev" {
 		sameSite = http.SameSiteNoneMode
-		secure = true
 	}
 
 	accessTokenCookie := http.Cookie{Name: constants.JwtKey, Value: jwt, HttpOnly: true, Path: "/", Expires: utils.GetAccessTokenExpiryDate().Time, SameSite: sameSite, Secure: secure}
@@ -189,11 +211,11 @@ func PrepareAccessTokenClaims(accessTokenClaims structs.Claims) {
 }
 
 func GetEmptyAccessTokenCookie() http.Cookie {
-	return http.Cookie{Name: constants.JwtKey, Value: "", HttpOnly: false, Path: "/", MaxAge: -1}
+	return http.Cookie{Name: constants.JwtKey, Value: "", HttpOnly: false, Path: "/", MaxAge: -1, Secure: UseSecureCookies()}
 }
 
 func GetEmptyRefreshTokenCookie() http.Cookie {
-	return http.Cookie{Name: constants.RefreshTokenKey, Value: "", HttpOnly: true, Path: "/", MaxAge: -1}
+	return http.Cookie{Name: constants.RefreshTokenKey, Value: "", HttpOnly: true, Path: "/", MaxAge: -1, Secure: UseSecureCookies()}
 }
 
 func GenerateJWT(userId uint) (string, string, structs.Claims, error) {

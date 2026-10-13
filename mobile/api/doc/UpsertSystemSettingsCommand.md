@@ -31,6 +31,7 @@ Name | Type | Description | Notes
 **mcpRefreshTokenValidForHours** | **int** | How long an MCP/OAuth connector refresh token stays valid, in hours. Accepted values are 1-720 (30 days), or 0 meaning unset, which falls back to the default of 24. Omit the key entirely to leave the currently configured value unchanged. | [optional] 
 **tempFileRetentionHours** | **int** | How long a temp file is kept once nothing can still act on it, in hours. Accepted values are 24-8760 (1 year), or 0 meaning unset, which falls back to the default of 720 (30 days). Omit the key entirely to leave the currently configured value unchanged. | [optional] 
 **timeZone** | **String** | The app time zone, an IANA name such as America/New_York that the server can load (an unknown name is a 400 under the timeZone key). Omit the key entirely to leave the currently configured value unchanged. | [optional] 
+**secureCookies** | **bool** | Marks every cookie the server sets as Secure. Only turn it on when the app is served over HTTPS: a browser drops a Secure cookie set over plain HTTP, which breaks login. Omit the key entirely to leave the currently configured value unchanged. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

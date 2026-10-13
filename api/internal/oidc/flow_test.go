@@ -243,6 +243,40 @@ func TestLoginSetsHttpOnlyLaxBindingCookie(t *testing.T) {
 	}
 }
 
+func TestBindingCookieIsSecureOnlyWhenTheSettingIsOn(t *testing.T) {
+	defer teardownOidcTest()
+	idp, provider := setupOidcTest(t, oidcTestOptions{allowProvisioning: true})
+
+	off := findCookie(startLogin(t, provider.Name, "").Result().Cookies(), bindingCookieName)
+	if off == nil || off.Secure {
+		t.Fatal("expected a non-Secure binding cookie while the setting is off")
+	}
+
+	if err := repositories.SetSecureCookiesForTests(true); err != nil {
+		t.Fatalf("failed to turn secure cookies on: %v", err)
+	}
+
+	loginRecorder := startLogin(t, provider.Name, "")
+	if binding := findCookie(loginRecorder.Result().Cookies(), bindingCookieName); binding == nil || !binding.Secure {
+		t.Fatal("expected the binding cookie to be Secure")
+	}
+
+	state, cookies := loginAndExtractFrom(t, loginRecorder)
+	idp.setClaims(claimsFor(idp, "subject-secure", nonceFromAuthUrl(t, loginRecorder), "secureuser"))
+	result := runCallback(t, provider.Name, url.Values{"code": {"abc"}, "state": {state}}, cookies).Result().Cookies()
+
+	// The callback's whole cookie set: the session pair, and the binding expired.
+	for _, name := range []string{"jwt", "refresh_token", bindingCookieName} {
+		cookie := findCookie(result, name)
+		if cookie == nil {
+			t.Fatalf("expected the callback to set %s", name)
+		}
+		if !cookie.Secure {
+			t.Errorf("expected %s to be Secure", name)
+		}
+	}
+}
+
 func TestLoginStoresSecretsHashedNotPlaintext(t *testing.T) {
 	defer teardownOidcTest()
 	_, provider := setupOidcTest(t, oidcTestOptions{})

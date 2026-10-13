@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"receipt-wrangler/api/internal/constants"
-	"receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/permissions"
@@ -747,18 +746,13 @@ func pendingClientType(state string) string {
 }
 
 func buildBindingCookie(value string) *http.Cookie {
-	secure := false
-	if env.GetDeployEnv() == "dev" {
-		secure = true
-	}
-
 	return &http.Cookie{
 		Name:     bindingCookieName,
 		Value:    value,
 		HttpOnly: true,
 		Path:     bindingCookiePath,
 		MaxAge:   int(authSessionTTL.Seconds()),
-		Secure:   secure,
+		Secure:   services.UseSecureCookies(),
 		// Lax, NOT Strict. BuildTokenCookies uses Strict in production, but the
 		// callback arrives as a cross-site top-level GET from the identity provider:
 		// Strict would drop this cookie on exactly the request that needs it, and the
@@ -784,6 +778,7 @@ func clearBindingCookie(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Path:     bindingCookiePath,
 		MaxAge:   -1,
+		Secure:   services.UseSecureCookies(),
 	})
 }
 

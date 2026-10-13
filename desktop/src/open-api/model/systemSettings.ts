@@ -101,6 +101,10 @@ export interface SystemSettings {
      * The app time zone, an IANA name such as America/New_York. Every calendar boundary (which day an Added At or Resolved Date falls on, \"today\", \"this month\", report periods) is worked out in it. A receipt\'s Date is a calendar day and never shifts with it.
      */
     timeZone?: string;
+    /**
+     * Marks every cookie the server sets as Secure, so browsers only send them over HTTPS. Recommended for any install served over HTTPS. Off by default, because a browser drops a Secure cookie set over plain HTTP, which breaks login.
+     */
+    secureCookies?: boolean;
 }
 export namespace SystemSettings {
 }

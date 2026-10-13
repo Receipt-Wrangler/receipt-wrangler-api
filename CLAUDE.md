@@ -243,6 +243,12 @@ dev libs must be installed by hand.
   size their 15-minute proactive refresh timer against it, and neither client needed any change for
   this. See `api/CLAUDE.md` → "Session lifetime" and `desktop/CLAUDE.md` → "Session lifetime
   settings".
+- **Whether cookies carry `Secure` is a System Setting too** (`secureCookies`), **off by default** so
+  plain-HTTP LAN installs keep working, and recommended for any install served over HTTPS. It covers
+  every cookie the API sets, through the one resolver `services.UseSecureCookies()`; `dev` forces it
+  on regardless. Turning it on over plain HTTP locks the web app out, so the desktop warns first and
+  recovery goes through the API with an admin's API key. Mobile is unaffected (tokens ride in the
+  body). See `api/CLAUDE.md` → "Cookie `Secure` is a System Setting".
 
 ### OIDC Login (external identity providers)
 

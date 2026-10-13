@@ -90,6 +90,10 @@ export interface UpsertSystemSettingsCommand {
      * The app time zone, an IANA name such as America/New_York that the server can load (an unknown name is a 400 under the timeZone key). Omit the key entirely to leave the currently configured value unchanged.
      */
     timeZone?: string;
+    /**
+     * Marks every cookie the server sets as Secure. Only turn it on when the app is served over HTTPS: a browser drops a Secure cookie set over plain HTTP, which breaks login. Omit the key entirely to leave the currently configured value unchanged.
+     */
+    secureCookies?: boolean;
 }
 export namespace UpsertSystemSettingsCommand {
 }

@@ -16,6 +16,8 @@ class _$SystemSettings extends SystemSettings {
   @override
   final int? tempFileRetentionHours;
   @override
+  final bool? secureCookies;
+  @override
   final String? currencyDisplay;
   @override
   final bool? showLoginQr;
@@ -72,6 +74,7 @@ class _$SystemSettings extends SystemSettings {
       this.currencyThousandthsSeparator,
       this.pdfDpi,
       this.tempFileRetentionHours,
+      this.secureCookies,
       this.currencyDisplay,
       this.showLoginQr,
       this.serverPublicUrl,
@@ -112,6 +115,7 @@ class _$SystemSettings extends SystemSettings {
         currencyThousandthsSeparator == other.currencyThousandthsSeparator &&
         pdfDpi == other.pdfDpi &&
         tempFileRetentionHours == other.tempFileRetentionHours &&
+        secureCookies == other.secureCookies &&
         currencyDisplay == other.currencyDisplay &&
         showLoginQr == other.showLoginQr &&
         serverPublicUrl == other.serverPublicUrl &&
@@ -146,6 +150,7 @@ class _$SystemSettings extends SystemSettings {
     _$hash = $jc(_$hash, currencyThousandthsSeparator.hashCode);
     _$hash = $jc(_$hash, pdfDpi.hashCode);
     _$hash = $jc(_$hash, tempFileRetentionHours.hashCode);
+    _$hash = $jc(_$hash, secureCookies.hashCode);
     _$hash = $jc(_$hash, currencyDisplay.hashCode);
     _$hash = $jc(_$hash, showLoginQr.hashCode);
     _$hash = $jc(_$hash, serverPublicUrl.hashCode);
@@ -181,6 +186,7 @@ class _$SystemSettings extends SystemSettings {
           ..add('currencyThousandthsSeparator', currencyThousandthsSeparator)
           ..add('pdfDpi', pdfDpi)
           ..add('tempFileRetentionHours', tempFileRetentionHours)
+          ..add('secureCookies', secureCookies)
           ..add('currencyDisplay', currencyDisplay)
           ..add('showLoginQr', showLoginQr)
           ..add('serverPublicUrl', serverPublicUrl)
@@ -235,6 +241,11 @@ class SystemSettingsBuilder
   int? get tempFileRetentionHours => _$this._tempFileRetentionHours;
   set tempFileRetentionHours(covariant int? tempFileRetentionHours) =>
       _$this._tempFileRetentionHours = tempFileRetentionHours;
+
+  bool? _secureCookies;
+  bool? get secureCookies => _$this._secureCookies;
+  set secureCookies(covariant bool? secureCookies) =>
+      _$this._secureCookies = secureCookies;
 
   String? _currencyDisplay;
   String? get currencyDisplay => _$this._currencyDisplay;
@@ -371,6 +382,7 @@ class SystemSettingsBuilder
       _currencyThousandthsSeparator = $v.currencyThousandthsSeparator;
       _pdfDpi = $v.pdfDpi;
       _tempFileRetentionHours = $v.tempFileRetentionHours;
+      _secureCookies = $v.secureCookies;
       _currencyDisplay = $v.currencyDisplay;
       _showLoginQr = $v.showLoginQr;
       _serverPublicUrl = $v.serverPublicUrl;
@@ -423,6 +435,7 @@ class SystemSettingsBuilder
             currencyThousandthsSeparator: currencyThousandthsSeparator,
             pdfDpi: pdfDpi,
             tempFileRetentionHours: tempFileRetentionHours,
+            secureCookies: secureCookies,
             currencyDisplay: currencyDisplay,
             showLoginQr: showLoginQr,
             serverPublicUrl: serverPublicUrl,

@@ -134,6 +134,8 @@ describe("SystemSettingsFormComponent", () => {
       serverPublicUrl: null,
       showLoginQr: null,
       mobileServerUrl: null,
+      // Unset on the wire (an older server): seeds the server's own default, off.
+      secureCookies: false,
       // With no stored value, splitHours falls back to the 24h default and
       // renders it as the friendlier "1 Days".
       refreshTokenValidForValue: 1,
@@ -172,6 +174,7 @@ describe("SystemSettingsFormComponent", () => {
       serverPublicUrl: "https://receipts.example.com",
       showLoginQr: true,
       mobileServerUrl: "https://receipts.example.com/api",
+      secureCookies: true,
       refreshTokenValidForHours: 720,
       mcpRefreshTokenValidForHours: 6,
     };
@@ -201,6 +204,7 @@ describe("SystemSettingsFormComponent", () => {
       serverPublicUrl: "https://receipts.example.com",
       showLoginQr: true,
       mobileServerUrl: "https://receipts.example.com/api",
+      secureCookies: true,
       // 720 hours divides evenly into days, so it renders as 30 Days; 6 does
       // not, so it stays in hours.
       refreshTokenValidForValue: 30,
@@ -486,6 +490,7 @@ describe("SystemSettingsFormComponent", () => {
       serverPublicUrl: "https://receipts.example.com",
       showLoginQr: true,
       mobileServerUrl: "https://receipts.example.com/api",
+      secureCookies: true,
       refreshTokenValidForValue: "14",
       refreshTokenValidForUnit: "DAYS",
       mcpRefreshTokenValidForValue: "12",
@@ -528,6 +533,7 @@ describe("SystemSettingsFormComponent", () => {
       serverPublicUrl: "https://receipts.example.com",
       showLoginQr: true,
       mobileServerUrl: "https://receipts.example.com/api",
+      secureCookies: true,
       // The value/unit pairs are folded into hours and the presentation-only
       // controls are stripped — toEqual would fail if any of them leaked.
       refreshTokenValidForHours: 336,
@@ -537,6 +543,54 @@ describe("SystemSettingsFormComponent", () => {
 
     expect(snackbarServiceSpy).toHaveBeenCalled();
     expect(routerSpy).toHaveBeenCalled();
+  });
+
+  describe("secure cookies", () => {
+    function warning(): HTMLElement | null {
+      return fixture.nativeElement.querySelector('[data-testid="secure-cookies-http-warning"]');
+    }
+
+    it("renders the checkbox with its test id", () => {
+      const checkbox: HTMLElement | null = fixture.nativeElement.querySelector(
+        '[data-testid="system-settings-secure-cookies"]'
+      );
+
+      expect(checkbox).not.toBeNull();
+      expect(checkbox!.tagName.toLowerCase()).toEqual("app-checkbox");
+    });
+
+    it("is disabled in view mode but still read by getRawValue", () => {
+      const activatedRoute = TestBed.inject(ActivatedRoute);
+      activatedRoute.snapshot.data["systemSettings"] = { taskQueueConfigurations: [], secureCookies: true };
+      activatedRoute.snapshot.data["formConfig"] = { mode: FormMode.view };
+      component.ngOnInit();
+
+      expect(component.form.get("secureCookies")!.disabled).toBe(true);
+      expect(component.form.getRawValue().secureCookies).toBe(true);
+    });
+
+    // jsdom serves the page from http://localhost, i.e. the case the warning is for.
+    it("warns when ticked on a page loaded over http", () => {
+      expect(component.servedOverHttps).toBe(false);
+      expect(warning()).toBeNull();
+
+      component.form.get("secureCookies")!.setValue(true);
+      fixture.detectChanges();
+      expect(warning()).not.toBeNull();
+
+      component.form.get("secureCookies")!.setValue(false);
+      fixture.detectChanges();
+      expect(warning()).toBeNull();
+    });
+
+    it("does not warn on a page loaded over https", () => {
+      Object.assign(component, { servedOverHttps: true });
+
+      component.form.get("secureCookies")!.setValue(true);
+      fixture.detectChanges();
+
+      expect(warning()).toBeNull();
+    });
   });
 
   describe("time zone", () => {

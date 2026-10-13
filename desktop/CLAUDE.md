@@ -1162,6 +1162,23 @@ redirect, and administer the provider rows.
   existing convention for these tables — `setColumns()` runs in `ngAfterViewInit` and mutates a plain
   property, which trips NG0100 in the dev-mode check-no-changes pass.
 
+## Secure cookies setting
+
+A **Cookies** `app-form-section` on the System Settings form, after **Session**, holds one
+`app-checkbox` (`data-testid="system-settings-secure-cookies"`) bound to `secureCookies`. It marks
+every cookie the API sets as `Secure`; see `api/CLAUDE.md` → "Cookie `Secure` is a System Setting"
+for the server side and the lockout recovery.
+
+- **Seeded `?? false`**, the server's own default, so an older server that omits the key renders
+  unchecked; it is in the view-mode disable block and rides the payload through `getRawValue()`.
+- **The HTTP warning** (`data-testid="secure-cookies-http-warning"`, an `alert alert-warning`) shows
+  while the box is ticked and `servedOverHttps` is false. That field is read once from
+  `window.location.protocol`: the browser that loaded this page is exactly the one that would drop the
+  cookies, so it is the right thing to ask, and the API cannot answer it reliably from behind a
+  second proxy. It warns rather than blocks — `http://localhost` is a secure context in Chromium, so
+  the warning is conservative there. The spec drives it under jsdom's `http://localhost` and
+  overrides the field for the HTTPS case.
+
 ## Duration settings (Hours/Days selector over an hours-based API)
 
 The System Settings form exposes two configurable refresh-token lifetimes (see `api/CLAUDE.md` →

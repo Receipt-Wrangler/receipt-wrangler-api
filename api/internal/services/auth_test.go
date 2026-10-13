@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -915,6 +916,101 @@ func TestLoginUserRejectsEmptyPassword(t *testing.T) {
 	// Sanity: the real password still works.
 	if _, _, err := LoginUser(commands.LoginCommand{Username: "realuser", Password: "Password"}); err != nil {
 		utils.PrintTestError(t, err, "successful login with correct password")
+	}
+}
+
+// seedOidcIdentity links userId to a new provider named providerName.
+// provisioned marks the ACCOUNT as having no password of its own, which is what
+// an OIDC provisioning login records.
+func seedOidcIdentity(t *testing.T, userId uint, providerName string, provisioned bool) models.OidcIdentity {
+	t.Helper()
+	db := repositories.GetDB()
+
+	provider := models.OidcProvider{
+		Name:         providerName,
+		DisplayName:  providerName,
+		IssuerUrl:    "https://idp.example.com",
+		ClientId:     "client",
+		ClientSecret: "secret",
+		Enabled:      true,
+	}
+	if err := db.Create(&provider).Error; err != nil {
+		t.Fatalf("failed to create the provider: %v", err)
+	}
+
+	identity := models.OidcIdentity{
+		OidcProviderId:  provider.ID,
+		Subject:         providerName + "-subject",
+		UserId:          userId,
+		ProvisionedUser: provisioned,
+	}
+	if err := db.Create(&identity).Error; err != nil {
+		t.Fatalf("failed to create the identity: %v", err)
+	}
+
+	return identity
+}
+
+// An account with no password of its own must not sign in through the password
+// form, even with the password that is actually stored. A provisioned account's
+// password is random and discarded, so nobody can produce it today; this pins
+// the rule itself, so the account stays closed if that ever stops being true.
+func TestLoginUserRejectsPasswordlessOidcAccount(t *testing.T) {
+	defer repositories.TruncateTestDb()
+	ClearRolePermissionCacheForTests()
+
+	user, err := repositories.NewUserRepository(nil).CreateUser(commands.SignUpCommand{
+		Username:    "oidconly",
+		Password:    "Password",
+		DisplayName: "OIDC Only",
+	})
+	if err != nil {
+		t.Fatalf("failed to create the user: %v", err)
+	}
+	seedOidcIdentity(t, user.ID, "keycloak", true)
+
+	_, _, err = LoginUser(commands.LoginCommand{Username: "oidconly", Password: "Password"})
+	if !errors.Is(err, ErrPasswordLoginUnavailable) {
+		t.Fatalf("expected ErrPasswordLoginUnavailable for a passwordless account, got %v", err)
+	}
+
+	var stored models.User
+	if err := repositories.GetDB().First(&stored, user.ID).Error; err != nil {
+		t.Fatalf("failed to reload the user: %v", err)
+	}
+	if stored.LastLoginDate != nil {
+		t.Errorf("a refused login was recorded as a login at %v", stored.LastLoginDate)
+	}
+
+	// An administrator's password reset gives the account a password of its own,
+	// which is the documented way back in.
+	if err := repositories.NewOidcIdentityRepository(nil).ClearProvisionedFlagForUser(user.ID); err != nil {
+		t.Fatalf("failed to clear the provisioned flag: %v", err)
+	}
+
+	if _, _, err := LoginUser(commands.LoginCommand{Username: "oidconly", Password: "Password"}); err != nil {
+		t.Fatalf("expected a login once the account has a password of its own, got %v", err)
+	}
+}
+
+// Linking a provider to an account that already had a password must not take
+// password sign-in away from it.
+func TestLoginUserAllowsLinkedAccountWithItsOwnPassword(t *testing.T) {
+	defer repositories.TruncateTestDb()
+	ClearRolePermissionCacheForTests()
+
+	user, err := repositories.NewUserRepository(nil).CreateUser(commands.SignUpCommand{
+		Username:    "linkeduser",
+		Password:    "Password",
+		DisplayName: "Linked User",
+	})
+	if err != nil {
+		t.Fatalf("failed to create the user: %v", err)
+	}
+	seedOidcIdentity(t, user.ID, "keycloak", false)
+
+	if _, _, err := LoginUser(commands.LoginCommand{Username: "linkeduser", Password: "Password"}); err != nil {
+		t.Fatalf("expected a linked account with its own password to log in, got %v", err)
 	}
 }
 

@@ -186,7 +186,7 @@ func TestDeleteAccountShouldFailWithWrongPassword(t *testing.T) {
 
 	ctx := context.WithValue(r.Context(), "deleteAccountCommand", commands.DeleteAccountCommand{Password: "wrongpassword"})
 	ctx = context.WithValue(ctx, jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{
-		CustomClaims: &structs.Claims{UserId: user.ID},
+		CustomClaims: &structs.Claims{UserId: user.ID, AuthSource: structs.AuthSourceJwt},
 	})
 	r = r.WithContext(ctx)
 
@@ -216,7 +216,7 @@ func TestDeleteAccountShouldSucceedWithCorrectPassword(t *testing.T) {
 
 	ctx := context.WithValue(r.Context(), "deleteAccountCommand", commands.DeleteAccountCommand{Password: "correctpassword"})
 	ctx = context.WithValue(ctx, jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{
-		CustomClaims: &structs.Claims{UserId: user.ID},
+		CustomClaims: &structs.Claims{UserId: user.ID, AuthSource: structs.AuthSourceJwt},
 	})
 	r = r.WithContext(ctx)
 
@@ -264,7 +264,7 @@ func TestDeleteAccountShouldPreventLastAdminDeletion(t *testing.T) {
 
 	ctx := context.WithValue(r.Context(), "deleteAccountCommand", commands.DeleteAccountCommand{Password: "adminpassword"})
 	ctx = context.WithValue(ctx, jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{
-		CustomClaims: &structs.Claims{UserId: user.ID},
+		CustomClaims: &structs.Claims{UserId: user.ID, AuthSource: structs.AuthSourceJwt},
 	})
 	r = r.WithContext(ctx)
 
@@ -279,6 +279,63 @@ func TestDeleteAccountShouldPreventLastAdminDeletion(t *testing.T) {
 	db.Model(&models.User{}).Where("id = ?", user.ID).Count(&count)
 	if count != 1 {
 		utils.PrintTestError(t, count, 1)
+	}
+}
+
+// deleteAccountAs drives POST /user/deleteAccount with claims built the way the
+// named auth source would have built them.
+func deleteAccountAs(t *testing.T, userId uint, password string, authSource string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	r := httptest.NewRequest("POST", "/api/user/deleteAccount", strings.NewReader(""))
+
+	ctx := context.WithValue(r.Context(), "deleteAccountCommand", commands.DeleteAccountCommand{Password: password})
+	ctx = context.WithValue(ctx, jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{
+		CustomClaims: &structs.Claims{UserId: userId, AuthSource: authSource},
+	})
+
+	w := httptest.NewRecorder()
+	DeleteAccount(w, r.WithContext(ctx))
+
+	return w
+}
+
+// TestDeleteAccountRequiresAnInteractiveSession pins self-delete to the account's
+// own session. A key must not be able to destroy the account that issued it,
+// whatever its scope -- the same rule connecting and disconnecting an identity
+// provider carry.
+func TestDeleteAccountRequiresAnInteractiveSession(t *testing.T) {
+	defer tearDownUserTest()
+
+	db := repositories.GetDB()
+	db.Create(&models.SystemEmail{})
+
+	// A second admin, so the last-admin guard cannot be what refuses the delete.
+	adminUser := createTestUser(t, "adminuser", "adminpass")
+	grantAppPerms(t, adminUser.ID, permissions.AppUsersRead)
+	user := createTestUser(t, "testuser", "correctpassword")
+	grantAppPerms(t, user.ID, permissions.AppAccountDelete)
+
+	// Unmarked claims are denied too: the check requires an interactive session
+	// rather than rejecting a key, so the zero value cannot slip through.
+	for _, authSource := range []string{structs.AuthSourceApiKey, ""} {
+		w := deleteAccountAs(t, user.ID, "correctpassword", authSource)
+		if w.Result().StatusCode != http.StatusForbidden {
+			t.Errorf("auth source %q: expected 403, got %d", authSource, w.Result().StatusCode)
+		}
+	}
+
+	var count int64
+	db.Model(&models.User{}).Where("id = ?", user.ID).Count(&count)
+	if count != 1 {
+		t.Fatalf("a refused self-delete removed the account anyway")
+	}
+
+	// The positive control: the same call from a real session succeeds, so the
+	// 403s above are the credential rule and not some unrelated failure.
+	w := deleteAccountAs(t, user.ID, "correctpassword", structs.AuthSourceJwt)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected an interactive session to delete the account, got %d", w.Result().StatusCode)
 	}
 }
 

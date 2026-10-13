@@ -277,6 +277,13 @@ pieces have to agree:
 - **Both clients gate on `app.oidc-providers.*`** for the admin CRUD. Legacy Admin picks the four
   new permissions up for free (its key set is dynamic over every APP key); Legacy User's list is
   fixed and must stay without them.
+- **An OIDC-only account cannot sign in with a password.** Its password is random and discarded at
+  provisioning, and `LoginUser` refuses the account outright as well — after the password verifies,
+  with the same error as a wrong password, so the refusal reveals nothing about the username. An
+  administrator's password reset is the way back in. **Self-delete requires an interactive session**,
+  never an API key. It still asks for a password, which an OIDC-only user does not have; the agreed
+  follow-up is to confirm the delete by signing in at the provider again, which the app stores'
+  account-deletion rules require. See `api/CLAUDE.md` → "A provisioned account's password".
 - **Pre-existing password accounts link from the profile page**, not by matching — *Connected
   accounts* on both `desktop/` and `mobile/` profiles runs the OIDC flow from an
   authenticated session, so the server is *told* the identity rather than inferring it. That is

@@ -221,11 +221,42 @@ func InitDB() error {
 	return nil
 }
 
+// testDbFile is the database every package's test suite runs against.
+const testDbFile = "file:test.db"
+
 func InitTestDb() {
-	sqlite, err := gorm.Open(sqlite.Open("file:test.db?_pragma=foreign_keys(1)"), &gorm.Config{})
+	sqlite, err := gorm.Open(sqlite.Open(testDbFile+"?_pragma=foreign_keys(1)"), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
 
 	db = sqlite
+}
+
+// UseTestDbWithoutForeignKeysForTests points the package database at a second
+// connection pool on the same test database, opened with foreign key
+// enforcement OFF, and returns a function restoring the original. Tests only.
+//
+// It lets a test tell an explicit delete apart from an ON DELETE CASCADE that
+// would otherwise have done the work. SQLite's foreign_keys pragma is per
+// connection and InitTestDb turns it on for every new one, so it cannot be
+// switched off on that pool; pinning the pool to a single connection instead
+// deadlocks any code that opens a second one mid-transaction, which
+// services.DeleteUser does.
+func UseTestDbWithoutForeignKeysForTests() (restore func(), err error) {
+	withoutForeignKeys, err := gorm.Open(sqlite.Open(testDbFile+"?_pragma=foreign_keys(0)"), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	previous := db
+	db = withoutForeignKeys
+
+	return func() {
+		db = previous
+
+		if sqlDB, err := withoutForeignKeys.DB(); err == nil {
+			sqlDB.Close()
+		}
+	}, nil
 }

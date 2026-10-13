@@ -632,6 +632,14 @@ func DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		AppPermissions: []string{permissions.AppAccountDelete},
 		HandlerFunction: func(w http.ResponseWriter, r *http.Request) (int, error) {
 			token := structs.GetClaims(r)
+
+			// Deleting the account is for the account's own session, never for a key
+			// it issued, whatever that key's scope. Required-to-be-a-session rather
+			// than refused-if-a-key, so an unmarked caller is denied too.
+			if token.AuthSource != structs.AuthSourceJwt {
+				return http.StatusForbidden, errors.New("an account may only be deleted by an interactive session")
+			}
+
 			command := r.Context().Value("deleteAccountCommand").(commands.DeleteAccountCommand)
 
 			statusCode, err := services.DeleteAccountForUser(token.UserId, command.Password)

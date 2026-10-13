@@ -107,6 +107,11 @@ func initTokenValidator(audience string) (*validator.Validator, error) {
 	return jwtValidator, err
 }
 
+// ErrPasswordLoginUnavailable means the account has no password of its own -- it
+// was created by an OIDC provisioning login and nobody has set one since -- so it
+// may only sign in through its identity provider.
+var ErrPasswordLoginUnavailable = errors.New("this account signs in through an identity provider")
+
 func LoginUser(loginAttempt commands.LoginCommand) (models.User, bool, error) {
 	db := repositories.GetDB()
 	firstAdminToLogin := false
@@ -136,6 +141,20 @@ func LoginUser(loginAttempt commands.LoginCommand) (models.User, bool, error) {
 	err = utils.VerifyPassword(dbUser.Password, loginAttempt.Password)
 	if err != nil {
 		return models.User{}, false, err
+	}
+
+	// An account with no password of its own signs in through its identity
+	// provider only. Its stored password is random and was never shown to anyone,
+	// so this holds the rule rather than stopping a guess. It runs AFTER the
+	// password check on purpose: every caller answers this error exactly like a
+	// wrong password, and asking first would answer faster than bcrypt and tell
+	// anyone which usernames are identity provider accounts.
+	passwordless, err := repositories.NewOidcIdentityRepository(nil).IsAccountPasswordless(dbUser.ID)
+	if err != nil {
+		return models.User{}, false, err
+	}
+	if passwordless {
+		return models.User{}, false, ErrPasswordLoginUnavailable
 	}
 
 	userRepository := repositories.NewUserRepository(nil)

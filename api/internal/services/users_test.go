@@ -609,6 +609,77 @@ func TestDeleteUser_WithRefreshTokens(t *testing.T) {
 	assertCount(t, &models.RefreshToken{}, "user_id = ?", []interface{}{user.ID}, 0, "refresh tokens should be deleted")
 }
 
+// DeleteUser removes the user's OIDC rows itself rather than leaving them to the
+// database. An orphaned identity would sign its subject into whichever account
+// later reuses the id, and the auth session and exchange code tables carry no
+// foreign key to cascade from at all.
+func TestDeleteUser_RemovesOidcRecords(t *testing.T) {
+	defer repositories.TruncateTestDb()
+	db := repositories.GetDB()
+
+	user := createUserForDeletion(t, "oidcdeleted")
+	other := createUserForDeletion(t, "oidckept")
+
+	identity := seedOidcIdentity(t, user.ID, "keycloak", true)
+	seedOidcIdentity(t, other.ID, "authentik", false)
+
+	expiresAt := time.Now().Add(10 * time.Minute)
+	linkUserId := user.ID
+	seeds := []interface{}{
+		&models.OidcAuthSession{
+			OidcProviderId: identity.OidcProviderId,
+			StateHash:      "state-hash",
+			NonceHash:      "nonce-hash",
+			CodeVerifier:   "verifier",
+			LinkUserId:     &linkUserId,
+			ExpiresAt:      expiresAt,
+		},
+		&models.OidcLinkLaunch{
+			LaunchHash:     "launch-hash",
+			UserId:         user.ID,
+			OidcProviderId: identity.OidcProviderId,
+			ExpiresAt:      expiresAt,
+		},
+		&models.OidcExchangeCode{
+			CodeHash:      "code-hash",
+			UserId:        user.ID,
+			CodeChallenge: "challenge",
+			ExpiresAt:     expiresAt,
+		},
+	}
+	for _, seed := range seeds {
+		if err := db.Create(seed).Error; err != nil {
+			t.Fatalf("failed to seed %T: %v", seed, err)
+		}
+	}
+
+	// Run the delete with foreign keys off, so the assertions below fail if the
+	// cascade is the only thing removing the rows.
+	restore, err := repositories.UseTestDbWithoutForeignKeysForTests()
+	if err != nil {
+		t.Fatalf("failed to open the test database without foreign keys: %v", err)
+	}
+	defer restore()
+
+	var foreignKeys int
+	if err := repositories.GetDB().Raw("PRAGMA foreign_keys").Scan(&foreignKeys).Error; err != nil {
+		t.Fatalf("failed to read the foreign_keys pragma: %v", err)
+	}
+	if foreignKeys != 0 {
+		t.Fatalf("foreign keys are still enforced, so the cascade alone would pass this test")
+	}
+
+	if err := DeleteUser(utils.UintToString(user.ID)); err != nil {
+		t.Fatalf("DeleteUser failed: %v", err)
+	}
+
+	assertCount(t, &models.OidcIdentity{}, "user_id = ?", []interface{}{user.ID}, 0, "the deleted user's identities should be gone")
+	assertCount(t, &models.OidcAuthSession{}, "link_user_id = ?", []interface{}{user.ID}, 0, "pending link sessions for the deleted user should be gone")
+	assertCount(t, &models.OidcLinkLaunch{}, "user_id = ?", []interface{}{user.ID}, 0, "link launches for the deleted user should be gone")
+	assertCount(t, &models.OidcExchangeCode{}, "user_id = ?", []interface{}{user.ID}, 0, "exchange codes for the deleted user should be gone")
+	assertCount(t, &models.OidcIdentity{}, "user_id = ?", []interface{}{other.ID}, 1, "another user's identity should survive")
+}
+
 func TestDeleteUser_WithDashboards(t *testing.T) {
 	defer repositories.TruncateTestDb()
 	user := createUserForDeletion(t, "dashuser")

@@ -88,6 +88,19 @@ func (repository OidcIdentityRepository) CountProvisionedIdentitiesForUser(userI
 	return count, err
 }
 
+// IsAccountPasswordless reports whether this account still has no password of its
+// own -- it was created by an OIDC provisioning login and nobody has set one
+// since. Such an account cannot afford to lose its last identity, and may not
+// sign in through the password form at all.
+func (repository OidcIdentityRepository) IsAccountPasswordless(userId uint) (bool, error) {
+	count, err := repository.CountProvisionedIdentitiesForUser(userId)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 // SetProvisionedFlagForUser re-asserts the passwordless fact across every
 // identity the account holds, restoring the invariant on rows that predate it.
 func (repository OidcIdentityRepository) SetProvisionedFlagForUser(userId uint) error {

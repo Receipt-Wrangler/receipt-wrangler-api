@@ -1,9 +1,10 @@
+import { HttpErrorResponse } from "@angular/common/http";
 import { AfterViewInit, Component, ElementRef, OnInit, viewChild } from "@angular/core";
 import { FormArray, FormBuilder, FormGroup, ValidatorFn, Validators } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
 import { UntilDestroy, untilDestroyed } from "@ngneat/until-destroy";
 import { Store } from "@ngxs/store";
-import { startWith, switchMap, take, tap } from "rxjs";
+import { catchError, EMPTY, startWith, switchMap, take, tap } from "rxjs";
 import { fadeInOut } from "../../animations/index";
 import { AutocomleteComponent } from "../../autocomplete/autocomlete/autocomlete.component";
 import { BaseFormComponent } from "../../form";
@@ -21,7 +22,7 @@ import { InputReadonlyPipe } from "../../pipes/input-readonly.pipe";
 import { SnackbarService } from "../../services";
 import { SetFeatureConfig } from "../../store";
 import { SetCurrencyData, SetCurrencyDisplay, SetTimeZone } from "../../store/system-settings.state.actions";
-import { DurationUnit, maxForUnit, minForUnit, splitHours, toHours } from "../../utils";
+import { applyApiErrors, DurationUnit, maxForUnit, minForUnit, splitHours, toHours } from "../../utils";
 import { DEFAULT_APP_TIME_ZONE, timeZoneOptions } from "../../utils/app-time-zone";
 import { absoluteUrlValidator, durationValueValidator } from "../../validators";
 
@@ -421,6 +422,19 @@ export class SystemSettingsFormComponent extends BaseFormComponent implements On
     this.systemSettingsService.updateSystemSettings(formValue)
       .pipe(
         take(1),
+        // Clearing serverPublicUrl while an OIDC provider is enabled is refused
+        // with a field-keyed 400, which the interceptor has no branch for -- so
+        // without this the page sits there having apparently saved. It is
+        // scoped to the save by sitting ahead of the success tap: as the last
+        // operator it would also swallow a failure from the feature-config
+        // refetch below, which the interceptor should keep reporting.
+        catchError((error: HttpErrorResponse) => {
+          applyApiErrors(this.form, error?.error, (message) =>
+            this.snackbarService.error(message)
+          );
+
+          return EMPTY;
+        }),
         tap(() => {
           this.snackbarService.success("System settings updated successfully");
           this.router.navigate(["/system-settings/settings/view"], {

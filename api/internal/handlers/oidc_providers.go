@@ -251,9 +251,20 @@ func DeleteOidcProvider(w http.ResponseWriter, r *http.Request) {
 	HandleRequest(handler)
 }
 
-// writeOidcProviderServiceError maps the service's typed errors onto a 400 with
-// the same field-keyed shape a command validator produces, so the client renders
-// them the same way. Reports whether it handled the error.
+// writeOidcProviderServiceError reports a service-layer refusal to the client.
+// Reports whether it handled the error.
+//
+// The two errors deliberately take different shapes, because they are different
+// kinds of refusal. A taken name is a FIELD error: it names the control the
+// admin can fix, so it goes out field-keyed and the form renders it under that
+// input. A missing server public URL is a CONDITION error -- the Enabled
+// checkbox is not itself wrong, a setting on another page is -- so it goes out
+// as an errorMsg, which the desktop interceptor toasts. Keying it to "enabled"
+// was undeliverable by construction: app-checkbox renders no mat-error and has
+// no mat-form-field to host one, so that message reached nobody.
+//
+// See handlers.serverPublicUrlStillNeeded for the mirror direction, which IS a
+// field error -- it names the very input being edited.
 func writeOidcProviderServiceError(w http.ResponseWriter, err error) bool {
 	switch {
 	case errors.Is(err, services.ErrOidcProviderNameTaken):
@@ -263,9 +274,7 @@ func writeOidcProviderServiceError(w http.ResponseWriter, err error) bool {
 
 		return true
 	case errors.Is(err, services.ErrServerPublicUrlRequired):
-		structs.WriteValidatorErrorResponse(w, structs.ValidatorError{
-			Errors: map[string]string{"enabled": err.Error()},
-		}, http.StatusBadRequest)
+		utils.WriteCustomErrorResponse(w, err.Error(), http.StatusBadRequest)
 
 		return true
 	}

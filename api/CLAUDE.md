@@ -1629,8 +1629,7 @@ tweak cannot invalidate live MCP connector tokens.
 **That dependency is enforced from BOTH directions, and it has to be.**
 `OidcProviderService.validateCrossSettingRules` refuses to *enable* a provider with no
 `serverPublicUrl`; `handlers.serverPublicUrlStillNeeded` refuses to *clear* it while any enabled
-provider exists (a 400 under `serverPublicUrl`, reusing `services.ErrServerPublicUrlRequired`). Only
-the first existed at first, so the same broken configuration was reachable by doing the two steps in
+provider exists. Only the first existed at first, so the same broken configuration was reachable by doing the two steps in
 the other order — and the result is invisible from here: `GetServerPublicUrl` falls back to
 `http://localhost:8081`, every provider starts sending a `redirect_uri` nobody registered, and the
 rejection happens at the identity provider. The check lives in the **handler**: there is no system
@@ -1638,6 +1637,30 @@ settings service, and the repository cannot import `services`. It triggers on a 
 the same `len(TrimSpace(...)) > 0` test `IsServerPublicUrlConfigured` applies, so the two halves
 cannot disagree about what "configured" means — leaving a *change* allowed (a deployment moves) and
 an omitted key untouched.
+
+**The two directions answer in deliberately DIFFERENT shapes, and the asymmetry is the point.**
+Both are 400s from the same rule, so it is tempting to make them match; they are not the same kind of
+refusal.
+- **Enabling a provider with no URL** is a *condition* error — the Enabled checkbox is not itself
+  wrong, a setting on another page is — so `writeOidcProviderServiceError` sends
+  `ErrServerPublicUrlRequired` as an **`errorMsg`** (`utils.WriteCustomErrorResponse`), which the
+  desktop interceptor toasts at any status. It shipped keyed to `enabled` instead, and that was
+  undeliverable *by construction*: the desktop's `app-checkbox` renders no `mat-error` and has no
+  `mat-form-field` to host one, so the message reached nobody and the dialog just sat there. Join
+  `receipt_summary.go`'s `ErrConfigurationGroupNotAllGroup` for the shape — a typed service sentinel
+  mapped to a 400 `errorMsg` beside a `WriteValidatorErrorResponse` for real field errors.
+- **Clearing the URL** is a *field* error — the key names the very input being edited — so it stays
+  `WriteValidatorErrorResponse` under `serverPublicUrl`, and the desktop renders it under that field
+  via `applyApiErrors`. It carries its **own** sentinel, `ErrServerPublicUrlInUse`: it used to reuse
+  `ErrServerPublicUrlRequired`, whose sentence ends "…before enabling an OIDC provider" — an action
+  the admin is not taking, on a page they are already on.
+
+The `ErrOidcProviderNameTaken` branch beside it stays field-keyed for the same reason as the second:
+it names a control the admin can actually fix. **Do not unify the three.** The status is identical,
+so only a body assertion can tell them apart — which is why
+`TestEnablingAProviderRequiresAServerPublicUrl` and
+`TestCreatingAProviderWithATakenNameNamesTheNameField` assert bodies rather than codes; the first was
+status-only, and that is how the miscategorisation shipped.
 
 `UpdateOidcProvider` uses the **map form** of `Updates`: GORM's struct form skips zero values, so
 turning `allowProvisioning` / `linkByUsername` / `enabled` **off** would be silently ignored — and

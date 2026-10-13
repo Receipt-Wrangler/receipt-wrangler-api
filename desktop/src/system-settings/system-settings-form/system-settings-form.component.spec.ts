@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from "@angular/common/http";
 import { provideHttpClientTesting } from "@angular/common/http/testing";
 import { CUSTOM_ELEMENTS_SCHEMA, provideZonelessChangeDetection } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
@@ -626,6 +627,53 @@ describe("SystemSettingsFormComponent", () => {
       component.submit();
 
       expect(dispatchSpy).not.toHaveBeenCalledWith(new SetTimeZone("America/New_York"));
+    });
+  });
+
+  // The server refuses clearing serverPublicUrl while an OIDC provider is
+  // enabled, as a bare {"serverPublicUrl": "..."} 400. The interceptor only
+  // toasts errorMsg, so before this the page sat there having apparently saved
+  // and the only evidence was the failed request in devtools.
+  describe("a rejected save", () => {
+    const URL_IN_USE =
+      "the server public URL cannot be cleared while an OIDC provider is enabled; disable the provider first";
+
+    const rejection = () =>
+      new HttpErrorResponse({
+        status: 400,
+        statusText: "Bad Request",
+        error: { serverPublicUrl: URL_IN_USE },
+      });
+
+    it("renders a field-keyed 400 on the control it names", () => {
+      const systemSettingsService = TestBed.inject(SystemSettingsService);
+      jest
+        .spyOn(systemSettingsService, "updateSystemSettings")
+        .mockReturnValue(throwError(() => rejection()) as any);
+
+      component.ngOnInit();
+      component.submit();
+
+      const control = component.form.get("serverPublicUrl")!;
+      expect(control.errors).toEqual({ server: URL_IN_USE });
+      expect(control.touched).toBe(true);
+    });
+
+    it("does not report the save as successful", () => {
+      const systemSettingsService = TestBed.inject(SystemSettingsService);
+      const snackbarService = TestBed.inject(SnackbarService);
+      const router = TestBed.inject(Router);
+      jest
+        .spyOn(systemSettingsService, "updateSystemSettings")
+        .mockReturnValue(throwError(() => rejection()) as any);
+      const successSpy = jest.spyOn(snackbarService, "success");
+      const navigateSpy = jest.spyOn(router, "navigate");
+
+      component.ngOnInit();
+      component.submit();
+
+      expect(successSpy).not.toHaveBeenCalled();
+      expect(navigateSpy).not.toHaveBeenCalled();
     });
   });
 });

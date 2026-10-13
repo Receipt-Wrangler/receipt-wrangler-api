@@ -12,6 +12,7 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/permissions"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/services"
 	"receipt-wrangler/api/internal/structs"
 
 	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
@@ -314,6 +315,64 @@ func TestEnablingAProviderRequiresAServerPublicUrl(t *testing.T) {
 	CreateOidcProvider(recorder, request)
 
 	if recorder.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 without a server public URL, got %d (%s)", recorder.Code, recorder.Body.String())
+		t.Fatalf("expected 400 without a server public URL, got %d (%s)", recorder.Code, recorder.Body.String())
+	}
+
+	// This is a CONDITION error, not a field error: the Enabled checkbox is not
+	// itself wrong, a setting on another page is. So it goes out as an errorMsg,
+	// which the desktop interceptor toasts at any status. Keyed to "enabled" it
+	// reached nobody -- app-checkbox renders no mat-error and has no
+	// mat-form-field to host one -- and the status alone cannot tell the two
+	// shapes apart, which is exactly how that shipped. Hence the body assertion.
+	var body map[string]string
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("the 400 body is not a string map: %v (%s)", err, recorder.Body.String())
+	}
+
+	if body["errorMsg"] != services.ErrServerPublicUrlRequired.Error() {
+		t.Errorf("errorMsg = %q, want %q", body["errorMsg"], services.ErrServerPublicUrlRequired.Error())
+	}
+
+	if _, ok := body["enabled"]; ok {
+		t.Errorf("the refusal must not be keyed to a checkbox that cannot render it: %s", recorder.Body.String())
+	}
+}
+
+// TestCreatingAProviderWithATakenNameNamesTheNameField is the contrast to the
+// test above, and the pair is why both are worth pinning: the two refusals leave
+// the SAME handler with the SAME status and deliberately different bodies, so a
+// status-only assertion cannot tell a field error from a condition error. A taken
+// name names a control the admin can actually fix, so it stays field-keyed and
+// the dialog renders it under that input.
+func TestCreatingAProviderWithATakenNameNamesTheNameField(t *testing.T) {
+	defer teardownOidcProviderHandlerTest()
+	setupOidcProviderHandlerTest(t)
+	grantAppPerms(t, oidcTestUserId, permissions.AppOidcProvidersCreate)
+
+	request, recorder := oidcRequest(t, http.MethodPost, "/api/oidcProvider/", createProviderBody("keycloak"), nil)
+	CreateOidcProvider(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("the first create: status %d, body %s", recorder.Code, recorder.Body.String())
+	}
+
+	request, recorder = oidcRequest(t, http.MethodPost, "/api/oidcProvider/", createProviderBody("keycloak"), nil)
+	CreateOidcProvider(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("a duplicate name: status %d, want 400 (%s)", recorder.Code, recorder.Body.String())
+	}
+
+	var body map[string]string
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("the 400 body is not a string map: %v (%s)", err, recorder.Body.String())
+	}
+
+	if body["name"] != services.ErrOidcProviderNameTaken.Error() {
+		t.Errorf("name = %q, want %q", body["name"], services.ErrOidcProviderNameTaken.Error())
+	}
+
+	if _, ok := body["errorMsg"]; ok {
+		t.Errorf("a refusal naming a real control must stay field-keyed: %s", recorder.Body.String())
 	}
 }

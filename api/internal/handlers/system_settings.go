@@ -72,7 +72,7 @@ func UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 			if blocked {
 				structs.WriteValidatorErrorResponse(w, structs.ValidatorError{
 					Errors: map[string]string{
-						"serverPublicUrl": services.ErrServerPublicUrlRequired.Error(),
+						"serverPublicUrl": services.ErrServerPublicUrlInUse.Error(),
 					},
 				}, http.StatusBadRequest)
 

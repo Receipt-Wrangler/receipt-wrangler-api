@@ -1,4 +1,4 @@
-import { provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
+import { HttpErrorResponse, provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
 import { provideHttpClientTesting } from "@angular/common/http/testing";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { ReactiveFormsModule } from "@angular/forms";
@@ -7,7 +7,7 @@ import { MatSnackBarModule } from "@angular/material/snack-bar";
 import { NoopAnimationsModule } from "@angular/platform-browser/animations";
 import { RouterTestingModule } from "@angular/router/testing";
 import { NgxsModule } from "@ngxs/store";
-import { config, of, Subject, throwError } from "rxjs";
+import { of, Subject, throwError } from "rxjs";
 import { ButtonModule } from "../../button";
 import { CheckboxModule } from "../../checkbox/checkbox.module";
 import { FormMode } from "../../enums/form-mode.enum";
@@ -225,23 +225,95 @@ describe("OidcProviderFormComponent", () => {
         .spyOn(oidcProviderService, "updateOidcProvider")
         .mockReturnValue(throwError(() => new Error("boom")) as any);
 
-      // subscribe() takes no error handler -- the interceptor is what reports
-      // a failed save -- so RxJS routes the error here rather than throwing
-      // out of submit(). Swallow it so it does not surface as an unhandled
-      // error in a later test.
-      const originalOnUnhandledError = config.onUnhandledError;
-      config.onUnhandledError = () => undefined;
-
-      try {
-        // The dialog stays open on a failure, so the form has to be usable
-        // again -- which is why the flag clears in finalize, not in tap.
-        component.submit();
-        component.submit();
-      } finally {
-        config.onUnhandledError = originalOnUnhandledError;
-      }
+      // The dialog stays open on a failure, so the form has to be usable again
+      // -- which is why the flag clears in finalize, not in tap. submit()'s
+      // catchError now handles the error, so nothing reaches RxJS's unhandled
+      // channel and this needs no onUnhandledError scaffolding.
+      component.submit();
+      component.submit();
 
       expect(updateSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // A taken name comes back as a bare {"name": "..."} 400. The interceptor only
+  // toasts errorMsg, so before this the dialog sat there having apparently done
+  // nothing and the only evidence was the failed request in devtools.
+  //
+  // These drive ADD mode, which is the only way to reach that error: the name is
+  // immutable after create and the server rejects a rename outright, so a
+  // collision can only happen while the field is still editable -- which is also
+  // the only state in which the message can render.
+  describe("a rejected save", () => {
+    const NAME_TAKEN = "an OIDC provider with this name already exists";
+
+    function initValidAdd(): void {
+      initAdd();
+      component.form.patchValue({
+        name: "google",
+        displayName: "Google",
+        issuerUrl: "https://accounts.google.com",
+        clientId: "a-client-id",
+        clientSecret: "a-client-secret",
+        scope: "openid profile email",
+      });
+
+      // submit() early-returns on an invalid form, so a test that never reaches
+      // the service would pass for the wrong reason.
+      expect(component.form.valid).toBe(true);
+    }
+
+    function rejectCreate() {
+      return jest.spyOn(oidcProviderService, "createOidcProvider").mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              statusText: "Bad Request",
+              error: { name: NAME_TAKEN },
+            })
+        ) as any
+      );
+    }
+
+    it("renders a field-keyed 400 on the control it names", () => {
+      initValidAdd();
+      rejectCreate();
+
+      component.submit();
+
+      const control = component.form.get("name")!;
+      expect(control.errors).toEqual({ server: NAME_TAKEN });
+      expect(control.touched).toBe(true);
+    });
+
+    it("neither toasts success nor closes the dialog", () => {
+      initValidAdd();
+      const snackbarService = TestBed.inject(SnackbarService);
+      const dialogRef = TestBed.inject(MatDialogRef);
+      rejectCreate();
+      const successSpy = jest.spyOn(snackbarService, "success");
+      const closeSpy = jest.spyOn(dialogRef, "close");
+
+      component.submit();
+
+      expect(successSpy).not.toHaveBeenCalled();
+      expect(closeSpy).not.toHaveBeenCalled();
+    });
+
+    // The error clears as soon as the admin edits the field, because a value
+    // change re-runs the validators and replaces the errors object -- so the
+    // stale server verdict cannot outlive the value it judged.
+    it("clears once the admin changes the name", () => {
+      initValidAdd();
+      rejectCreate();
+
+      component.submit();
+      expect(component.form.get("name")!.errors).toEqual({ server: NAME_TAKEN });
+
+      component.form.get("name")!.setValue("google-workspace");
+
+      expect(component.form.get("name")!.errors).toBeNull();
     });
   });
 

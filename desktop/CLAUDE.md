@@ -671,6 +671,46 @@ gated by `appPermissionGuard` requiring `app.roles.read` (see **Permission-based
     `e2e/group-delete-any.spec.ts`.
 
 
+### Reporting a field-keyed 400 (`applyApiErrors`)
+
+The API writes errors in two shapes, and only one of them reaches the user on its own.
+`WriteErrorResponse` / `WriteCustomErrorResponse` emit `{ errorMsg }`, which
+`interceptors/http-interceptor.ts` toasts **at any status**; `WriteValidatorErrorResponse` marshals a
+bare `{ <control>: <message> }` map, which the interceptor has no branch for (it is not a 5xx, so the
+generic fallback does not fire either). A 400 of that second shape is therefore **completely silent**
+— no toast, no inline error — unless the component that issued the request reports it.
+
+**`applyApiErrors(form, error.error, onUnmatched?)`** (`src/utils/form.utils.ts`) is that report. Call
+it from a `catchError` on the save, returning `EMPTY`. It is used by the System Settings form and the
+OIDC provider dialog; the three hard-coded `err.error["username"]` reads in `auth-form.component.ts`,
+`auth-form.util.ts` and `user-form.component.ts` predate it and are the obvious next callers.
+
+Four things about it are load-bearing, each of which the original (dead, never-called) version got
+wrong:
+
+- **A body carrying `errorMsg` is skipped entirely**, because the interceptor already toasted it.
+  This is what keeps the two mechanisms from both firing — and a double report *costs* the user the
+  message rather than repeating it, since `MatSnackBar.open()` dismisses whatever is showing.
+  `http-interceptor.spec.ts` → "stays silent on a 400 that carries no errorMsg" pins the other half
+  of that contract; if the interceptor ever gains a validator-body fallback, every call site here
+  starts reporting twice.
+- **The message is the error's *value*, under the key `server`.** That key is deliberately absent
+  from `BaseInputComponent.errorMessages`, so it takes the `typeof value === "string"` branch and
+  renders the server's sentence verbatim — the same idiom `durationValueValidator` and
+  `providerNameValidator` use.
+- **It calls `markAsTouched()`.** Material's default `ErrorStateMatcher` is `invalid && (touched ||
+  form.submitted)`, so `setErrors` alone leaves a control the user never focused looking perfectly
+  fine.
+- **A key matching no control goes to `onUnmatched`**, not to the floor — a silent 400 is the bug
+  this exists to fix. It also guards a body that is not a flat object at all (a network failure gives
+  `null`, an nginx 502 gives HTML).
+
+**It cannot help a control that renders no errors.** `app-checkbox` has no `mat-error` and no
+`mat-form-field` to host one, and its `additionalErrorMessages` input is never read — so a server
+error keyed to a checkbox is invisible no matter what. That is why the backend sends the
+"configure a server public URL first" refusal as an `errorMsg` instead of keying it to `enabled`; see
+`api/CLAUDE.md` → "OIDC (OpenID Connect) login" → Configuration.
+
 ### Receipt status colors
 
 Everything visual for a receipt status is the ~20 lines of
@@ -1149,9 +1189,15 @@ redirect, and administer the provider rows.
   than an error, so an older server degrades quietly.
 - **`serverPublicUrl`** is a new field in the System Settings form's **Server** section — the
   externally reachable origin the redirect URIs are built from. It carries the shared
-  `absoluteUrlValidator()` and is deliberately **never conditionally required** here: the backend
-  accepts a blank value, and the "required once a provider is enabled" rule is enforced where providers
-  are saved, so an admin cannot register one with no redirect URI to publish.
+  `absoluteUrlValidator()` and is deliberately **never conditionally required** here: a blank value is
+  fine on an install with no OIDC providers, and the "required once a provider is enabled" rule is
+  enforced where providers are saved, so an admin cannot register one with no redirect URI to publish.
+  - **The backend enforces the same rule from the other direction too**, which this form has to
+    report: clearing the field while an enabled provider exists is refused with a field-keyed 400
+    under `serverPublicUrl`. `submit()` therefore carries a `catchError` → `applyApiErrors` (below),
+    placed **before** the success `tap` so the toast and the navigation cannot run, and ahead of the
+    feature-config refetch so a failure *there* still reaches the interceptor. Without it the page
+    sat there having apparently saved.
 - **Specs:** `auth-form.component.spec.ts` (buttons per provider, none when empty, URL escaping,
   `?oidcError=` snackbar), `oidc-callback.component.spec.ts` (bootstrap, failure, and the error-code
   passthrough that must **not** call the API), `oidc-provider-form.component.spec.ts` (name disabled on

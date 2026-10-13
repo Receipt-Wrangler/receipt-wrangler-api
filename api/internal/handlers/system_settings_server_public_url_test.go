@@ -1,12 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
-	"strings"
 	"testing"
 
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
+	"receipt-wrangler/api/internal/services"
 )
 
 func storedServerPublicUrl(t *testing.T) string {
@@ -67,8 +68,22 @@ func TestUpdateSystemSettingsCannotClearServerPublicUrlWhileAProviderIsEnabled(t
 		t.Fatalf("clearing the URL: status %d, want 400 (%s)", w.Code, w.Body.String())
 	}
 
-	if !strings.Contains(w.Body.String(), "serverPublicUrl") {
-		t.Errorf("the 400 should name serverPublicUrl: %s", w.Body.String())
+	// This direction IS a field error -- the key names the very input the admin
+	// just cleared, on the form in front of them -- so the body stays field-keyed
+	// rather than becoming an errorMsg. It also has to say what THIS direction
+	// refused: reusing ErrServerPublicUrlRequired read "...before enabling an OIDC
+	// provider", which is not the action being taken here.
+	var fieldErrors map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &fieldErrors); err != nil {
+		t.Fatalf("the 400 body is not a field map: %v (%s)", err, w.Body.String())
+	}
+
+	if fieldErrors["serverPublicUrl"] != services.ErrServerPublicUrlInUse.Error() {
+		t.Errorf("serverPublicUrl = %q, want %q", fieldErrors["serverPublicUrl"], services.ErrServerPublicUrlInUse.Error())
+	}
+
+	if _, ok := fieldErrors["errorMsg"]; ok {
+		t.Errorf("a refusal naming a real field must not be an errorMsg condition error: %s", w.Body.String())
 	}
 
 	if got := storedServerPublicUrl(t); got != configured {

@@ -19,6 +19,13 @@ var (
 	// provider. Enabling a provider without it would silently produce a localhost
 	// redirect that fails at the IdP.
 	ErrServerPublicUrlRequired = errors.New("a server public URL must be configured in system settings before enabling an OIDC provider")
+
+	// ErrServerPublicUrlInUse is the mirror of ErrServerPublicUrlRequired: the
+	// origin cannot be removed while a provider still publishes a redirect URI
+	// built from it. It carries its own wording because it is shown on System
+	// Settings, to an admin clearing that field -- not to one enabling a
+	// provider, which is the only thing the sentence above describes.
+	ErrServerPublicUrlInUse = errors.New("the server public URL cannot be cleared while an OIDC provider is enabled; disable the provider first")
 )
 
 type OidcProviderService struct {

@@ -117,6 +117,25 @@ describe("httpInterceptor", () => {
     expect(errorSpy).toHaveBeenCalledWith("Something broke");
   });
 
+  // The contract applyApiErrors depends on. A field-keyed validator body carries
+  // no errorMsg and is not a 5xx, so the interceptor deliberately says nothing
+  // and the form that issued the request owns the report. If this ever started
+  // toasting, every call site using that helper would report the same 400 twice
+  // -- and since MatSnackBar.open() dismisses the first, the user would be left
+  // with whichever message happened to land last rather than with both.
+  it("stays silent on a 400 that carries no errorMsg", () => {
+    httpClient.put("/test", {}).subscribe({ error: () => {} });
+
+    httpTestingController
+      .expectOne("/test")
+      .flush(
+        { serverPublicUrl: "the server public URL cannot be cleared" },
+        { status: 400, statusText: "Bad Request" }
+      );
+
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   // Regression guard for the failed-login double toast. The backend returns a bad
   // password as a 500 carrying errorMsg, and MatSnackBar shows one bar at a time,
   // so a second toast here silently replaces "Invalid credentials." with Angular's

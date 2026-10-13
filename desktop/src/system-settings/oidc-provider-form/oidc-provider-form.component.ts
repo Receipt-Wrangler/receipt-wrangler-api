@@ -1,10 +1,12 @@
+import { HttpErrorResponse } from "@angular/common/http";
 import { Component, Input, OnInit } from "@angular/core";
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn, Validators } from "@angular/forms";
 import { MatDialogRef } from "@angular/material/dialog";
-import { finalize, Observable, take, tap } from "rxjs";
+import { catchError, EMPTY, finalize, Observable, take, tap } from "rxjs";
 import { FormMode } from "../../enums/form-mode.enum";
 import { OidcProviderService, OidcProviderView, UpsertOidcProviderCommand } from "../../open-api/index";
 import { SnackbarService } from "../../services/index";
+import { applyApiErrors } from "../../utils/index";
 import { absoluteUrlValidator, trimmedRequiredValidator } from "../../validators/index";
 
 /**
@@ -157,6 +159,19 @@ export class OidcProviderFormComponent implements OnInit {
     request$
       .pipe(
         take(1),
+        // A taken name comes back as a field-keyed 400, which the interceptor
+        // has no branch for -- so without this the dialog sits there having
+        // apparently done nothing. It is placed before the success tap so the
+        // toast and the close cannot run, and before finalize so the form still
+        // becomes submittable again. Anything carrying errorMsg the interceptor
+        // has already toasted, and applyApiErrors skips it for that reason.
+        catchError((error: HttpErrorResponse) => {
+          applyApiErrors(this.form, error?.error, (message) =>
+            this.snackbarService.error(message)
+          );
+
+          return EMPTY;
+        }),
         tap(() => {
           this.snackbarService.success(successMessage);
           this.matDialogRef.close(true);

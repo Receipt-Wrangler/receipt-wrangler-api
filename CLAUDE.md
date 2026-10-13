@@ -301,6 +301,16 @@ pieces have to agree:
   scheme `io.receiptwrangler://oidc` (RFC 8252 §7.1), carrying a one-time **PKCE-bound exchange
   code** — never a token. Any installed Android app can claim a private-use scheme, so the PKCE
   binding is what makes an intercepted code worthless. See `mobile/CLAUDE.md` → "OIDC sign-in".
+- **The `serverPublicUrl` rule is enforced from BOTH directions, in two different error shapes**,
+  and the shapes are a cross-component contract rather than a style choice. Enabling a provider
+  while the URL is blank is a *condition* error — it names no field on the form being saved — so the
+  API sends it as `errorMsg` and the desktop interceptor toasts it. Clearing the URL while an
+  enabled provider exists is a *field* error — it names the very input being edited — so it stays a
+  field-keyed validator body and the desktop renders it under that input via `applyApiErrors`.
+  Getting this wrong is silent on both sides: a field-keyed 400 produces no toast, and a key naming
+  a control that renders no `mat-error` (`app-checkbox`) produces nothing at all. See
+  `api/CLAUDE.md` → "OIDC (OpenID Connect) login" → Configuration and `desktop/CLAUDE.md` →
+  "Reporting a field-keyed 400".
 - **Desktop lands on `/auth/callback`**, which bootstraps app data before routing — a first-ever
   OIDC login has valid cookies but an empty NGXS store, so landing anywhere else bounces back to
   the login screen. See `desktop/CLAUDE.md` → "OIDC sign-in".

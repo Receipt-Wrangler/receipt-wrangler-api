@@ -196,6 +196,22 @@ func RemoveTestDb() {
 // setting over unchanged. TruncateTestDb removes the settings row, which puts
 // the zone back to its UTC default.
 func SetAppTimeZoneForTests(name string) error {
+	return updateSystemSettingsForTests(func(command *commands.UpsertSystemSettingsCommand) {
+		command.TimeZone = &name
+	})
+}
+
+// SetSecureCookiesForTests turns the secureCookies System Setting on or off the
+// same way. TruncateTestDb puts it back to its default, off.
+func SetSecureCookiesForTests(enabled bool) error {
+	return updateSystemSettingsForTests(func(command *commands.UpsertSystemSettingsCommand) {
+		command.SecureCookies = &enabled
+	})
+}
+
+// updateSystemSettingsForTests round-trips the stored settings into a command,
+// lets the caller change one field, and saves it through UpdateSystemSettings.
+func updateSystemSettingsForTests(change func(command *commands.UpsertSystemSettingsCommand)) error {
 	repository := NewSystemSettingsRepository(nil)
 	existing, err := repository.GetSystemSettings()
 	if err != nil {
@@ -211,7 +227,7 @@ func SetAppTimeZoneForTests(name string) error {
 	if err := json.Unmarshal(bytes, &command); err != nil {
 		return err
 	}
-	command.TimeZone = &name
+	change(&command)
 
 	_, err = repository.UpdateSystemSettings(command)
 	return err

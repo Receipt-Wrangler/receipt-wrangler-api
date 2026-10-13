@@ -408,6 +408,10 @@ func stringPtr(value string) *string {
 	return &value
 }
 
+func boolPtr(value bool) *bool {
+	return &value
+}
+
 // OmittedColumns is what keeps a partial PUT from resetting a field it
 // never mentioned: the repository writes every column (Select("*")), so a value
 // that is not excluded here is silently overwritten with zero.
@@ -418,26 +422,32 @@ func TestOmittedColumnsNamesEveryUnsentField(t *testing.T) {
 	}{
 		"all omitted": {
 			modify:   func(cmd *UpsertSystemSettingsCommand) {},
-			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours", "ServerPublicUrl", "TimeZone"},
+			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours", "ServerPublicUrl", "TimeZone", "SecureCookies"},
 		},
 		"retention sent, lifetimes omitted": {
 			modify: func(cmd *UpsertSystemSettingsCommand) {
 				cmd.TempFileRetentionHours = intPtr(48)
 			},
-			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "ServerPublicUrl", "TimeZone"},
+			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "ServerPublicUrl", "TimeZone", "SecureCookies"},
 		},
 		"lifetimes sent, retention omitted": {
 			modify: func(cmd *UpsertSystemSettingsCommand) {
 				cmd.RefreshTokenValidForHours = intPtr(24)
 				cmd.McpRefreshTokenValidForHours = intPtr(24)
 			},
-			expected: []string{"TempFileRetentionHours", "ServerPublicUrl", "TimeZone"},
+			expected: []string{"TempFileRetentionHours", "ServerPublicUrl", "TimeZone", "SecureCookies"},
 		},
 		"only time zone sent": {
 			modify: func(cmd *UpsertSystemSettingsCommand) {
 				cmd.TimeZone = stringPtr("America/New_York")
 			},
-			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours", "ServerPublicUrl"},
+			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours", "ServerPublicUrl", "SecureCookies"},
+		},
+		"only secure cookies sent, as false": {
+			modify: func(cmd *UpsertSystemSettingsCommand) {
+				cmd.SecureCookies = boolPtr(false)
+			},
+			expected: []string{"RefreshTokenValidForHours", "McpRefreshTokenValidForHours", "TempFileRetentionHours", "ServerPublicUrl", "TimeZone"},
 		},
 		"all sent": {
 			modify: func(cmd *UpsertSystemSettingsCommand) {
@@ -446,6 +456,7 @@ func TestOmittedColumnsNamesEveryUnsentField(t *testing.T) {
 				cmd.TempFileRetentionHours = intPtr(48)
 				cmd.ServerPublicUrl = stringPtr("https://receipts.example.com")
 				cmd.TimeZone = stringPtr("UTC")
+				cmd.SecureCookies = boolPtr(true)
 			},
 			expected: []string{},
 		},
@@ -512,6 +523,26 @@ func TestApplyOmittedValuesEchoesTheStoredTimeZone(t *testing.T) {
 	sent.ApplyOmittedValues(existing, &updated)
 	if updated.TimeZone != "Europe/Berlin" {
 		t.Errorf("sent time zone = %q, want Europe/Berlin", updated.TimeZone)
+	}
+}
+
+// An omitted secureCookies echoes the stored value; a sent one -- false
+// included -- survives. A false that is sent must not be mistaken for omitted.
+func TestApplyOmittedValuesEchoesTheStoredSecureCookies(t *testing.T) {
+	existing := models.SystemSettings{SecureCookies: true}
+
+	omitted := UpsertSystemSettingsCommand{}
+	updated := models.SystemSettings{}
+	omitted.ApplyOmittedValues(existing, &updated)
+	if !updated.SecureCookies {
+		t.Error("omitted secureCookies should echo the stored true")
+	}
+
+	sent := UpsertSystemSettingsCommand{SecureCookies: boolPtr(false)}
+	updated = models.SystemSettings{SecureCookies: false}
+	sent.ApplyOmittedValues(existing, &updated)
+	if updated.SecureCookies {
+		t.Error("a sent false should survive, not be replaced by the stored true")
 	}
 }
 

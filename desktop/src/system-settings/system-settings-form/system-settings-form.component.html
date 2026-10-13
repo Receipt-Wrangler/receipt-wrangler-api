@@ -180,6 +180,33 @@
     </div>
   </app-form-section>
   <app-form-section
+    headerText="Cookies"
+  >
+    <p class="text-muted mb-3">
+      Marks every cookie Receipt Wrangler sets as Secure, so browsers only send them over HTTPS.
+      Recommended for any install served over HTTPS. Leave this off if Receipt Wrangler is reached over
+      plain HTTP, such as a LAN or bare IP address: browsers refuse Secure cookies there, so nobody
+      would be able to log in.
+    </p>
+    <app-checkbox
+      class="d-block mb-3"
+      label="Use secure cookies (HTTPS only)"
+      data-testid="system-settings-secure-cookies"
+      [inputFormControl]="form | formGet:'secureCookies'"
+      [readonly]="formConfig.mode | inputReadonly"
+    ></app-checkbox>
+    @if ((form | formGet:'secureCookies').value && !servedOverHttps) {
+      <div
+        class="alert alert-warning mb-3"
+        data-testid="secure-cookies-http-warning"
+      >
+        This page was loaded over HTTP. If you save with secure cookies on, browsers will drop the
+        login cookies on HTTP connections: you will be signed out, and nobody reaching Receipt Wrangler
+        over HTTP will be able to log back in until it is turned off again.
+      </div>
+    }
+  </app-form-section>
+  <app-form-section
     headerText="Server"
   >
     <p class="text-muted mb-3">

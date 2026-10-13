@@ -53,6 +53,8 @@ class _$UpsertSystemSettingsCommand extends UpsertSystemSettingsCommand {
   final int? tempFileRetentionHours;
   @override
   final String? timeZone;
+  @override
+  final bool? secureCookies;
 
   factory _$UpsertSystemSettingsCommand(
           [void Function(UpsertSystemSettingsCommandBuilder)? updates]) =>
@@ -81,7 +83,8 @@ class _$UpsertSystemSettingsCommand extends UpsertSystemSettingsCommand {
       this.refreshTokenValidForHours,
       this.mcpRefreshTokenValidForHours,
       this.tempFileRetentionHours,
-      this.timeZone})
+      this.timeZone,
+      this.secureCookies})
       : super._();
   @override
   UpsertSystemSettingsCommand rebuild(
@@ -119,7 +122,8 @@ class _$UpsertSystemSettingsCommand extends UpsertSystemSettingsCommand {
         refreshTokenValidForHours == other.refreshTokenValidForHours &&
         mcpRefreshTokenValidForHours == other.mcpRefreshTokenValidForHours &&
         tempFileRetentionHours == other.tempFileRetentionHours &&
-        timeZone == other.timeZone;
+        timeZone == other.timeZone &&
+        secureCookies == other.secureCookies;
   }
 
   @override
@@ -148,6 +152,7 @@ class _$UpsertSystemSettingsCommand extends UpsertSystemSettingsCommand {
     _$hash = $jc(_$hash, mcpRefreshTokenValidForHours.hashCode);
     _$hash = $jc(_$hash, tempFileRetentionHours.hashCode);
     _$hash = $jc(_$hash, timeZone.hashCode);
+    _$hash = $jc(_$hash, secureCookies.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -178,7 +183,8 @@ class _$UpsertSystemSettingsCommand extends UpsertSystemSettingsCommand {
           ..add('refreshTokenValidForHours', refreshTokenValidForHours)
           ..add('mcpRefreshTokenValidForHours', mcpRefreshTokenValidForHours)
           ..add('tempFileRetentionHours', tempFileRetentionHours)
-          ..add('timeZone', timeZone))
+          ..add('timeZone', timeZone)
+          ..add('secureCookies', secureCookies))
         .toString();
   }
 }
@@ -307,6 +313,11 @@ class UpsertSystemSettingsCommandBuilder
   String? get timeZone => _$this._timeZone;
   set timeZone(String? timeZone) => _$this._timeZone = timeZone;
 
+  bool? _secureCookies;
+  bool? get secureCookies => _$this._secureCookies;
+  set secureCookies(bool? secureCookies) =>
+      _$this._secureCookies = secureCookies;
+
   UpsertSystemSettingsCommandBuilder() {
     UpsertSystemSettingsCommand._defaults(this);
   }
@@ -338,6 +349,7 @@ class UpsertSystemSettingsCommandBuilder
       _mcpRefreshTokenValidForHours = $v.mcpRefreshTokenValidForHours;
       _tempFileRetentionHours = $v.tempFileRetentionHours;
       _timeZone = $v.timeZone;
+      _secureCookies = $v.secureCookies;
       _$v = null;
     }
     return this;
@@ -400,6 +412,7 @@ class UpsertSystemSettingsCommandBuilder
             mcpRefreshTokenValidForHours: mcpRefreshTokenValidForHours,
             tempFileRetentionHours: tempFileRetentionHours,
             timeZone: timeZone,
+            secureCookies: secureCookies,
           );
     } catch (_) {
       late String _$failedField;

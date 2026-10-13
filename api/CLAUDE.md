@@ -1767,36 +1767,71 @@ so validation and the clamp cannot drift. `BuildTokenCookies` resolves the app l
 the refresh cookie's `Expires` — both its call sites (login, token refresh) are REST-only, never
 MCP.
 
-### Cookie `Secure` is deliberately off in production
+### Cookie `Secure` is a System Setting, off by default (`secureCookies`)
 
-`BuildTokenCookies` sets `Secure=false` + `SameSite=Strict` in production, and `Secure=true` +
-`SameSite=None` **only** in `dev` — which reads backwards and is not. Two separate reasons, and
-both have to hold:
+Whether the cookies the API sets carry `Secure` is the admin's call, per install:
+`SystemSettings.SecureCookies` (`gorm:"default:false"`), edited on the desktop's System Settings
+**Cookies** section. It is **off by default**, and that is deliberate:
 
-- **`SameSite=None` is what forces `Secure` in dev.** Browsers reject a `None` cookie without it,
-  so the dev branch cannot set one without the other. Production uses `Strict`, which carries no
-  such requirement.
 - **Plain-http self-hosting is supported**, on a LAN or a bare IP (the same reason
   `isValidAbsoluteUrl` accepts `http`). A browser silently drops a `Secure` cookie over http, so
   setting it unconditionally **breaks login on those installs** — that has happened before, which
-  is why this is written down rather than left to be rediscovered.
+  is why this is opt-in rather than on for everyone. It is recommended for any install served over
+  HTTPS.
+- **`dev` still forces it on.** `BuildTokenCookies` uses `SameSite=None` there, and browsers reject a
+  `None` cookie without `Secure`. Everywhere else SameSite stays `Strict` (session cookies) or `Lax`
+  (the OIDC binding cookie) whatever the setting says.
 
-`GetEmptyAccessTokenCookie` / `GetEmptyRefreshTokenCookie` and `oidc.clearBindingCookie` set no
-`Secure` at all, for the same reason; they are expiry cookies carrying an empty value.
+**One resolver, every cookie.** `services.UseSecureCookies()` is the only thing any cookie builder
+asks: `BuildTokenCookies` (jwt + refresh_token), `GetEmptyAccessTokenCookie` /
+`GetEmptyRefreshTokenCookie` (the expiry cookies set on logout, refresh failure and account delete),
+and `oidc.buildBindingCookie` / `clearBindingCookie`. Those six are every `http.SetCookie` in the API;
+a new cookie must ask the same function. It reads the setting **live, with no cache** (the
+`IsMcpEnabled` pattern), so a save applies to the next response, and a failed read falls back to the
+default, off. The expiry cookies follow it too — a browser matches a deletion on name/domain/path,
+so it is not needed for them to work over https, but it keeps every `Set-Cookie` consistent.
 
-**CodeQL flags all of this** as `go/insecure-cookie` (alerts #119-#122, medium), and the alerts are
-**known and accepted**, not unnoticed. They land on `internal/oidc/flow.go` rather than on
-`services/auth.go` because CodeQL reports at the `http.SetCookie` call, and `flow.go` is the newest
-file to make those calls — two of the four are the shared builder's own cookies. Do not "fix" them
-by flipping the flag.
+**The command field is a `*bool`**, on the same omitted-key machinery as the lifetimes (see "Session
+lifetime" → `OmittedColumns` / `ApplyOmittedValues`). For a security toggle a plain `bool` is the
+worst version of that hazard: any client that does not send the key — `services/import.go` builds a
+four-field command — would silently turn Secure cookies back off.
 
-**The agreed fix is a System Settings toggle, in its own change** — per-install, like
-`mcpEnabled` and `showLoginQr`, so an operator serving over TLS can turn it on and a LAN install
-stays working. Worth knowing when that lands: `docker/default.conf` already sets
-`proxy_set_header X-Forwarded-Proto $scheme` on every `/api/` location, so the toggle can offer an
-**auto-detect** default (`r.TLS != nil || X-Forwarded-Proto == "https"`) rather than making every
-operator reason about it. That detection degrades to `false` wherever the header is absent, so it
-cannot reintroduce the breakage above.
+**CodeQL still flags the default** as `go/insecure-cookie` (alerts #119-#122, medium). The alerts are
+**known and accepted**: the flag is now the operator's to set, and on by default would break the
+plain-http installs above. An **auto-detect** default (`r.TLS != nil || X-Forwarded-Proto == "https"`)
+was considered and not adopted — behind a second TLS-terminating proxy, the container's nginx sets
+`X-Forwarded-Proto $scheme` to `http`, so it reads wrong in a common deployment.
+
+**Turning it on over plain http locks the web app out**, including the admin who would turn it back
+off: their next token refresh sets cookies the browser drops. The desktop warns before saving when
+its own page was loaded over `http:` — conservatively, since Chromium accepts `Secure` cookies from
+`http://localhost`. Mobile is unaffected — it carries its tokens in the body, not in cookies.
+**Recovery** goes through the API rather than the browser, with an admin's credential:
+
+```bash
+HOST=http://receipts.lan    # however the API is reached
+# An API key with scope rw, owned by a user holding app.system-settings.read + .update.
+# No key? Sign in for a token instead and send "Authorization: Bearer <jwt>" below:
+#   curl -s -X POST "$HOST/api/login/?tokensInBody=true" \
+#     -H 'Content-Type: application/json' -d '{"username":"admin","password":"..."}' | jq -r .jwt
+AUTH='key.1.<id>.<secret>'
+curl -s -H "Authorization: $AUTH" "$HOST/api/systemSettings/" \
+  | jq '.secureCookies = false' \
+  | curl -s -X PUT -H "Authorization: $AUTH" -H 'Content-Type: application/json' -d @- "$HOST/api/systemSettings/"
+```
+
+The PUT validates a whole settings body, which is why it round-trips the GET rather than sending the
+one key; that also makes it read **and** write, so a key needs `rw` (see "API key scopes").
+
+Tests: `services/auth_test.go` (`TestUseSecureCookiesFollowsTheSystemSetting`,
+`TestCookiesAreSecureWhenTheSettingIsOn`, and `Secure=false` on the default path),
+`oidc/flow_test.go` (`TestBindingCookieIsSecureOnlyWhenTheSettingIsOn` — the binding cookie, the
+callback's session pair and the binding's expiry), `handlers/login_test.go`
+(`TestLogin_SetCookieHeadersFollowTheSecureCookiesSetting`, the raw `Set-Cookie` headers — the wire
+proof), the omitted/explicit round trips in `handlers/system_settings_handler_test.go`, and
+`commands/upsert_system_settings_command_test.go`. `repositories.SetSecureCookiesForTests` flips it.
+There is no e2e: turning the setting on globally would change every concurrently running spec's
+session.
 
 The `@every 24h` refresh-token cleanup cron is unaffected: it deletes on `is_used = true` as well as
 expiry, and rotation marks the previous token used immediately, so the table stays small at any TTL.
@@ -2038,8 +2073,8 @@ means unset. It follows the `RefreshTokenValidForHours` machinery exactly — se
 "Session lifetime" above for the `*int` command field, `OmittedColumns`
 and why an omitted key is *dropped from the UPDATE* rather than copied. Both helpers
 cover every pointer-backed field — the lifetimes, this retention window, the server
-public URL and the time zone — which is why neither is named for the lifetimes they
-started out holding.
+public URL, the time zone and the secure-cookie toggle — which is why neither is named
+for the lifetimes they started out holding.
 
 `tempFileRetention()` is the read-side clamp, the same shape as
 `repositories.pdfRasterizationDpi`: **the clamp, not the validator, is the real

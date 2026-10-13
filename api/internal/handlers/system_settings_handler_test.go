@@ -260,6 +260,7 @@ func TestUpdateSystemSettingsPreservesOmittedRefreshTokenLifetimes(t *testing.T)
 			"refresh_token_valid_for_hours":     720,
 			"mcp_refresh_token_valid_for_hours": 6,
 			"temp_file_retention_hours":         1080,
+			"secure_cookies":                    true,
 		}).Error
 	if err != nil {
 		t.Fatalf("failed to seed configured lifetimes: %v", err)
@@ -318,6 +319,12 @@ func TestUpdateSystemSettingsPreservesOmittedRefreshTokenLifetimes(t *testing.T)
 	if updated.TempFileRetentionHours != 1080 {
 		utils.PrintTestError(t, updated.TempFileRetentionHours, 1080)
 	}
+
+	// A security toggle has the most to lose here: a client that does not know
+	// the key must not silently turn Secure cookies back off.
+	if !updated.SecureCookies {
+		utils.PrintTestError(t, updated.SecureCookies, true)
+	}
 }
 
 // The flip side: an explicitly sent value must still be written, so the merge
@@ -339,6 +346,7 @@ func TestUpdateSystemSettingsPersistsExplicitRefreshTokenLifetimes(t *testing.T)
 
 	appHours := 168
 	mcpHours := 12
+	secureCookies := true
 	command := commands.UpsertSystemSettingsCommand{
 		CurrencyDisplay:              "$",
 		CurrencySymbolPosition:       models.START,
@@ -349,6 +357,7 @@ func TestUpdateSystemSettingsPersistsExplicitRefreshTokenLifetimes(t *testing.T)
 		TaskQueueConfigurations:      queueConfigs,
 		RefreshTokenValidForHours:    &appHours,
 		McpRefreshTokenValidForHours: &mcpHours,
+		SecureCookies:                &secureCookies,
 	}
 	bodyBytes, err := json.Marshal(command)
 	if err != nil {
@@ -377,6 +386,10 @@ func TestUpdateSystemSettingsPersistsExplicitRefreshTokenLifetimes(t *testing.T)
 
 	if updated.McpRefreshTokenValidForHours != mcpHours {
 		utils.PrintTestError(t, updated.McpRefreshTokenValidForHours, mcpHours)
+	}
+
+	if !updated.SecureCookies {
+		utils.PrintTestError(t, updated.SecureCookies, true)
 	}
 }
 

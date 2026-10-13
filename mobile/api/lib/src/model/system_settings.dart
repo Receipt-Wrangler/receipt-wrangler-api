@@ -44,6 +44,7 @@ part 'system_settings.g.dart';
 /// * [mcpRefreshTokenValidForHours] - The same for MCP/OAuth connector refresh tokens, kept separate so a long window chosen for human convenience does not extend third-party client tokens. 1-720 (30 days); 0 means unset and falls back to the default.
 /// * [tempFileRetentionHours] - How long a file in temp/ is kept once nothing can still act on it, i.e. how long a user has to rerun, preview or download the source image of a failed upload. 24-8760 (1 year); 0 means unset and falls back to the default.
 /// * [timeZone] - The app time zone, an IANA name such as America/New_York. Every calendar boundary (which day an Added At or Resolved Date falls on, \"today\", \"this month\", report periods) is worked out in it. A receipt's Date is a calendar day and never shifts with it.
+/// * [secureCookies] - Marks every cookie the server sets as Secure, so browsers only send them over HTTPS. Recommended for any install served over HTTPS. Off by default, because a browser drops a Secure cookie set over plain HTTP, which breaks login.
 @BuiltValue()
 abstract class SystemSettings implements BaseModel, Built<SystemSettings, SystemSettingsBuilder> {
   /// Whether the OAuth 2.1-protected MCP server is enabled
@@ -61,6 +62,10 @@ abstract class SystemSettings implements BaseModel, Built<SystemSettings, System
   /// How long a file in temp/ is kept once nothing can still act on it, i.e. how long a user has to rerun, preview or download the source image of a failed upload. 24-8760 (1 year); 0 means unset and falls back to the default.
   @BuiltValueField(wireName: r'tempFileRetentionHours')
   int? get tempFileRetentionHours;
+
+  /// Marks every cookie the server sets as Secure, so browsers only send them over HTTPS. Recommended for any install served over HTTPS. Off by default, because a browser drops a Secure cookie set over plain HTTP, which breaks login.
+  @BuiltValueField(wireName: r'secureCookies')
+  bool? get secureCookies;
 
   /// Currency display
   @BuiltValueField(wireName: r'currencyDisplay')
@@ -153,6 +158,7 @@ abstract class SystemSettings implements BaseModel, Built<SystemSettings, System
       ..mcpRefreshTokenValidForHours = 24
       ..createdByString = ''
       ..updatedAt = ''
+      ..secureCookies = false
       ..showLoginQr = false
       ..timeZone = 'UTC'
       ..debugOcr = false
@@ -276,6 +282,13 @@ class _$SystemSettingsSerializer implements PrimitiveSerializer<SystemSettings> 
       yield serializers.serialize(
         object.currencyThousandthsSeparator,
         specifiedType: const FullType(CurrencySeparator),
+      );
+    }
+    if (object.secureCookies != null) {
+      yield r'secureCookies';
+      yield serializers.serialize(
+        object.secureCookies,
+        specifiedType: const FullType(bool),
       );
     }
     if (object.showLoginQr != null) {
@@ -494,6 +507,13 @@ class _$SystemSettingsSerializer implements PrimitiveSerializer<SystemSettings> 
             specifiedType: const FullType(CurrencySeparator),
           ) as CurrencySeparator;
           result.currencyThousandthsSeparator = valueDes;
+          break;
+        case r'secureCookies':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.secureCookies = valueDes;
           break;
         case r'showLoginQr':
           final valueDes = serializers.deserialize(

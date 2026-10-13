@@ -59,4 +59,10 @@ type SystemSettings struct {
 	// resolves to UTC (see repositories.GetAppLocation), which is also the
 	// default, so an existing install behaves exactly as before.
 	TimeZone string `json:"timeZone" gorm:"default:UTC"`
+	// SecureCookies marks every cookie the API sets as Secure, so browsers only
+	// send them over HTTPS. Off by default because plain-http self-hosting (a LAN
+	// address, a bare IP) is supported, and a browser silently drops a Secure
+	// cookie set over http — turning this on there breaks login. See
+	// services.UseSecureCookies.
+	SecureCookies bool `json:"secureCookies" gorm:"default:false"`
 }

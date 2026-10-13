@@ -69,6 +69,10 @@ type UpsertSystemSettingsCommand struct {
 	// as the lifetimes above: a client that does not know the field (an older
 	// build) must not reset a configured zone to "".
 	TimeZone *string `json:"timeZone"`
+	// SecureCookies is a pointer for the same omitted-key reason, and it matters
+	// more for a security toggle than for a lifetime: a client that does not send
+	// it must not silently turn Secure cookies back off.
+	SecureCookies *bool `json:"secureCookies"`
 }
 
 func (command *UpsertSystemSettingsCommand) LoadDataFromRequest(w http.ResponseWriter, r *http.Request) error {
@@ -292,8 +296,8 @@ func (command *UpsertSystemSettingsCommand) ToSystemSettings(id uint) (models.Sy
 // OmittedColumns names the pointer-backed fields the request did not send, so
 // the repository can leave those columns out of the UPDATE entirely. It covers
 // every such field -- the two token lifetimes, the retention window, the public
-// URL and the time zone -- which is why it is not named for the lifetimes it
-// started out holding.
+// URL, the time zone and the secure-cookie toggle -- which is why it is not
+// named for the lifetimes it started out holding.
 //
 // Skipping the column is what makes a concurrent update safe. Copying the stored
 // value onto the row instead (see ApplyOmittedValues) would still write it, so
@@ -302,7 +306,7 @@ func (command *UpsertSystemSettingsCommand) ToSystemSettings(id uint) (models.Sy
 // written cannot be clobbered, and unlike a row lock this works identically on
 // SQLite, MySQL and Postgres.
 func (command *UpsertSystemSettingsCommand) OmittedColumns() []string {
-	columns := make([]string, 0, 5)
+	columns := make([]string, 0, 6)
 
 	if command.RefreshTokenValidForHours == nil {
 		columns = append(columns, "RefreshTokenValidForHours")
@@ -322,6 +326,10 @@ func (command *UpsertSystemSettingsCommand) OmittedColumns() []string {
 
 	if command.TimeZone == nil {
 		columns = append(columns, "TimeZone")
+	}
+
+	if command.SecureCookies == nil {
+		columns = append(columns, "SecureCookies")
 	}
 
 	return columns
@@ -353,5 +361,9 @@ func (command *UpsertSystemSettingsCommand) ApplyOmittedValues(existing models.S
 
 	if command.TimeZone == nil {
 		updated.TimeZone = existing.TimeZone
+	}
+
+	if command.SecureCookies == nil {
+		updated.SecureCookies = existing.SecureCookies
 	}
 }

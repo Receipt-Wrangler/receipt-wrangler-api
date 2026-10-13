@@ -135,6 +135,12 @@ export class SystemSettingsFormComponent extends BaseFormComponent implements On
   // field once a zone is picked.
   public readonly timeZoneDisplayWith = (zone: string | null): string => zone ?? "";
 
+  // Whether this page reached the browser over HTTPS. Secure cookies set over
+  // plain HTTP are dropped by the browser, so saving Secure Cookies on while
+  // this is false locks out everyone reaching the app over HTTP, this admin
+  // included — the template warns before they save it.
+  public readonly servedOverHttps = window.location.protocol === "https:";
+
   constructor(
     private activatedRoute: ActivatedRoute,
     private featureConfigService: FeatureConfigService,
@@ -200,6 +206,7 @@ export class SystemSettingsFormComponent extends BaseFormComponent implements On
       serverPublicUrl: [this.originalSystemSettings?.serverPublicUrl, [absoluteUrlValidator()]],
       showLoginQr: [this.originalSystemSettings?.showLoginQr],
       mobileServerUrl: [this.originalSystemSettings?.mobileServerUrl],
+      secureCookies: [this.originalSystemSettings?.secureCookies ?? false],
       // Form-only controls. The API stores hours; the unit is presentation and
       // is folded back into `<name>Hours` in submit().
       refreshTokenValidForValue: [refreshTokenLifetime.value],
@@ -223,6 +230,7 @@ export class SystemSettingsFormComponent extends BaseFormComponent implements On
       this.form.get("serverPublicUrl")?.disable();
       this.form.get("showLoginQr")?.disable();
       this.form.get("mobileServerUrl")?.disable();
+      this.form.get("secureCookies")?.disable();
       this.form.get("refreshTokenValidForValue")?.disable();
       this.form.get("refreshTokenValidForUnit")?.disable();
       this.form.get("mcpRefreshTokenValidForValue")?.disable();

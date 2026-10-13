@@ -12,6 +12,7 @@ import (
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"strings"
 	"testing"
 )
 
@@ -154,6 +155,47 @@ func TestLogin_SuccessFirstAdminSetsCookies(t *testing.T) {
 	repositories.GetDB().Model(&models.Prompt{}).Count(&promptCount)
 	if promptCount == 0 {
 		utils.PrintTestError(t, "no default prompt created", "at least 1 prompt")
+	}
+}
+
+// The wire proof for the secureCookies setting: the raw Set-Cookie headers a
+// login writes carry the Secure attribute exactly when the setting is on.
+func TestLogin_SetCookieHeadersFollowTheSecureCookiesSetting(t *testing.T) {
+	defer teardownLoginTests()
+
+	createAdminUser(t, "secure-cookie-admin", "Password")
+
+	loginSetCookies := func() []string {
+		w := httptest.NewRecorder()
+		Login(w, loginRequest(commands.LoginCommand{Username: "secure-cookie-admin", Password: "Password"}, "", ""))
+		if w.Result().StatusCode != http.StatusOK {
+			utils.PrintTestError(t, w.Result().StatusCode, http.StatusOK)
+		}
+		return w.Result().Header.Values("Set-Cookie")
+	}
+
+	countSecure := func(headers []string) int {
+		count := 0
+		for _, header := range headers {
+			if strings.Contains(header, "; Secure") {
+				count++
+			}
+		}
+		return count
+	}
+
+	off := loginSetCookies()
+	if len(off) != 2 || countSecure(off) != 0 {
+		utils.PrintTestError(t, off, "two Set-Cookie headers, neither Secure")
+	}
+
+	if err := repositories.SetSecureCookiesForTests(true); err != nil {
+		utils.PrintTestError(t, err, nil)
+	}
+
+	on := loginSetCookies()
+	if len(on) != 2 || countSecure(on) != 2 {
+		utils.PrintTestError(t, on, "two Set-Cookie headers, both Secure")
 	}
 }
 

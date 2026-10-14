@@ -3,17 +3,39 @@
     This action is <strong>permanent</strong> and cannot be undone. All of your
     data, including receipts, group memberships, and preferences will be deleted.
   </p>
-  <p>Please enter your password to confirm account deletion.</p>
-  <app-input
-    appearance="outline"
-    label="Password"
-    type="password"
-    [showVisibilityEye]="true"
-    [inputFormControl]="form | formGet : 'password'"
-  ></app-input>
-  <app-dialog-footer
-    submitButtonTooltip="Delete Account"
-    (submitClicked)="submitButtonClicked()"
-    (cancelClicked)="cancelButtonClicked()"
-  ></app-dialog-footer>
+  @if (providers.length) {
+    <p>
+      Your account has no password of its own. To confirm the deletion, sign in
+      again with one of your connected accounts.
+    </p>
+    <div class="d-flex flex-column gap-2 mb-3">
+      @for (provider of providers; track provider.name) {
+        <app-button
+          buttonClass="w-100"
+          color="warn"
+          type="button"
+          [attr.data-testid]="'delete-confirm-' + provider.name"
+          [buttonText]="'Confirm with ' + provider.displayName"
+          (clicked)="providerButtonClicked(provider.name)"
+        ></app-button>
+      }
+    </div>
+    <div class="d-flex justify-content-end align-items-center">
+      <app-cancel-button (clicked)="cancelButtonClicked()"></app-cancel-button>
+    </div>
+  } @else {
+    <p>Please enter your password to confirm account deletion.</p>
+    <app-input
+      appearance="outline"
+      label="Password"
+      type="password"
+      [showVisibilityEye]="true"
+      [inputFormControl]="form | formGet : 'password'"
+    ></app-input>
+    <app-dialog-footer
+      submitButtonTooltip="Delete Account"
+      (submitClicked)="submitButtonClicked()"
+      (cancelClicked)="cancelButtonClicked()"
+    ></app-dialog-footer>
+  }
 </app-dialog>

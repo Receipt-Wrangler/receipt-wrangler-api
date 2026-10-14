@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openapi/openapi.dart' as api;
 import 'package:receipt_wrangler_mobile/profile/widgets/delete_account_dialog.dart';
 
 // The delete-account dialog masks its password the same way the login form
@@ -103,5 +104,80 @@ void main() {
     expect(find.text('Delete Account'), findsWidgets);
     expect(find.text('MySecretPass123'), findsOneWidget);
     expect(isObscured(tester), isFalse);
+  });
+
+  // An account an identity provider created has no password to type, so it
+  // confirms by signing in at one of its providers again instead.
+  group('showDeleteAccountProviderDialog', () {
+    api.OidcConnectionView connection(String name, String displayName) =>
+        (api.OidcConnectionViewBuilder()
+              ..providerName = name
+              ..providerDisplayName = displayName
+              ..provisionedUser = true
+              ..linkedAt = DateTime.utc(2026, 1, 1))
+            .build();
+
+    final connections = [
+      connection('google', 'Google'),
+      connection('keycloak', 'Keycloak'),
+    ];
+
+    /// Opens the dialog and records what it returns once it closes.
+    Future<List<String?>> pumpProviderDialog(WidgetTester tester) async {
+      final results = <String?>[];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () async => results.add(
+                    await showDeleteAccountProviderDialog(context, connections),
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      return results;
+    }
+
+    testWidgets('offers one button per connection, and no password field',
+        (tester) async {
+      await pumpProviderDialog(tester);
+
+      expect(find.byKey(const ValueKey('delete-confirm-google')), findsOneWidget);
+      expect(
+          find.byKey(const ValueKey('delete-confirm-keycloak')), findsOneWidget);
+      expect(find.text('Confirm with Google'), findsOneWidget);
+      expect(find.text('Confirm with Keycloak'), findsOneWidget);
+      expect(find.byKey(passwordFieldKey), findsNothing);
+    });
+
+    testWidgets('returns the chosen provider name', (tester) async {
+      final results = await pumpProviderDialog(tester);
+
+      await tester.tap(find.byKey(const ValueKey('delete-confirm-keycloak')));
+      await tester.pumpAndSettle();
+
+      expect(results, ['keycloak']);
+      expect(find.text('Confirm with Keycloak'), findsNothing);
+    });
+
+    testWidgets('cancel returns null', (tester) async {
+      final results = await pumpProviderDialog(tester);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(results, [null]);
+    });
   });
 }

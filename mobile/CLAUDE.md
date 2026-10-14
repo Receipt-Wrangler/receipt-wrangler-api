@@ -2376,6 +2376,26 @@ the system browser and redeems the one-time code that comes back. See `api/CLAUD
     every identity, so this per-connection predicate is also the account-level one — see
     `api/CLAUDE.md`. A failed load yields no section rather than an
     error, so an older server or a caller without `app.account.read` degrades quietly.
+- **Provider-confirmed account deletion** (`lib/profile/screens/user_profile_screen.dart`). An
+  account an identity provider created has no password of its own, so the password dialog is a dead
+  end for it; it confirms a self-delete by signing in at one of its connected providers again. **Only
+  passwordless accounts take this path** — the screen fetches the connections on tap and branches on
+  `provisionedUser` (an account fact, so any connection answers); everyone else, and any failed
+  fetch, gets today's password dialog unchanged.
+  - `confirmDeleteWithOidc` starts with `GET /oidc/connections/{name}/delete-confirmation?client=mobile`
+    and then takes **the same launch hop as `linkWithOidc`** — both go through `_runLaunchFlow`, for
+    the same bearer-token and binding-cookie reasons as above. The callback returns
+    `io.receiptwrangler://oidc?deleteConfirmation={code}` (parsed by
+    `extractDeleteConfirmationFromCallback`; `?error=` wins), and the code goes to `deleteAccount` as
+    `confirmationCode` in place of `password`. It is single-use and only a signed-in session of the
+    same account can spend it, so no verifier rides along. The server's refusals —
+    `identity_mismatch`, `stale_login` (the provider reused a sign-in instead of asking again),
+    `not_linked` — have copy in `oidcErrorMessage`.
+  - `showDeleteAccountProviderDialog` offers one `delete-confirm-{name}` button per connection.
+  - The screen has the same synchronous guard (`_isDeleting`) and the same kind of seams
+    (`loadConnections` / `confirmDelete`) as `ConnectedAccounts`; `AuthModel` is read **before** the
+    first await, so a delete the server already performed still purges the tokens if the screen was
+    disposed meanwhile.
 - **`app_links` is not involved** — `flutter_web_auth_2` captures the callback itself, so the existing
   deep-link handler in `lib/main.dart` and its test seams are untouched.
 - **Both OIDC entry points carry a synchronous re-entrancy guard, and "the button disappears while
@@ -2390,8 +2410,8 @@ the system browser and redeems the one-time code that comes back. See `api/CLAUD
   reasoning, as the guard in `receipts/nav/receipt_bottom_sheet_builder.dart`. `_connect` clears its
   flag in a `finally` where `loginWithOidc` cannot: it stays on the page after a successful link,
   where a login navigates away.
-- **Each widget takes an injectable seam for its flow** — `AuthForm.signIn` and
-  `ConnectedAccounts.link`, resolved `widget.x ?? theRealFunction` at the call site, mirroring
+- **Each widget takes an injectable seam for its flow** — `AuthForm.signIn`,
+  `ConnectedAccounts.link` and `UserProfileScreen.confirmDelete` (plus its `loadConnections`), resolved `widget.x ?? theRealFunction` at the call site, mirroring
   `SetHomeserverUrl.scanQrCode`. `signInWithOidc` / `linkWithOidc` are top-level functions with I/O,
   so `oidc_service_test.dart` can only reach the pure helpers; without the seam neither guard above
   is testable at all.
@@ -2408,12 +2428,15 @@ the system browser and redeems the one-time code that comes back. See `api/CLAUD
   untested; reaching it needs the widget disposed mid-`storeAppData`, which would mean a seam over
   all eight providers for a defensive one-liner.
 - **Tests:** `test/utils/pkce_test.dart` (the cross-language contract),
-  `test/services/oidc_service_test.dart` (URL composition, escaping, callback parsing for **both** the
-  login and link shapes — including that a bare `code` is not a successful link — and error mapping),
+  `test/services/oidc_service_test.dart` (URL composition, escaping, callback parsing for the
+  login, link and delete-confirmation shapes — including that a bare `code` is not a successful link — and error mapping),
   `test/widgets/auth_form_test.dart` (a button per provider; none when the list is empty **or
   absent**; and a second tap not starting a second sign-in),
   `test/widgets/connected_accounts_test.dart` (the link guard, the button disabling while a link is
-  open, and a failed link re-enabling it), and `test/models/feature_config_oidc_ingest_test.dart` — which deserializes
+  open, and a failed link re-enabling it), `test/widgets/user_profile_screen_test.dart` (a
+  passwordless delete sends the provider's code, a password account still gets the password dialog,
+  cancel and a refusal delete nothing, the delete guard), `test/widgets/delete_account_dialog_test.dart`
+  (the provider dialog), and `test/models/feature_config_oidc_ingest_test.dart` — which deserializes
   `featureConfig` with `oidcProviders` **absent, empty and populated**. That last one matters because
   the payload is fetched unauthenticated before login: a shape this client cannot read does not fail
   one screen, it reports itself as "Failed to connect to server", the same blast radius as the two

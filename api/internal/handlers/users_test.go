@@ -287,9 +287,16 @@ func TestDeleteAccountShouldPreventLastAdminDeletion(t *testing.T) {
 func deleteAccountAs(t *testing.T, userId uint, password string, authSource string) *httptest.ResponseRecorder {
 	t.Helper()
 
+	return deleteAccountWithCommandAs(t, userId, commands.DeleteAccountCommand{Password: password}, authSource)
+}
+
+// deleteAccountWithCommandAs is deleteAccountAs for any command body.
+func deleteAccountWithCommandAs(t *testing.T, userId uint, command commands.DeleteAccountCommand, authSource string) *httptest.ResponseRecorder {
+	t.Helper()
+
 	r := httptest.NewRequest("POST", "/api/user/deleteAccount", strings.NewReader(""))
 
-	ctx := context.WithValue(r.Context(), "deleteAccountCommand", commands.DeleteAccountCommand{Password: password})
+	ctx := context.WithValue(r.Context(), "deleteAccountCommand", command)
 	ctx = context.WithValue(ctx, jwtmiddleware.ContextKey{}, &validator.ValidatedClaims{
 		CustomClaims: &structs.Claims{UserId: userId, AuthSource: authSource},
 	})
@@ -336,6 +343,63 @@ func TestDeleteAccountRequiresAnInteractiveSession(t *testing.T) {
 	w := deleteAccountAs(t, user.ID, "correctpassword", structs.AuthSourceJwt)
 	if w.Result().StatusCode != http.StatusOK {
 		t.Fatalf("expected an interactive session to delete the account, got %d", w.Result().StatusCode)
+	}
+}
+
+// An OIDC-only account deletes itself through this same endpoint, presenting the
+// code its provider sign-in produced in place of a password it does not have. A
+// key still cannot, code or not.
+func TestDeleteAccountWithAConfirmationCode(t *testing.T) {
+	defer tearDownUserTest()
+
+	db := repositories.GetDB()
+	db.Create(&models.SystemEmail{})
+
+	user := createTestUser(t, "oidconly", "a-password-nobody-knows")
+	grantAppPerms(t, user.ID, permissions.AppAccountDelete)
+
+	provider := models.OidcProvider{
+		Name:         "keycloak",
+		DisplayName:  "Keycloak",
+		IssuerUrl:    "https://idp.example.com",
+		ClientId:     "client",
+		ClientSecret: "secret",
+		Enabled:      true,
+	}
+	if err := db.Create(&provider).Error; err != nil {
+		t.Fatalf("failed to create the provider: %v", err)
+	}
+
+	identity := models.OidcIdentity{OidcProviderId: provider.ID, Subject: "a-subject", UserId: user.ID, ProvisionedUser: true}
+	if err := db.Create(&identity).Error; err != nil {
+		t.Fatalf("failed to create the identity: %v", err)
+	}
+
+	confirmation := models.OidcDeleteConfirmation{
+		CodeHash:  utils.Sha256Hash([]byte("a-code")),
+		UserId:    user.ID,
+		ExpiresAt: time.Now().Add(5 * time.Minute),
+	}
+	if err := db.Create(&confirmation).Error; err != nil {
+		t.Fatalf("failed to create the confirmation: %v", err)
+	}
+
+	command := commands.DeleteAccountCommand{ConfirmationCode: "a-code"}
+
+	refused := deleteAccountWithCommandAs(t, user.ID, command, structs.AuthSourceApiKey)
+	if refused.Result().StatusCode != http.StatusForbidden {
+		t.Fatalf("expected an API key to be refused, got %d", refused.Result().StatusCode)
+	}
+
+	w := deleteAccountWithCommandAs(t, user.ID, command, structs.AuthSourceJwt)
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("expected the confirmed delete to succeed, got %d (%s)", w.Result().StatusCode, w.Body.String())
+	}
+
+	var count int64
+	db.Model(&models.User{}).Where("id = ?", user.ID).Count(&count)
+	if count != 0 {
+		t.Fatalf("expected the account to be deleted")
 	}
 }
 

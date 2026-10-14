@@ -642,7 +642,7 @@ func DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 			command := r.Context().Value("deleteAccountCommand").(commands.DeleteAccountCommand)
 
-			statusCode, err := services.DeleteAccountForUser(token.UserId, command.Password)
+			statusCode, err := services.DeleteAccountForUser(token.UserId, command)
 			if err != nil {
 				return statusCode, err
 			}

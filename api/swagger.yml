@@ -2413,9 +2413,16 @@ paths:
       tags:
         - User
       summary: Delete own account
-      description: This will delete the currently logged in user's account after verifying their password
+      description:
+        Deletes the signed-in user's own account once it is confirmed. An account with
+        a password of its own confirms with that password (401 when it is wrong). An
+        account without one - created by signing in with an identity provider -
+        confirms with the confirmationCode that oidcDeleteConfirmationStart hands back
+        (400 when it is missing, spent, expired or not this account's). Which applies
+        is decided by the account, not by which field is sent. Requires an interactive
+        session; an API key is refused with 403 whatever its scope.
       requestBody:
-        description: Password confirmation for account deletion
+        description: Confirmation for account deletion
         required: true
         content:
           application/json:
@@ -2429,11 +2436,12 @@ paths:
           $ref: "#/components/responses/BadRequest"
         401:
           $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/Internal"
       security:
         - bearerAuth: [ ]
-        - apiKeyAuth: [ ]
   /user/appData:
     get:
       tags:
@@ -3629,6 +3637,70 @@ paths:
           $ref: "#/components/responses/NotFound"
         500:
           $ref: "#/components/responses/Internal"
+      security:
+        - bearerAuth: [ ]
+  /oidc/connections/{name}/delete-confirmation:
+    get:
+      tags:
+        - Oidc
+      summary: Confirm deleting the signed-in account by signing in at a linked provider
+      description:
+        For an account with no password of its own - one created by signing in with an
+        identity provider. Such an account cannot confirm a self-delete with a password,
+        so it signs in at one of its linked providers again instead, and the callback
+        hands back a single-use confirmationCode for POST /user/deleteAccount.
+        Requires app.account.delete and an interactive session, never an API key. An
+        account with a password of its own is refused; it confirms with that password.
+
+
+        The provider is asked for a fresh sign-in with max_age=0. When it returns
+        auth_time, a sign-in older than this flow is refused (stale_login). Signing in
+        as any identity other than the account's own at this provider is refused
+        (identity_mismatch).
+
+
+        A browser navigates here and is redirected (302) to the identity provider; the
+        callback returns to the profile page with ?deleteConfirmation={code} or
+        ?deleteError={code}. A native client passes client=mobile, gets a launch URL as
+        JSON exactly as for oidcLinkStart, opens it in the external browser, and the
+        callback returns to its private-use scheme with ?deleteConfirmation={code} or
+        ?error={code}.
+      operationId: oidcDeleteConfirmationStart
+      parameters:
+        - name: name
+          in: path
+          description: The slug of a provider linked to the account
+          required: true
+          schema:
+            type: string
+        - name: client
+          in: query
+          description:
+            Which client is confirming. Mobile receives a launch URL as JSON rather than
+            a redirect. No codeChallenge is needed - the code the callback hands back can
+            only be spent by a signed-in session of the same account.
+          required: false
+          schema:
+            type: string
+            enum:
+              - desktop
+              - mobile
+            default: desktop
+      responses:
+        200:
+          description: The launch URL, for client=mobile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcLinkStartView"
+        302:
+          description: Redirect to the identity provider, for a browser
+        403:
+          $ref: "#/components/responses/OidcFlowError"
+        404:
+          $ref: "#/components/responses/OidcFlowError"
+        500:
+          $ref: "#/components/responses/OidcFlowError"
       security:
         - bearerAuth: [ ]
   /oidcProvider/:
@@ -5298,14 +5370,19 @@ components:
           description: User's new password
       description: Command to reset user's password profile
     DeleteAccountCommand:
-      required:
-        - password
       type: object
       properties:
         password:
           type: string
-          description: User's current password for confirmation
-      description: Command to delete the user's own account
+          description: The current password, for an account that has one
+        confirmationCode:
+          type: string
+          description:
+            The single-use code from oidcDeleteConfirmationStart, for an account with
+            no password of its own
+      description:
+        Command to delete the user's own account. Send the password, or for an account
+        created by an identity provider the confirmationCode.
     LoginCommand:
       required:
         - username

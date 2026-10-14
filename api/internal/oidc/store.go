@@ -27,8 +27,14 @@ const (
 	// things and should be free to diverge.
 	linkLaunchTTL = 2 * time.Minute
 
+	// deleteConfirmationTTL bounds the gap between the provider sign-in that
+	// confirms an account deletion and the client's delete request. One automatic
+	// hand-off, so it is short; it is not tighter still only because the request
+	// waits on the app or page coming back to the foreground.
+	deleteConfirmationTTL = 5 * time.Minute
+
 	// randomTokenBytes is the entropy behind state, nonce, the browser binding,
-	// the exchange code and the link launch handle.
+	// the exchange code, the link launch handle and the delete confirmation code.
 	randomTokenBytes = 32
 )
 
@@ -38,6 +44,7 @@ type newAuthSessionParams struct {
 	ClientType          string
 	MobileCodeChallenge string
 	LinkUserId          *uint
+	Purpose             string
 	CodeVerifier        string
 }
 
@@ -86,6 +93,7 @@ func createAuthSession(params newAuthSessionParams) (createdAuthSession, error) 
 		ClientType:          params.ClientType,
 		MobileCodeChallenge: params.MobileCodeChallenge,
 		LinkUserId:          params.LinkUserId,
+		Purpose:             params.Purpose,
 		ExpiresAt:           time.Now().Add(authSessionTTL),
 	}
 
@@ -153,8 +161,9 @@ func consumeExchangeCode(code string) (bool, error) {
 }
 
 // createLinkLaunch issues the handle that lets the external browser start a
-// mobile link on behalf of an already-authenticated user.
-func createLinkLaunch(userId uint, providerId uint) (string, error) {
+// mobile signed-in flow -- a link or a delete confirmation, as purpose says -- on
+// behalf of an already-authenticated user.
+func createLinkLaunch(userId uint, providerId uint, purpose string) (string, error) {
 	handle, err := utils.GetRandomUrlSafeString(randomTokenBytes)
 	if err != nil {
 		return "", err
@@ -164,6 +173,7 @@ func createLinkLaunch(userId uint, providerId uint) (string, error) {
 		LaunchHash:     hashSecret(handle),
 		UserId:         userId,
 		OidcProviderId: providerId,
+		Purpose:        purpose,
 		ExpiresAt:      time.Now().Add(linkLaunchTTL),
 	}
 
@@ -177,6 +187,28 @@ func createLinkLaunch(userId uint, providerId uint) (string, error) {
 
 func consumeLinkLaunch(handle string) (models.OidcLinkLaunch, bool, error) {
 	return repositories.NewOidcSessionRepository(nil).ConsumeLinkLaunch(hashSecret(handle))
+}
+
+// createDeleteConfirmation issues the code an OIDC-only account presents to
+// delete itself, once its own identity has signed in at the provider again.
+func createDeleteConfirmation(userId uint) (string, error) {
+	code, err := utils.GetRandomUrlSafeString(randomTokenBytes)
+	if err != nil {
+		return "", err
+	}
+
+	row := models.OidcDeleteConfirmation{
+		CodeHash:  hashSecret(code),
+		UserId:    userId,
+		ExpiresAt: time.Now().Add(deleteConfirmationTTL),
+	}
+
+	err = repositories.NewOidcSessionRepository(nil).CreateDeleteConfirmation(&row)
+	if err != nil {
+		return "", err
+	}
+
+	return code, nil
 }
 
 // hashSecret is the single hashing entry point for every OIDC bearer secret, so

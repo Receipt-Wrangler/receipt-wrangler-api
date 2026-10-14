@@ -10,12 +10,16 @@
 
 
 /**
- * Command to delete the user\'s own account
+ * Command to delete the user\'s own account. Send the password, or for an account created by an identity provider the confirmationCode.
  */
 export interface DeleteAccountCommand { 
     /**
-     * User\'s current password for confirmation
+     * The current password, for an account that has one
      */
-    password: string;
+    password?: string;
+    /**
+     * The single-use code from oidcDeleteConfirmationStart, for an account with no password of its own
+     */
+    confirmationCode?: string;
 }
 

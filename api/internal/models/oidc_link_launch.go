@@ -34,9 +34,19 @@ type OidcLinkLaunch struct {
 
 	OidcProviderId uint `gorm:"not null;index" json:"-"`
 
+	// Purpose is the flow the launched session will run: a link, or a delete
+	// confirmation. The launch request is unauthenticated, so this has to come
+	// from the row the authenticated start wrote, never from the URL.
+	Purpose string `gorm:"not null;default:''" json:"-"`
+
 	OidcProvider *OidcProvider `gorm:"foreignKey:OidcProviderId;constraint:OnDelete:CASCADE" json:"-"`
 	User         *User         `gorm:"foreignKey:UserId;constraint:OnDelete:CASCADE" json:"-"`
 
 	Used      bool      `gorm:"not null;default:false;index" json:"-"`
 	ExpiresAt time.Time `gorm:"index" json:"-"`
+}
+
+// FlowPurpose reports which signed-in flow this launch starts.
+func (l OidcLinkLaunch) FlowPurpose() string {
+	return resolveSignedInPurpose(l.Purpose)
 }

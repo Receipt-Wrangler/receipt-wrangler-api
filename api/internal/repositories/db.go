@@ -172,6 +172,7 @@ func MakeMigrations() error {
 		&models.OidcAuthSession{},
 		&models.OidcExchangeCode{},
 		&models.OidcLinkLaunch{},
+		&models.OidcDeleteConfirmation{},
 	)
 
 	return err

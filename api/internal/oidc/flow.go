@@ -21,6 +21,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/oauth2"
+	"gorm.io/gorm"
 )
 
 const (
@@ -45,10 +46,16 @@ const (
 	// desktopLoginPath is where a failed login lands.
 	desktopLoginPath = "/auth/login"
 
-	// desktopProfilePath is where a link flow returns to.
+	// desktopProfilePath is where a signed-in flow -- a link or a delete
+	// confirmation -- returns to.
 	desktopProfilePath = "/settings/user-profile/view"
 
 	exchangeTimeout = 15 * time.Second
+
+	// authTimeSkew is how far our clock and the identity provider's may disagree
+	// when the delete confirmation compares auth_time against the moment the flow
+	// began.
+	authTimeSkew = 60 * time.Second
 )
 
 // Error codes handed back to a client. A small fixed vocabulary -- an upstream
@@ -65,11 +72,16 @@ const (
 	errAlreadyLinked   = "already_linked"
 	errForbidden       = "forbidden"
 	errServerError     = "server_error"
+
+	// The delete confirmation's own refusals.
+	errNotLinked        = "not_linked"
+	errIdentityMismatch = "identity_mismatch"
+	errStaleLogin       = "stale_login"
 )
 
 // Login starts an OIDC login. Unauthenticated.
 func Login(w http.ResponseWriter, r *http.Request) {
-	startFlow(w, r, nil, resolveClientType(r))
+	startFlow(w, r, nil, models.OidcPurposeLogin, resolveClientType(r))
 }
 
 // LinkStart starts a "connect account" flow for the authenticated caller. It is
@@ -105,10 +117,86 @@ func Login(w http.ResponseWriter, r *http.Request) {
 // lacks) and UpdateProfileCommand carries no password. A key is a scoped,
 // revocable credential and must not be able to mint an unscoped, unrevocable one.
 func LinkStart(w http.ResponseWriter, r *http.Request) {
-	claims := structs.GetClaims(r)
-	userId := claims.UserId
-
 	clientType := resolveClientType(r)
+
+	userId, ok := authorizeSignedInStart(w, r, clientType, models.OidcPurposeLink, permissions.AppAccountUpdate)
+	if !ok {
+		return
+	}
+
+	beginSignedInFlow(w, r, userId, models.OidcPurposeLink, clientType)
+}
+
+// DeleteConfirmationStart starts the flow that lets an account with no password
+// of its own confirm its deletion: it signs in at one of its linked providers
+// again, and the callback hands back a single-use code that
+// POST /user/deleteAccount accepts in place of the password.
+//
+// Gated on app.account.delete -- the permission the delete itself needs -- and,
+// like LinkStart, on an interactive session: a key must not be able to begin
+// destroying the account that issued it. Two further checks narrow it to exactly
+// the accounts it exists for:
+//
+//   - The account must be passwordless. One with a password confirms with that
+//     password, so a provider is never a second way around it.
+//   - The account must hold an identity at THIS provider. The callback will only
+//     accept that identity signing in, so starting anywhere else is a flow that
+//     cannot succeed.
+func DeleteConfirmationStart(w http.ResponseWriter, r *http.Request) {
+	clientType := resolveClientType(r)
+	purpose := models.OidcPurposeDeleteAccount
+
+	userId, ok := authorizeSignedInStart(w, r, clientType, purpose, permissions.AppAccountDelete)
+	if !ok {
+		return
+	}
+
+	identityRepository := repositories.NewOidcIdentityRepository(nil)
+
+	passwordless, err := identityRepository.IsAccountPasswordless(userId)
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to resolve whether an account is passwordless: "+err.Error())
+		failFlowStart(w, r, clientType, purpose, errServerError)
+		return
+	}
+
+	if !passwordless {
+		failFlowStart(w, r, clientType, purpose, errForbidden)
+		return
+	}
+
+	providerRow, err := repositories.NewOidcProviderRepository(nil).GetEnabledOidcProviderByName(chi.URLParam(r, "name"))
+	if err != nil {
+		failFlowStart(w, r, clientType, purpose, errUnknownProvider)
+		return
+	}
+
+	_, err = identityRepository.GetIdentityForUser(providerRow.ID, userId)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		failFlowStart(w, r, clientType, purpose, errNotLinked)
+		return
+	}
+
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to load the identity for a delete confirmation: "+err.Error())
+		failFlowStart(w, r, clientType, purpose, errServerError)
+		return
+	}
+
+	beginSignedInFlow(w, r, userId, purpose, clientType)
+}
+
+// authorizeSignedInStart runs the checks every flow started by a signed-in
+// account shares, answering the failure itself. It reports the caller's user id
+// and whether to proceed.
+func authorizeSignedInStart(
+	w http.ResponseWriter,
+	r *http.Request,
+	clientType string,
+	purpose string,
+	permission string,
+) (uint, bool) {
+	claims := structs.GetClaims(r)
 
 	// Phrased as "must be an interactive session", never "must not be an API key".
 	// The zero AuthSource is neither, so anything that reaches this handler without
@@ -118,47 +206,54 @@ func LinkStart(w http.ResponseWriter, r *http.Request) {
 	if claims.AuthSource != structs.AuthSourceJwt {
 		logging.LogStd(
 			logging.LOG_LEVEL_ERROR,
-			"Refused an OIDC link start that was not authenticated by an interactive session",
+			"Refused a signed-in OIDC flow start that was not authenticated by an interactive session",
 		)
-		failFlowStart(w, r, clientType, true, errForbidden)
-		return
+		failFlowStart(w, r, clientType, purpose, errForbidden)
+		return 0, false
 	}
 
-	allowed, err := services.NewPermissionService(nil).HasAppPermissions(userId, permissions.AppAccountUpdate)
+	allowed, err := services.NewPermissionService(nil).HasAppPermissions(claims.UserId, permission)
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to resolve permissions for an OIDC link: "+err.Error())
-		failFlowStart(w, r, clientType, true, errServerError)
-		return
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to resolve permissions for a signed-in OIDC flow: "+err.Error())
+		failFlowStart(w, r, clientType, purpose, errServerError)
+		return 0, false
 	}
 
 	if !allowed {
-		failFlowStart(w, r, clientType, true, errForbidden)
-		return
+		failFlowStart(w, r, clientType, purpose, errForbidden)
+		return 0, false
 	}
 
-	// Mobile is the one caller that is not a browser: the app makes this request
-	// itself, with a bearer token, because an external user agent cannot carry one.
-	// That means there is nobody here to hand a binding cookie to -- so this start
-	// deliberately creates NO session. It hands back a single-use launch handle and
-	// lets the external browser start the real flow at LinkLaunch, where it gets
-	// bound like every other leg.
-	if clientType == models.OidcClientMobile {
-		startMobileLinkLaunch(w, r, userId)
-		return
-	}
-
-	startFlow(w, r, &userId, clientType)
+	return claims.UserId, true
 }
 
-// startMobileLinkLaunch answers a mobile link start with the URL the app should
-// open in the external browser. The handle in it is the browser's authorization
-// to start a link for this user, and it is single-use and short-lived.
+// beginSignedInFlow sends an authorized signed-in start on its way.
+//
+// Mobile is the one caller that is not a browser: the app makes this request
+// itself, with a bearer token, because an external user agent cannot carry one.
+// That means there is nobody here to hand a binding cookie to -- so this start
+// deliberately creates NO session. It hands back a single-use launch handle and
+// lets the external browser start the real flow at LinkLaunch, where it gets
+// bound like every other leg.
+func beginSignedInFlow(w http.ResponseWriter, r *http.Request, userId uint, purpose string, clientType string) {
+	if clientType == models.OidcClientMobile {
+		startMobileLinkLaunch(w, r, userId, purpose)
+		return
+	}
+
+	startFlow(w, r, &userId, purpose, clientType)
+}
+
+// startMobileLinkLaunch answers a mobile signed-in start with the URL the app
+// should open in the external browser. The handle in it is the browser's
+// authorization to start that flow for this user, and it is single-use and
+// short-lived.
 //
 // It is safe to put in a URL the browser navigates to: a 302 does not make the
 // redirecting URL the next request's Referer, so the handle never reaches the
 // identity provider the way the authorization URL's own state does. That Referer
 // leak is exactly the attack this whole hop exists to defeat.
-func startMobileLinkLaunch(w http.ResponseWriter, r *http.Request, userId uint) {
+func startMobileLinkLaunch(w http.ResponseWriter, r *http.Request, userId uint, purpose string) {
 	name := chi.URLParam(r, "name")
 
 	providerRow, err := repositories.NewOidcProviderRepository(nil).GetEnabledOidcProviderByName(name)
@@ -167,7 +262,7 @@ func startMobileLinkLaunch(w http.ResponseWriter, r *http.Request, userId uint) 
 		return
 	}
 
-	handle, err := createLinkLaunch(userId, providerRow.ID)
+	handle, err := createLinkLaunch(userId, providerRow.ID, purpose)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to create an OIDC link launch: "+err.Error())
 		writeOidcFlowError(w, errServerError)
@@ -217,7 +312,7 @@ func LinkLaunch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	startFlow(w, r, &launch.UserId, models.OidcClientMobile)
+	startFlow(w, r, &launch.UserId, launch.FlowPurpose(), models.OidcClientMobile)
 }
 
 // resolveClientType reads which client is driving the flow. Anything that is not
@@ -231,24 +326,25 @@ func resolveClientType(r *http.Request) string {
 }
 
 // startFlow creates the auth session and sends the user agent to the identity
-// provider. Every caller is a BROWSER -- a login navigation, a desktop link
+// provider. Every caller is a BROWSER -- a login navigation, a desktop signed-in
 // navigation, or LinkLaunch -- which is what lets it bind the session to the
-// agent unconditionally. The client type is passed in rather than sniffed from
-// the query because LinkLaunch knows it from the handle, not from the URL.
-func startFlow(w http.ResponseWriter, r *http.Request, linkUserId *uint, clientType string) {
+// agent unconditionally. The client type and purpose are passed in rather than
+// sniffed from the query because LinkLaunch knows them from the handle, not from
+// the URL. linkUserId is set exactly when the purpose is a signed-in one.
+func startFlow(w http.ResponseWriter, r *http.Request, linkUserId *uint, purpose string, clientType string) {
 	name := chi.URLParam(r, "name")
 
-	isLink := linkUserId != nil
+	signedIn := linkUserId != nil
 
 	providerRow, err := repositories.NewOidcProviderRepository(nil).GetEnabledOidcProviderByName(name)
 	if err != nil {
-		failBrowserFlowStart(w, r, clientType, isLink, errUnknownProvider)
+		failBrowserFlowStart(w, r, clientType, purpose, errUnknownProvider)
 		return
 	}
 
 	mobileChallenge := ""
 
-	if clientType == models.OidcClientMobile && !isLink {
+	if clientType == models.OidcClientMobile && !signedIn {
 		mobileChallenge = strings.TrimSpace(r.URL.Query().Get("codeChallenge"))
 
 		// A mobile LOGIN hands the app a one-time exchange code, which buys a full
@@ -258,9 +354,12 @@ func startFlow(w http.ResponseWriter, r *http.Request, linkUserId *uint, clientT
 		// which stops an attacker DRIVING the flow rather than stealing its result.
 		//
 		// A mobile LINK needs none: its callback hands back only ?linked={name},
-		// which is not a credential. Nothing is minted for the app to protect.
+		// which is not a credential. Nothing is minted for the app to protect. A
+		// mobile delete confirmation needs none either: its code is redeemable only
+		// by a signed-in session of the same account, which a rogue app does not
+		// have.
 		if len(mobileChallenge) == 0 {
-			failBrowserFlowStart(w, r, clientType, isLink, errInvalidRequest)
+			failBrowserFlowStart(w, r, clientType, purpose, errInvalidRequest)
 			return
 		}
 	}
@@ -268,14 +367,14 @@ func startFlow(w http.ResponseWriter, r *http.Request, linkUserId *uint, clientT
 	discovered, err := GetProvider(providerRow)
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "OIDC discovery failed for provider "+providerRow.Name+": "+err.Error())
-		failBrowserFlowStart(w, r, clientType, isLink, errProviderError)
+		failBrowserFlowStart(w, r, clientType, purpose, errProviderError)
 		return
 	}
 
 	config, err := buildOauthConfig(providerRow, discovered, services.BuildOidcRedirectUri(providerRow.Name))
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to build OIDC config for provider "+providerRow.Name+": "+err.Error())
-		failBrowserFlowStart(w, r, clientType, isLink, errServerError)
+		failBrowserFlowStart(w, r, clientType, purpose, errServerError)
 		return
 	}
 
@@ -286,11 +385,12 @@ func startFlow(w http.ResponseWriter, r *http.Request, linkUserId *uint, clientT
 		ClientType:          clientType,
 		MobileCodeChallenge: mobileChallenge,
 		LinkUserId:          linkUserId,
+		Purpose:             purpose,
 		CodeVerifier:        verifier,
 	})
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to create OIDC auth session: "+err.Error())
-		failBrowserFlowStart(w, r, clientType, isLink, errServerError)
+		failBrowserFlowStart(w, r, clientType, purpose, errServerError)
 		return
 	}
 
@@ -301,11 +401,22 @@ func startFlow(w http.ResponseWriter, r *http.Request, linkUserId *uint, clientT
 	// their callback is refused.
 	http.SetCookie(w, buildBindingCookie(created.Binding))
 
-	authUrl := config.AuthCodeURL(
-		created.State,
+	options := []oauth2.AuthCodeOption{
 		oidc.Nonce(created.Nonce),
 		oauth2.S256ChallengeOption(verifier),
-	)
+	}
+
+	// A delete confirmation asks for a FRESH sign-in. max_age=0 is the standard
+	// way to ask, and the one whose result can be checked: a provider that honours
+	// it must return auth_time, which finishDeleteConfirmation verifies. A provider
+	// that does not support it ignores an unrecognized parameter, as OAuth
+	// requires. prompt=login is deliberately NOT sent: Google lists only none,
+	// consent and select_account, so it could fail the flow outright there.
+	if purpose == models.OidcPurposeDeleteAccount {
+		options = append(options, oauth2.SetAuthURLParam("max_age", "0"))
+	}
+
+	authUrl := config.AuthCodeURL(created.State, options...)
 
 	http.Redirect(w, r, authUrl, http.StatusFound)
 }
@@ -318,21 +429,23 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	code := r.URL.Query().Get("code")
 
-	// Which client is waiting, for the failures below that happen BEFORE a session
-	// is in hand. The identity provider appends only code/state/error to the fixed
-	// redirect URI, so there is no ?client= to read here and the state is the only
-	// thing that can answer it. Anything unknown reads as desktop.
+	// Who is waiting, and for what, for the failures below that happen BEFORE a
+	// session is in hand. The identity provider appends only code/state/error to
+	// the fixed redirect URI, so there is no ?client= to read here and the state is
+	// the only thing that can answer it. Anything unknown reads as a desktop login.
 	//
 	// It matters most for the branch that is not an attack at all: a user who
 	// declines consent. Answered as desktop, a mobile flow lands the external
 	// browser on the web login page while the app sits waiting on its private-use
 	// scheme -- so the one ordinary way to back out is also the one that strands
-	// you.
-	pending := pendingClientType(state)
+	// you. Answered as a login, a signed-in desktop user backing out of a link or a
+	// delete confirmation lands on the login screen, which reads as "you have been
+	// signed out".
+	pending := pendingSession(state)
 
 	providerRow, err := repositories.NewOidcProviderRepository(nil).GetEnabledOidcProviderByName(name)
 	if err != nil {
-		redirectWithError(w, r, pending, errUnknownProvider)
+		failCallback(w, r, pending, errUnknownProvider)
 		return
 	}
 
@@ -340,13 +453,13 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 	// session simply expires. Never echo the upstream text.
 	if len(r.URL.Query().Get("error")) > 0 {
 		clearBindingCookie(w, r)
-		redirectWithError(w, r, pending, errProviderError)
+		failCallback(w, r, pending, errProviderError)
 		return
 	}
 
 	if len(state) == 0 || len(code) == 0 {
 		clearBindingCookie(w, r)
-		redirectWithError(w, r, pending, errInvalidRequest)
+		failCallback(w, r, pending, errInvalidRequest)
 		return
 	}
 
@@ -465,12 +578,14 @@ func Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.IsLink() {
+	switch session.FlowPurpose() {
+	case models.OidcPurposeLink:
 		finishLink(w, r, providerRow, claims, session)
-		return
+	case models.OidcPurposeDeleteAccount:
+		finishDeleteConfirmation(w, r, providerRow, claims, session)
+	default:
+		finishLogin(w, r, providerRow, claims, session)
 	}
-
-	finishLogin(w, r, providerRow, claims, session)
 }
 
 // extractClaims decodes the ID token's claims, falling back to the userinfo
@@ -539,30 +654,88 @@ func finishLink(
 ) {
 	err := resolveLink(providerRow, claims, *session.LinkUserId)
 	if err != nil {
-		redirectLinkError(w, r, session.ClientType, resolutionErrorCode(err))
+		redirectSignedInError(w, r, session.ClientType, models.OidcPurposeLink, resolutionErrorCode(err))
 		return
 	}
 
 	redirectLinkSuccess(w, r, session.ClientType, providerRow.Name)
 }
 
-// failCallback reports a post-consume failure to wherever the flow actually
-// started from.
+// finishDeleteConfirmation hands back the code that lets an account with no
+// password of its own delete itself, once two things hold:
+//
+//   - The identity that just signed in is the account's OWN identity at this
+//     provider. Signing in as anyone else -- another user's identity, or one
+//     nobody has linked -- confirms nothing about this account.
+//   - The sign-in was fresh. When the provider sends auth_time it must not
+//     predate the start of this flow (allowing for clock skew), or the provider
+//     ignored max_age=0 and simply reused an old session. When auth_time is
+//     absent the round trip is accepted: refusing would leave every user of a
+//     provider that never sends it unable to delete their account, which is the
+//     requirement this whole flow exists to meet.
+//
+// Nothing is deleted here. The code goes back to the client, which spends it on
+// POST /user/deleteAccount from its own signed-in session -- so the delete keeps
+// one endpoint, one permission check and one interactive-session check.
+func finishDeleteConfirmation(
+	w http.ResponseWriter,
+	r *http.Request,
+	providerRow models.OidcProvider,
+	claims idTokenClaims,
+	session models.OidcAuthSession,
+) {
+	purpose := models.OidcPurposeDeleteAccount
+	userId := *session.LinkUserId
+
+	identity, err := repositories.NewOidcIdentityRepository(nil).GetIdentityBySubject(providerRow.ID, claims.Subject)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to load the identity for a delete confirmation: "+err.Error())
+		redirectSignedInError(w, r, session.ClientType, purpose, errServerError)
+		return
+	}
+
+	if err != nil || identity.UserId != userId {
+		redirectSignedInError(w, r, session.ClientType, purpose, errIdentityMismatch)
+		return
+	}
+
+	if authTime := claims.AuthTime.Time(); authTime != nil && authTime.Before(session.CreatedAt.Add(-authTimeSkew)) {
+		redirectSignedInError(w, r, session.ClientType, purpose, errStaleLogin)
+		return
+	}
+
+	code, err := createDeleteConfirmation(userId)
+	if err != nil {
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to create a delete confirmation: "+err.Error())
+		redirectSignedInError(w, r, session.ClientType, purpose, errServerError)
+		return
+	}
+
+	if session.ClientType == models.OidcClientMobile {
+		http.Redirect(w, r, mobileCallbackScheme+"?deleteConfirmation="+url.QueryEscape(code), http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, desktopProfilePath+"?tab=user-profile&deleteConfirmation="+url.QueryEscape(code), http.StatusFound)
+}
+
+// failCallback reports a callback failure to wherever the flow actually started
+// from.
 //
 // The client type alone is not enough: a desktop LINK and a desktop LOGIN are
-// both "desktop", and sending the link to the login screen is exactly what
-// redirectLinkError exists to prevent -- its caller is already signed in, so a
-// login form reads as "you have been signed out" rather than "that provider
-// could not be connected". Only finishLink used to get this right, leaving every
-// check between the provider match and the nonce compare landing a link on the
-// login page.
+// both "desktop", and sending a signed-in flow to the login screen is exactly
+// what redirectSignedInError exists to prevent -- its caller is already signed
+// in, so a login form reads as "you have been signed out" rather than "that
+// provider could not be connected". Only finishLink used to get this right,
+// leaving every check between the provider match and the nonce compare landing a
+// link on the login page.
 //
-// Both branches target fixed, server-side constants, and session is our own row,
-// consumed atomically a few lines earlier -- so nothing a caller supplies reaches
-// a redirect target here.
+// Every branch targets fixed, server-side constants, and session is our own row
+// -- consumed atomically a few lines earlier, or read from the pending state --
+// so nothing a caller supplies reaches a redirect target here.
 func failCallback(w http.ResponseWriter, r *http.Request, session models.OidcAuthSession, code string) {
-	if session.IsLink() {
-		redirectLinkError(w, r, session.ClientType, code)
+	if purpose := session.FlowPurpose(); purpose != models.OidcPurposeLogin {
+		redirectSignedInError(w, r, session.ClientType, purpose, code)
 		return
 	}
 
@@ -582,19 +755,27 @@ func redirectLinkSuccess(w http.ResponseWriter, r *http.Request, clientType stri
 	http.Redirect(w, r, desktopProfilePath+"?tab=user-profile&oidcLinked="+url.QueryEscape(providerName), http.StatusFound)
 }
 
-// redirectLinkError reports a failed "connect account" attempt on the profile
-// page the user started from.
+// redirectSignedInError reports a failed signed-in flow -- a link or a delete
+// confirmation -- on the profile page the user started from.
 //
-// Deliberately NOT redirectWithError, which lands on the login screen: a link
-// flow's caller is already signed in, so bouncing them to a login form reads as
-// "you have been signed out" rather than "that provider could not be connected".
-func redirectLinkError(w http.ResponseWriter, r *http.Request, clientType string, code string) {
+// Deliberately NOT redirectWithError, which lands on the login screen: a
+// signed-in flow's caller is already signed in, so bouncing them to a login form
+// reads as "you have been signed out" rather than "that provider could not be
+// connected". The two flows report under different query parameters, so the
+// page can say which attempt failed. The app needs no such split: it knows which
+// flow it is waiting on.
+func redirectSignedInError(w http.ResponseWriter, r *http.Request, clientType string, purpose string, code string) {
 	if clientType == models.OidcClientMobile {
 		redirectWithError(w, r, clientType, code)
 		return
 	}
 
-	http.Redirect(w, r, desktopProfilePath+"?tab=user-profile&oidcError="+url.QueryEscape(code), http.StatusFound)
+	parameter := "oidcError"
+	if purpose == models.OidcPurposeDeleteAccount {
+		parameter = "deleteError"
+	}
+
+	http.Redirect(w, r, desktopProfilePath+"?tab=user-profile&"+parameter+"="+url.QueryEscape(code), http.StatusFound)
 }
 
 // issueSession mints Receipt Wrangler tokens and hands them to the client in the
@@ -650,27 +831,28 @@ func resolutionErrorCode(err error) string {
 }
 
 // failFlowStart reports a failure from a start that the APP called directly --
-// LinkStart, which a mobile client reaches as an ordinary bearer-authenticated
-// API request and a desktop client reaches as a browser navigation. The mobile
-// case gets JSON so the failure arrives in the same shape as the success.
+// LinkStart or DeleteConfirmationStart, which a mobile client reaches as an
+// ordinary bearer-authenticated API request and a desktop client reaches as a
+// browser navigation. The mobile case gets JSON so the failure arrives in the
+// same shape as the success.
 //
 // Not for startFlow: every caller of that is a browser, including LinkLaunch,
 // and handing a browser a JSON body would strand it on a blank page.
-func failFlowStart(w http.ResponseWriter, r *http.Request, clientType string, isLink bool, code string) {
-	if clientType == models.OidcClientMobile && isLink {
+func failFlowStart(w http.ResponseWriter, r *http.Request, clientType string, purpose string, code string) {
+	if clientType == models.OidcClientMobile && purpose != models.OidcPurposeLogin {
 		writeOidcFlowError(w, code)
 		return
 	}
 
-	failBrowserFlowStart(w, r, clientType, isLink, code)
+	failBrowserFlowStart(w, r, clientType, purpose, code)
 }
 
 // failBrowserFlowStart reports a start failure to a user agent, sending it back
-// wherever it came from: the profile page for a link, the login screen for a
-// login, and the app's own scheme for either on mobile.
-func failBrowserFlowStart(w http.ResponseWriter, r *http.Request, clientType string, isLink bool, code string) {
-	if isLink {
-		redirectLinkError(w, r, clientType, code)
+// wherever it came from: the profile page for a signed-in flow, the login screen
+// for a login, and the app's own scheme for any of them on mobile.
+func failBrowserFlowStart(w http.ResponseWriter, r *http.Request, clientType string, purpose string, code string) {
+	if purpose != models.OidcPurposeLogin {
+		redirectSignedInError(w, r, clientType, purpose, code)
 		return
 	}
 
@@ -683,7 +865,7 @@ func writeOidcFlowError(w http.ResponseWriter, code string) {
 	status := http.StatusInternalServerError
 
 	switch code {
-	case errUnknownProvider:
+	case errUnknownProvider, errNotLinked:
 		status = http.StatusNotFound
 	case errInvalidRequest:
 		status = http.StatusBadRequest
@@ -718,31 +900,34 @@ func redirectWithError(w http.ResponseWriter, r *http.Request, clientType string
 	http.Redirect(w, r, desktopLoginPath+"?oidcError="+url.QueryEscape(code), http.StatusFound)
 }
 
-// pendingClientType recovers which client is waiting on a flow we have not
-// consumed yet, so a pre-session failure can answer in a shape that client can
-// receive. Anything it cannot establish -- an absent state, an unknown, expired
-// or already-spent one, a failed read -- degrades to desktop.
+// pendingSession recovers who is waiting on a flow we have not consumed yet, and
+// for what, so a pre-session failure can answer where that caller can receive it.
+// Only the routing columns are loaded. Anything it cannot establish -- an absent
+// state, an unknown, expired or already-spent one, a failed read -- degrades to a
+// desktop login.
 //
-// The value chooses between two fixed redirect constants and nothing else, so an
+// The result chooses between fixed redirect constants and nothing else, so an
 // attacker who feeds it a state they already hold learns only that it is live.
 // Nothing is consumed, so a failed callback still leaves the real one able to
 // complete.
-func pendingClientType(state string) string {
+func pendingSession(state string) models.OidcAuthSession {
+	desktopLogin := models.OidcAuthSession{ClientType: models.OidcClientDesktop}
+
 	if len(state) == 0 {
-		return models.OidcClientDesktop
+		return desktopLogin
 	}
 
-	clientType, err := repositories.NewOidcSessionRepository(nil).GetPendingAuthSessionClientType(hashSecret(state))
+	session, err := repositories.NewOidcSessionRepository(nil).GetPendingAuthSessionRouting(hashSecret(state))
 	if err != nil {
-		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to read a pending OIDC session's client type: "+err.Error())
-		return models.OidcClientDesktop
+		logging.LogStd(logging.LOG_LEVEL_ERROR, "Failed to read a pending OIDC session's routing: "+err.Error())
+		return desktopLogin
 	}
 
-	if clientType != models.OidcClientMobile {
-		return models.OidcClientDesktop
+	if session.ClientType != models.OidcClientMobile {
+		session.ClientType = models.OidcClientDesktop
 	}
 
-	return models.OidcClientMobile
+	return session
 }
 
 func buildBindingCookie(value string) *http.Cookie {

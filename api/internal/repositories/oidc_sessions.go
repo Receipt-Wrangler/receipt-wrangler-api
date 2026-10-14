@@ -61,29 +61,32 @@ func (repository OidcSessionRepository) ConsumeAuthSession(stateHash string) (mo
 	return session, true, nil
 }
 
-// GetPendingAuthSessionClientType reports which client started a still-pending
-// session, WITHOUT consuming it, so the callback can answer a failure in the
-// shape that client can receive rather than assuming a browser.
+// GetPendingAuthSessionRouting reports who started a still-pending session and
+// for what, WITHOUT consuming it, so the callback can answer a failure where that
+// flow's caller is actually waiting: the right client, and for a signed-in flow
+// the profile page rather than the login screen.
 //
-// It reads one column and nothing else, and it is scoped to a LIVE session, so a
+// It reads the three routing columns and nothing else -- no secret, no user
+// beyond whether there is one -- and it is scoped to a LIVE session, so a
 // replayed callback learns nothing about a session that was already spent. A miss
-// of any kind -- unknown, expired, already used -- returns "", which the caller
-// must treat as "assume the default client": the value only ever chooses between
-// two fixed, server-side redirect constants, so an unknown state can degrade but
-// can never point a user agent somewhere new.
-func (repository OidcSessionRepository) GetPendingAuthSessionClientType(stateHash string) (string, error) {
-	var clientTypes []string
+// of any kind -- unknown, expired, already used -- returns the zero session,
+// which reads as a desktop login: the result only ever chooses between fixed,
+// server-side redirect constants, so an unknown state can degrade but can never
+// point a user agent somewhere new.
+func (repository OidcSessionRepository) GetPendingAuthSessionRouting(stateHash string) (models.OidcAuthSession, error) {
+	var sessions []models.OidcAuthSession
 
 	err := repository.GetDB().
 		Model(&models.OidcAuthSession{}).
+		Select("client_type", "link_user_id", "purpose").
 		Where("state_hash = ? AND used = ? AND expires_at > ?", stateHash, false, time.Now()).
 		Limit(1).
-		Pluck("client_type", &clientTypes).Error
-	if err != nil || len(clientTypes) == 0 {
-		return "", err
+		Find(&sessions).Error
+	if err != nil || len(sessions) == 0 {
+		return models.OidcAuthSession{}, err
 	}
 
-	return clientTypes[0], nil
+	return sessions[0], nil
 }
 
 func (repository OidcSessionRepository) CreateExchangeCode(code *models.OidcExchangeCode) error {
@@ -157,22 +160,47 @@ func (repository OidcSessionRepository) ConsumeLinkLaunch(launchHash string) (mo
 	return launch, true, nil
 }
 
-// DeleteExpiredOidcSessions is the cleanup cron's worker. All three tables are
-// already guarded by expires_at inside the consume statements' WHERE clauses, so
-// this is hygiene rather than a security control.
+func (repository OidcSessionRepository) CreateDeleteConfirmation(confirmation *models.OidcDeleteConfirmation) error {
+	return repository.GetDB().Create(confirmation).Error
+}
+
+// ConsumeDeleteConfirmation atomically burns a live delete confirmation code
+// issued to userId, mirroring ConsumeExchangeCode.
+//
+// The account is part of the WHERE clause, not checked afterwards, so a code is
+// worthless to any session but its own account's -- and a mismatch burns
+// nothing, so presenting someone else's code cannot destroy it either. Unknown,
+// spent, expired and foreign codes all report false, indistinguishably.
+func (repository OidcSessionRepository) ConsumeDeleteConfirmation(codeHash string, userId uint) (bool, error) {
+	result := repository.GetDB().
+		Model(&models.OidcDeleteConfirmation{}).
+		Where("code_hash = ? AND user_id = ? AND used = ? AND expires_at > ?", codeHash, userId, false, time.Now()).
+		Update("used", true)
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	return result.RowsAffected == 1, nil
+}
+
+// DeleteExpiredOidcSessions is the cleanup cron's worker. Every table is already
+// guarded by expires_at inside its consume statement's WHERE clause, so this is
+// hygiene rather than a security control.
 func (repository OidcSessionRepository) DeleteExpiredOidcSessions() error {
 	db := repository.GetDB()
 	now := time.Now()
 
-	err := db.Where("expires_at < ? OR used = ?", now, true).Delete(&models.OidcAuthSession{}).Error
-	if err != nil {
-		return err
+	for _, model := range []interface{}{
+		&models.OidcAuthSession{},
+		&models.OidcExchangeCode{},
+		&models.OidcLinkLaunch{},
+		&models.OidcDeleteConfirmation{},
+	} {
+		err := db.Where("expires_at < ? OR used = ?", now, true).Delete(model).Error
+		if err != nil {
+			return err
+		}
 	}
 
-	err = db.Where("expires_at < ? OR used = ?", now, true).Delete(&models.OidcExchangeCode{}).Error
-	if err != nil {
-		return err
-	}
-
-	return db.Where("expires_at < ? OR used = ?", now, true).Delete(&models.OidcLinkLaunch{}).Error
+	return nil
 }

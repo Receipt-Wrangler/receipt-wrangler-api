@@ -219,6 +219,94 @@ class OidcApi {
     return _response;
   }
 
+  /// Confirm deleting the signed-in account by signing in at a linked provider
+  /// For an account with no password of its own - one created by signing in with an identity provider. Such an account cannot confirm a self-delete with a password, so it signs in at one of its linked providers again instead, and the callback hands back a single-use confirmationCode for POST /user/deleteAccount. Requires app.account.delete and an interactive session, never an API key. An account with a password of its own is refused; it confirms with that password.  The provider is asked for a fresh sign-in with max_age&#x3D;0. When it returns auth_time, a sign-in older than this flow is refused (stale_login). Signing in as any identity other than the account&#39;s own at this provider is refused (identity_mismatch).  A browser navigates here and is redirected (302) to the identity provider; the callback returns to the profile page with ?deleteConfirmation&#x3D;{code} or ?deleteError&#x3D;{code}. A native client passes client&#x3D;mobile, gets a launch URL as JSON exactly as for oidcLinkStart, opens it in the external browser, and the callback returns to its private-use scheme with ?deleteConfirmation&#x3D;{code} or ?error&#x3D;{code}.
+  ///
+  /// Parameters:
+  /// * [name] - The slug of a provider linked to the account
+  /// * [client] - Which client is confirming. Mobile receives a launch URL as JSON rather than a redirect. No codeChallenge is needed - the code the callback hands back can only be spent by a signed-in session of the same account.
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [OidcLinkStartView] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<OidcLinkStartView>> oidcDeleteConfirmationStart({ 
+    required String name,
+    String? client = 'desktop',
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/oidc/connections/{name}/delete-confirmation'.replaceAll('{' r'name' '}', encodeQueryParameter(_serializers, name, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (client != null) r'client': encodeQueryParameter(_serializers, client, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    OidcLinkStartView? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(OidcLinkStartView),
+      ) as OidcLinkStartView;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<OidcLinkStartView>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// Redeem a mobile sign-in code
   /// Trades the single-use code the app received on its private-use URL scheme for a session. The PKCE verifier is what proves this is the app that started the flow, so an app that intercepted the redirect cannot redeem the code. Returns the same payload as login with tokensInBody, and never sets a cookie.
   ///

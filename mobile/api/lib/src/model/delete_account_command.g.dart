@@ -8,13 +8,15 @@ part of 'delete_account_command.dart';
 
 class _$DeleteAccountCommand extends DeleteAccountCommand {
   @override
-  final String password;
+  final String? password;
+  @override
+  final String? confirmationCode;
 
   factory _$DeleteAccountCommand(
           [void Function(DeleteAccountCommandBuilder)? updates]) =>
       (DeleteAccountCommandBuilder()..update(updates))._build();
 
-  _$DeleteAccountCommand._({required this.password}) : super._();
+  _$DeleteAccountCommand._({this.password, this.confirmationCode}) : super._();
   @override
   DeleteAccountCommand rebuild(
           void Function(DeleteAccountCommandBuilder) updates) =>
@@ -27,13 +29,16 @@ class _$DeleteAccountCommand extends DeleteAccountCommand {
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is DeleteAccountCommand && password == other.password;
+    return other is DeleteAccountCommand &&
+        password == other.password &&
+        confirmationCode == other.confirmationCode;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, password.hashCode);
+    _$hash = $jc(_$hash, confirmationCode.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -41,7 +46,8 @@ class _$DeleteAccountCommand extends DeleteAccountCommand {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'DeleteAccountCommand')
-          ..add('password', password))
+          ..add('password', password)
+          ..add('confirmationCode', confirmationCode))
         .toString();
   }
 }
@@ -54,6 +60,11 @@ class DeleteAccountCommandBuilder
   String? get password => _$this._password;
   set password(String? password) => _$this._password = password;
 
+  String? _confirmationCode;
+  String? get confirmationCode => _$this._confirmationCode;
+  set confirmationCode(String? confirmationCode) =>
+      _$this._confirmationCode = confirmationCode;
+
   DeleteAccountCommandBuilder() {
     DeleteAccountCommand._defaults(this);
   }
@@ -62,6 +73,7 @@ class DeleteAccountCommandBuilder
     final $v = _$v;
     if ($v != null) {
       _password = $v.password;
+      _confirmationCode = $v.confirmationCode;
       _$v = null;
     }
     return this;
@@ -83,8 +95,8 @@ class DeleteAccountCommandBuilder
   _$DeleteAccountCommand _build() {
     final _$result = _$v ??
         _$DeleteAccountCommand._(
-          password: BuiltValueNullFieldError.checkNotNull(
-              password, r'DeleteAccountCommand', 'password'),
+          password: password,
+          confirmationCode: confirmationCode,
         );
     replace(_$result);
     return _$result;

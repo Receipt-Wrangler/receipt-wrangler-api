@@ -170,18 +170,14 @@ void (empty response body)
 
 Delete own account
 
-This will delete the currently logged in user's account after verifying their password
+Deletes the signed-in user's own account once it is confirmed. An account with a password of its own confirms with that password (401 when it is wrong). An account without one - created by signing in with an identity provider - confirms with the confirmationCode that oidcDeleteConfirmationStart hands back (400 when it is missing, spent, expired or not this account's). Which applies is decided by the account, not by which field is sent. Requires an interactive session; an API key is refused with 403 whatever its scope.
 
 ### Example
 ```dart
 import 'package:openapi/api.dart';
-// TODO Configure API key authorization: apiKeyAuth
-//defaultApiClient.getAuthentication<ApiKeyAuth>('apiKeyAuth').apiKey = 'YOUR_API_KEY';
-// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-//defaultApiClient.getAuthentication<ApiKeyAuth>('apiKeyAuth').apiKeyPrefix = 'Bearer';
 
 final api = Openapi().getUserApi();
-final DeleteAccountCommand deleteAccountCommand = ; // DeleteAccountCommand | Password confirmation for account deletion
+final DeleteAccountCommand deleteAccountCommand = ; // DeleteAccountCommand | Confirmation for account deletion
 
 try {
     api.deleteAccount(deleteAccountCommand);
@@ -194,7 +190,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **deleteAccountCommand** | [**DeleteAccountCommand**](DeleteAccountCommand.md)| Password confirmation for account deletion | 
+ **deleteAccountCommand** | [**DeleteAccountCommand**](DeleteAccountCommand.md)| Confirmation for account deletion | 
 
 ### Return type
 
@@ -202,7 +198,7 @@ void (empty response body)
 
 ### Authorization
 
-[apiKeyAuth](../README.md#apiKeyAuth), [bearerAuth](../README.md#bearerAuth)
+[bearerAuth](../README.md#bearerAuth)
 
 ### HTTP request headers
 

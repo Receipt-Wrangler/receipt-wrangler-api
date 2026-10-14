@@ -267,10 +267,10 @@ class UserApi {
   }
 
   /// Delete own account
-  /// This will delete the currently logged in user&#39;s account after verifying their password
+  /// Deletes the signed-in user&#39;s own account once it is confirmed. An account with a password of its own confirms with that password (401 when it is wrong). An account without one - created by signing in with an identity provider - confirms with the confirmationCode that oidcDeleteConfirmationStart hands back (400 when it is missing, spent, expired or not this account&#39;s). Which applies is decided by the account, not by which field is sent. Requires an interactive session; an API key is refused with 403 whatever its scope.
   ///
   /// Parameters:
-  /// * [deleteAccountCommand] - Password confirmation for account deletion
+  /// * [deleteAccountCommand] - Confirmation for account deletion
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -298,11 +298,6 @@ class UserApi {
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {
-            'type': 'apiKey',
-            'name': 'apiKeyAuth',
-            'keyName': 'Authorization',
-            'where': 'header',
-          },{
             'type': 'http',
             'scheme': 'bearer',
             'name': 'bearerAuth',

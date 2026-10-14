@@ -1239,8 +1239,9 @@ as "does this request write anything" gets that backwards.
 human and an escalation for a key, whatever its scope, so `UnifiedAuthMiddleware` also stamps
 **`structs.Claims.AuthSource`** (`AuthSourceJwt` / `AuthSourceApiKey`) — it is the only thing that
 knows which branch ran, and the only writer. Its consumers are the OIDC link pair — see "OIDC
-(OpenID Connect) login" → "Linking an existing account" for the escalation it closes — and
-self-delete (`handlers.DeleteAccount`), so a key cannot destroy the account that issued it. Three rules
+(OpenID Connect) login" → "Linking an existing account" for the escalation it closes — plus
+self-delete (`handlers.DeleteAccount`) and its provider confirmation (`oidc.DeleteConfirmationStart`),
+so a key cannot destroy the account that issued it. Three rules
 travel with it: the field is **`json:"-"`**, so it cannot ride on a token, be set by whoever minted
 one, or be inherited by a legacy one; a check is written as **"require `AuthSourceJwt`"**, never
 "reject `AuthSourceApiKey`", so the zero value denies rather than slips through; and it is **not**
@@ -1454,7 +1455,8 @@ password, and only an administrator's reset gets the user back in. The fix is to
 `User` instead, which needs a schema change and a migration. Deferred.
 
 **Deleting a user removes its OIDC rows explicitly** (`services.DeleteUser`): its identities, any
-pending link session (`link_user_id`), link launches and exchange codes. Do not leave these to
+pending signed-in session (`link_user_id`, a link or a delete confirmation), link launches, exchange
+codes and delete confirmations. Do not leave these to
 `ON DELETE CASCADE`. Two of those tables have no foreign key at all. And an orphaned identity is an
 account-takeover path: it would sign its subject into whichever account later reuses the id.
 `TestDeleteUser_RemovesOidcRecords` runs the delete with foreign keys **off**, so it fails if the
@@ -1510,8 +1512,9 @@ State, nonce and the mobile exchange code are stored **hashed** (`utils.Sha256Ha
 pending login. The PKCE **verifier cannot be hashed** — it must be replayed to the IdP verbatim — so
 it is AES-GCM encrypted, as is the provider's client secret (the `SystemEmail.Password` precedent).
 TTLs: auth session **10 min** (must cover an MFA prompt), exchange code **2 min** (the app already
-holds the browser result). Both are swept by an `@every 24h` cron, which is hygiene only — `expires_at`
-is inside the consume statement's WHERE clause.
+holds the browser result), link launch **2 min**, delete confirmation code **5 min**. All are swept by
+an `@every 24h` cron, which is hygiene only — `expires_at` is inside every consume statement's WHERE
+clause.
 
 ### Mobile handoff
 
@@ -1655,6 +1658,84 @@ The static route segments (`link`, `exchange`, `connections`) come first so chi'
 unambiguous, and `commands.ReservedOidcProviderNames` rejects them as slugs from the other direction.
 The provider **name is immutable on update**: it is baked into the redirect URI already registered at
 the IdP.
+
+### Confirming account deletion with the provider
+
+Self-delete (`POST /user/deleteAccount`) needs a confirmation, and an OIDC-only account has no
+password to give: its own was random and discarded, and password login refuses it outright. Apple
+5.1.1(v) and Google Play both require in-app account deletion for any app that lets users create
+accounts, and mobile's "Log in with X" does. So such an account confirms by **signing in at one of its
+linked providers again**, and gets a single-use code to spend in place of the password.
+
+**The flow is a third purpose on the link machinery, not a new flow.** `OidcAuthSession.Purpose` and
+`OidcLinkLaunch.Purpose` (`""` login, `link`, `delete_account`) say what a session is for.
+`LinkUserId` stays the column for "the signed-in account that started this", for both signed-in
+purposes, which is why `DeleteUser`'s `link_user_id` cleanup and the failure routing back to the
+profile page cover the new flow for free. `FlowPurpose()` reads it. A row from before the column
+existed has `Purpose ""` plus a `LinkUserId`, and still reads as a link, so a session in flight across
+the deploy keeps its meaning. `IsLink()` is `FlowPurpose() == link`; **never** test
+`LinkUserId != nil` for "is a link" again.
+
+- **Start: `GET /oidc/connections/{name}/delete-confirmation`** (`oidc.DeleteConfirmationStart`).
+  It sits under the reserved `connections` segment, so it needs no new reserved provider slug. It
+  shares `authorizeSignedInStart` with `LinkStart`: an interactive session (an API key may not begin
+  destroying the account that issued it), then **`app.account.delete`**, the delete's own permission.
+  Then two checks of its own, both refusals rather than fallbacks:
+  - **The account must be passwordless** (`IsAccountPasswordless`), else `forbidden`. A password
+    account confirms with its password, so a provider is never a second way around it.
+  - **It must hold an identity at this enabled provider**, else `not_linked`. The callback only
+    accepts that identity.
+  Desktop gets a 302. Mobile gets the same `OidcLinkStartView{launchUrl}` as a link start, and the
+  launch row carries the purpose through the unauthenticated `/link/{name}/launch` hop.
+- **Fresh sign-in: `max_age=0` only.** It is the standard OIDC parameter, and the only one whose
+  result can be checked: a provider that honours it must return `auth_time`. **Do not add
+  `prompt=login`**: Google documents only `none`/`consent`/`select_account`, so it could fail the flow
+  outright there. `TestLoginAndLinkDoNotAskForAFreshLogin` pins that nothing else sends it.
+- **Callback: `finishDeleteConfirmation`.** Two checks, then the code:
+  - **The identity must be the account's own.** The `(provider, sub)` lookup must land on the
+    session's user, else `identity_mismatch`. That covers another user's identity and an unlinked one.
+  - **When `auth_time` is present it must not predate the session's `CreatedAt`** (60s skew), else
+    `stale_login`: the provider ignored `max_age` and reused an old session. When it is absent the
+    round trip is accepted, deliberately. Refusing would leave every user of a provider that never
+    sends it unable to delete their account, which is the requirement this exists to meet.
+    `idTokenClaims.AuthTime` is a `tolerantTime` that never fails the decode (number, fraction or
+    numeric string; anything else reads as absent), because go-oidc exposes no field for it and a
+    stricter type would break every login on a provider that formats it oddly.
+  - **Nothing is deleted in the callback.** It mints an `OidcDeleteConfirmation` (hashed, 5 min,
+    single-use) and returns it: `/settings/user-profile/view?tab=user-profile&deleteConfirmation=…`,
+    or `io.receiptwrangler://oidc?deleteConfirmation=…`. The client spends it on the normal delete
+    endpoint, so deletion keeps one endpoint, one permission check and one session check.
+  - Failures go to the profile page as `deleteError=…` (a link's are `oidcError=…`, so the page can
+    say which attempt failed) and to the app as `?error=…`.
+- **Its own table, not a kind of exchange code.** An exchange code buys a session. "Delete my
+  account" and "give me a session" must never share a redemption path.
+- **The delete: `DeleteAccountForUser(userId, command)`.** The ACCOUNT decides which confirmation
+  applies, never which field the request filled.
+  - A passwordless account must send `confirmationCode`. It is consumed atomically with the account
+    in the WHERE clause (`ConsumeDeleteConfirmation`), so another account's code burns nothing.
+  - A password account must send its password; a code is ignored.
+  - A code refusal is a **400**, not the password path's 401, because the desktop reads 401 as "ask
+    for the password again". The code is spent before `DeleteUser` runs, so a delete refused after
+    that (`ErrLastAdmin`) needs a fresh confirmation.
+- **Pre-consume failures route by purpose too.** `pendingSession` reads client type, `link_user_id`
+  and purpose from the live row (`GetPendingAuthSessionRouting`). So a user who declines at the
+  provider lands back on the profile page, not `/auth/login`. This also fixed the same gap for links.
+- **Error codes are plain strings** on the contract (`OidcFlowErrorView.errorCode` is `type: string`),
+  so `not_linked`, `identity_mismatch` and `stale_login` cannot break a released mobile build.
+
+Tests: `oidc/delete_confirmation_test.go`:
+- the start's four refusals;
+- `max_age=0` and the session purpose;
+- the desktop and mobile round trips;
+- `identity_mismatch` for another user's identity and for an unlinked one;
+- the `auth_time` matrix;
+- declining at the provider returning to the profile, for delete and for link.
+
+`oidc/claims_test.go` covers `TestAuthTimeDecoding`. `services/users_test.go` covers the code path
+(valid, missing, unknown, spent, expired, foreign, single-use across `ErrLastAdmin`), and a password
+account ignoring a code. `handlers/users_test.go` (`TestDeleteAccountWithAConfirmationCode`) covers
+the API key still getting a 403. Every one of the new checks was mutation-tested: each, broken alone,
+fails a test.
 
 ### Configuration
 

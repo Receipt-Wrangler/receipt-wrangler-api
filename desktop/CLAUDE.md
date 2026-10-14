@@ -1147,6 +1147,20 @@ redirect, and administer the provider rows.
   comfortable to leave off. **Unlink is hidden for a provisioned account's last connection**, mirroring
   the server's lockout guard (the server refuses it either way). A failed load yields no section rather
   than an error, so an older server degrades quietly.
+  - **Provider-confirmed self-delete — passwordless accounts only.** A provisioned account has no
+    password to type, so when any connection has `provisionedUser` (`isPasswordless`), Delete Account
+    opens `DeleteAccountDialogComponent` with `data: { providers }` and it renders one
+    `delete-confirm-<name>` button per connection instead of the password field. The pick goes through
+    the component's `navigateToUrl` seam to `buildOidcDeleteConfirmationUrl` →
+    `/api/oidc/connections/{name}/delete-confirmation` (full-page, same reason as login). The backend
+    returns to this page with `?deleteConfirmation=<code>`, which `ngOnInit` **strips first**
+    (`replaceUrl`, so a reload cannot resubmit a spent code) and then spends via
+    `deleteAccount({ confirmationCode })` — success is the password path's Logout → toast → `/`, and a
+    refused code is a 400 the interceptor already toasts. `?deleteError=<code>` is stripped the same
+    way and mapped through `DELETE_CONFIRMATION_ERROR_MESSAGES` (own-property lookup, default copy).
+    Every other account — including one whose connections failed to load — keeps the password dialog
+    and its 401 re-open loop unchanged. The dialog closes with `{ password }` / `{ providerName }` /
+    `false` (`DeleteAccountDialogResult`), and `MAT_DIALOG_DATA` is `@Optional()`.
 - **`serverPublicUrl`** is a new field in the System Settings form's **Server** section — the
   externally reachable origin the redirect URIs are built from. It carries the shared
   `absoluteUrlValidator()` and is deliberately **never conditionally required** here: the backend
@@ -1154,7 +1168,9 @@ redirect, and administer the provider rows.
   are saved, so an admin cannot register one with no redirect URI to publish.
 - **Specs:** `auth-form.component.spec.ts` (buttons per provider, none when empty, URL escaping,
   `?oidcError=` snackbar), `oidc-callback.component.spec.ts` (bootstrap, failure, and the error-code
-  passthrough that must **not** call the API), `oidc-provider-form.component.spec.ts` (name disabled on
+  passthrough that must **not** call the API), `delete-account-dialog.component.spec.ts` and
+  `user-profile.component.spec.ts` (both dialog modes, the URL and its escaping, strip-before-spend,
+  the `deleteError` copy), `oidc-provider-form.component.spec.ts` (name disabled on
   edit, blank secret omitted / typed secret included, scope must contain `openid`, reserved and
   malformed names, the warning renders), `oidc-provider-table.component.spec.ts` (the actions-column
   gating in all three permission shapes), and `feature-config.state.spec.ts` (defaults to `[]`, and

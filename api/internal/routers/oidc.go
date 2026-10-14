@@ -43,6 +43,11 @@ func BuildOidcRouter() *chi.Mux {
 		authenticated.Get("/link/{name}", oidc.LinkStart)
 		authenticated.Get("/connections", handlers.GetOidcConnections)
 		authenticated.Delete("/connections/{name}", handlers.DeleteOidcConnection)
+
+		// Confirming an account deletion by signing in at a linked provider. Under
+		// the already reserved "connections" segment, so it needs no new reserved
+		// provider slug; the mobile leg reuses /link/{name}/launch above.
+		authenticated.Get("/connections/{name}/delete-confirmation", oidc.DeleteConfirmationStart)
 	})
 
 	return router

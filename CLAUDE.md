@@ -281,9 +281,17 @@ pieces have to agree:
   provisioning, and `LoginUser` refuses the account outright as well — after the password verifies,
   with the same error as a wrong password, so the refusal reveals nothing about the username. An
   administrator's password reset is the way back in. **Self-delete requires an interactive session**,
-  never an API key. It still asks for a password, which an OIDC-only user does not have; the agreed
-  follow-up is to confirm the delete by signing in at the provider again, which the app stores'
-  account-deletion rules require. See `api/CLAUDE.md` → "A provisioned account's password".
+  never an API key. See `api/CLAUDE.md` → "A provisioned account's password".
+- **An OIDC-only account deletes itself by signing in at its provider again**, which the app stores'
+  account-deletion rules require, since it has no password to confirm with. It is a third purpose on
+  the link machinery. Both clients start
+  `GET /oidc/connections/{name}/delete-confirmation`, which asks the provider for a fresh sign-in
+  (`max_age=0`, never `prompt=login`, which Google doesn't support). The callback checks the identity
+  is the account's own (and `auth_time`, when sent), then hands back a single-use
+  `deleteConfirmation` code. The client spends it on the normal `POST /user/deleteAccount` as
+  `confirmationCode`, so the delete itself keeps one endpoint. Accounts with a password are unchanged.
+  See `api/CLAUDE.md` → "Confirming account deletion with the provider", and the desktop and mobile
+  OIDC sections.
 - **Pre-existing password accounts link from the profile page**, not by matching — *Connected
   accounts* on both `desktop/` and `mobile/` profiles runs the OIDC flow from an
   authenticated session, so the server is *told* the identity rather than inferring it. That is

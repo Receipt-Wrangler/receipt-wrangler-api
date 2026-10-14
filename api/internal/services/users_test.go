@@ -646,6 +646,11 @@ func TestDeleteUser_RemovesOidcRecords(t *testing.T) {
 			CodeChallenge: "challenge",
 			ExpiresAt:     expiresAt,
 		},
+		&models.OidcDeleteConfirmation{
+			CodeHash:  "delete-confirmation-hash",
+			UserId:    user.ID,
+			ExpiresAt: expiresAt,
+		},
 	}
 	for _, seed := range seeds {
 		if err := db.Create(seed).Error; err != nil {
@@ -677,6 +682,7 @@ func TestDeleteUser_RemovesOidcRecords(t *testing.T) {
 	assertCount(t, &models.OidcAuthSession{}, "link_user_id = ?", []interface{}{user.ID}, 0, "pending link sessions for the deleted user should be gone")
 	assertCount(t, &models.OidcLinkLaunch{}, "user_id = ?", []interface{}{user.ID}, 0, "link launches for the deleted user should be gone")
 	assertCount(t, &models.OidcExchangeCode{}, "user_id = ?", []interface{}{user.ID}, 0, "exchange codes for the deleted user should be gone")
+	assertCount(t, &models.OidcDeleteConfirmation{}, "user_id = ?", []interface{}{user.ID}, 0, "delete confirmations for the deleted user should be gone")
 	assertCount(t, &models.OidcIdentity{}, "user_id = ?", []interface{}{other.ID}, 1, "another user's identity should survive")
 }
 
@@ -1080,7 +1086,7 @@ func TestDeleteAccountForUser_ShouldFailWithWrongPassword(t *testing.T) {
 	defer repositories.TruncateTestDb()
 	user := createUserForDeletion(t, "wrongpwuser")
 
-	statusCode, err := DeleteAccountForUser(user.ID, "wrongpassword")
+	statusCode, err := DeleteAccountForUser(user.ID, commands.DeleteAccountCommand{Password: "wrongpassword"})
 	if err == nil {
 		t.Fatalf("expected error for wrong password, got nil")
 	}
@@ -1098,7 +1104,7 @@ func TestDeleteAccountForUser_ShouldSucceed(t *testing.T) {
 	defer repositories.TruncateTestDb()
 	user := createUserForDeletion(t, "deleteacctuser")
 
-	statusCode, err := DeleteAccountForUser(user.ID, "password")
+	statusCode, err := DeleteAccountForUser(user.ID, commands.DeleteAccountCommand{Password: "password"})
 	if err != nil {
 		t.Fatalf("DeleteAccountForUser failed: %v", err)
 	}
@@ -1114,7 +1120,7 @@ func TestDeleteAccountForUser_ShouldPreventLastAdminDeletion(t *testing.T) {
 	admin := createUserForDeletion(t, "lastadminacct")
 	makeUserAdmin(t, admin.ID)
 
-	statusCode, err := DeleteAccountForUser(admin.ID, "password")
+	statusCode, err := DeleteAccountForUser(admin.ID, commands.DeleteAccountCommand{Password: "password"})
 	if err == nil {
 		t.Fatalf("expected error when deleting last admin account, got nil")
 	}
@@ -1126,6 +1132,141 @@ func TestDeleteAccountForUser_ShouldPreventLastAdminDeletion(t *testing.T) {
 	}
 
 	assertCount(t, &models.User{}, "id = ?", []interface{}{admin.ID}, 1, "last admin should survive")
+}
+
+// seedDeleteConfirmation stores a confirmation code for userId the way the OIDC
+// callback does: hashed, single-use and short-lived.
+func seedDeleteConfirmation(t *testing.T, userId uint, code string, expiresAt time.Time, used bool) {
+	t.Helper()
+
+	row := models.OidcDeleteConfirmation{
+		CodeHash:  utils.Sha256Hash([]byte(code)),
+		UserId:    userId,
+		Used:      used,
+		ExpiresAt: expiresAt,
+	}
+	if err := repositories.GetDB().Create(&row).Error; err != nil {
+		t.Fatalf("failed to seed the delete confirmation: %v", err)
+	}
+}
+
+// An account with no password of its own deletes itself with the code its
+// provider sign-in produced, in place of the password it does not have.
+func TestDeleteAccountForUser_PasswordlessAccountDeletesWithAConfirmationCode(t *testing.T) {
+	defer repositories.TruncateTestDb()
+	user := createUserForDeletion(t, "oidconlydelete")
+	seedOidcIdentity(t, user.ID, "keycloak", true)
+	seedDeleteConfirmation(t, user.ID, "a-valid-code", time.Now().Add(5*time.Minute), false)
+
+	statusCode, err := DeleteAccountForUser(user.ID, commands.DeleteAccountCommand{ConfirmationCode: "a-valid-code"})
+	if err != nil {
+		t.Fatalf("expected the delete to succeed, got %d: %v", statusCode, err)
+	}
+
+	assertCount(t, &models.User{}, "id = ?", []interface{}{user.ID}, 0, "the account should be deleted")
+}
+
+// Anything but a live code issued to this very account is refused, and refused
+// with a 400 -- never the password path's 401, which the desktop reads as "ask
+// for the password again".
+func TestDeleteAccountForUser_PasswordlessAccountRefusesABadConfirmation(t *testing.T) {
+	for _, testCase := range []struct {
+		name    string
+		command commands.DeleteAccountCommand
+		seed    func(t *testing.T, userId uint, otherId uint)
+	}{
+		{
+			name:    "no code",
+			command: commands.DeleteAccountCommand{},
+			seed:    func(t *testing.T, userId uint, otherId uint) {},
+		},
+		{
+			name:    "a password instead of a code",
+			command: commands.DeleteAccountCommand{Password: "password"},
+			seed:    func(t *testing.T, userId uint, otherId uint) {},
+		},
+		{
+			name:    "an unknown code",
+			command: commands.DeleteAccountCommand{ConfirmationCode: "never-issued"},
+			seed:    func(t *testing.T, userId uint, otherId uint) {},
+		},
+		{
+			name:    "a spent code",
+			command: commands.DeleteAccountCommand{ConfirmationCode: "spent"},
+			seed: func(t *testing.T, userId uint, otherId uint) {
+				seedDeleteConfirmation(t, userId, "spent", time.Now().Add(5*time.Minute), true)
+			},
+		},
+		{
+			name:    "an expired code",
+			command: commands.DeleteAccountCommand{ConfirmationCode: "expired"},
+			seed: func(t *testing.T, userId uint, otherId uint) {
+				seedDeleteConfirmation(t, userId, "expired", time.Now().Add(-time.Minute), false)
+			},
+		},
+		{
+			name:    "another account's code",
+			command: commands.DeleteAccountCommand{ConfirmationCode: "not-yours"},
+			seed: func(t *testing.T, userId uint, otherId uint) {
+				seedDeleteConfirmation(t, otherId, "not-yours", time.Now().Add(5*time.Minute), false)
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			defer repositories.TruncateTestDb()
+			user := createUserForDeletion(t, "oidconlyrefused")
+			other := createUserForDeletion(t, "oidconlyother")
+			seedOidcIdentity(t, user.ID, "keycloak", true)
+			testCase.seed(t, user.ID, other.ID)
+
+			statusCode, err := DeleteAccountForUser(user.ID, testCase.command)
+			if err == nil {
+				t.Fatalf("expected the delete to be refused")
+			}
+			if statusCode != http.StatusBadRequest {
+				t.Errorf("expected status %d, got %d", http.StatusBadRequest, statusCode)
+			}
+
+			assertCount(t, &models.User{}, "id = ?", []interface{}{user.ID}, 1, "the account should survive")
+		})
+	}
+}
+
+// A code is spent by the delete it confirms, so it cannot confirm a second one.
+func TestDeleteAccountForUser_ConfirmationCodeIsSingleUse(t *testing.T) {
+	defer repositories.TruncateTestDb()
+	user := createUserForDeletion(t, "oidconlysingleuse")
+	seedOidcIdentity(t, user.ID, "keycloak", true)
+	seedDeleteConfirmation(t, user.ID, "once", time.Now().Add(5*time.Minute), false)
+
+	// The last-admin guard refuses this delete AFTER the code is checked, which is
+	// the one way a code can be spent without the account going with it.
+	makeUserAdmin(t, user.ID)
+
+	statusCode, err := DeleteAccountForUser(user.ID, commands.DeleteAccountCommand{ConfirmationCode: "once"})
+	if !errors.Is(err, ErrLastAdmin) {
+		t.Fatalf("expected ErrLastAdmin, got %d: %v", statusCode, err)
+	}
+
+	statusCode, err = DeleteAccountForUser(user.ID, commands.DeleteAccountCommand{ConfirmationCode: "once"})
+	if err == nil || statusCode != http.StatusBadRequest {
+		t.Fatalf("expected a spent code to be refused with 400, got %d: %v", statusCode, err)
+	}
+}
+
+// An account with a password keeps confirming with it; a confirmation code is not
+// a way around the password.
+func TestDeleteAccountForUser_PasswordAccountIgnoresAConfirmationCode(t *testing.T) {
+	defer repositories.TruncateTestDb()
+	user := createUserForDeletion(t, "passwordkept")
+	seedDeleteConfirmation(t, user.ID, "a-code", time.Now().Add(5*time.Minute), false)
+
+	statusCode, err := DeleteAccountForUser(user.ID, commands.DeleteAccountCommand{ConfirmationCode: "a-code"})
+	if err == nil || statusCode != http.StatusUnauthorized {
+		t.Fatalf("expected the password path's 401, got %d: %v", statusCode, err)
+	}
+
+	assertCount(t, &models.User{}, "id = ?", []interface{}{user.ID}, 1, "the account should survive")
 }
 
 func TestDeleteUser_WithItemsHavingCategoriesTagsAndLinkedItems(t *testing.T) {

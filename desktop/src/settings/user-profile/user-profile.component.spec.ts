@@ -9,12 +9,22 @@ import { NgxsModule, Store } from "@ngxs/store";
 import { of, throwError } from "rxjs";
 import { PipesModule } from "src/pipes/pipes.module";
 import { DirectivesModule } from "../../directives";
-import { ApiModule, Permission, UserService } from "../../open-api";
-import { TokenRefreshService } from "../../services";
+import { ApiModule, OidcConnectionView, OidcService, Permission, UserService } from "../../open-api";
+import { SnackbarService, TokenRefreshService } from "../../services";
 import { AuthState, FeatureConfigState, Logout, UserState } from "../../store";
 import { SetPermissions } from "../../store/auth.state.actions";
-import { UserProfileComponent } from "./user-profile.component";
+import { buildOidcDeleteConfirmationUrl, UserProfileComponent } from "./user-profile.component";
 import { DeleteAccountDialogComponent } from "../delete-account-dialog/delete-account-dialog.component";
+
+function connection(overrides: Partial<OidcConnectionView> = {}): OidcConnectionView {
+  return {
+    providerName: "google",
+    providerDisplayName: "Google",
+    provisionedUser: true,
+    linkedAt: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
 
 describe("UserProfileComponent", () => {
   let component: UserProfileComponent;
@@ -159,6 +169,8 @@ describe("UserProfileComponent", () => {
       DeleteAccountDialogComponent,
       expect.any(Object),
     );
+    // No connections loaded (a failed load looks the same): the password dialog.
+    expect(dialogSpy.mock.calls[0][1]).not.toHaveProperty("data");
   });
 
   it("should delete account, dispatch logout, and navigate on confirmation", () => {
@@ -168,7 +180,7 @@ describe("UserProfileComponent", () => {
     const userService = TestBed.inject(UserService);
 
     const dialogRefMock = {
-      afterClosed: () => of("userpassword"),
+      afterClosed: () => of({ password: "userpassword" }),
       componentInstance: {},
     } as any;
 
@@ -190,7 +202,7 @@ describe("UserProfileComponent", () => {
     const userService = TestBed.inject(UserService);
 
     const passwordDialogRef = {
-      afterClosed: () => of("userpassword"),
+      afterClosed: () => of({ password: "userpassword" }),
       componentInstance: {},
     } as any;
     const cancelledDialogRef = {
@@ -210,6 +222,167 @@ describe("UserProfileComponent", () => {
 
     expect(dialogSpy).toHaveBeenCalledTimes(2);
     expect(dispatchSpy).not.toHaveBeenCalledWith(expect.any(Logout));
+  });
+
+  it("keeps the password dialog for an account whose connections were linked, not provisioned", () => {
+    const matDialog = TestBed.inject(MatDialog);
+    const userService = TestBed.inject(UserService);
+    const store = TestBed.inject(Store);
+    component.connections.set([connection({ provisionedUser: false })]);
+
+    const dialogSpy = jest.spyOn(matDialog, "open").mockReturnValue({
+      afterClosed: () => of({ password: "userpassword" }),
+      componentInstance: {},
+    } as any);
+    const deleteAccountSpy = jest.spyOn(userService, "deleteAccount").mockReturnValue(of(undefined) as any);
+    jest.spyOn(store, "dispatch").mockReturnValue(of(undefined));
+
+    component.deleteAccount();
+
+    expect(component.isPasswordless()).toBe(false);
+    expect(dialogSpy.mock.calls[0][1]).not.toHaveProperty("data");
+    expect(deleteAccountSpy).toHaveBeenCalledWith({ password: "userpassword" });
+  });
+
+  it("offers a passwordless account its providers and navigates to the chosen one", () => {
+    const matDialog = TestBed.inject(MatDialog);
+    const userService = TestBed.inject(UserService);
+    component.connections.set([
+      connection({ providerName: "my idp", providerDisplayName: "My IdP" }),
+      connection({ providerName: "google", providerDisplayName: "Google" }),
+    ]);
+
+    const dialogSpy = jest.spyOn(matDialog, "open").mockReturnValue({
+      afterClosed: () => of({ providerName: "my idp" }),
+      componentInstance: {},
+    } as any);
+    const navigateSpy = jest
+      .spyOn(component as any, "navigateToUrl")
+      .mockImplementation(() => undefined);
+    const deleteAccountSpy = jest.spyOn(userService, "deleteAccount");
+
+    component.deleteAccount();
+
+    expect(component.isPasswordless()).toBe(true);
+    expect(dialogSpy).toHaveBeenCalledWith(
+      DeleteAccountDialogComponent,
+      expect.objectContaining({
+        data: {
+          providers: [
+            { name: "my idp", displayName: "My IdP" },
+            { name: "google", displayName: "Google" },
+          ],
+        },
+      }),
+    );
+    expect(navigateSpy).toHaveBeenCalledWith(
+      "/api/oidc/connections/my%20idp/delete-confirmation"
+    );
+    // The code comes back on the redirect; nothing is spent yet.
+    expect(deleteAccountSpy).not.toHaveBeenCalled();
+  });
+
+  it("escapes a provider name in the delete-confirmation URL", () => {
+    expect(buildOidcDeleteConfirmationUrl("my provider/../evil")).toBe(
+      "/api/oidc/connections/my%20provider%2F..%2Fevil/delete-confirmation"
+    );
+  });
+
+  it("navigates the whole page to the link URL when connecting a provider", () => {
+    const navigateSpy = jest
+      .spyOn(component as any, "navigateToUrl")
+      .mockImplementation(() => undefined);
+
+    component.connectProvider("google");
+
+    expect(navigateSpy).toHaveBeenCalledWith("/api/oidc/link/google");
+  });
+
+  describe("returning from a delete confirmation", () => {
+    const stripParams = {
+      queryParams: { deleteConfirmation: null, deleteError: null },
+      queryParamsHandling: "merge",
+      replaceUrl: true,
+    };
+
+    function initWithQueryParams(queryParams: Record<string, string>): void {
+      const route = TestBed.inject(ActivatedRoute) as any;
+      route.snapshot.queryParams = queryParams;
+      jest
+        .spyOn(TestBed.inject(OidcService), "getOidcConnections")
+        .mockReturnValue(of([]) as any);
+
+      component.ngOnInit();
+    }
+
+    it("strips the code, spends it, signs out and leaves the page", () => {
+      const store = TestBed.inject(Store);
+      const router = TestBed.inject(Router);
+      const route = TestBed.inject(ActivatedRoute);
+      const deleteAccountSpy = jest
+        .spyOn(TestBed.inject(UserService), "deleteAccount")
+        .mockReturnValue(of(undefined) as any);
+      const dispatchSpy = jest.spyOn(store, "dispatch").mockReturnValue(of(undefined));
+      const successSpy = jest
+        .spyOn(TestBed.inject(SnackbarService), "success")
+        .mockImplementation(() => undefined as any);
+
+      initWithQueryParams({ tab: "user-profile", deleteConfirmation: "the-code" });
+
+      expect(router.navigate).toHaveBeenCalledWith([], { relativeTo: route, ...stripParams });
+      expect(deleteAccountSpy).toHaveBeenCalledWith({ confirmationCode: "the-code" });
+      // Stripped before spending, so a reload cannot resubmit a spent code.
+      expect((router.navigate as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+        deleteAccountSpy.mock.invocationCallOrder[0]
+      );
+      expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Logout));
+      expect(successSpy).toHaveBeenCalledWith("Your account has been successfully deleted");
+      expect(router.navigate).toHaveBeenLastCalledWith(["/"]);
+    });
+
+    it("stays signed in when the code is refused", () => {
+      const store = TestBed.inject(Store);
+      const router = TestBed.inject(Router);
+      jest
+        .spyOn(TestBed.inject(UserService), "deleteAccount")
+        .mockReturnValue(throwError(() => ({ status: 400 })));
+      const dispatchSpy = jest.spyOn(store, "dispatch");
+
+      initWithQueryParams({ deleteConfirmation: "spent-code" });
+
+      expect(dispatchSpy).not.toHaveBeenCalledWith(expect.any(Logout));
+      expect(router.navigate).not.toHaveBeenCalledWith(["/"]);
+    });
+
+    it.each([
+      ["identity_mismatch", "You signed in with a different account than the one connected here."],
+      ["stale_login", "Your provider didn't ask you to sign in again. Sign out of it and try again."],
+      ["not_linked", "That provider is no longer connected to your account."],
+      ["forbidden", "Your account can't be deleted this way."],
+      ["provider_error", "Could not confirm the account deletion. Please try again."],
+      ["constructor", "Could not confirm the account deletion. Please try again."],
+    ])("strips deleteError=%s and reports it", (code, message) => {
+      const router = TestBed.inject(Router);
+      const route = TestBed.inject(ActivatedRoute);
+      const deleteAccountSpy = jest.spyOn(TestBed.inject(UserService), "deleteAccount");
+      const errorSpy = jest
+        .spyOn(TestBed.inject(SnackbarService), "error")
+        .mockImplementation(() => undefined as any);
+
+      initWithQueryParams({ deleteError: code });
+
+      expect(router.navigate).toHaveBeenCalledWith([], { relativeTo: route, ...stripParams });
+      expect(errorSpy).toHaveBeenCalledWith(message);
+      expect(deleteAccountSpy).not.toHaveBeenCalled();
+    });
+
+    it("leaves the URL alone without either parameter", () => {
+      const router = TestBed.inject(Router);
+
+      initWithQueryParams({ tab: "user-profile" });
+
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
   });
 
   it("should not call deleteAccount API when dialog is cancelled", () => {

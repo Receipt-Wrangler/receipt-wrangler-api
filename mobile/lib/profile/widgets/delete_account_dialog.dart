@@ -1,9 +1,73 @@
 import 'package:flutter/material.dart';
+import 'package:openapi/openapi.dart' as api;
+
+const _permanentWarning = Text.rich(
+  TextSpan(
+    children: [
+      TextSpan(text: 'This action is '),
+      TextSpan(
+        text: 'permanent',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      TextSpan(
+        text:
+            ' and cannot be undone. All of your data, including receipts, group memberships, and preferences will be deleted.',
+      ),
+    ],
+  ),
+);
+
+ButtonStyle _destructiveButtonStyle(BuildContext context) {
+  return ElevatedButton.styleFrom(
+    backgroundColor: Theme.of(context).colorScheme.error,
+    foregroundColor: Theme.of(context).colorScheme.onError,
+  );
+}
 
 Future<String?> showDeleteAccountDialog(BuildContext context) {
   return showDialog<String?>(
     context: context,
     builder: (context) => const _DeleteAccountDialog(),
+  );
+}
+
+/// The confirmation for an account with no password of its own -- one an
+/// identity provider created. Offers one button per connected provider and
+/// returns the chosen provider's name, or null when the user cancels.
+Future<String?> showDeleteAccountProviderDialog(
+  BuildContext context,
+  List<api.OidcConnectionView> connections,
+) {
+  return showDialog<String?>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Delete Account'),
+      content: const Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _permanentWarning,
+          SizedBox(height: 12),
+          Text(
+            'Your account does not have a password. To confirm account '
+            'deletion, sign in again with a connected account.',
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: const Text('Cancel'),
+        ),
+        for (final connection in connections)
+          ElevatedButton(
+            key: ValueKey('delete-confirm-${connection.providerName}'),
+            onPressed: () => Navigator.pop(context, connection.providerName),
+            style: _destructiveButtonStyle(context),
+            child: Text('Confirm with ${connection.providerDisplayName}'),
+          ),
+      ],
+    ),
   );
 }
 
@@ -32,21 +96,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: 'This action is '),
-                TextSpan(
-                  text: 'permanent',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                TextSpan(
-                  text:
-                      ' and cannot be undone. All of your data, including receipts, group memberships, and preferences will be deleted.',
-                ),
-              ],
-            ),
-          ),
+          _permanentWarning,
           const SizedBox(height: 12),
           const Text('Please enter your password to confirm account deletion.'),
           const SizedBox(height: 16),
@@ -85,10 +135,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           onPressed: _passwordController.text.isEmpty
               ? null
               : () => Navigator.pop(context, _passwordController.text),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.error,
-            foregroundColor: Theme.of(context).colorScheme.onError,
-          ),
+          style: _destructiveButtonStyle(context),
           child: const Text('Delete Account'),
         ),
       ],

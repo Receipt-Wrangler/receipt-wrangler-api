@@ -8,15 +8,20 @@ import 'package:built_value/serializer.dart';
 
 part 'delete_account_command.g.dart';
 
-/// Command to delete the user's own account
+/// Command to delete the user's own account. Send the password, or for an account created by an identity provider the confirmationCode.
 ///
 /// Properties:
-/// * [password] - User's current password for confirmation
+/// * [password] - The current password, for an account that has one
+/// * [confirmationCode] - The single-use code from oidcDeleteConfirmationStart, for an account with no password of its own
 @BuiltValue()
 abstract class DeleteAccountCommand implements Built<DeleteAccountCommand, DeleteAccountCommandBuilder> {
-  /// User's current password for confirmation
+  /// The current password, for an account that has one
   @BuiltValueField(wireName: r'password')
-  String get password;
+  String? get password;
+
+  /// The single-use code from oidcDeleteConfirmationStart, for an account with no password of its own
+  @BuiltValueField(wireName: r'confirmationCode')
+  String? get confirmationCode;
 
   DeleteAccountCommand._();
 
@@ -41,11 +46,20 @@ class _$DeleteAccountCommandSerializer implements PrimitiveSerializer<DeleteAcco
     DeleteAccountCommand object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'password';
-    yield serializers.serialize(
-      object.password,
-      specifiedType: const FullType(String),
-    );
+    if (object.password != null) {
+      yield r'password';
+      yield serializers.serialize(
+        object.password,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.confirmationCode != null) {
+      yield r'confirmationCode';
+      yield serializers.serialize(
+        object.confirmationCode,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -75,6 +89,13 @@ class _$DeleteAccountCommandSerializer implements PrimitiveSerializer<DeleteAcco
             specifiedType: const FullType(String),
           ) as String;
           result.password = valueDes;
+          break;
+        case r'confirmationCode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.confirmationCode = valueDes;
           break;
         default:
           unhandled.add(key);

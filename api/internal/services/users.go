@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"net/http"
+	"receipt-wrangler/api/internal/commands"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/permissions"
 	"receipt-wrangler/api/internal/repositories"
@@ -80,6 +81,11 @@ func DeleteUser(userId string) error {
 		}
 
 		txErr = tx.Where("user_id = ?", userId).Delete(&models.OidcExchangeCode{}).Error
+		if txErr != nil {
+			return txErr
+		}
+
+		txErr = tx.Where("user_id = ?", userId).Delete(&models.OidcDeleteConfirmation{}).Error
 		if txErr != nil {
 			return txErr
 		}
@@ -315,18 +321,41 @@ func BulkDeleteUsers(userIds []string) error {
 	return nil
 }
 
-func DeleteAccountForUser(userId uint, password string) (int, error) {
-	db := repositories.GetDB()
-	var dbUser models.User
+// ErrDeleteConfirmationRequired means an account with no password of its own
+// tried to delete itself without a live confirmation code from its provider.
+var ErrDeleteConfirmationRequired = errors.New("confirm the deletion by signing in with your identity provider")
 
-	err := db.Where("id = ?", userId).First(&dbUser).Error
+// DeleteAccountForUser deletes the caller's own account once it has confirmed:
+// with its password, or -- for an account that has none, created by OIDC
+// provisioning -- with the single-use code a fresh sign-in at one of its linked
+// providers handed back.
+//
+// Which confirmation applies is decided by the ACCOUNT, never by which field the
+// request happened to fill. A code is not a way around a password, and an
+// account with no password cannot be confirmed by guessing one.
+func DeleteAccountForUser(userId uint, command commands.DeleteAccountCommand) (int, error) {
+	passwordless, err := repositories.NewOidcIdentityRepository(nil).IsAccountPasswordless(userId)
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 
-	err = utils.VerifyPassword(dbUser.Password, password)
-	if err != nil {
-		return http.StatusUnauthorized, errors.New("invalid password")
+	if passwordless {
+		statusCode, err := spendDeleteConfirmation(userId, command.ConfirmationCode)
+		if err != nil {
+			return statusCode, err
+		}
+	} else {
+		var dbUser models.User
+
+		err = repositories.GetDB().Where("id = ?", userId).First(&dbUser).Error
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+
+		err = utils.VerifyPassword(dbUser.Password, command.Password)
+		if err != nil {
+			return http.StatusUnauthorized, errors.New("invalid password")
+		}
 	}
 
 	err = DeleteUser(utils.UintToString(userId))
@@ -335,6 +364,31 @@ func DeleteAccountForUser(userId uint, password string) (int, error) {
 			return http.StatusBadRequest, err
 		}
 		return http.StatusInternalServerError, err
+	}
+
+	return 0, nil
+}
+
+// spendDeleteConfirmation burns a passwordless account's confirmation code. The
+// code is spent before the delete runs, so a delete that then fails -- the last
+// admin, say -- needs a fresh confirmation; a code never confirms twice.
+//
+// A refusal is a 400 rather than the password path's 401: the desktop reads a
+// 401 as "ask for the password again", which this account does not have.
+func spendDeleteConfirmation(userId uint, code string) (int, error) {
+	if len(code) == 0 {
+		return http.StatusBadRequest, ErrDeleteConfirmationRequired
+	}
+
+	// utils.Sha256Hash is the hash the OIDC callback stored the code under
+	// (oidc.hashSecret), so both sides agree on the lookup key.
+	consumed, err := repositories.NewOidcSessionRepository(nil).ConsumeDeleteConfirmation(utils.Sha256Hash([]byte(code)), userId)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	if !consumed {
+		return http.StatusBadRequest, ErrDeleteConfirmationRequired
 	}
 
 	return 0, nil

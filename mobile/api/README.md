@@ -111,6 +111,7 @@ Class | Method | HTTP request | Description
 [*OidcApi*](doc/OidcApi.md) | [**deleteOidcConnection**](doc/OidcApi.md#deleteoidcconnection) | **DELETE** /oidc/connections/{name} | Disconnect a provider from the caller&#39;s account
 [*OidcApi*](doc/OidcApi.md) | [**getOidcConnections**](doc/OidcApi.md#getoidcconnections) | **GET** /oidc/connections | List the caller&#39;s connected accounts
 [*OidcApi*](doc/OidcApi.md) | [**oidcCallback**](doc/OidcApi.md#oidccallback) | **GET** /oidc/{name}/callback | OIDC redirect URI
+[*OidcApi*](doc/OidcApi.md) | [**oidcDeleteConfirmationStart**](doc/OidcApi.md#oidcdeleteconfirmationstart) | **GET** /oidc/connections/{name}/delete-confirmation | Confirm deleting the signed-in account by signing in at a linked provider
 [*OidcApi*](doc/OidcApi.md) | [**oidcExchange**](doc/OidcApi.md#oidcexchange) | **POST** /oidc/exchange | Redeem a mobile sign-in code
 [*OidcApi*](doc/OidcApi.md) | [**oidcLinkLaunch**](doc/OidcApi.md#oidclinklaunch) | **GET** /oidc/link/{name}/launch | Open a mobile \&quot;connect account\&quot; flow in the browser
 [*OidcApi*](doc/OidcApi.md) | [**oidcLinkStart**](doc/OidcApi.md#oidclinkstart) | **GET** /oidc/link/{name} | Connect a provider to the signed-in account

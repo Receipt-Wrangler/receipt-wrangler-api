@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**deleteOidcConnection**](OidcApi.md#deleteoidcconnection) | **DELETE** /oidc/connections/{name} | Disconnect a provider from the caller&#39;s account
 [**getOidcConnections**](OidcApi.md#getoidcconnections) | **GET** /oidc/connections | List the caller&#39;s connected accounts
 [**oidcCallback**](OidcApi.md#oidccallback) | **GET** /oidc/{name}/callback | OIDC redirect URI
+[**oidcDeleteConfirmationStart**](OidcApi.md#oidcdeleteconfirmationstart) | **GET** /oidc/connections/{name}/delete-confirmation | Confirm deleting the signed-in account by signing in at a linked provider
 [**oidcExchange**](OidcApi.md#oidcexchange) | **POST** /oidc/exchange | Redeem a mobile sign-in code
 [**oidcLinkLaunch**](OidcApi.md#oidclinklaunch) | **GET** /oidc/link/{name}/launch | Open a mobile \&quot;connect account\&quot; flow in the browser
 [**oidcLinkStart**](OidcApi.md#oidclinkstart) | **GET** /oidc/link/{name} | Connect a provider to the signed-in account
@@ -144,6 +145,51 @@ No authorization required
 
  - **Content-Type**: Not defined
  - **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **oidcDeleteConfirmationStart**
+> OidcLinkStartView oidcDeleteConfirmationStart(name, client)
+
+Confirm deleting the signed-in account by signing in at a linked provider
+
+For an account with no password of its own - one created by signing in with an identity provider. Such an account cannot confirm a self-delete with a password, so it signs in at one of its linked providers again instead, and the callback hands back a single-use confirmationCode for POST /user/deleteAccount. Requires app.account.delete and an interactive session, never an API key. An account with a password of its own is refused; it confirms with that password.  The provider is asked for a fresh sign-in with max_age=0. When it returns auth_time, a sign-in older than this flow is refused (stale_login). Signing in as any identity other than the account's own at this provider is refused (identity_mismatch).  A browser navigates here and is redirected (302) to the identity provider; the callback returns to the profile page with ?deleteConfirmation={code} or ?deleteError={code}. A native client passes client=mobile, gets a launch URL as JSON exactly as for oidcLinkStart, opens it in the external browser, and the callback returns to its private-use scheme with ?deleteConfirmation={code} or ?error={code}.
+
+### Example
+```dart
+import 'package:openapi/api.dart';
+
+final api = Openapi().getOidcApi();
+final String name = name_example; // String | The slug of a provider linked to the account
+final String client = client_example; // String | Which client is confirming. Mobile receives a launch URL as JSON rather than a redirect. No codeChallenge is needed - the code the callback hands back can only be spent by a signed-in session of the same account.
+
+try {
+    final response = api.oidcDeleteConfirmationStart(name, client);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling OidcApi->oidcDeleteConfirmationStart: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **name** | **String**| The slug of a provider linked to the account | 
+ **client** | **String**| Which client is confirming. Mobile receives a launch URL as JSON rather than a redirect. No codeChallenge is needed - the code the callback hands back can only be spent by a signed-in session of the same account. | [optional] [default to 'desktop']
+
+### Return type
+
+[**OidcLinkStartView**](OidcLinkStartView.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

@@ -131,6 +131,58 @@ void main() {
     });
   });
 
+  group('extractDeleteConfirmationFromCallback', () {
+    test('returns the confirmation code', () {
+      expect(
+        extractDeleteConfirmationFromCallback(
+          'io.receiptwrangler://oidc?deleteConfirmation=abc123',
+        ),
+        'abc123',
+      );
+    });
+
+    test('an error wins over a confirmation code', () {
+      expect(
+        () => extractDeleteConfirmationFromCallback(
+          'io.receiptwrangler://oidc?deleteConfirmation=abc123&error=identity_mismatch',
+        ),
+        throwsA(
+          isA<OidcSignInException>().having(
+            (e) => e.message,
+            'message',
+            contains('different account'),
+          ),
+        ),
+      );
+    });
+
+    test('throws when the callback carries no confirmation code', () {
+      expect(
+        () => extractDeleteConfirmationFromCallback('io.receiptwrangler://oidc'),
+        throwsA(
+          isA<OidcSignInException>().having(
+            (e) => e.message,
+            'message',
+            'Could not confirm the account deletion. Please try again.',
+          ),
+        ),
+      );
+    });
+
+    // Neither of the other flows' success shapes confirms a delete.
+    test('a login code or a link result is not a confirmation', () {
+      for (final url in [
+        'io.receiptwrangler://oidc?code=an-exchange-code',
+        'io.receiptwrangler://oidc?linked=google',
+      ]) {
+        expect(
+          () => extractDeleteConfirmationFromCallback(url),
+          throwsA(isA<OidcSignInException>()),
+        );
+      }
+    });
+  });
+
   group('oidcErrorMessage', () {
     test('maps every code the backend can send', () {
       for (final code in [
@@ -142,11 +194,29 @@ void main() {
         'nonce_mismatch',
         'no_id_token',
         'provider_error',
+        'identity_mismatch',
+        'stale_login',
+        'not_linked',
       ]) {
         expect(oidcErrorMessage(code), isNotEmpty);
         // Never echo the raw code at the user.
         expect(oidcErrorMessage(code), isNot(code));
       }
+    });
+
+    test('explains the delete-confirmation refusals', () {
+      expect(
+        oidcErrorMessage('identity_mismatch'),
+        'You signed in with a different account than the one connected here.',
+      );
+      expect(
+        oidcErrorMessage('stale_login'),
+        "Your provider didn't ask you to sign in again. Sign out of it and try again.",
+      );
+      expect(
+        oidcErrorMessage('not_linked'),
+        'That provider is no longer connected to your account.',
+      );
     });
 
     test('falls back for an unrecognized code', () {

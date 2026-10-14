@@ -89,3 +89,41 @@ func TestDecodeIdTokenClaimsToleratesMissingOptionalClaims(t *testing.T) {
 		t.Errorf("unexpected subject %q", claims.Subject)
 	}
 }
+
+// TestAuthTimeDecoding covers the forms auth_time arrives in, and pins that an
+// unreadable value never fails the claim decode: it reads as absent, so a
+// provider that formats one claim oddly cannot break every login.
+func TestAuthTimeDecoding(t *testing.T) {
+	tests := []struct {
+		name     string
+		raw      string
+		expected int64
+		present  bool
+	}{
+		{"absent", `{"sub":"s"}`, 0, false},
+		{"null", `{"sub":"s","auth_time":null}`, 0, false},
+		{"integer", `{"sub":"s","auth_time":1700000000}`, 1700000000, true},
+		{"fractional", `{"sub":"s","auth_time":1700000000.75}`, 1700000000, true},
+		{"numeric string", `{"sub":"s","auth_time":"1700000000"}`, 1700000000, true},
+		{"unreadable string", `{"sub":"s","auth_time":"yesterday"}`, 0, false},
+		{"object", `{"sub":"s","auth_time":{}}`, 0, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			claims, err := decodeIdTokenClaims(json.RawMessage(test.raw))
+			if err != nil {
+				t.Fatalf("expected the claims to decode, got %v", err)
+			}
+
+			authTime := claims.AuthTime.Time()
+			if (authTime != nil) != test.present {
+				t.Fatalf("expected present=%v, got %v", test.present, authTime)
+			}
+
+			if test.present && authTime.Unix() != test.expected {
+				t.Errorf("expected %d, got %d", test.expected, authTime.Unix())
+			}
+		})
+	}
+}

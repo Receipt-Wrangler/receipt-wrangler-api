@@ -160,10 +160,30 @@ Receipt Wrangler Desktop is an Angular 19 application with modular architecture 
 
 Keep `npm audit` at **0 vulnerabilities**. Two conventions exist specifically to hold that line —
 do not undo them without re-checking `npm audit`:
-- **`overrides` block in `package.json`** forces patched versions of build-time/dev-only transitive
-  deps that the Angular toolchain otherwise pins inside vulnerable ranges (`@babel/core`, `esbuild`,
-  `http-proxy-middleware`, `qs`, `undici`, `uuid`). When `npm audit` flags a new transitive advisory that
-  the toolchain hasn't bumped yet, add/raise the floor here rather than waiting on an upstream release.
+- **`overrides` block in `package.json`** forces patched versions of transitive deps that a dependency
+  otherwise pins inside vulnerable ranges. When `npm audit` flags a new transitive advisory that
+  upstream hasn't bumped yet, add/raise the floor here rather than waiting on an upstream release.
+  - `@babel/core`, `esbuild`, `undici` — floors under the Angular toolchain.
+  - `ts-morph` (`^28`) — `@ngxs/storage-plugin@21` peer-pins `ts-morph@21.0.1`, whose
+    `@ts-morph/common@0.22` pulls `fast-glob` → `micromatch` → `braces`. The plugin never imports
+    ts-morph (its tarball has no schematics), so the override is runtime-inert; NGXS 22 relaxes the
+    peer to `>=21`. This one sits in the **production** tree, not just dev.
+  - `js-yaml` (`^4.1.1`) — `babel-plugin-istanbul` (every version, via jest) →
+    `@istanbuljs/load-nyc-config` → `js-yaml@3` → `argparse@1` → `sprintf-js`. load-nyc-config only
+    calls `js-yaml.load()`, which v4 keeps. Global form, not nested, so it dedupes with cosmiconfig's.
+  - Drop an override once it does nothing — its target has left the tree, or every range still
+    declaring it already admits the floor (`npm ls <name>` shows who declares it). Dead ones mislead.
+    `http-proxy-middleware` and `uuid` left with build-angular; `qs` was only there to lift express 4's
+    `~6.15` cap, and the express 5 / body-parser 2 left behind already accept the fixed 6.16.x.
+- **When an advisory has no patched release, remove the path — don't bump.** `braces` (`<=3.0.3`) and
+  `sprintf-js` (`<=1.1.3`) both have *no* fixed version, so no floor can clear them; the `ts-morph` /
+  `js-yaml` overrides above and the builder switch below each cut the edge that pulled them in.
+  `npm audit`'s own suggestion for these (`@ngxs/storage-plugin@22`, `jest-preset-angular@14`) is a
+  major jump or a downgrade — ignore it.
+- **Builders are `@angular/build:*`, not `@angular-devkit/build-angular`.** The app was already on the
+  esbuild `application` builder, so build-angular was only a wrapper — but it hard-pinned
+  `webpack-dev-server` and `http-proxy-middleware` (both → `braces`) plus ~400 more webpack-era
+  packages. Do not add it back; nothing here uses a webpack builder.
 - **Exact pins (no caret):** `ngx-bootstrap` (`21.0.1`) and `@playwright/test` (`1.59.1`) are pinned
   because their next minor introduced an incompatibility (ngx-bootstrap dropped `CarouselModule.forRoot()`
   used by `src/carousel/`; Playwright `1.61` needs a newer browser build than the pinned `e2e:install`
@@ -183,7 +203,8 @@ in two ways that `npm install` and `npm audit` both report as clean:
    install hoisted 1.4.0 to the root, where the optional peer then wants 2.4.0 — so `npm ci` fails
    with `Invalid: lock file's @noble/hashes@1.4.0 does not satisfy @noble/hashes@2.4.0` /
    `Missing: @noble/hashes@1.4.0 from lock file`. `npm install` accepts that lockfile happily; only
-   `npm ci` rejects it.
+   `npm ci` rejects it. (That particular pair left the tree with `webpack-dev-server` when the
+   builders moved to `@angular/build`; the hoisting failure mode did not.)
 2. **It drifts the tree past CI's Node floor.** CI pins Node **20.19.6** (`ci.yml`, `release.yml`,
    `e2e.yml`). A fresh resolve pulled `jsdom` 29→30, `whatwg-url` 16→17 and `@asamuzakjp/*`, all of
    which declare `node: ^22.x || >=24` and emit `EBADENGINE` on Node 20.
@@ -192,19 +213,26 @@ in two ways that `npm install` and `npm audit` both report as clean:
 peer-coupled family in place (the Angular packages are one), delete just those entries and let it
 re-resolve that subtree only:
 
+Do every step below with **CI's own Node and npm** (Node 20.19.6, which bundles npm 10.8.2 — unpack
+the `nodejs.org/dist` tarball and put its `bin/` first on `PATH` if your machine has another), so the
+lockfile is written by the same npm that later runs `npm ci` on it.
+
 ```bash
 # 1. start from the committed lockfile; edit package.json pins/overrides as needed
 # 2. drop the entries npm will not move on its own: the peer-coupled family it
-#    ERESOLVEs on, AND every `overrides` target (an override is ignored unless its
-#    entry is re-resolved), at any nesting depth
+#    ERESOLVEs on, every `overrides` target (an override is ignored unless its
+#    entry is re-resolved), and any flagged transitive package whose fixed version
+#    its declaring range already admits (only its lockfile entry is stale), at any
+#    nesting depth
 python3 - <<'EOF'
 import json, re
 NAMESPACES = ('@angular/', '@angular-devkit/', '@ngtools/')   # the peer-coupled family
-OVERRIDES  = ('@babel/core', 'esbuild', 'http-proxy-middleware',
-              'qs', 'undici', 'uuid')                          # keep in sync with package.json
+OVERRIDES  = ('@babel/core', 'esbuild', 'js-yaml',
+              'ts-morph', 'undici')                            # keep in sync with package.json
+STALE      = ()                                                # e.g. ('handlebars', 'shell-quote')
 pat = re.compile(
     r'(^|/)node_modules/(?:' + '|'.join(map(re.escape, NAMESPACES)) + r')[^/]+$'
-    r'|(^|/)node_modules/(?:' + '|'.join(map(re.escape, OVERRIDES)) + r')$')
+    r'|(^|/)node_modules/(?:' + '|'.join(map(re.escape, OVERRIDES + STALE)) + r')$')
 d = json.load(open('package-lock.json'))
 gone = [k for k in d['packages'] if pat.search(k)]
 for k in gone:
@@ -215,7 +243,33 @@ print(f'dropped {len(gone)} entries')
 EOF
 # 3. rebuild; npm re-resolves only what was dropped and leaves the rest of the tree pinned
 rm -rf node_modules && npm install
+# 4. rebuild AGAIN and confirm nothing moves — then confirm the tree is whole
+cp package-lock.json /tmp/lock.pass1 && npm install && cmp package-lock.json /tmp/lock.pass1
+npm ls --all > /dev/null   # must exit 0 (UNMET OPTIONAL lines are fine)
 ```
+
+**Why step 4 exists.** One pass is not guaranteed to restore everything step 2 dropped. In the
+2026-10 audit fix, the first `npm install` left `express` 5 (under `@angular/cli` →
+`@modelcontextprotocol/sdk`) without `qs`, `proxy-addr` and their dependencies. Because the
+vulnerable packages were *absent*, `npm audit` read 0 — a false clean — and the lockfile was exactly
+the "Missing: … from lock file" kind that `npm ci` refuses. The second install filled them in at
+fixed versions. Repeat until a pass changes nothing.
+
+**If `npm install` crashes with `Cannot read properties of null (reading 'edgesOut')`** (stack in
+`#loadPeerSet`), a freshly published package's peer set is inconsistent — npm bug, not ours. Seen
+when re-placing `@angular/build`: its optional peer `vitest@4.1.12` (published 2026-10-15) pins
+every sibling peer at `4.1.12` except `@vitest/browser-webdriverio: ^4.1.11`, and npm 10.8.2 and
+10.9.4 both crash placing that set. Confirm with the publish times (`npm view <pkg> time`), then
+resolve with `npm install --before=<ISO time just before it>` — the cutoff only constrains entries
+being re-resolved, and nothing about it persists. Check every fixed version you need predates it.
+
+**Then let a newer npm prune optional-peer strays.** Re-placing a package with optional peers can make
+npm 10 record packages reachable *only* through those peers (`"optional": true, "peer": true` —
+`@angular/build`'s `less`, vite's `terser` / `jiti` and their deps, 25 entries in 2026-10). npm 11
+prunes them, so they would churn the lockfile for the next person on npm 11, and they install code
+nothing uses. Run `npx npm@11 install --package-lock-only` once (the Docker build's
+`node:lts-alpine` ships npm 11); if it changes the lockfile, check the diff is deletion-only, then
+confirm npm 10.8.2 still `npm ci`s it and leaves it unchanged on `npm install`.
 
 **Always gate on `npm ci`, not `npm install`.** `npm ci` applies a stricter sync check, so a lockfile
 that installs fine locally can still fail the build. Run the full gate before pushing any dependency
@@ -223,7 +277,8 @@ change — a lockfile can satisfy `npm ci` and still break the app, so the build
 it, not an afterthought:
 
 ```bash
-npm ci                    # real install, exactly what CI runs — must exit 0
+rm -rf node_modules
+npm ci --verbose          # real install, exactly what CI runs (on Node 20.19.6) — must exit 0
 npm audit                 # must report 0 vulnerabilities
 npm run test:ci           # must pass
 npm run build             # must succeed
@@ -1500,9 +1555,14 @@ End-to-end tests live in `e2e/` and use **Playwright**. They drive the real Angu
    is pre-installed and `e2e:install` is blocked — apply the `chromium-1217` /
    `chromium_headless_shell-1217` symlinks from "Running in the Claude Code Web/Cloud Sandbox" above
    instead.)
-2. **One-time:** sign up the two e2e accounts against your local DB. The **first** signup is auto-promoted to admin, so order matters. With the API running, go to `http://localhost:4200/auth/sign-up` and create:
-   - Admin first: username `e2e-admin`, password `e2e-admin-password`
-   - Then user: username `e2e-user`, password `e2e-user-password`
+2. **One-time:** create the two e2e accounts against your local DB. On a fresh DB, public sign-up is
+   **off** (`enableLocalSignUp` defaults false) and the API has already auto-created `admin`/`admin`,
+   so create them as `admin` (Users screen, or `POST /api/user/` with `appRoleId`):
+   - username `e2e-admin`, password `e2e-admin-password`, display name `E2E Admin`, role Legacy Admin
+   - username `e2e-user`, password `e2e-user-password`, display name **`E2E User`**, role Legacy User
+
+   The display name matters: the provisioning fixtures pick the member by the option text
+   `E2E User`, so any other name times out every spec that builds a group in `beforeAll`.
 3. **Every run:** source the dev env script so the `E2E_*` vars are exported:
    ```bash
    cd ../api/dev && source switch-to-sqlite.sh && cd -

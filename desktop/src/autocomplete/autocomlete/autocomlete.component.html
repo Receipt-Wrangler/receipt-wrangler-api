@@ -1,32 +1,35 @@
 <mat-form-field class="w-100" appearance="fill" [hintLabel]="hint ?? ''">
   <mat-label>{{ label }}</mat-label>
-  <ng-container *ngIf="multiple">
+  @if (multiple) {
     <mat-chip-grid #chipGrid>
       <mat-chip-row
         *ngFor="let option of inputFormControl.value; let i = index"
         (removed)="removeOption(i)"
       >
-        <ng-template
-          *ngIf="optionChipTemplate"
-          [ngTemplateOutlet]="optionChipTemplate"
-          [ngTemplateOutletContext]="{
-            option: option
-          }"
-        ></ng-template>
-        <div *ngIf="!optionChipTemplate">
-          {{
-            option | optionDisplay : options() : optionDisplayKey() : optionValueKey
-          }}
-        </div>
-        <button *ngIf="!readonly" matChipRemove>
-          <mat-icon>cancel</mat-icon>
-        </button>
+        @if (optionChipTemplate) {
+          <ng-template
+            [ngTemplateOutlet]="optionChipTemplate"
+            [ngTemplateOutletContext]="{
+              option: option
+            }"
+          ></ng-template>
+        } @else {
+          <div>
+            {{
+              option | optionDisplay : options() : optionDisplayKey() : optionValueKey
+            }}
+          </div>
+        }
+        @if (!readonly) {
+          <button matChipRemove>
+            <mat-icon>cancel</mat-icon>
+          </button>
+        }
       </mat-chip-row
       >
     </mat-chip-grid>
     <input
       #inputMultiple
-      *ngIf="multiple"
       matInput
       type="text"
       [id]="inputId"
@@ -36,25 +39,27 @@
       [readonly]="readonly"
       [required]="isRequired"
     />
-  </ng-container>
+  }
   <div class="d-flex justify-content-between">
-    <input
-      *ngIf="!multiple"
-      matInput
-      type="text"
-      [formControl]="filterFormControl"
-      [matAutocomplete]="auto"
-      [readonly]="readonly || singleOptionSelected()"
-      [required]="isRequired"
-    />
-    <app-button
-      *ngIf="singleOptionSelected() && !readonly"
-      data-testid="autocomplete-clear"
-      matButtonType="iconButton"
-      icon="close"
-      color="secondary"
-      (clicked)="removeSingleOption()"
-    ></app-button>
+    @if (!multiple) {
+      <input
+        matInput
+        type="text"
+        [formControl]="filterFormControl"
+        [matAutocomplete]="auto"
+        [readonly]="readonly || singleOptionSelected()"
+        [required]="isRequired"
+      />
+    }
+    @if (singleOptionSelected() && !readonly) {
+      <app-button
+        data-testid="autocomplete-clear"
+        matButtonType="iconButton"
+        icon="close"
+        color="secondary"
+        (clicked)="removeSingleOption()"
+      ></app-button>
+    }
   </div>
   <mat-autocomplete
     autoActiveFirstOption
@@ -66,33 +71,26 @@
       *ngFor="let option of filteredOptions | async"
       [value]="optionValueKey ? option[optionValueKey] : option"
     >
-      <ng-template
-        *ngIf="optionTemplate"
-        [ngTemplateOutlet]="optionTemplate"
-        [ngTemplateOutletContext]="{
-          option: option
-        }"
-      >
-      </ng-template>
-      <ng-container *ngIf="!optionTemplate">
+      @if (optionTemplate) {
+        <ng-template
+          [ngTemplateOutlet]="optionTemplate"
+          [ngTemplateOutletContext]="{
+            option: option
+          }"
+        >
+        </ng-template>
+      } @else {
         {{
           option | optionDisplay : options() : optionDisplayKey() : optionValueKey
         }}
-      </ng-container
-      >
+      }
     </mat-option>
-    <ng-container
-      *ngIf="
-        creatable() &&
-        (filteredOptions | async)?.length === 0 &&
-        filterFormControl?.value?.length > 0
-      "
-    >
+    @if (creatable() && (filteredOptions | async)?.length === 0 && filterFormControl?.value?.length > 0) {
       <mat-option [id]="creatableOptionId" [value]="filterFormControl.value"
       >Add {{ filterFormControl.value }}
       </mat-option
       >
-    </ng-container>
+    }
   </mat-autocomplete>
   <mat-error *ngFor="let err of formControlErrors | async">{{
       err.message

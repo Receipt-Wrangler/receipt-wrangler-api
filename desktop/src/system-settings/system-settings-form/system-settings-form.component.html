@@ -15,10 +15,11 @@
   </div>
 }
 
-<app-audit-detail-section
-  *ngIf="formConfig.mode != FormMode.add"
-  [data]="originalSystemSettings"
-></app-audit-detail-section>
+@if (formConfig.mode != FormMode.add) {
+  <app-audit-detail-section
+    [data]="originalSystemSettings"
+  ></app-audit-detail-section>
+}
 <form
   [formGroup]="form"
   (ngSubmit)="submit()"
@@ -323,11 +324,12 @@
 </form>
 
 <ng-template #headerButtons>
-  <app-edit-button
-    *ngIf="formConfig.mode != FormMode.edit"
-    color="accent"
-    [buttonRouterLink]="['/system-settings/settings', 'edit']"
-  ></app-edit-button>
+  @if (formConfig.mode != FormMode.edit) {
+    <app-edit-button
+      color="accent"
+      [buttonRouterLink]="['/system-settings/settings', 'edit']"
+    ></app-edit-button>
+  }
 </ng-template>
 
 <ng-template

@@ -1,17 +1,18 @@
-<div
-  *ngIf="mode() && (mode() === formMode.edit || mode() == formMode.add)"
-  class="modern-form-bar"
->
-  <div class="form-bar-backdrop"></div>
-  <div class="form-bar-container">
-    <div
-      class="form-bar-content"
-      [ngClass]="{
-        'justify-content-end': justifyContentEnd(),
-        'justify-content-between': !justifyContentEnd()
-      }"
-    >
-      <ng-content></ng-content>
+@if (mode() && (mode() === formMode.edit || mode() == formMode.add)) {
+  <div
+    class="modern-form-bar"
+  >
+    <div class="form-bar-backdrop"></div>
+    <div class="form-bar-container">
+      <div
+        class="form-bar-content"
+        [ngClass]="{
+          'justify-content-end': justifyContentEnd(),
+          'justify-content-between': !justifyContentEnd()
+        }"
+      >
+        <ng-content></ng-content>
+      </div>
     </div>
   </div>
-</div>
+}

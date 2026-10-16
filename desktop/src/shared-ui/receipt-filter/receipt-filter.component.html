@@ -1,12 +1,13 @@
-<app-dialog *ngIf="inDialog()" [headerText]="headerText">
-  <ng-template [ngTemplateOutlet]="formTemplate"></ng-template>
-</app-dialog>
-<ng-container *ngIf="!inDialog()">
+@if (inDialog()) {
+  <app-dialog [headerText]="headerText">
+    <ng-template [ngTemplateOutlet]="formTemplate"></ng-template>
+  </app-dialog>
+} @else {
   <div [ngTemplateOutlet]="formTemplate"></div>
-</ng-container>
+}
 
 <ng-template #formTemplate>
-  <ng-container *ngIf="isOpen(); else preview">
+  @if (isOpen()) {
     <app-filter-field
       label="Receipt Date"
       fieldName="date"
@@ -113,15 +114,18 @@
     <ng-template
       [ngTemplateOutlet]="footerTemplate() ?? defaultFooter"
     ></ng-template>
-  </ng-container>
+  } @else {
+    <ng-container [ngTemplateOutlet]="preview"></ng-container>
+  }
 </ng-template>
 
 <ng-template #preview>
-  <ng-template
-    *ngIf="previewTemplate"
-    [ngTemplateOutlet]="previewTemplate"
-    [ngTemplateOutletContext]="previewTemplateContext()"
-  ></ng-template>
+  @if (previewTemplate) {
+    <ng-template
+      [ngTemplateOutlet]="previewTemplate"
+      [ngTemplateOutletContext]="previewTemplateContext()"
+    ></ng-template>
+  }
 </ng-template>
 
 <ng-template #defaultFooter>

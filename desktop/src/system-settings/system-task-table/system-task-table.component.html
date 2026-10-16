@@ -13,15 +13,16 @@
       [matBadgeContent]="numFiltersApplied()"
       (clicked)="filterButtonClicked()"
     ></app-button>
-    <app-button
-      *ngIf="(numFiltersApplied() ?? 0) > 0"
-      data-testid="system-tasks-filter-reset"
-      icon="restart_alt"
-      matButtonType="iconButton"
-      tooltip="Reset filter"
-      color="accent"
-      (clicked)="resetFilterButtonClicked()"
-    ></app-button>
+    @if ((numFiltersApplied() ?? 0) > 0) {
+      <app-button
+        data-testid="system-tasks-filter-reset"
+        icon="restart_alt"
+        matButtonType="iconButton"
+        tooltip="Reset filter"
+        color="accent"
+        (clicked)="resetFilterButtonClicked()"
+      ></app-button>
+    }
     <app-button
       matButtonType="iconButton"
       icon="refresh"
@@ -62,16 +63,16 @@
   #expandedRowTemplate
   let-element="element"
 >
-  <ng-container *ngIf="element.associatedEntityType === AssociatedEntityType.SystemEmail">
+  @if (element.associatedEntityType === AssociatedEntityType.SystemEmail) {
     <app-system-email-child-system-task
       [childTasks]="element.childSystemTasks ?? []"
       [allReceiptProcessingSettings]="allReceiptProcessingSettings"
     ></app-system-email-child-system-task>
-  </ng-container>
+  }
 
-  <ng-container *ngIf="element.associatedEntityType === AssociatedEntityType.ReceiptProcessingSettings">
+  @if (element.associatedEntityType === AssociatedEntityType.ReceiptProcessingSettings) {
     <app-receipt-processing-settings-child-system-task-accordion
       [childTasks]="element.childSystemTasks ?? []"
     ></app-receipt-processing-settings-child-system-task-accordion>
-  </ng-container>
+  }
 </ng-template>

@@ -3,41 +3,45 @@
     <div class="d-flex w-100">
       <div class="d-flex w-50 align-items-center">
         <div class="w-50">
-          <app-input
-            *ngIf="type() === 'text' || type() === 'number'"
-            [label]="'Start ' + label()"
-            [isCurrency]="isCurrency()"
-            [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value.0'"
-            [additionalErrorMessages]="{
-            'invalidValue': 'Start ' + label() + ' is invalid.'
-            }"
-          ></app-input>
-          <app-datepicker
-            *ngIf="type() === 'date'"
-            [label]="'Start ' + label()"
-            [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value.0'"
-            [additionalErrorMessages]="{
-            'invalidValue': 'Start ' + label() + ' is invalid.'
-            }"
-          >
-          </app-datepicker>
+          @if (type() === 'text' || type() === 'number') {
+            <app-input
+              [label]="'Start ' + label()"
+              [isCurrency]="isCurrency()"
+              [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value.0'"
+              [additionalErrorMessages]="{
+              'invalidValue': 'Start ' + label() + ' is invalid.'
+              }"
+            ></app-input>
+          }
+          @if (type() === 'date') {
+            <app-datepicker
+              [label]="'Start ' + label()"
+              [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value.0'"
+              [additionalErrorMessages]="{
+              'invalidValue': 'Start ' + label() + ' is invalid.'
+              }"
+            >
+            </app-datepicker>
+          }
         </div>
         <span class="between-separator">
           and
         </span>
         <div class="w-50">
-          <app-input
-            *ngIf="type() === 'text' || type() === 'number'"
-            [label]="'End ' + label()"
-            [isCurrency]="isCurrency()"
-            [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value.1'"
-          ></app-input>
-          <app-datepicker
-            *ngIf="type() === 'date'"
-            [label]="'End ' + label()"
-            [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value.1'"
-          >
-          </app-datepicker>
+          @if (type() === 'text' || type() === 'number') {
+            <app-input
+              [label]="'End ' + label()"
+              [isCurrency]="isCurrency()"
+              [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value.1'"
+            ></app-input>
+          }
+          @if (type() === 'date') {
+            <app-datepicker
+              [label]="'End ' + label()"
+              [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value.1'"
+            >
+            </app-datepicker>
+          }
         </div>
       </div>
 
@@ -55,23 +59,25 @@
     <div class="d-flex w-100">
       <div class="d-flex w-50 align-items-center">
         <div class="w-50">
-          <app-datepicker
-            *ngIf="type() === 'date'"
-            [label]="'Start ' + label()"
-            [inputFormControl]="startOfMonthFormControl"
-          >
-          </app-datepicker>
+          @if (type() === 'date') {
+            <app-datepicker
+              [label]="'Start ' + label()"
+              [inputFormControl]="startOfMonthFormControl"
+            >
+            </app-datepicker>
+          }
         </div>
         <span class="between-separator">
           and
         </span>
         <div class="w-50">
-          <app-datepicker
-            *ngIf="type() === 'date'"
-            [label]="'End ' + label()"
-            [inputFormControl]="endOfTodayFormControl"
-          >
-          </app-datepicker>
+          @if (type() === 'date') {
+            <app-datepicker
+              [label]="'End ' + label()"
+              [inputFormControl]="endOfTodayFormControl"
+            >
+            </app-datepicker>
+          }
         </div>
       </div>
 
@@ -86,40 +92,44 @@
       </div>
     </div>
   } @else {
-    <app-input
-      *ngIf="type() === 'text' || type() === 'number'"
-      class="w-50"
-      [label]="label()"
-      [isCurrency]="isCurrency()"
-      [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value'"
-    ></app-input>
-    <app-user-autocomplete
-      *ngIf="type() === 'users'"
-      class="w-50"
-      optionValueKey="id"
-      [label]="label()"
-      [multiple]="true"
-      [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value'"
-    ></app-user-autocomplete>
-    <app-datepicker
-      *ngIf="type() === 'date'"
-      class="w-50"
-      [label]="label()"
-      [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value'"
-    >
-    </app-datepicker>
-    <app-autocomlete
-      *ngIf="type() === 'list'"
-      class="w-50"
-      [multiple]="multiple()"
-      [label]="label()"
-      [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value'"
-      [options]="options()"
-      [optionValueKey]="optionValueKey()"
-      [optionFilterKey]="optionFilterKey()"
-      [optionDisplayKey]="optionDisplayKey()"
-    >
-    </app-autocomlete>
+    @if (type() === 'text' || type() === 'number') {
+      <app-input
+        class="w-50"
+        [label]="label()"
+        [isCurrency]="isCurrency()"
+        [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value'"
+      ></app-input>
+    }
+    @if (type() === 'users') {
+      <app-user-autocomplete
+        class="w-50"
+        optionValueKey="id"
+        [label]="label()"
+        [multiple]="true"
+        [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value'"
+      ></app-user-autocomplete>
+    }
+    @if (type() === 'date') {
+      <app-datepicker
+        class="w-50"
+        [label]="label()"
+        [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value'"
+      >
+      </app-datepicker>
+    }
+    @if (type() === 'list') {
+      <app-autocomlete
+        class="w-50"
+        [multiple]="multiple()"
+        [label]="label()"
+        [inputFormControl]="parentForm() | formGet : basePath() + fieldName() + '.value'"
+        [options]="options()"
+        [optionValueKey]="optionValueKey()"
+        [optionFilterKey]="optionFilterKey()"
+        [optionDisplayKey]="optionDisplayKey()"
+      >
+      </app-autocomlete>
+    }
     <app-select
       class="ms-2 w-50"
       label="Operation"

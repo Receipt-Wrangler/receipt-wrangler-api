@@ -69,18 +69,16 @@
         <span>{{ commentControl?.value?.comment }}</span>
       </div>
     </div>
-    <ng-container
-      *ngIf="
-        commentControl?.value?.userId?.toString() === loggedInUserId()
-         && (mode() === formMode.add || (mode() === formMode.edit && canDeleteComments()))
-         && !isLastCommentLocked()
-      "
-    >
+    @if (
+      commentControl?.value?.userId?.toString() === loggedInUserId()
+      && (mode() === formMode.add || (mode() === formMode.edit && canDeleteComments()))
+      && !isLastCommentLocked()
+    ) {
       <app-delete-button
         data-testid="comment-delete"
         (clicked)="deleteComment(commentIndex)"
       ></app-delete-button>
-    </ng-container>
+    }
   </div>
 </ng-template>
 
@@ -97,10 +95,12 @@
 </ng-template>
 
 <ng-template #date let-comment="comment">
-  <small *ngIf="comment?.updatedAt">
-    <span> - </span>
-    {{ comment?.updatedAt | appDate : "medium" }}
-  </small>
+  @if (comment?.updatedAt) {
+    <small>
+      <span> - </span>
+      {{ comment?.updatedAt | appDate : "medium" }}
+    </small>
+  }
 </ng-template>
 
 <ng-template #add>

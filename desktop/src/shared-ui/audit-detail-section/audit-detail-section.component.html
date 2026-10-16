@@ -1,25 +1,30 @@
-<ng-container *ngIf="formMode() !== FormMode.add">
+@if (formMode() !== FormMode.add) {
   <app-form-section
     [indent]="indent()"
     headerText="Audit Details"
   >
     <div class="d-flex flex-column mb-3">
-  <span
-    *ngIf="data?.createdBy || data?.createdByString"
-    class="mb-1"
-  >
-    Added by:
-    <ng-container *ngIf="data?.createdByString">{{ data?.createdByString }}</ng-container>
-    <ng-container *ngIf="data?.createdBy">{{ (data?.createdBy?.toString() | user)?.displayName }}</ng-container>
-  </span>
+  @if (data?.createdBy || data?.createdByString) {
+    <span
+      class="mb-1"
+    >
+      Added by:
+      @if (data?.createdByString) {
+        {{ data?.createdByString }}
+      }
+      @if (data?.createdBy) {
+        {{ (data?.createdBy?.toString() | user)?.displayName }}
+      }
+    </span>
+  }
       <span class="mb-1">Added at: {{ data?.createdAt | appDate : "medium" }}</span>
       <span>Updated at: {{ data?.updatedAt | appDate : "medium" }}</span>
-      <ng-container *ngIf="data?.resolvedDate">
+      @if (data?.resolvedDate) {
     <span class="mt-2">
       Resolved at:
       {{ data?.resolvedDate | appDate : "medium" }}
     </span>
-      </ng-container>
+      }
     </div>
   </app-form-section>
-</ng-container>
+}

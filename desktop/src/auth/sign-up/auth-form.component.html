@@ -22,13 +22,13 @@
       <form [formGroup]="form" (ngSubmit)="submit()">
         <!-- Form Fields -->
         <div class="form-fields">
-          <ng-container *ngIf="isSignUp | async">
+          @if (isSignUp | async) {
             <app-input
               appearance="outline"
               label="Display Name"
               [inputFormControl]="form | formGet : 'displayname'"
             ></app-input>
-          </ng-container>
+          }
 
           <app-input
             appearance="outline"

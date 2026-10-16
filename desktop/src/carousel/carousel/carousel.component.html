@@ -42,32 +42,35 @@
 </carousel>
 
 <ng-template #buttonControls let-i="i">
-  <div *ngIf="!hideButtonControls()" class="row justify-content-center">
-    <app-button
-      class="col-auto"
-      matButtonType="iconButton"
-      icon="zoom_in"
-      tooltip="Zoom In"
-      [disabled]="disabled()"
-      (clicked)="zoomIn()"
-    ></app-button>
-    <app-button
-      class="col-auto"
-      matButtonType="iconButton"
-      icon="zoom_out"
-      tooltip="Zoom Out"
-      [disabled]="disabled()"
-      (clicked)="zoomOut()"
-    ></app-button>
-    <app-button
-      *ngIf="!(mode() | inputReadonly)"
-      class="col-auto"
-      matButtonType="iconButton"
-      icon="delete"
-      tooltip="Remove Image"
-      color="warn"
-      [disabled]="disabled()"
-      (clicked)="emitRemoveButtonClicked(i)"
-    ></app-button>
-  </div>
+  @if (!hideButtonControls()) {
+    <div class="row justify-content-center">
+      <app-button
+        class="col-auto"
+        matButtonType="iconButton"
+        icon="zoom_in"
+        tooltip="Zoom In"
+        [disabled]="disabled()"
+        (clicked)="zoomIn()"
+      ></app-button>
+      <app-button
+        class="col-auto"
+        matButtonType="iconButton"
+        icon="zoom_out"
+        tooltip="Zoom Out"
+        [disabled]="disabled()"
+        (clicked)="zoomOut()"
+      ></app-button>
+      @if (!(mode() | inputReadonly)) {
+        <app-button
+          class="col-auto"
+          matButtonType="iconButton"
+          icon="delete"
+          tooltip="Remove Image"
+          color="warn"
+          [disabled]="disabled()"
+          (clicked)="emitRemoveButtonClicked(i)"
+        ></app-button>
+      }
+    </div>
+  }
 </ng-template>

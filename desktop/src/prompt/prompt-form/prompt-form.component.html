@@ -2,10 +2,11 @@
   [headerText]="formConfig.headerText"
   [headerButtonsTemplate]="headerButtons"
 ></app-form-header>
-<app-audit-detail-section
-  *ngIf="formConfig.mode != FormMode.add"
-  [data]="originalPrompt"
-></app-audit-detail-section>
+@if (formConfig.mode != FormMode.add) {
+  <app-audit-detail-section
+    [data]="originalPrompt"
+  ></app-audit-detail-section>
+}
 <form [formGroup]="form" (ngSubmit)="submit()">
   <app-form-section
     headerText="Details"
@@ -33,18 +34,20 @@
     ></app-textarea>
   </app-form-section>
   <app-form-button-bar [mode]="formConfig.mode">
-    <app-submit-button
-      *ngIf="!(formConfig.mode | inputReadonly)"
-      class="mb-4"
-      [onlyIcon]="false"
-    ></app-submit-button>
+    @if (!(formConfig.mode | inputReadonly)) {
+      <app-submit-button
+        class="mb-4"
+        [onlyIcon]="false"
+      ></app-submit-button>
+    }
   </app-form-button-bar>
 </form>
 
 <ng-template #headerButtons>
-  <app-edit-button
-    *ngIf="formConfig.mode === FormMode.view"
-    color="accent"
-    [buttonRouterLink]="['/system-settings/prompts/' + originalPrompt?.id + '/edit']"
-  ></app-edit-button>
+  @if (formConfig.mode === FormMode.view) {
+    <app-edit-button
+      color="accent"
+      [buttonRouterLink]="['/system-settings/prompts/' + originalPrompt?.id + '/edit']"
+    ></app-edit-button>
+  }
 </ng-template>

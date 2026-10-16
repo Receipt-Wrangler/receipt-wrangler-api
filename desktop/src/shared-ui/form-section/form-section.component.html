@@ -17,11 +17,12 @@
     </div>
 
     <div class="ms-1">
-      <ng-container
-        *ngIf="headerButtonsTemplate"
-        [ngTemplateOutlet]="headerButtonsTemplate"
-      >
-      </ng-container>
+      @if (headerButtonsTemplate) {
+        <ng-container
+          [ngTemplateOutlet]="headerButtonsTemplate"
+        >
+        </ng-container>
+      }
     </div>
   </div>
 </div>

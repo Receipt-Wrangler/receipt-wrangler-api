@@ -14,8 +14,9 @@
     "
     (clicked)="cancelClicked.emit()"
   ></app-cancel-button>
-  <ng-container
-    *ngIf="additionalButtonsTemplate"
-    [ngTemplateOutlet]="additionalButtonsTemplate"
-  ></ng-container>
+  @if (additionalButtonsTemplate) {
+    <ng-container
+      [ngTemplateOutlet]="additionalButtonsTemplate"
+    ></ng-container>
+  }
 </div>

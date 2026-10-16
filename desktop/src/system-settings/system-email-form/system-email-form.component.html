@@ -24,44 +24,48 @@
       [inputFormControl]="form | formGet: 'username'"
       [readonly]="formConfig.mode | inputReadonly"
     ></app-input>
-    <app-input
-      *ngIf="formConfig.mode != FormMode.view"
-      label="Password"
-      [inputFormControl]="form | formGet: 'password'"
-      [showVisibilityEye]="true"
-      [readonly]="formConfig.mode | inputReadonly"
-    ></app-input>
+    @if (formConfig.mode != FormMode.view) {
+      <app-input
+        label="Password"
+        [inputFormControl]="form | formGet: 'password'"
+        [showVisibilityEye]="true"
+        [readonly]="formConfig.mode | inputReadonly"
+      ></app-input>
+    }
     <app-checkbox
       label="Use STARTTLS"
       [inputFormControl]="form | formGet: 'useStartTLS'"
       [readonly]="formConfig.mode | inputReadonly"
     ></app-checkbox>
   </app-form-section>
-  <app-form-section
-    *ngIf="formConfig.mode != FormMode.add"
-    headerText="System Tasks"
-  >
-    <app-task-table
-      [associatedEntityType]="AssociatedEntityType.SystemEmail"
-      [associatedEntityId]="originalSystemEmail.id"
-      [expandedRowTemplate]="expandedRowTemplate"
-    ></app-task-table>
-  </app-form-section>
+  @if (formConfig.mode != FormMode.add) {
+    <app-form-section
+      headerText="System Tasks"
+    >
+      <app-task-table
+        [associatedEntityType]="AssociatedEntityType.SystemEmail"
+        [associatedEntityId]="originalSystemEmail.id"
+        [expandedRowTemplate]="expandedRowTemplate"
+      ></app-task-table>
+    </app-form-section>
+  }
   <app-form-button-bar [mode]="formConfig.mode">
-    <app-submit-button
-      *ngIf="!(formConfig.mode | inputReadonly)"
-      class="mb-4"
-      [onlyIcon]="false"
-    ></app-submit-button>
+    @if (!(formConfig.mode | inputReadonly)) {
+      <app-submit-button
+        class="mb-4"
+        [onlyIcon]="false"
+      ></app-submit-button>
+    }
   </app-form-button-bar>
 </form>
 
 <ng-template #headerButtons>
-  <app-edit-button
-    *ngIf="formConfig.mode == FormMode.view"
-    color="accent"
-    [routerLink]="['/system-settings/system-emails/' + originalSystemEmail.id + '/edit']"
-  ></app-edit-button>
+  @if (formConfig.mode == FormMode.view) {
+    <app-edit-button
+      color="accent"
+      [routerLink]="['/system-settings/system-emails/' + originalSystemEmail.id + '/edit']"
+    ></app-edit-button>
+  }
   <app-button
     color="accent"
     matButtonType="iconButton"

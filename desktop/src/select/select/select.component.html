@@ -30,7 +30,9 @@
           }
         </mat-select-trigger>
       }
-      <mat-option *ngIf="addEmptyOption()" [value]="null"></mat-option>
+      @if (addEmptyOption()) {
+        <mat-option [value]="null"></mat-option>
+      }
       <mat-option
         *ngFor="let option of options(); let i = index"
         [value]="optionValueKey ? option[optionValueKey] : option"

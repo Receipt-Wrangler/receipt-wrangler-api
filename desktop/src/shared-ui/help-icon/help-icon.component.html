@@ -1,8 +1,9 @@
-<mat-icon
-  *ngIf="helpText"
-  class="ms-1"
-  #tooltip="matTooltip"
-  [matTooltip]="helpText"
-  (click)="tooltip.show()"
-  >help</mat-icon
->
+@if (helpText) {
+  <mat-icon
+    class="ms-1"
+    #tooltip="matTooltip"
+    [matTooltip]="helpText"
+    (click)="tooltip.show()"
+    >help</mat-icon
+  >
+}

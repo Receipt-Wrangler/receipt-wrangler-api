@@ -32,7 +32,9 @@
 >
   <mat-list>
     <strong>{{ headerText }}</strong>
-    <mat-list-item *ngIf="map.size === 0">{{ emptyText }}</mat-list-item>
+    @if (map.size === 0) {
+      <mat-list-item>{{ emptyText }}</mat-list-item>
+    }
     <mat-list-item *ngFor="let e of map | keyvalue">
       {{ ($any(e.key) | user)?.displayName }} - {{ $any(e.value) | customCurrency }}
     </mat-list-item>

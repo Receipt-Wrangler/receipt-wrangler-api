@@ -15,17 +15,18 @@
       [inputFormControl]="form | formGet: 'importType'"
       [options]="importTypeOptions"
     ></app-select>
-    <div
-      *ngIf="fileContents"
-      @fadeInOut
-      class="d-flex flex-column"
-    >
-      <h3 class="text-dark">File Contents</h3>
+    @if (fileContents) {
       <div
-        class="json-container"
-        [innerHtml]="fileContents"
-      ></div>
-    </div>
+        @fadeInOut
+        class="d-flex flex-column"
+      >
+        <h3 class="text-dark">File Contents</h3>
+        <div
+          class="json-container"
+          [innerHtml]="fileContents"
+        ></div>
+      </div>
+    }
   </form>
   <app-dialog-footer
     submitButtonTooltip="Import"
@@ -43,11 +44,12 @@
       icon="upload"
       (clicked)="openFileUploadDialog()">
     </app-button>
-    <app-delete-button
-      *ngIf="fileContents"
-      tooltip="Remove file"
-      @fadeInOut
-      (clicked)="clearFileContents()"
-    ></app-delete-button>
+    @if (fileContents) {
+      <app-delete-button
+        tooltip="Remove file"
+        @fadeInOut
+        (clicked)="clearFileContents()"
+      ></app-delete-button>
+    }
   </div>
 </ng-template>

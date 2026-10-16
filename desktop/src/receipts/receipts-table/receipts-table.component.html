@@ -3,14 +3,15 @@
   subtitle="View, filter, and manage this group's receipts."
 >
   <div class="d-flex align-items-center receipts-toolbar">
-    <app-add-button
-      *ngIf="canCreate"
-      class="me-2"
-      data-testid="receipt-add"
-      buttonText="Add Receipt"
-      tooltip="Add Receipt"
-      [buttonRouterLink]="['/receipts/add']"
-    ></app-add-button>
+    @if (canCreate) {
+      <app-add-button
+        class="me-2"
+        data-testid="receipt-add"
+        buttonText="Add Receipt"
+        tooltip="Add Receipt"
+        [buttonRouterLink]="['/receipts/add']"
+      ></app-add-button>
+    }
 
     <!--
       The stepper and the field picker are one control, read left to right as
@@ -77,17 +78,18 @@
       [matBadgeContent]="numFiltersApplied()"
       (clicked)="filterButtonClicked()"
     ></app-button>
-    <app-button
-      *ngIf="(numFiltersApplied() ?? 0) > 0"
-      @fadeInOut
-      class="me-2"
-      data-testid="receipts-filter-reset"
-      icon="restart_alt"
-      matButtonType="iconButton"
-      tooltip="Reset filter"
-      color="accent"
-      (clicked)="resetFilterButtonClicked()"
-    ></app-button>
+    @if ((numFiltersApplied() ?? 0) > 0) {
+      <app-button
+        @fadeInOut
+        class="me-2"
+        data-testid="receipts-filter-reset"
+        icon="restart_alt"
+        matButtonType="iconButton"
+        tooltip="Reset filter"
+        color="accent"
+        (clicked)="resetFilterButtonClicked()"
+      ></app-button>
+    }
 
     @if (selectedReceiptIds().length > 1) {
       <app-queue-start-menu
@@ -148,7 +150,7 @@
         <span>Configure Columns</span>
       </button>
 
-      <ng-container *ngIf="canPollEmail && group?.groupSettings?.emailIntegrationEnabled">
+      @if (canPollEmail && group?.groupSettings?.emailIntegrationEnabled) {
         <button
           *appFeature="'aiPoweredReceipts'"
           mat-menu-item
@@ -158,7 +160,7 @@
           <mat-icon>mail</mat-icon>
           <span>Poll email(s)</span>
         </button>
-      </ng-container>
+      }
 
       @if (selectedReceiptIds().length > 0) {
         <div class="receipts-overflow-menu__label" role="presentation">
@@ -197,13 +199,14 @@
 @if (summaryAtTop()) {
   <ng-container *ngTemplateOutlet="receiptTotals"></ng-container>
 }
-<app-summary-card
-  *ngIf="selectedReceiptIds().length"
-  @fadeInOut
-  headerText="Selected Receipt summary"
-  [receiptIds]="selectedReceiptIds()"
-  [groupId]="selectedGroupId() ?? ''"
-></app-summary-card>
+@if (selectedReceiptIds().length) {
+  <app-summary-card
+    @fadeInOut
+    headerText="Selected Receipt summary"
+    [receiptIds]="selectedReceiptIds()"
+    [groupId]="selectedGroupId() ?? ''"
+  ></app-summary-card>
+}
 
 @if (filterChips().length > 0) {
   <mat-chip-set class="receipt-filter-chips" aria-label="Applied filters">

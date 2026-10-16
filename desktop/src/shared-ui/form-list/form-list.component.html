@@ -1,6 +1,8 @@
 <mat-list role="list">
   <strong class="mb-2">{{ headerText() }}</strong>
-  <div class="mb-2" *ngIf="array().length === 0">{{ nothingToDisplayText() }}</div>
+  @if (array().length === 0) {
+    <div class="mb-2">{{ nothingToDisplayText() }}</div>
+  }
   <mat-list-item
     class="w-100 h-100"
     *ngFor="let item of array(); let index = index; let last = last"
@@ -17,30 +19,34 @@
           }"
         ></ng-template>
       </div>
-      <div *ngIf="editingIndex !== index && !disabled()">
-        <app-edit-button
-          color="accent"
-          (clicked)="onItemEditButtonClicked(index)"
-        ></app-edit-button>
-        <app-delete-button
-          (clicked)="onItemDeleteButtonClicked(index)"
-        ></app-delete-button>
-      </div>
-      <div *ngIf="editingIndex === index" class="d-flex ms-2 w-25">
-        <app-submit-button
-          tooltip="Done"
-          [onlyIcon]="true"
-          [type]="'button'"
-          (clicked)="onDoneButtonClicked(index)"
-        ></app-submit-button>
-        <app-cancel-button
-          (clicked)="onItemCancelButtonClicked(index)"
-        ></app-cancel-button>
-      </div>
+      @if (editingIndex !== index && !disabled()) {
+        <div>
+          <app-edit-button
+            color="accent"
+            (clicked)="onItemEditButtonClicked(index)"
+          ></app-edit-button>
+          <app-delete-button
+            (clicked)="onItemDeleteButtonClicked(index)"
+          ></app-delete-button>
+        </div>
+      }
+      @if (editingIndex === index) {
+        <div class="d-flex ms-2 w-25">
+          <app-submit-button
+            tooltip="Done"
+            [onlyIcon]="true"
+            [type]="'button'"
+            (clicked)="onDoneButtonClicked(index)"
+          ></app-submit-button>
+          <app-cancel-button
+            (clicked)="onItemCancelButtonClicked(index)"
+          ></app-cancel-button>
+        </div>
+      }
     </div>
-    <ng-container *ngIf="!last">
+    @if (!last) {
       <hr />
-    </ng-container>
+    }
   </mat-list-item>
   <div class="w-50">
     <app-button

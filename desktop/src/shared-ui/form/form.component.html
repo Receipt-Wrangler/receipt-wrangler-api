@@ -8,21 +8,23 @@
     <ng-template [ngTemplateOutlet]="formTemplate()"></ng-template>
   </div>
   <app-form-button-bar [mode]="formConfig().mode">
-    <app-submit-button
-      *ngIf="!(formConfig().mode | inputReadonly)"
-      class="mb-3"
-      [disabled]="submitButtonDisabled()"
-      [onlyIcon]="false"
-    ></app-submit-button>
+    @if (!(formConfig().mode | inputReadonly)) {
+      <app-submit-button
+        class="mb-3"
+        [disabled]="submitButtonDisabled()"
+        [onlyIcon]="false"
+      ></app-submit-button>
+    }
   </app-form-button-bar>
 </form>
 
 <ng-template #headerButtonsTemplate>
-  <app-edit-button
-    *ngIf="(formConfig().mode | inputReadonly) && canEdit()"
-    color="accent"
-    [buttonRouterLink]="editButtonRouterLink()"
-    [buttonQueryParams]="editButtonQueryParams()"
-  >
-  </app-edit-button>
+  @if ((formConfig().mode | inputReadonly) && canEdit()) {
+    <app-edit-button
+      color="accent"
+      [buttonRouterLink]="editButtonRouterLink()"
+      [buttonQueryParams]="editButtonQueryParams()"
+    >
+    </app-edit-button>
+  }
 </ng-template>

@@ -14,9 +14,11 @@
       (click)="emitClicked($event)"
     >
       <div class="d-flex align-items-center">
-        <mat-icon *ngIf="icon" class="me-1">
-          {{ icon }}
-        </mat-icon>
+        @if (icon) {
+          <mat-icon class="me-1">
+            {{ icon }}
+          </mat-icon>
+        }
         <span>
           <strong>
             {{ buttonText() }}
@@ -41,9 +43,11 @@
       (click)="emitClicked($event)"
     >
       <div class="d-flex align-items-center">
-        <mat-icon *ngIf="icon" class="me-1">
-          {{ icon }}
-        </mat-icon>
+        @if (icon) {
+          <mat-icon class="me-1">
+            {{ icon }}
+          </mat-icon>
+        }
         <span>
           <strong>
             {{ buttonText() }}
@@ -67,10 +71,14 @@
       [matBadge]="matBadgeContent()"
       (click)="emitClicked($event)"
     >
-      <mat-icon *ngIf="customIcon" [svgIcon]="customIcon"></mat-icon>
-      <mat-icon *ngIf="icon">
-        {{ icon }}
-      </mat-icon>
+      @if (customIcon) {
+        <mat-icon [svgIcon]="customIcon"></mat-icon>
+      }
+      @if (icon) {
+        <mat-icon>
+          {{ icon }}
+        </mat-icon>
+      }
     </button>
   }
 }

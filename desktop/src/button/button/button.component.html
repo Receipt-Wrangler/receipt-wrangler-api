@@ -1,73 +1,76 @@
-<ng-container [ngSwitch]="matButtonType()">
-  <button
-    mat-button
-    *ngSwitchCase="'basic'"
-    [class]="buttonClass()"
-    [type]="type()"
-    [color]="color()"
-    [disabled]="disabled()"
-    [matTooltip]="tooltip()"
-    [routerLink]="buttonRouterLink()"
-    [queryParams]="buttonQueryParams()"
-    [matBadgeColor]="matBadgeColor()"
-    [matBadge]="matBadgeContent()"
-    (click)="emitClicked($event)"
-  >
-    <div class="d-flex align-items-center">
-      <mat-icon *ngIf="icon" class="me-1">
+@switch (matButtonType()) {
+  @case ('basic') {
+    <button
+      mat-button
+      [class]="buttonClass()"
+      [type]="type()"
+      [color]="color()"
+      [disabled]="disabled()"
+      [matTooltip]="tooltip()"
+      [routerLink]="buttonRouterLink()"
+      [queryParams]="buttonQueryParams()"
+      [matBadgeColor]="matBadgeColor()"
+      [matBadge]="matBadgeContent()"
+      (click)="emitClicked($event)"
+    >
+      <div class="d-flex align-items-center">
+        <mat-icon *ngIf="icon" class="me-1">
+          {{ icon }}
+        </mat-icon>
+        <span>
+          <strong>
+            {{ buttonText() }}
+          </strong>
+        </span>
+      </div>
+    </button>
+  }
+
+  @case ('matRaisedButton') {
+    <button
+      mat-raised-button
+      [class]="buttonClass()"
+      [type]="type()"
+      [color]="color()"
+      [disabled]="disabled()"
+      [matTooltip]="tooltip()"
+      [matBadgeColor]="matBadgeColor()"
+      [matBadge]="matBadgeContent()"
+      [routerLink]="buttonRouterLink()"
+      [queryParams]="buttonQueryParams()"
+      (click)="emitClicked($event)"
+    >
+      <div class="d-flex align-items-center">
+        <mat-icon *ngIf="icon" class="me-1">
+          {{ icon }}
+        </mat-icon>
+        <span>
+          <strong>
+            {{ buttonText() }}
+          </strong>
+        </span>
+      </div>
+    </button>
+  }
+
+  @case ('iconButton') {
+    <button
+      mat-icon-button
+      [class]="buttonClass()"
+      [type]="type()"
+      [color]="color()"
+      [disabled]="disabled()"
+      [routerLink]="buttonRouterLink()"
+      [queryParams]="buttonQueryParams()"
+      [matTooltip]="tooltip()"
+      [matBadgeColor]="matBadgeColor()"
+      [matBadge]="matBadgeContent()"
+      (click)="emitClicked($event)"
+    >
+      <mat-icon *ngIf="customIcon" [svgIcon]="customIcon"></mat-icon>
+      <mat-icon *ngIf="icon">
         {{ icon }}
       </mat-icon>
-      <span>
-        <strong>
-          {{ buttonText() }}
-        </strong>
-      </span>
-    </div>
-  </button>
-
-  <button
-    mat-raised-button
-    *ngSwitchCase="'matRaisedButton'"
-    [class]="buttonClass()"
-    [type]="type()"
-    [color]="color()"
-    [disabled]="disabled()"
-    [matTooltip]="tooltip()"
-    [matBadgeColor]="matBadgeColor()"
-    [matBadge]="matBadgeContent()"
-    [routerLink]="buttonRouterLink()"
-    [queryParams]="buttonQueryParams()"
-    (click)="emitClicked($event)"
-  >
-    <div class="d-flex align-items-center">
-      <mat-icon *ngIf="icon" class="me-1">
-        {{ icon }}
-      </mat-icon>
-      <span>
-        <strong>
-          {{ buttonText() }}
-        </strong>
-      </span>
-    </div>
-  </button>
-
-  <button
-    mat-icon-button
-    *ngSwitchCase="'iconButton'"
-    [class]="buttonClass()"
-    [type]="type()"
-    [color]="color()"
-    [disabled]="disabled()"
-    [routerLink]="buttonRouterLink()"
-    [queryParams]="buttonQueryParams()"
-    [matTooltip]="tooltip()"
-    [matBadgeColor]="matBadgeColor()"
-    [matBadge]="matBadgeContent()"
-    (click)="emitClicked($event)"
-  >
-    <mat-icon *ngIf="customIcon" [svgIcon]="customIcon"></mat-icon>
-    <mat-icon *ngIf="icon">
-      {{ icon }}
-    </mat-icon>
-  </button>
-</ng-container>
+    </button>
+  }
+}

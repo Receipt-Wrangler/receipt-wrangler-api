@@ -1,21 +1,21 @@
 @let customFieldValue = value();
 
 @if (customFieldValue) {
-  <ng-container [ngSwitch]="customField()?.type">
-    <ng-container *ngSwitchCase="CustomFieldType.Currency">
+  @switch (customField()?.type) {
+    @case (CustomFieldType.Currency) {
       {{ currencyValue() | customCurrency }}
-    </ng-container>
-    <ng-container *ngSwitchCase="CustomFieldType.Date">
+    }
+    @case (CustomFieldType.Date) {
       {{ customFieldValue.dateValue | appDate: "mediumDate" : "calendar" }}
-    </ng-container>
-    <ng-container *ngSwitchCase="CustomFieldType.Text">
+    }
+    @case (CustomFieldType.Text) {
       {{ customFieldValue.stringValue }}
-    </ng-container>
-    <ng-container *ngSwitchCase="CustomFieldType.Select">
+    }
+    @case (CustomFieldType.Select) {
       {{ selectedOptionValue() }}
-    </ng-container>
-    <ng-container *ngSwitchCase="CustomFieldType.Boolean">
+    }
+    @case (CustomFieldType.Boolean) {
       {{ customFieldValue.booleanValue ? "Yes" : "No" }}
-    </ng-container>
-  </ng-container>
+    }
+  }
 }

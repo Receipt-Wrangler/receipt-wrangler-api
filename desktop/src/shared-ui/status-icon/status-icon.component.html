@@ -1,8 +1,8 @@
-<ng-container [ngSwitch]="taskStatus()">
-  <ng-container *ngSwitchCase="SystemTaskStatus.Succeeded">
+@switch (taskStatus()) {
+  @case (SystemTaskStatus.Succeeded) {
     <mat-icon class="success-icon" fontIcon="task_alt"></mat-icon>
-  </ng-container>
-  <ng-container *ngSwitchCase="SystemTaskStatus.Failed">
+  }
+  @case (SystemTaskStatus.Failed) {
     <mat-icon class="error-icon" fontIcon="error_outline"></mat-icon>
-  </ng-container>
-</ng-container>
+  }
+}

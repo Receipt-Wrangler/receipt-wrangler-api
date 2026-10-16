@@ -1,15 +1,23 @@
 @let customField = (formGroup().value.customFieldId ?? 0)| customField: customFields();
 @let label = customField?.name ?? '';
 
-<ng-container
-  [ngSwitch]="customField?.type ?? ''"
->
-  <ng-container *ngSwitchCase="CustomFieldType.Currency" [ngTemplateOutlet]="currency"></ng-container>
-  <ng-container *ngSwitchCase="CustomFieldType.Date" [ngTemplateOutlet]="date"></ng-container>
-  <ng-container *ngSwitchCase="CustomFieldType.Text" [ngTemplateOutlet]="text"></ng-container>
-  <ng-container *ngSwitchCase="CustomFieldType.Select" [ngTemplateOutlet]="select"></ng-container>
-  <ng-container *ngSwitchCase="CustomFieldType.Boolean" [ngTemplateOutlet]="boolean"></ng-container>
-</ng-container>
+@switch (customField?.type ?? '') {
+  @case (CustomFieldType.Currency) {
+    <ng-container [ngTemplateOutlet]="currency"></ng-container>
+  }
+  @case (CustomFieldType.Date) {
+    <ng-container [ngTemplateOutlet]="date"></ng-container>
+  }
+  @case (CustomFieldType.Text) {
+    <ng-container [ngTemplateOutlet]="text"></ng-container>
+  }
+  @case (CustomFieldType.Select) {
+    <ng-container [ngTemplateOutlet]="select"></ng-container>
+  }
+  @case (CustomFieldType.Boolean) {
+    <ng-container [ngTemplateOutlet]="boolean"></ng-container>
+  }
+}
 
 <ng-template #currency>
   <app-input

@@ -4,9 +4,11 @@
   'warning-background': type() === 'warning',
   }"
 >
-  <ng-container [ngSwitch]="type()">
-    <ng-container *ngSwitchCase="'warning'" [ngTemplateOutlet]="warningHeader"></ng-container>
-  </ng-container>
+  @switch (type()) {
+    @case ('warning') {
+      <ng-container [ngTemplateOutlet]="warningHeader"></ng-container>
+    }
+  }
   {{ message() }}
 </div>
 

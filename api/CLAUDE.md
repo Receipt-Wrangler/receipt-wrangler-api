@@ -158,11 +158,25 @@ pre-installed binary works.
 - `./generate-client.sh mobile <output-dir>` - Generate Dart Dio client
 
 ### Go Toolchain
-- Requires **Go 1.26.8+** — `api/go.mod` declares `go 1.26.8`, which `golang.org/x/crypto v0.56.0`
-  forces (it declares `go 1.26.0`). The MCP `github.com/modelcontextprotocol/go-sdk` sets a lower,
-  1.25 minimum.
+- Requires **Go 1.26.9+** — `api/go.mod` declares `go 1.26.9`. No module forces that patch level
+  (`golang.org/x/crypto` and `x/net` declare `go 1.26.0`; the MCP `go-sdk` sets 1.25); it is set so
+  no build can run on a standard library with the 13 advisories fixed in 1.26.9 (`net/http` HTTP/2,
+  `html/template`, …). Raise it again when a Go patch release fixes stdlib advisories — Dependabot
+  does not surface those, only `govulncheck` does.
   Docker images and CI containers use `golang:1.26-trixie`, which currently resolves to the same
-  digest as `1.26.8-trixie` and so satisfies the directive without a toolchain download.
+  digest as `1.26.9-trixie`. Check that before raising the directive: the official image sets
+  `GOTOOLCHAIN=local`, so a directive ahead of the image fails the build instead of downloading.
+- **Vulnerability scan:** `go install golang.org/x/vuln/cmd/govulncheck@latest`, then from `api/`
+  `govulncheck -show verbose ./...` (confirm the "scanned … the go1.26.x standard library" line names
+  the version you expect) and `govulncheck -scan module` for the reachability-blind view Dependabot
+  takes. Known residuals, both accepted:
+  - **GO-2026-5932** (`x/crypto/openpgp` unmaintained) — no fix exists and nothing imports it;
+    module scan only.
+  - **`github.com/xuri/excelize/v2` v2.11.0** — 15 GHSA advisories (parsing panics / unbounded
+    allocations) whose fixes are only on excelize's untagged master as of 2026-10. Left until a tagged
+    release past 2026-10-03 exists; production only *writes* XLSX (`excelize.NewFile` in
+    `internal/reporting/render/xlsx.go`) and reads files back only in tests. These are GHSA-only, so
+    they show in Dependabot but not in `govulncheck`.
 
 ## Architecture Overview
 

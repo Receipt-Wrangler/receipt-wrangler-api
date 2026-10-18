@@ -2216,6 +2216,19 @@ API cannot write a version 1 row, so that path is covered by the Go service test
 paged response to its own task with `page.route` + `route.fetch()`, so the row is still the real
 server's output while other specs' tasks stay out of the way.
 
+## Group email settings — Require Signed Sender
+
+`group-settings-email` (inside the group settings page, gated on `app.groups.update-settings`) has a
+**"Require Signed Sender (DKIM)"** `app-checkbox` bound to `emailRequireSignedSender`; see
+`api/CLAUDE.md` → "Email ingestion (IMAP)" → "Sender verification (DKIM)".
+
+- **It is seeded `?? true`**, the server's default, and the parent form (`group-settings.component.ts`)
+  declares it `true`. The form submits `form.value`, so this control is **always** sent; an unset value
+  defaulting to `false` would silently switch the check off on the next save. Pinned by
+  "should keep the signed sender check on when the settings omit it".
+- Unlike "Process Email Body Text", it stays editable while email integration is off, so an admin can
+  decide on it before turning integration on.
+
 ## Quick Scan Configuration
 
 - **Group receipt settings** (`src/group/group-receipt-settings/`) has a **Quick Scan** section: per

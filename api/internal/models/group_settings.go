@@ -17,10 +17,10 @@ type GroupSettings struct {
 	Prompt                      *Prompt                       `json:"prompt"`
 	FallbackPromptId            *uint                         `json:"fallbackPromptId"`
 	FallbackPrompt              *Prompt                       `json:"fallbackPrompt"`
-}
-
-type GroupSettingsWithSystemEmailPassword struct {
-	BaseModel
-	GroupSettings
-	SystemEmail SystemEmailWithPassword `json:"systemEmail"`
+	// EmailRequireSignedSender makes the poller accept an email only when it
+	// carries a valid DKIM signature from its From domain. AutoMigrate backfills
+	// existing rows with the default. Because the column has a default, GORM
+	// omits a false value on Create, so no create path may rely on setting it
+	// false; updates write it explicitly.
+	EmailRequireSignedSender bool `gorm:"not null; default:true" json:"emailRequireSignedSender"`
 }

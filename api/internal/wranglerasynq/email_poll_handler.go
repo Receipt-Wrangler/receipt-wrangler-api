@@ -16,7 +16,7 @@ func HandleEmailPollTask(context context.Context, task *asynq.Task) error {
 
 	if payload == nil {
 		groupIds := make([]string, 0)
-		return CallClient(true, groupIds)
+		return PollEmail(true, groupIds)
 	}
 
 	var emailPollTaskPayload EmailPollTaskPayload
@@ -26,5 +26,5 @@ func HandleEmailPollTask(context context.Context, task *asynq.Task) error {
 		return err
 	}
 
-	return CallClient(emailPollTaskPayload.PollAllGroups, emailPollTaskPayload.GroupIds)
+	return PollEmail(emailPollTaskPayload.PollAllGroups, emailPollTaskPayload.GroupIds)
 }

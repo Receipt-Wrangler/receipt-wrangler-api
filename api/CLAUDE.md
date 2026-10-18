@@ -26,8 +26,8 @@ the project's Docker images (and `set-up-dependencies.sh`) assume **Debian** (`g
   repos only ship ImageMagick **6** (`libmagickwand-dev` = IM6) and have no IM7 package, so
   `set-up-dependencies.sh`'s `libmagickwand-7.q16-dev` isn't installable and the Go build fails to
   link. **IM7 must be built from source.**
-- `set-up-dependencies.sh` also installs heavy Python (torch, easyocr) used only by the **IMAP email
-  client**, not the Go server. **Skip it** — install just the native libs below.
+- `set-up-dependencies.sh` also installs heavy Python (torch, easyocr) used only by the optional
+  **EasyOCR** engine, not to boot the Go server. **Skip it** — install just the native libs below.
 
 **Step 1 — Start Redis** (installed but not running by default):
 ```bash
@@ -144,7 +144,6 @@ pre-installed binary works.
 ### Testing
 - `go test -v ./...` - Run all Go tests with verbose output
 - `go test -coverprofile=coverage.out -covermode=atomic -v ./...` - Run tests with coverage
-- `python3 -m unittest discover -s ./imap-client` - Run Python IMAP client tests
 
 ### Seeding test data
 - `RW_API_KEY='key.1.<id>.<secret>' node dev/seed-reporting-data.mjs` - Seed a realistic, high-volume
@@ -183,7 +182,7 @@ pre-installed binary works.
 ### Core Structure
 - **main.go** - Application entry point, initializes logging, config, database, and starts HTTP server
 - **internal/** - Core application code organized by domain
-- **imap-client/** - Python-based email processing client
+- **internal/emailclient/** - IMAP, MIME parsing, routing and DKIM for email ingestion
 
 ### Key Directories
 - **internal/handlers/** - HTTP request handlers for each API endpoint
@@ -331,6 +330,153 @@ When working with tests in this codebase, follow these critical requirements:
 - ImageMagick integration for image processing and format conversion
 - Supports HEIC format conversion to standard image formats
 - Python dependencies for additional image processing capabilities
+
+## Email ingestion (IMAP)
+
+Groups receive receipts by email: a System Email (an IMAP account) is polled, each unread message is
+routed to the groups reading that mailbox, and every attachment (or the body) becomes an
+`EmailProcessTaskPayload` for `HandleEmailProcessTask`. That handler, the payload, the temp sweeper,
+the source-file endpoints and rerun are all **downstream and unchanged** by how the mail is read.
+
+This used to be a Python client (`api/imap-client/`, run with `exec`). It was ported to Go and
+deleted. **Python is still installed** — the optional EasyOCR engine (`services/ocr.go`) needs it,
+the venv and `PYTHONPATH` — so do not strip those from the Dockerfiles.
+
+- **`internal/emailclient/`** imports no repositories, asynq or config, so it tests without a DB:
+  - `mailbox.go` — `Connector` / `Mailbox` over `emersion/go-imap/v2` (pinned `v2.0.0-beta.8`; v2 has
+    been beta since 2023 and its API surface used here is small). Implicit TLS by default, STARTTLS
+    when `UseStartTLS`, always with certificate verification; 30s dial, and a **2-minute idle
+    deadline pushed forward on every read and write**, so a hung server cannot stall a poll while a
+    large download that keeps moving is never cut off.
+  - `parse.go` — `ParseMessage` / `ParseHeaderFields` over `emersion/go-message` (plus its `charset`
+    subpackage, which is what decodes windows-1252, ISO-8859-x and friends).
+  - `routing.go` — `Route`, `SenderAllowed`, `SubjectAllowed`.
+  - `dkim.go` — `VerifySender` over `emersion/go-msgauth/dkim`, `SameOrganizationalDomain` over
+    `golang.org/x/net/publicsuffix`.
+- **Orchestration** is `wranglerasynq/email_poll.go` (`emailPoller`), entered through `PollEmail` in
+  `email.go` from both the cron poll and `POST /group/{id}/pollGroupEmail`. Its three seams —
+  `connect`, `lookupTXT`, `enqueue` — are fields, and `newEmailPoller` is a package variable so tests
+  drive `PollEmail` end to end with fakes.
+
+### What happens to each message
+
+Nothing is fetched with `RFC822`, which sets `\Seen` as a side effect: headers come from
+`BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)]` and bodies from `BODY.PEEK[]`, so **a message only becomes
+read once it is finished with**. The old client's `RFC822` fetch marked a whole batch read before
+processing it, so any exception lost every email in it.
+
+| Case | Outcome |
+|---|---|
+| matches no group | **left unread**; only its headers are ever fetched |
+| larger than 50 MB (`RFC822.SIZE`) | failed activity, marked read, body never downloaded |
+| unparseable, no `From`, or more than one `From` address | failed activity, marked read |
+| DKIM check temporarily impossible (DNS) | left unread, nothing recorded — retried next poll |
+| DKIM fails, for a group requiring it | failed activity **for that group**; other matched groups continue |
+| an attachment fails conversion | failed activity naming it; the email's other attachments continue |
+| every attachment failed | marked read, **no fallback to the body** (it would make a receipt without its image) |
+| nothing to process (no allowed attachment, no body) | marked read silently — as before |
+| queued | marked read |
+| the queue (Redis) errors | left unread and the mailbox is abandoned for this poll |
+
+A **failed activity** is a FAILED `EMAIL_READ` (`AssociatedEntityType: SYSTEM_EMAIL`, the admin
+System Tasks page) with a FAILED `EMAIL_UPLOAD` child per affected group carrying `GroupId` — the
+child is what the group's activity feed lists (`repositories/system_task.go`). It is the same
+parent/child shape a processed email produces, and it has no `AsynqTaskId`, so rerun and the
+source-file controls stay off.
+
+### Routing is per mailbox and per group
+
+`Route` considers **only groups whose `SystemEmailId` is the mailbox the message came from**, each
+judged by its **own** whitelist and regexes. The Python client pooled every mailbox's messages and
+matched them against every group, so a group with an empty whitelist received mail sent to any other
+group's inbox, and whitelists/regexes were unioned before fetching so one group's filters narrowed
+another's. A **manual poll** reads only the requested groups' mailboxes but routes against **every
+enabled group on them** — it used to mark group B's mail read without ever routing it to B.
+
+- Sender comparison is case-insensitive on the parsed address, and a whitelist entry stored as
+  `Name <address>` is reduced to its address. An empty whitelist still allows anyone.
+- Subjects are matched **decoded** (RFC 2047), unanchored like `re.search`.
+- **Subject regexes are Go RE2.** `UpdateGroupSettingsCommand.Validate` compiles each one
+  (`subjectLineRegexes.<i>.regex`, 400). A regex saved before that, using Python-only syntax
+  (lookarounds, backreferences), is logged and treated as non-matching at poll time — it can never
+  fail a poll — so that group's mail stays unread until the regex is fixed.
+
+### Attachments
+
+- **Temp files get random names** (`FileRepository.WriteTempFile`), and the OCR copy is
+  `temp/image-<that name>`. Writing `temp/<sender's filename>` meant two `receipt.pdf`s, or Outlook's
+  `image001.png` in every email, overwrote each other and put one email's image on another email's
+  receipt — possibly in another group. `Attachment.Filename` keeps the sanitized original, which is
+  what download and preview already use; the sweeper and source-file code key on payload paths.
+- **The type is sniffed** (`utils.GetMimeType`), never the declared `Content-Type`, against the same
+  allowlist as before (`image/jpeg|png|heic|bmp|webp|tiff`, `application/pdf`). A PDF labelled
+  `application/octet-stream` is now accepted; a non-image labelled `image/jpeg` is not.
+- Like the old client, a part with **no `Content-Disposition`** is never an attachment, and the
+  filename goes through `utils.SanitizeFileName` (GHSA-h3pr-mhcr-8phg).
+- **Inline images are skipped only when they are decoration**: disposition `inline`, referenced by the
+  HTML body as `cid:<Content-ID>`, **and** under 20 KB (`InlineImageMaxBytes`). Skipping every inline
+  image would drop photos attached from Apple Mail and iOS Mail, which are structurally the same as a
+  signature logo.
+- HTML→text (`StripHtmlTags`) concatenates text nodes exactly as before but drops `<style>` and
+  `<script>` contents, so CSS never reaches the AI prompt. Bodies are charset-decoded; an
+  unknown-charset part is skipped rather than failing the message.
+
+### Sender verification (DKIM)
+
+`GroupSettings.EmailRequireSignedSender` (default **true**, also for upgraded installs — AutoMigrate
+backfills the column) makes the poller accept an email only when it carries a valid DKIM signature
+whose `d=` has the **same organizational domain** as the `From:` address. The command field is a
+`*bool` — omitted leaves it alone — and the swagger field is an optional boolean on both schemas,
+pinned by `commands/email_require_signed_sender_contract_test.go`.
+
+- **The library does the cryptography and the known refusals**: a signature not covering `From`, the
+  `l=` body-length tag, SHA-1, RSA keys under 1024 bits. **Alignment is ours** — the library reports a
+  bulk-mail service's valid signature (`d=sendgrid.net`) as a clean pass.
+- **A message must have exactly one `From:` address** (`ErrAmbiguousFrom`). A signature covers only
+  the bottom-most `From`, so a forged one added above it rides a genuine signature past naive readers.
+  `TestVerifySender_SecondFromHeaderIsNotSigned` shows the signature still verifying on such a message.
+- A temporary DNS failure is `RetryLater` only when the temp-failed signature is **aligned** —
+  retrying a third-party signature cannot change the answer.
+- **It proves the domain, not the person**: `bob@gmail.com` and `eve@gmail.com` are both signed by
+  `gmail.com`; the full address rests on the provider stopping its users impersonating each other.
+- **Upgrade impact:** mail from senders that don't DKIM-sign (some self-hosted servers, some mailing
+  lists) is now rejected, with a failed activity saying why, until an admin unticks "Require Signed
+  Sender (DKIM)" on the group's email settings.
+- Checking `Authentication-Results` instead was considered and rejected: it is only trustworthy as
+  the topmost header from your own provider, which needs per-mailbox configuration and fails open on
+  a provider that does not add one.
+
+### Limits and concurrency
+
+- At most **50 matched messages per mailbox per poll** (`maxMatchedMessagesPerMailboxPoll`);
+  non-matching unread mail does not count, so a backlog can never starve new receipts.
+- **One mailbox failing does not stop the others**; `PollEmail` errors only when every mailbox failed.
+- A per-mailbox **in-process try-lock** skips a mailbox already being polled. Messages stay unread while
+  processed, so the cron poll and a manual poll would otherwise both queue them. It assumes one API
+  process, which is how the monolith runs.
+
+### Connectivity check
+
+`SystemEmailService.CheckEmailConnectivity` calls `emailclient.Connector.CheckConnection` (connect,
+log in, select INBOX, log out) through the package variable `checkEmailConnection`, and reports the
+returned error text on the system task. It used to scrape the last line of `logs/imap-client.log`, a
+file every poll also wrote to, so it could report another mailbox's failure. Still always a 200.
+
+### Tests
+
+- `emailclient/parse_test.go` — the Python suite ported for parity, plus decoding, charsets, dates
+  (a `-0500` date is now converted to UTC rather than relabelled), the `From` rules, sniffing and the
+  inline rule.
+- `emailclient/routing_test.go`, `dkim_test.go` (real RSA keys signed with `dkim.Sign`, a stubbed
+  `lookupTXT`), and `mailbox_test.go` against `go-imap/v2/imapserver/imapmemserver` over implicit TLS
+  and STARTTLS with a self-signed certificate — including that PEEK leaves messages unread, that
+  messages are addressed by UID (an expunge makes UIDs and sequence numbers diverge), and that the
+  zero `Connector` refuses an untrusted certificate.
+- `wranglerasynq/email_poll_test.go` (+ `email_poll_fixture_test.go`: a fake `Mailbox`, recorded
+  enqueues, the real test DB) — every row of the table above, the collision cases, mailbox isolation,
+  the manual-poll routing, the cap, the lock and the payload parity.
+- `services/system_email_test.go`, the setting's repository / handler / command tests.
+- Every fix was mutation-checked: reverting it fails a named test.
 
 ## Email HTML to PDF Rendering
 

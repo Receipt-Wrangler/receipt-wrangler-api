@@ -13,6 +13,14 @@
     [readonly]="formConfig.mode | inputReadonly"
   ></app-checkbox>
 </div>
+<div class="mb-2">
+  <app-checkbox
+    label="Require Signed Sender (DKIM)"
+    helpText="When enabled, an email is only processed if it carries a valid DKIM signature from the sender's domain, which proves the sender address was not forged. Turn off for senders whose mail is not signed."
+    [inputFormControl]="form | formGet : 'emailRequireSignedSender'"
+    [readonly]="formConfig.mode | inputReadonly"
+  ></app-checkbox>
+</div>
 <app-autocomlete
   optionFilterKey="username"
   optionDisplayKey="username"

@@ -176,6 +176,14 @@ export class GroupSettingsEmailComponent
       payload: this.group?.groupSettings?.emailBodyProcessingEnabled,
     });
 
+    // Default to on when the settings omit it: the form always submits this
+    // control, so an unset value would otherwise switch the check off.
+    this.emitFormCommand({
+      path: "emailRequireSignedSender",
+      command: "patchValue",
+      payload: this.group?.groupSettings?.emailRequireSignedSender ?? true,
+    });
+
     const formCommand: FormCommand = {
       path: "systemEmailId",
       command: "patchValue",

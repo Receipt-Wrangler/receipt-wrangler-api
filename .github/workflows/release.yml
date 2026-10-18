@@ -30,11 +30,6 @@ jobs:
           flags: api
           fail_ci_if_error: true
           verbose: true
-      - name: Test imap client
-        run: |
-          . wranglervenv/bin/activate
-          python3 -m unittest discover -s ./imap-client
-        working-directory: ./api
 
   test-desktop:
     runs-on: ubuntu-latest

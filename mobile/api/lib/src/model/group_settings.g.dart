@@ -16,6 +16,8 @@ class _$GroupSettings extends GroupSettings {
   @override
   final bool? emailBodyProcessingEnabled;
   @override
+  final bool? emailRequireSignedSender;
+  @override
   final int? systemEmailId;
   @override
   final SystemEmail? systemEmail;
@@ -52,6 +54,7 @@ class _$GroupSettings extends GroupSettings {
       required this.groupId,
       this.emailIntegrationEnabled,
       this.emailBodyProcessingEnabled,
+      this.emailRequireSignedSender,
       this.systemEmailId,
       this.systemEmail,
       this.emailToRead,
@@ -82,6 +85,7 @@ class _$GroupSettings extends GroupSettings {
         groupId == other.groupId &&
         emailIntegrationEnabled == other.emailIntegrationEnabled &&
         emailBodyProcessingEnabled == other.emailBodyProcessingEnabled &&
+        emailRequireSignedSender == other.emailRequireSignedSender &&
         systemEmailId == other.systemEmailId &&
         systemEmail == other.systemEmail &&
         emailToRead == other.emailToRead &&
@@ -105,6 +109,7 @@ class _$GroupSettings extends GroupSettings {
     _$hash = $jc(_$hash, groupId.hashCode);
     _$hash = $jc(_$hash, emailIntegrationEnabled.hashCode);
     _$hash = $jc(_$hash, emailBodyProcessingEnabled.hashCode);
+    _$hash = $jc(_$hash, emailRequireSignedSender.hashCode);
     _$hash = $jc(_$hash, systemEmailId.hashCode);
     _$hash = $jc(_$hash, systemEmail.hashCode);
     _$hash = $jc(_$hash, emailToRead.hashCode);
@@ -130,6 +135,7 @@ class _$GroupSettings extends GroupSettings {
           ..add('groupId', groupId)
           ..add('emailIntegrationEnabled', emailIntegrationEnabled)
           ..add('emailBodyProcessingEnabled', emailBodyProcessingEnabled)
+          ..add('emailRequireSignedSender', emailRequireSignedSender)
           ..add('systemEmailId', systemEmailId)
           ..add('systemEmail', systemEmail)
           ..add('emailToRead', emailToRead)
@@ -169,6 +175,11 @@ class GroupSettingsBuilder
   bool? get emailBodyProcessingEnabled => _$this._emailBodyProcessingEnabled;
   set emailBodyProcessingEnabled(bool? emailBodyProcessingEnabled) =>
       _$this._emailBodyProcessingEnabled = emailBodyProcessingEnabled;
+
+  bool? _emailRequireSignedSender;
+  bool? get emailRequireSignedSender => _$this._emailRequireSignedSender;
+  set emailRequireSignedSender(bool? emailRequireSignedSender) =>
+      _$this._emailRequireSignedSender = emailRequireSignedSender;
 
   int? _systemEmailId;
   int? get systemEmailId => _$this._systemEmailId;
@@ -251,6 +262,7 @@ class GroupSettingsBuilder
       _groupId = $v.groupId;
       _emailIntegrationEnabled = $v.emailIntegrationEnabled;
       _emailBodyProcessingEnabled = $v.emailBodyProcessingEnabled;
+      _emailRequireSignedSender = $v.emailRequireSignedSender;
       _systemEmailId = $v.systemEmailId;
       _systemEmail = $v.systemEmail?.toBuilder();
       _emailToRead = $v.emailToRead;
@@ -294,6 +306,7 @@ class GroupSettingsBuilder
                 groupId, r'GroupSettings', 'groupId'),
             emailIntegrationEnabled: emailIntegrationEnabled,
             emailBodyProcessingEnabled: emailBodyProcessingEnabled,
+            emailRequireSignedSender: emailRequireSignedSender,
             systemEmailId: systemEmailId,
             systemEmail: _systemEmail?.build(),
             emailToRead: emailToRead,

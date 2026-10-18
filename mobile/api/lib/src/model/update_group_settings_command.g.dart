@@ -14,6 +14,8 @@ class _$UpdateGroupSettingsCommand extends UpdateGroupSettingsCommand {
   @override
   final bool? emailBodyProcessingEnabled;
   @override
+  final bool? emailRequireSignedSender;
+  @override
   final BuiltList<SubjectLineRegex> subjectLineRegexes;
   @override
   final BuiltList<GroupSettingsWhiteListEmail> emailWhiteList;
@@ -34,6 +36,7 @@ class _$UpdateGroupSettingsCommand extends UpdateGroupSettingsCommand {
       {required this.systemEmailId,
       this.emailIntegrationEnabled,
       this.emailBodyProcessingEnabled,
+      this.emailRequireSignedSender,
       required this.subjectLineRegexes,
       required this.emailWhiteList,
       this.emailDefaultReceiptStatus,
@@ -57,6 +60,7 @@ class _$UpdateGroupSettingsCommand extends UpdateGroupSettingsCommand {
         systemEmailId == other.systemEmailId &&
         emailIntegrationEnabled == other.emailIntegrationEnabled &&
         emailBodyProcessingEnabled == other.emailBodyProcessingEnabled &&
+        emailRequireSignedSender == other.emailRequireSignedSender &&
         subjectLineRegexes == other.subjectLineRegexes &&
         emailWhiteList == other.emailWhiteList &&
         emailDefaultReceiptStatus == other.emailDefaultReceiptStatus &&
@@ -71,6 +75,7 @@ class _$UpdateGroupSettingsCommand extends UpdateGroupSettingsCommand {
     _$hash = $jc(_$hash, systemEmailId.hashCode);
     _$hash = $jc(_$hash, emailIntegrationEnabled.hashCode);
     _$hash = $jc(_$hash, emailBodyProcessingEnabled.hashCode);
+    _$hash = $jc(_$hash, emailRequireSignedSender.hashCode);
     _$hash = $jc(_$hash, subjectLineRegexes.hashCode);
     _$hash = $jc(_$hash, emailWhiteList.hashCode);
     _$hash = $jc(_$hash, emailDefaultReceiptStatus.hashCode);
@@ -87,6 +92,7 @@ class _$UpdateGroupSettingsCommand extends UpdateGroupSettingsCommand {
           ..add('systemEmailId', systemEmailId)
           ..add('emailIntegrationEnabled', emailIntegrationEnabled)
           ..add('emailBodyProcessingEnabled', emailBodyProcessingEnabled)
+          ..add('emailRequireSignedSender', emailRequireSignedSender)
           ..add('subjectLineRegexes', subjectLineRegexes)
           ..add('emailWhiteList', emailWhiteList)
           ..add('emailDefaultReceiptStatus', emailDefaultReceiptStatus)
@@ -116,6 +122,11 @@ class UpdateGroupSettingsCommandBuilder
   bool? get emailBodyProcessingEnabled => _$this._emailBodyProcessingEnabled;
   set emailBodyProcessingEnabled(bool? emailBodyProcessingEnabled) =>
       _$this._emailBodyProcessingEnabled = emailBodyProcessingEnabled;
+
+  bool? _emailRequireSignedSender;
+  bool? get emailRequireSignedSender => _$this._emailRequireSignedSender;
+  set emailRequireSignedSender(bool? emailRequireSignedSender) =>
+      _$this._emailRequireSignedSender = emailRequireSignedSender;
 
   ListBuilder<SubjectLineRegex>? _subjectLineRegexes;
   ListBuilder<SubjectLineRegex> get subjectLineRegexes =>
@@ -160,6 +171,7 @@ class UpdateGroupSettingsCommandBuilder
       _systemEmailId = $v.systemEmailId;
       _emailIntegrationEnabled = $v.emailIntegrationEnabled;
       _emailBodyProcessingEnabled = $v.emailBodyProcessingEnabled;
+      _emailRequireSignedSender = $v.emailRequireSignedSender;
       _subjectLineRegexes = $v.subjectLineRegexes.toBuilder();
       _emailWhiteList = $v.emailWhiteList.toBuilder();
       _emailDefaultReceiptStatus = $v.emailDefaultReceiptStatus;
@@ -193,6 +205,7 @@ class UpdateGroupSettingsCommandBuilder
                 systemEmailId, r'UpdateGroupSettingsCommand', 'systemEmailId'),
             emailIntegrationEnabled: emailIntegrationEnabled,
             emailBodyProcessingEnabled: emailBodyProcessingEnabled,
+            emailRequireSignedSender: emailRequireSignedSender,
             subjectLineRegexes: subjectLineRegexes.build(),
             emailWhiteList: emailWhiteList.build(),
             emailDefaultReceiptStatus: emailDefaultReceiptStatus,

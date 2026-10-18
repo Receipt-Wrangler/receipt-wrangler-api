@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **groupId** | **int** | Group foreign key | 
 **emailIntegrationEnabled** | **bool** | Whether email integration is enabled | [optional] 
 **emailBodyProcessingEnabled** | **bool** | Whether email body text processing is enabled (opt-in, default false) | [optional] 
+**emailRequireSignedSender** | **bool** | Whether an email is accepted only when it carries a valid DKIM signature from its From domain (default true). Omitting it on update leaves the stored value unchanged. | [optional] 
 **systemEmailId** | **int** | System email foreign key | [optional] 
 **systemEmail** | [**SystemEmail**](SystemEmail.md) |  | [optional] 
 **emailToRead** | **String** | Email to read | [optional] 

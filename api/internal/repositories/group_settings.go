@@ -72,6 +72,11 @@ func (repository GroupSettingsRepository) UpdateGroupSettings(groupId string, co
 	groupSettings.SystemEmailId = command.SystemEmailId
 	groupSettings.EmailIntegrationEnabled = command.EmailIntegrationEnabled
 	groupSettings.EmailBodyProcessingEnabled = command.EmailBodyProcessingEnabled
+	// Nil means the request left it out, e.g. a client that predates the setting.
+	// The write below is Select("*"), so the loaded value is written back as-is.
+	if command.EmailRequireSignedSender != nil {
+		groupSettings.EmailRequireSignedSender = *command.EmailRequireSignedSender
+	}
 	groupSettings.EmailDefaultReceiptStatus = command.EmailDefaultReceiptStatus
 	groupSettings.EmailDefaultReceiptPaidById = command.EmailDefaultReceiptPaidById
 	groupSettings.SubjectLineRegexes = command.SubjectLineRegexes

@@ -653,6 +653,26 @@ Unchanged: log timestamps, token expiry, `@every` schedules, sort order.
   displays instants in the app zone (see `desktop/CLAUDE.md`). Mobile only carries the regenerated
   client for now; building filters and displaying dates in the app zone is a pending follow-up.
 
+### Email Ingestion (IMAP)
+
+Groups receive receipts by email through an IMAP System Email polled by the API. **Backend +
+desktop**; mobile only carries the regenerated client (it has no group email settings UI).
+
+- **The IMAP client is Go** (`api/internal/emailclient/`). It replaced a Python client
+  (`api/imap-client/`, deleted). **Python stays in the images** for the optional EasyOCR engine.
+- **A message is only marked read once it is finished with** — processed, or recorded as a failed
+  activity. Mail matching no group is left unread. See `api/CLAUDE.md` → "Email ingestion (IMAP)"
+  for the full table.
+- **Routing is per mailbox and per group**: a group only receives mail sent to its own System Email,
+  judged by its own whitelist and regexes.
+- **`emailRequireSignedSender`** (per group, default **true** including on upgrade) requires a valid
+  DKIM signature from the sender's own domain. It is an optional boolean on `GroupSettings` and
+  `UpdateGroupSettingsCommand` — never required, so an older server's payload still parses — and a
+  `*bool` on the command, so a client that omits it leaves it alone. The desktop edits it with a
+  checkbox on the group's email settings.
+- **Subject regexes are Go RE2**, validated on save; a stored Python-only regex is ignored at poll
+  time rather than failing it.
+
 ### State Management Patterns
 - **Backend**: Service layer handles business logic, repositories handle data access
 - **Desktop**: NGXS store with actions/selectors, persistent storage for auth/preferences

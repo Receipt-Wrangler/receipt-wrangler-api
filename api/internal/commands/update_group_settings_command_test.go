@@ -1,8 +1,11 @@
 package commands
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/utils"
+	"strings"
 	"testing"
 )
 
@@ -187,5 +190,69 @@ func TestUpdateGroupSettingsCommand_Validate_MultipleInvalidEmails(t *testing.T)
 }
 
 func ptrUint(v uint) *uint {
+	return &v
+}
+
+func TestUpdateGroupSettingsCommand_Validate_SubjectLineRegexes(t *testing.T) {
+	tests := map[string]struct {
+		regex   string
+		wantErr bool
+	}{
+		"plain text":                     {regex: "Receipt", wantErr: false},
+		"anchored with class":            {regex: `^Receipt #\d+$`, wantErr: false},
+		"case-insensitive flag":          {regex: `(?i)invoice`, wantErr: false},
+		"unclosed group":                 {regex: `(Receipt`, wantErr: true},
+		"python-only lookahead":          {regex: `^(?=Receipt)`, wantErr: true},
+		"python-only backreference":      {regex: `(a)\1`, wantErr: true},
+		"python-only negative lookahead": {regex: `^(?!Spam)`, wantErr: true},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			command := UpdateGroupSettingsCommand{
+				SubjectLineRegexes: []models.SubjectLineRegex{{Regex: "^Valid"}, {Regex: test.regex}},
+			}
+
+			vErr := command.Validate()
+
+			if _, exists := vErr.Errors["subjectLineRegexes.0.regex"]; exists {
+				utils.PrintTestError(t, "valid regex should not produce error", nil)
+			}
+			_, exists := vErr.Errors["subjectLineRegexes.1.regex"]
+			if exists != test.wantErr {
+				utils.PrintTestError(t, exists, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestUpdateGroupSettingsCommand_LoadDataFromRequest_EmailRequireSignedSender(t *testing.T) {
+	tests := map[string]struct {
+		body string
+		want *bool
+	}{
+		"omitted stays nil": {body: `{"emailIntegrationEnabled": false}`, want: nil},
+		"explicit false":    {body: `{"emailRequireSignedSender": false}`, want: ptrBool(false)},
+		"explicit true":     {body: `{"emailRequireSignedSender": true}`, want: ptrBool(true)},
+	}
+
+	for testName, test := range tests {
+		t.Run(testName, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPut, "/", strings.NewReader(test.body))
+			command := UpdateGroupSettingsCommand{}
+
+			if err := command.LoadDataFromRequest(httptest.NewRecorder(), request); err != nil {
+				t.Fatal(err)
+			}
+
+			got := command.EmailRequireSignedSender
+			if (got == nil) != (test.want == nil) || (got != nil && *got != *test.want) {
+				t.Errorf("EmailRequireSignedSender = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func ptrBool(v bool) *bool {
 	return &v
 }

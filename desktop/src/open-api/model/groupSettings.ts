@@ -32,6 +32,10 @@ export interface GroupSettings {
      */
     emailBodyProcessingEnabled?: boolean;
     /**
+     * Whether an email is accepted only when it carries a valid DKIM signature from its From domain (default true). Omitting it on update leaves the stored value unchanged.
+     */
+    emailRequireSignedSender?: boolean;
+    /**
      * System email foreign key
      */
     systemEmailId?: number;

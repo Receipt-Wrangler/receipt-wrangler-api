@@ -58,6 +58,7 @@ describe("GroupSettingsComponent", () => {
       systemEmailId: "",
       emailIntegrationEnabled: false,
       emailBodyProcessingEnabled: false,
+      emailRequireSignedSender: true,
       subjectLineRegexes: [],
       emailWhiteList: [],
       emailDefaultReceiptStatus: "",

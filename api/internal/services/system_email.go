@@ -1,20 +1,19 @@
 package services
 
 import (
-	"bytes"
-	"encoding/json"
 	"gorm.io/gorm"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"receipt-wrangler/api/internal/commands"
+	"receipt-wrangler/api/internal/emailclient"
 	config "receipt-wrangler/api/internal/env"
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/repositories"
 	"receipt-wrangler/api/internal/utils"
-	"regexp"
 	"time"
 )
+
+// checkEmailConnection logs in to the mailbox and selects INBOX. A variable so
+// tests can stand in for the IMAP server.
+var checkEmailConnection = emailclient.Connector{}.CheckConnection
 
 type SystemEmailService struct {
 	BaseService
@@ -63,47 +62,22 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 		command.Password = cleartextPassword
 	}
 
-	commandBytes, err := json.Marshal(command)
-	if err != nil {
-		return models.SystemTask{}, err
-	}
-
-	basePath := config.GetBasePath()
-	path := filepath.Join(basePath, "imap-client", "check_connection.py")
-
-	var out bytes.Buffer
-
-	cmd := exec.Command("python3", path)
-	cmd.Stdout = &out
-	cmd.Stdin = bytes.NewReader(commandBytes)
-	cmd.Env = os.Environ()
-
 	systemTaskCommand.StartedAt = time.Now()
 
-	// Note: We ignore error from cmd.Run to capture the output in the system task, so resulting HTTP status code is always 200
-	err = cmd.Run()
+	// A failed check is still a 200: the outcome is reported on the system task.
+	err := checkEmailConnection(emailclient.Credentials{
+		Host:        command.Host,
+		Port:        command.Port,
+		Username:    command.Username,
+		Password:    command.Password,
+		UseStartTLS: command.UseStartTLS,
+	})
 	if err != nil {
-		imapLogPath := filepath.Join(basePath, "logs", "imap-client.log")
-
-		errorLine, err := utils.ReadLastFileLine(imapLogPath)
-		if err != nil {
-			return models.SystemTask{}, err
-		}
-
-		re := regexp.MustCompile(`\{[^}]*\}(.*)`)
-		matches := re.FindStringSubmatch(errorLine)
-		formattedLogLine := errorLine
-
-		if len(matches) > 1 {
-			formattedLogLine = matches[1]
-		}
-
-		systemTaskCommand.ResultDescription = formattedLogLine
+		systemTaskCommand.ResultDescription = err.Error()
 	} else {
 		systemTaskCommand.Status = models.SYSTEM_TASK_SUCCEEDED
 		systemTaskCommand.ResultDescription = "Connection successful"
 	}
-	err = nil
 
 	now := time.Now()
 	systemTaskCommand.EndedAt = &now
@@ -113,6 +87,7 @@ func (service SystemEmailService) CheckEmailConnectivity(command commands.CheckE
 	}
 
 	return models.SystemTask{
-		Status: systemTaskCommand.Status,
-	}, err
+		Status:            systemTaskCommand.Status,
+		ResultDescription: systemTaskCommand.ResultDescription,
+	}, nil
 }

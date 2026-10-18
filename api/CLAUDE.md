@@ -2784,7 +2784,10 @@ a real paid-by and status — neither field is ever null/empty**. This is why th
   unit-level `TestResolveQuickScan{Categories,Tags}`. **Known gap (follow-up):** resolution is
   **receipt-level only** — item-level categories/tags (`receiptCommand.Items[].Categories/Tags`) aren't
   produced by the default prompt and aren't resolved here, so a future prompt emitting id-only item-level
-  categories would hit the same validation failure.
+  categories would hit the same validation failure. Every AI ingest path must resolve id-only
+  categories/tags before `Validate()`: `QuickScan` uses `resolveQuickScan{Categories,Tags}`;
+  system-initiated paths with no triggering user (email ingest) use
+  `ReceiptService.ResolveIngest{Categories,Tags}` (userId=0). The item-level gap above applies to both.
 
 ## Role-required receipt fields & single-call create
 

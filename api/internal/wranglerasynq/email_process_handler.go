@@ -33,10 +33,6 @@ type EmailProcessTaskPayload struct {
 }
 
 func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
-	db := repositories.GetDB()
-	systemTaskService := services.NewSystemTaskService(nil)
-	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
-	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
 	var payload EmailProcessTaskPayload
 
 	taskId, err := GetTaskIdFromContext(context)
@@ -49,6 +45,18 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 		return HandleError(err)
 	}
 
+	return handleEmailProcessPayload(taskId, payload)
+}
+
+// handleEmailProcessPayload contains the core email ingest logic. It is a
+// separate function so that tests in this package can call it directly without
+// needing a real asynq context (whose task-id key is unexported).
+func handleEmailProcessPayload(taskId string, payload EmailProcessTaskPayload) error {
+	db := repositories.GetDB()
+	systemTaskService := services.NewSystemTaskService(nil)
+	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+
 	hasAttachmentImage := len(payload.ImageForOcrPath) > 0
 
 	var fileBytes []byte
@@ -58,9 +66,10 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 		// empty bytes, and because hasAttachmentImage is derived from the payload
 		// string rather than the file, processing would continue and persist a
 		// zero-byte receipt image carrying the real name and size.
-		fileBytes, err = os.ReadFile(payload.TempFilePath)
-		if err != nil {
-			return HandleError(err)
+		var readErr error
+		fileBytes, readErr = os.ReadFile(payload.TempFilePath)
+		if readErr != nil {
+			return HandleError(readErr)
 		}
 	}
 
@@ -189,6 +198,20 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 	// Attach the group's default custom fields (as empty values) when the group opted into applying
 	// them to server-created receipts. Same helper as quick scan so the two ingest paths cannot drift.
 	err = services.ApplyGroupDefaultCustomFields(nil, command.GroupId, &command)
+	if err != nil {
+		return HandleError(err)
+	}
+
+	// Resolve id-only categories/tags from the AI response. The default prompt instructs the
+	// model to return { Id: N } with no name, which Validate() would reject. This mirrors the
+	// equivalent step in QuickScan (resolveQuickScanCategories/Tags). Ids that don't resolve
+	// (hallucinated or deleted) are dropped rather than failing the whole ingest.
+	receiptService := services.NewReceiptService(nil)
+	command.Categories, err = receiptService.ResolveIngestCategories(command.Categories, command.GroupId)
+	if err != nil {
+		return HandleError(err)
+	}
+	command.Tags, err = receiptService.ResolveIngestTags(command.Tags, command.GroupId)
 	if err != nil {
 		return HandleError(err)
 	}

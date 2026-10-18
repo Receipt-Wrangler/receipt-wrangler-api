@@ -594,6 +594,26 @@ func (service ReceiptService) resolveQuickScanTags(
 	return resolved, nil
 }
 
+// ResolveIngestCategories resolves id-only categories from an AI response by looking up their names
+// from the database. Used by system-initiated ingest paths (email processing) where there is no
+// triggering user (userId=0): a non-member of a non-isolated group is unrestricted, so all existing
+// categories are eligible. Ids that don't resolve (hallucinated / deleted) are dropped, matching the
+// behaviour in QuickScan.
+func (service ReceiptService) ResolveIngestCategories(
+	categories []commands.UpsertCategoryCommand,
+	groupId uint,
+) ([]commands.UpsertCategoryCommand, error) {
+	return service.resolveQuickScanCategories(categories, nil, 0, groupId)
+}
+
+// ResolveIngestTags is the tag counterpart of ResolveIngestCategories.
+func (service ReceiptService) ResolveIngestTags(
+	tags []commands.UpsertTagCommand,
+	groupId uint,
+) ([]commands.UpsertTagCommand, error) {
+	return service.resolveQuickScanTags(tags, nil, 0, groupId)
+}
+
 // resolveAllowedCategoryIds returns the set of category ids the triggering user may see in the group,
 // or unrestricted=true (see-all) when the user bypasses grants (holds app.categories.read) or their
 // group role grants nothing for categories. The returned set is shared grant-cache state and must

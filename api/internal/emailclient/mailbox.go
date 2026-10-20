@@ -14,10 +14,10 @@ import (
 
 const (
 	defaultDialTimeout = 30 * time.Second
-	// defaultIdleTimeout bounds how long any single read or write may stall. It
-	// is pushed forward on every read and write, so a large download that keeps
-	// moving is never cut off, while a server that stops responding is.
-	defaultIdleTimeout = 2 * time.Minute
+	// defaultHandshakeTimeout bounds the implicit-TLS handshake, the one exchange
+	// imapclient does not time itself. Everything after it, imapclient bounds on
+	// its own: 30s for a command write or a response, 5 minutes for a literal.
+	defaultHandshakeTimeout = 30 * time.Second
 	// headerFetchBatchSize keeps each UID FETCH command line short, since a
 	// scattered UID set does not compress into ranges.
 	headerFetchBatchSize = 200
@@ -52,7 +52,30 @@ type Mailbox interface {
 	FetchRaw(uid uint32) ([]byte, error)
 	// MarkSeen sets \Seen on the messages.
 	MarkSeen(uids ...uint32) error
+	// MarkUnseen clears \Seen, handing the messages back to the next poll.
+	MarkUnseen(uids ...uint32) error
 	Close() error
+}
+
+// MessageFetchError is a problem with one message rather than with the session,
+// which stays usable: the server no longer has the message, or would not return
+// it. Any other error from FetchRaw means the session itself failed.
+type MessageFetchError struct {
+	UID uint32
+	// Gone means the server returned nothing for the message, typically because
+	// another client expunged it after it was listed.
+	Gone bool
+	// Temporary means the server asked to be asked again later (UNAVAILABLE).
+	Temporary bool
+	Err       error
+}
+
+func (err *MessageFetchError) Error() string {
+	return fmt.Sprintf("message %d: %s", err.UID, err.Err.Error())
+}
+
+func (err *MessageFetchError) Unwrap() error {
+	return err.Err
 }
 
 // Connector opens IMAP sessions. The zero value is ready for production use.
@@ -62,8 +85,8 @@ type Connector struct {
 	TLSConfig *tls.Config
 	// Dial opens the TCP connection. Nil means a net.Dialer with a 30s timeout.
 	Dial func(network string, address string) (net.Conn, error)
-	// IdleTimeout overrides the per-read/write stall limit.
-	IdleTimeout time.Duration
+	// HandshakeTimeout overrides the limit on the implicit-TLS handshake.
+	HandshakeTimeout time.Duration
 }
 
 // Connect logs in and selects INBOX. Like the Python client it uses implicit TLS
@@ -75,21 +98,20 @@ func (connector Connector) Connect(credentials Credentials) (Mailbox, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn := &idleTimeoutConn{Conn: rawConn, timeout: connector.idleTimeout()}
 
 	tlsConfig := connector.tlsConfig(credentials.Host)
 	options := &imapclient.Options{TLSConfig: tlsConfig}
 
 	var client *imapclient.Client
 	if credentials.UseStartTLS {
-		client, err = imapclient.NewStartTLS(conn, options)
+		client, err = imapclient.NewStartTLS(rawConn, options)
 		if err != nil {
 			rawConn.Close()
 			return nil, err
 		}
 	} else {
-		tlsConn := tls.Client(conn, tlsConfig)
-		if err := tlsConn.Handshake(); err != nil {
+		tlsConn, err := connector.handshake(rawConn, tlsConfig)
+		if err != nil {
 			rawConn.Close()
 			return nil, err
 		}
@@ -127,11 +149,34 @@ func (connector Connector) dial(network string, address string) (net.Conn, error
 	return dialer.Dial(network, address)
 }
 
-func (connector Connector) idleTimeout() time.Duration {
-	if connector.IdleTimeout > 0 {
-		return connector.IdleTimeout
+// handshake runs the implicit-TLS handshake under a deadline, then clears it.
+// From there on imapclient sets its own deadline before every read and write,
+// and waits for the next response with none at all; nothing here may push one
+// onto the connection, or the session dies whenever the poller spends that long
+// between two commands. Clearing this one keeps that true without relying on
+// imapclient to overwrite it.
+func (connector Connector) handshake(conn net.Conn, config *tls.Config) (*tls.Conn, error) {
+	if err := conn.SetDeadline(time.Now().Add(connector.handshakeTimeout())); err != nil {
+		return nil, err
 	}
-	return defaultIdleTimeout
+
+	tlsConn := tls.Client(conn, config)
+	if err := tlsConn.Handshake(); err != nil {
+		return nil, err
+	}
+
+	if err := conn.SetDeadline(time.Time{}); err != nil {
+		return nil, err
+	}
+
+	return tlsConn, nil
+}
+
+func (connector Connector) handshakeTimeout() time.Duration {
+	if connector.HandshakeTimeout > 0 {
+		return connector.HandshakeTimeout
+	}
+	return defaultHandshakeTimeout
 }
 
 func (connector Connector) tlsConfig(host string) *tls.Config {
@@ -209,6 +254,13 @@ func (mailbox *imapMailbox) FetchRaw(uid uint32) ([]byte, error) {
 		BodySection: []*imap.FetchItemBodySection{section},
 	}).Collect()
 	if err != nil {
+		// A NO is the server declining this one message. A BAD is a malformed
+		// command, which would fail for every message alike, so like a broken
+		// connection it is the session's problem.
+		var imapErr *imap.Error
+		if errors.As(err, &imapErr) && imapErr.Type == imap.StatusResponseTypeNo {
+			return nil, &MessageFetchError{UID: uid, Temporary: imapErr.Code == imap.ResponseCodeUnavailable, Err: err}
+		}
 		return nil, err
 	}
 
@@ -220,16 +272,24 @@ func (mailbox *imapMailbox) FetchRaw(uid uint32) ([]byte, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("message %d was not returned by the server", uid)
+	return nil, &MessageFetchError{UID: uid, Gone: true, Err: errors.New("the server did not return it")}
 }
 
 func (mailbox *imapMailbox) MarkSeen(uids ...uint32) error {
+	return mailbox.storeSeen(imap.StoreFlagsAdd, uids)
+}
+
+func (mailbox *imapMailbox) MarkUnseen(uids ...uint32) error {
+	return mailbox.storeSeen(imap.StoreFlagsDel, uids)
+}
+
+func (mailbox *imapMailbox) storeSeen(op imap.StoreFlagsOp, uids []uint32) error {
 	if len(uids) == 0 {
 		return nil
 	}
 
 	return mailbox.client.Store(toUIDSet(uids), &imap.StoreFlags{
-		Op:     imap.StoreFlagsAdd,
+		Op:     op,
 		Silent: true,
 		Flags:  []imap.Flag{imap.FlagSeen},
 	}, nil).Close()
@@ -247,24 +307,4 @@ func toUIDSet(uids []uint32) imap.UIDSet {
 		converted[i] = imap.UID(uid)
 	}
 	return imap.UIDSetNum(converted...)
-}
-
-// idleTimeoutConn pushes a deadline forward before every read and write.
-type idleTimeoutConn struct {
-	net.Conn
-	timeout time.Duration
-}
-
-func (conn *idleTimeoutConn) Read(b []byte) (int, error) {
-	if err := conn.Conn.SetDeadline(time.Now().Add(conn.timeout)); err != nil {
-		return 0, err
-	}
-	return conn.Conn.Read(b)
-}
-
-func (conn *idleTimeoutConn) Write(b []byte) (int, error) {
-	if err := conn.Conn.SetDeadline(time.Now().Add(conn.timeout)); err != nil {
-		return 0, err
-	}
-	return conn.Conn.Write(b)
 }

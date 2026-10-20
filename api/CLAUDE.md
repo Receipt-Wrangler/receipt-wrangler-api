@@ -345,9 +345,14 @@ the venv and `PYTHONPATH` — so do not strip those from the Dockerfiles.
 - **`internal/emailclient/`** imports no repositories, asynq or config, so it tests without a DB:
   - `mailbox.go` — `Connector` / `Mailbox` over `emersion/go-imap/v2` (pinned `v2.0.0-beta.8`; v2 has
     been beta since 2023 and its API surface used here is small). Implicit TLS by default, STARTTLS
-    when `UseStartTLS`, always with certificate verification; 30s dial, and a **2-minute idle
-    deadline pushed forward on every read and write**, so a hung server cannot stall a poll while a
-    large download that keeps moving is never cut off.
+    when `UseStartTLS`, always with certificate verification. 30s dial and a 30s deadline on the
+    implicit-TLS handshake, cleared once it completes. After that imapclient times every exchange
+    itself (30s per command or response, 5 minutes per literal) and waits for the next response with
+    **no** deadline. **Never wrap the connection to push a deadline onto every read.** The first port
+    did, with 2 minutes, and that closed the session whenever the poller spent long enough between
+    two commands. imapclient retries a timed-out read four times at a response boundary, so in
+    practice that was about 8 minutes. `TestMailbox_SurvivesAPauseLongerThanTheHandshakeTimeout`
+    pins it.
   - `parse.go` — `ParseMessage` / `ParseHeaderFields` over `emersion/go-message` (plus its `charset`
     subpackage, which is what decodes windows-1252, ISO-8859-x and friends).
   - `routing.go` — `Route`, `SenderAllowed`, `SubjectAllowed`.
@@ -361,22 +366,39 @@ the venv and `PYTHONPATH` — so do not strip those from the Dockerfiles.
 ### What happens to each message
 
 Nothing is fetched with `RFC822`, which sets `\Seen` as a side effect: headers come from
-`BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)]` and bodies from `BODY.PEEK[]`, so **a message only becomes
-read once it is finished with**. The old client's `RFC822` fetch marked a whole batch read before
-processing it, so any exception lost every email in it.
+`BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)]` and bodies from `BODY.PEEK[]`. The old client's `RFC822`
+fetch marked a whole batch read before processing it, so any exception lost every email in it.
+
+**Each message is planned, then claimed, then acted on** (`planMessage`, then `finishMessage`):
+1. **Plan.** Work out everything the message will cause: the tasks to queue and the failed activities
+   to record. The only side effect is writing attachments to `temp/`.
+2. **Claim.** Mark it read (`MarkSeen`). If that fails, nothing has happened yet, so the mailbox is
+   abandoned for this poll and the message is retried whole.
+3. **Queue, then record.** Failures are recorded last, so a retried message never records one twice.
+
+Claiming first is deliberate. The first port marked a message read only after queuing it, so a queue
+error part-way through, or a failed mark, sent it through again and duplicated the receipts already
+queued. A mailbox that never accepts the mark (a read-only ACL) duplicated them on **every** poll. The
+cost runs the other way: if the process dies between claiming and queuing, that one message is lost
+without a record.
 
 | Case | Outcome |
 |---|---|
 | matches no group | **left unread**; only its headers are ever fetched |
 | larger than 50 MB (`RFC822.SIZE`) | failed activity, marked read, body never downloaded |
+| gone by the time it is fetched (another client expunged it) | skipped, nothing recorded |
+| the server says try later (`NO [UNAVAILABLE]`) | left unread, nothing recorded; the next message is still processed |
+| the server refuses to return it (any other `NO`) | failed activity, marked read: retrying would block every later message, which always comes after it in UID order |
 | unparseable, no `From`, or more than one `From` address | failed activity, marked read |
 | DKIM check temporarily impossible (DNS) | left unread, nothing recorded — retried next poll |
-| DKIM fails, for a group requiring it | failed activity **for that group**; other matched groups continue |
+| DKIM fails, for a group requiring it | failed activity **for that group**, naming the setting to turn off; other matched groups continue |
 | an attachment fails conversion | failed activity naming it; the email's other attachments continue |
 | every attachment failed | marked read, **no fallback to the body** (it would make a receipt without its image) |
 | nothing to process (no allowed attachment, no body) | marked read silently — as before |
 | queued | marked read |
-| the queue (Redis) errors | left unread and the mailbox is abandoned for this poll |
+| the queue (Redis) errors before anything was queued | put back to unread (`MarkUnseen`); the mailbox is abandoned for this poll |
+| the queue errors after part of it was queued, or the unread mark cannot be undone | stays read, failed activity for the groups not queued; the mailbox is abandoned |
+| the session itself fails (connection, a `BAD`) | the mailbox is abandoned; the message is retried |
 
 A **failed activity** is a FAILED `EMAIL_READ` (`AssociatedEntityType: SYSTEM_EMAIL`, the admin
 System Tasks page) with a FAILED `EMAIL_UPLOAD` child per affected group carrying `GroupId` — the
@@ -437,11 +459,19 @@ pinned by `commands/email_require_signed_sender_contract_test.go`.
   `TestVerifySender_SecondFromHeaderIsNotSigned` shows the signature still verifying on such a message.
 - A temporary DNS failure is `RetryLater` only when the temp-failed signature is **aligned** —
   retrying a third-party signature cannot change the answer.
+- **At most 5 signatures are checked** (`maxDkimSignatures`, the topmost ones). Each costs a DNS
+  lookup and a hash of the whole body, in parallel, so a message carrying a thousand
+  `DKIM-Signature` headers would otherwise cost a thousand of each. Over the cap the library returns
+  `ErrTooManySignatures` **along with** the results it did check, and those are judged normally;
+  treating the error as unreadable would reject genuine mail that passed through several signers.
 - **It proves the domain, not the person**: `bob@gmail.com` and `eve@gmail.com` are both signed by
   `gmail.com`; the full address rests on the provider stopping its users impersonating each other.
 - **Upgrade impact:** mail from senders that don't DKIM-sign (some self-hosted servers, some mailing
   lists) is now rejected, with a failed activity saying why, until an admin unticks "Require Signed
   Sender (DKIM)" on the group's email settings.
+- **Exchange and Office 365 mailboxes can fail every message.** They rebuild each message when serving
+  it over IMAP, which can break the body hash of any signature. So the failed activity always ends
+  with `signedSenderHint`, naming the setting to turn off. The default stays on regardless.
 - Checking `Authentication-Results` instead was considered and rejected: it is only trustworthy as
   the topmost header from your own provider, which needs per-mailbox configuration and fails open on
   a provider that does not add one.
@@ -470,11 +500,15 @@ file every poll also wrote to, so it could report another mailbox's failure. Sti
 - `emailclient/routing_test.go`, `dkim_test.go` (real RSA keys signed with `dkim.Sign`, a stubbed
   `lookupTXT`), and `mailbox_test.go` against `go-imap/v2/imapserver/imapmemserver` over implicit TLS
   and STARTTLS with a self-signed certificate — including that PEEK leaves messages unread, that
-  messages are addressed by UID (an expunge makes UIDs and sequence numbers diverge), and that the
-  zero `Connector` refuses an untrusted certificate.
+  messages are addressed by UID (an expunge makes UIDs and sequence numbers diverge), that the
+  zero `Connector` refuses an untrusted certificate, that a session survives a pause, and how
+  `FetchRaw` classifies a vanished message and a `NO` / `NO [UNAVAILABLE]` / `BAD` (a wrapped
+  session that refuses one UID).
 - `wranglerasynq/email_poll_test.go` (+ `email_poll_fixture_test.go`: a fake `Mailbox`, recorded
   enqueues, the real test DB) — every row of the table above, the collision cases, mailbox isolation,
-  the manual-poll routing, the cap, the lock and the payload parity.
+  the manual-poll routing, the cap, the lock and the payload parity. The claim order is pinned by
+  `TestPollEmail_AnEmailIsClaimedBeforeAnythingIsQueuedOrRecorded` and
+  `TestPollEmail_PartlyQueuedEmailIsRecordedAndNeverQueuedTwice`.
 - `services/system_email_test.go`, the setting's repository / handler / command tests.
 - Every fix was mutation-checked: reverting it fails a named test.
 

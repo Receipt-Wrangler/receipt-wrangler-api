@@ -42,9 +42,13 @@ type fakeMailbox struct {
 	messages    map[uint32]*fakeMessage
 	nextUID     uint32
 	rawFetches  []uint32
+	unmarked    []uint32
 	connectErr  error
 	fetchRawErr error
-	markSeenErr error
+	// fetchRawErrs fails FetchRaw for one message only.
+	fetchRawErrs  map[uint32]error
+	markSeenErr   error
+	markUnseenErr error
 }
 
 func newFakeMailbox() *fakeMailbox {
@@ -102,6 +106,9 @@ func (mailbox *fakeMailbox) FetchRaw(uid uint32) ([]byte, error) {
 	if mailbox.fetchRawErr != nil {
 		return nil, mailbox.fetchRawErr
 	}
+	if err := mailbox.fetchRawErrs[uid]; err != nil {
+		return nil, err
+	}
 	return mailbox.messages[uid].raw, nil
 }
 
@@ -117,6 +124,19 @@ func (mailbox *fakeMailbox) MarkSeen(uids ...uint32) error {
 	return nil
 }
 
+func (mailbox *fakeMailbox) MarkUnseen(uids ...uint32) error {
+	mailbox.mu.Lock()
+	defer mailbox.mu.Unlock()
+	mailbox.unmarked = append(mailbox.unmarked, uids...)
+	if mailbox.markUnseenErr != nil {
+		return mailbox.markUnseenErr
+	}
+	for _, uid := range uids {
+		mailbox.messages[uid].seen = false
+	}
+	return nil
+}
+
 func (mailbox *fakeMailbox) Close() error { return nil }
 
 // --- Fixture ------------------------------------------------------------------------
@@ -128,7 +148,10 @@ type pollFixture struct {
 	connects   []emailclient.Credentials
 	enqueued   []EmailProcessTaskPayload
 	enqueueErr error
-	lookupTXT  emailclient.TXTLookup
+	// failEnqueueCall fails only that enqueue call, counting from 1 across polls.
+	failEnqueueCall int
+	enqueueCalls    int
+	lookupTXT       emailclient.TXTLookup
 }
 
 func newPollFixture(t *testing.T) *pollFixture {
@@ -167,8 +190,12 @@ func (fixture *pollFixture) poller() emailPoller {
 		},
 		lookupTXT: func(name string) ([]string, error) { return fixture.lookupTXT(name) },
 		enqueue: func(payload EmailProcessTaskPayload) error {
+			fixture.enqueueCalls++
 			if fixture.enqueueErr != nil {
 				return fixture.enqueueErr
+			}
+			if fixture.enqueueCalls == fixture.failEnqueueCall {
+				return errors.New("redis unavailable")
 			}
 			fixture.enqueued = append(fixture.enqueued, payload)
 			return nil

@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"math/big"
 	"net"
 	"slices"
@@ -67,6 +68,13 @@ func newSelfSignedCert(t *testing.T) (tls.Certificate, *x509.CertPool) {
 // offering STARTTLS.
 func startServer(t *testing.T, startTLS bool) testServer {
 	t.Helper()
+	return startServerWith(t, startTLS, nil)
+}
+
+// startServerWith is startServer with each session passed through wrap, so a
+// test can make the server misbehave.
+func startServerWith(t *testing.T, startTLS bool, wrap func(imapserver.Session) imapserver.Session) testServer {
+	t.Helper()
 	certificate, pool := newSelfSignedCert(t)
 	tlsConfig := &tls.Config{Certificates: []tls.Certificate{certificate}}
 
@@ -79,7 +87,11 @@ func startServer(t *testing.T, startTLS bool) testServer {
 
 	options := &imapserver.Options{
 		NewSession: func(conn *imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
-			return memServer.NewSession(), nil, nil
+			session := memServer.NewSession()
+			if wrap != nil {
+				session = wrap(session)
+			}
+			return session, nil, nil
 		},
 		InsecureAuth: true,
 		Caps:         imap.CapSet{imap.CapIMAP4rev1: {}, imap.CapIMAP4rev2: {}},
@@ -175,6 +187,14 @@ func TestMailbox_UnreadMessagesStayUnreadUntilMarked(t *testing.T) {
 			unseen, _ = mailbox.UnseenUIDs()
 			if !slices.Equal(unseen, []uint32{3}) {
 				t.Errorf("after MarkSeen(1), UnseenUIDs() = %v, want [3]", unseen)
+			}
+
+			if err := mailbox.MarkUnseen(1); err != nil {
+				t.Fatal(err)
+			}
+			unseen, _ = mailbox.UnseenUIDs()
+			if !slices.Equal(unseen, []uint32{1, 3}) {
+				t.Errorf("after MarkUnseen(1), UnseenUIDs() = %v, want [1 3]", unseen)
 			}
 		})
 	}
@@ -282,7 +302,7 @@ func TestConnector_UnresponsiveServerTimesOut(t *testing.T) {
 	}()
 
 	host, port, _ := net.SplitHostPort(listener.Addr().String())
-	connector := Connector{IdleTimeout: 200 * time.Millisecond}
+	connector := Connector{HandshakeTimeout: 200 * time.Millisecond}
 
 	start := time.Now()
 	err = connector.CheckConnection(Credentials{Host: host, Port: port, Username: "u", Password: "p"})
@@ -290,7 +310,7 @@ func TestConnector_UnresponsiveServerTimesOut(t *testing.T) {
 		t.Fatal("CheckConnection() = nil against a silent server")
 	}
 	if elapsed := time.Since(start); elapsed > 5*time.Second {
-		t.Errorf("CheckConnection() took %v, want it bounded by the idle timeout", elapsed)
+		t.Errorf("CheckConnection() took %v, want it bounded by the handshake timeout", elapsed)
 	}
 }
 
@@ -350,5 +370,137 @@ func TestMailbox_AddressesMessagesByUIDNotSequenceNumber(t *testing.T) {
 	unseen, _ = mailbox.UnseenUIDs()
 	if !slices.Equal(unseen, []uint32{2}) {
 		t.Errorf("after MarkSeen(3), UnseenUIDs() = %v, want [2]", unseen)
+	}
+}
+
+func TestMailbox_SurvivesAPauseLongerThanTheHandshakeTimeout(t *testing.T) {
+	server := startServer(t, false)
+	server.deliver(t, receiptFrom("bob@example.com"))
+
+	// imapclient waits for the next response with no deadline at all. A deadline
+	// pushed onto every read, as the first port did, closes the session once the
+	// poller spends long enough between two commands — converting an attachment,
+	// say. imapclient retries a timed-out read up to four times at a response
+	// boundary, so the pause has to outlast four deadlines to show it.
+	connector := server.connector()
+	connector.HandshakeTimeout = 100 * time.Millisecond
+	mailbox, err := connector.Connect(server.credentials(false))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mailbox.Close()
+
+	time.Sleep(time.Second)
+
+	unseen, err := mailbox.UnseenUIDs()
+	if err != nil {
+		t.Fatalf("UnseenUIDs() after a pause = %v, want the session still open", err)
+	}
+	if !slices.Equal(unseen, []uint32{1}) {
+		t.Errorf("UnseenUIDs() = %v, want [1]", unseen)
+	}
+}
+
+func TestMailbox_FetchRawOfAnExpungedMessageIsGone(t *testing.T) {
+	server := startServer(t, false)
+	server.deliver(t, receiptFrom("first@example.com"))
+	second := receiptFrom("second@example.com")
+	server.deliver(t, second)
+
+	mailbox := connect(t, server, false)
+	if _, err := mailbox.UnseenUIDs(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Another client deletes the message after it was listed.
+	client := mailbox.(*imapMailbox).client
+	if err := client.Store(toUIDSet([]uint32{1}), &imap.StoreFlags{Op: imap.StoreFlagsAdd, Silent: true, Flags: []imap.Flag{imap.FlagDeleted}}, nil).Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Expunge().Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := mailbox.FetchRaw(1)
+	var fetchErr *MessageFetchError
+	if !errors.As(err, &fetchErr) || !fetchErr.Gone || fetchErr.Temporary {
+		t.Fatalf("FetchRaw() error = %#v, want a MessageFetchError marked Gone", err)
+	}
+	if !strings.Contains(err.Error(), "message 1") {
+		t.Errorf("Error() = %q, want the UID named", err.Error())
+	}
+
+	raw, err := mailbox.FetchRaw(2)
+	if err != nil || !bytes.Equal(raw, second) {
+		t.Errorf("FetchRaw(2) after a vanished message = %v; the session should still work", err)
+	}
+}
+
+// refusingSession answers every FETCH of one UID with the given status. It
+// embeds the IMAP4rev2 session because the test server advertises that.
+type refusingSession struct {
+	imapserver.SessionIMAP4rev2
+	uid     imap.UID
+	refusal *imap.Error
+}
+
+func (session refusingSession) Fetch(w *imapserver.FetchWriter, numSet imap.NumSet, options *imap.FetchOptions) error {
+	if uidSet, ok := numSet.(imap.UIDSet); ok && uidSet.Contains(session.uid) {
+		return session.refusal
+	}
+	return session.SessionIMAP4rev2.Fetch(w, numSet, options)
+}
+
+func TestMailbox_FetchRawRefusals(t *testing.T) {
+	cases := []struct {
+		name          string
+		refusal       *imap.Error
+		wantMessage   bool
+		wantTemporary bool
+	}{
+		{
+			name:        "NO is about the message",
+			refusal:     &imap.Error{Type: imap.StatusResponseTypeNo, Text: "message is damaged"},
+			wantMessage: true,
+		},
+		{
+			name:          "NO [UNAVAILABLE] is worth retrying",
+			refusal:       &imap.Error{Type: imap.StatusResponseTypeNo, Code: imap.ResponseCodeUnavailable, Text: "try again later"},
+			wantMessage:   true,
+			wantTemporary: true,
+		},
+		{
+			name:    "BAD is about the session",
+			refusal: &imap.Error{Type: imap.StatusResponseTypeBad, Text: "syntax error"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := startServerWith(t, false, func(session imapserver.Session) imapserver.Session {
+				return refusingSession{SessionIMAP4rev2: session.(imapserver.SessionIMAP4rev2), uid: 1, refusal: tc.refusal}
+			})
+			server.deliver(t, receiptFrom("refused@example.com"))
+			mailbox := connect(t, server, false)
+
+			_, err := mailbox.FetchRaw(1)
+			if err == nil {
+				t.Fatal("FetchRaw() = nil error for a refused message")
+			}
+
+			var fetchErr *MessageFetchError
+			isMessageError := errors.As(err, &fetchErr)
+			if isMessageError != tc.wantMessage {
+				t.Fatalf("FetchRaw() error = %#v; a MessageFetchError = %v, want %v", err, isMessageError, tc.wantMessage)
+			}
+			if isMessageError && (fetchErr.Gone || fetchErr.Temporary != tc.wantTemporary) {
+				t.Errorf("MessageFetchError = %+v, want Temporary %v and not Gone", fetchErr, tc.wantTemporary)
+			}
+			// The server's own status stays reachable through the wrapper.
+			var imapErr *imap.Error
+			if !errors.As(err, &imapErr) || imapErr.Text != tc.refusal.Text {
+				t.Errorf("FetchRaw() error = %v, want it to unwrap to the server's %q", err, tc.refusal.Text)
+			}
+		})
 	}
 }

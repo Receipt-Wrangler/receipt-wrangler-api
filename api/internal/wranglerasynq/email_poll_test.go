@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"receipt-wrangler/api/internal/emailclient"
 	"receipt-wrangler/api/internal/models"
 )
 
@@ -395,6 +396,11 @@ func TestPollEmail_SignedSender(t *testing.T) {
 			if tc.wantFailedRead > 0 && !strings.Contains(failures[0].ResultDescription, "sender could not be verified") {
 				t.Errorf("ResultDescription = %q", failures[0].ResultDescription)
 			}
+			// The likeliest cause on Exchange and Office 365 is the mailbox, so the
+			// failure says which setting to turn off.
+			if tc.wantFailedRead > 0 && !strings.Contains(failures[0].ResultDescription, `turn off "Require Signed Sender (DKIM)"`) {
+				t.Errorf("ResultDescription = %q, want it to name the setting", failures[0].ResultDescription)
+			}
 		})
 	}
 }
@@ -462,6 +468,151 @@ func TestPollEmail_QueueFailureLeavesTheEmailUnread(t *testing.T) {
 	}
 	if len(fixture.systemTasks(models.EMAIL_READ)) != 0 {
 		t.Error("a queue outage was recorded as a problem with the email")
+	}
+
+	// Once the queue is back, the email goes through exactly once.
+	fixture.enqueueErr = nil
+	if err := PollEmail(true, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(fixture.enqueued) != 1 || !mailbox.isSeen(uid) {
+		t.Errorf("after the outage: enqueued %d, seen %v; want 1 and true", len(fixture.enqueued), mailbox.isSeen(uid))
+	}
+}
+
+func TestPollEmail_AnEmailIsClaimedBeforeAnythingIsQueuedOrRecorded(t *testing.T) {
+	fixture := newPollFixture(t)
+	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
+	fixture.addGroup(systemEmail, groupOptions{requireSigned: true})
+	notRequiring := fixture.addGroup(systemEmail, groupOptions{})
+	// Unsigned: queued for one group, a failed activity for the other.
+	uid := mailbox.deliver(rawEmail("bob@example.com", "Receipt", "", jpegNamed("receipt.jpg", pollJpeg)))
+	mailbox.markSeenErr = errors.New("connection reset")
+
+	if err := PollEmail(true, nil); err == nil {
+		t.Error("PollEmail() = nil, want the mark error")
+	}
+	if len(fixture.enqueued) != 0 || len(fixture.systemTasks(models.EMAIL_READ)) != 0 {
+		t.Fatalf("enqueued %d and recorded %d failures for an email that could not be claimed",
+			len(fixture.enqueued), len(fixture.systemTasks(models.EMAIL_READ)))
+	}
+
+	mailbox.markSeenErr = nil
+	if err := PollEmail(true, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(fixture.enqueued) != 1 || len(fixture.payloadsFor(notRequiring.ID)) != 1 {
+		t.Errorf("enqueued %+v, want exactly one task for the group not requiring a signature", fixture.enqueued)
+	}
+	if failures := fixture.systemTasks(models.EMAIL_READ); len(failures) != 1 {
+		t.Errorf("recorded %d failed EMAIL_READ across the two polls, want exactly 1", len(failures))
+	}
+	if !mailbox.isSeen(uid) {
+		t.Error("the email was left unread")
+	}
+}
+
+func TestPollEmail_PartlyQueuedEmailIsRecordedAndNeverQueuedTwice(t *testing.T) {
+	fixture := newPollFixture(t)
+	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
+	first := fixture.addGroup(systemEmail, groupOptions{})
+	second := fixture.addGroup(systemEmail, groupOptions{})
+	uid := mailbox.deliver(rawEmail("bob@example.com", "Receipt", "", jpegNamed("receipt.jpg", pollJpeg)))
+	fixture.failEnqueueCall = 2
+
+	if err := PollEmail(true, nil); err == nil {
+		t.Error("PollEmail() = nil, want the queue error")
+	}
+	if len(fixture.payloadsFor(first.ID)) != 1 || len(fixture.payloadsFor(second.ID)) != 0 {
+		t.Fatalf("enqueued %+v, want the first group's task only", fixture.enqueued)
+	}
+	if !mailbox.isSeen(uid) {
+		t.Error("a partly queued email went back to unread; the next poll would queue the first task again")
+	}
+	uploads := fixture.systemTasks(models.EMAIL_UPLOAD)
+	if len(uploads) != 1 || *uploads[0].GroupId != second.GroupId || !strings.Contains(uploads[0].ResultDescription, "could not queue") {
+		t.Errorf("failed EMAIL_UPLOAD = %+v, want one for the group whose task was not queued", uploads)
+	}
+
+	if err := PollEmail(true, nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(fixture.enqueued) != 1 {
+		t.Errorf("enqueued %d after a second poll, want the first task only once", len(fixture.enqueued))
+	}
+}
+
+func TestPollEmail_UnqueuedEmailThatCannotGoBackToUnreadIsRecorded(t *testing.T) {
+	fixture := newPollFixture(t)
+	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
+	settings := fixture.addGroup(systemEmail, groupOptions{})
+	uid := mailbox.deliver(rawEmail("bob@example.com", "Receipt", "", jpegNamed("receipt.jpg", pollJpeg)))
+	fixture.failEnqueueCall = 1
+	mailbox.markUnseenErr = errors.New("connection reset")
+
+	if err := PollEmail(true, nil); err == nil {
+		t.Error("PollEmail() = nil, want the queue error")
+	}
+	if !slices.Equal(mailbox.unmarked, []uint32{uid}) {
+		t.Errorf("MarkUnseen calls = %v, want one attempt for %d", mailbox.unmarked, uid)
+	}
+	if !mailbox.isSeen(uid) {
+		t.Fatal("precondition: the email should still be read")
+	}
+	uploads := fixture.systemTasks(models.EMAIL_UPLOAD)
+	if len(uploads) != 1 || *uploads[0].GroupId != settings.GroupId {
+		t.Errorf("failed EMAIL_UPLOAD = %+v; an email left read and unqueued must not vanish silently", uploads)
+	}
+}
+
+func TestPollEmail_PerMessageFetchFailures(t *testing.T) {
+	cases := []struct {
+		name        string
+		err         error
+		wantSeen    bool
+		wantFailure bool
+		wantPollErr bool
+	}{
+		{name: "vanished", err: &emailclient.MessageFetchError{UID: 1, Gone: true, Err: errors.New("the server did not return it")}},
+		{name: "temporarily unavailable", err: &emailclient.MessageFetchError{UID: 1, Temporary: true, Err: errors.New("NO [UNAVAILABLE]")}},
+		{name: "refused", err: &emailclient.MessageFetchError{UID: 1, Err: errors.New("NO message is damaged")}, wantSeen: true, wantFailure: true},
+		{name: "connection lost", err: errors.New("connection reset"), wantPollErr: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			fixture := newPollFixture(t)
+			systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
+			fixture.addGroup(systemEmail, groupOptions{})
+			bad := mailbox.deliver(rawEmail("bob@example.com", "Bad", "", jpegNamed("bad.jpg", pollJpeg)))
+			good := mailbox.deliver(rawEmail("bob@example.com", "Good", "", jpegNamed("good.jpg", pollJpeg)))
+			mailbox.fetchRawErrs = map[uint32]error{bad: tc.err}
+
+			err := PollEmail(true, nil)
+			if (err != nil) != tc.wantPollErr {
+				t.Fatalf("PollEmail() = %v, want an error: %v", err, tc.wantPollErr)
+			}
+
+			if mailbox.isSeen(bad) != tc.wantSeen {
+				t.Errorf("failing email seen = %v, want %v", mailbox.isSeen(bad), tc.wantSeen)
+			}
+			failures := fixture.systemTasks(models.EMAIL_READ)
+			if (len(failures) == 1) != tc.wantFailure || (tc.wantFailure && !strings.Contains(failures[0].ResultDescription, "would not return it")) {
+				t.Errorf("failed EMAIL_READ = %+v, want one: %v", failures, tc.wantFailure)
+			}
+
+			// One bad message must not hold back the next, except when the session
+			// itself is gone.
+			if tc.wantPollErr {
+				if len(fixture.enqueued) != 0 {
+					t.Errorf("enqueued %d after the session failed", len(fixture.enqueued))
+				}
+				return
+			}
+			if len(fixture.enqueued) != 1 || fixture.enqueued[0].Metadata.Subject != "Good" || !mailbox.isSeen(good) {
+				t.Errorf("enqueued %+v; the email after the failing one was not processed", fixture.enqueued)
+			}
+		})
 	}
 }
 

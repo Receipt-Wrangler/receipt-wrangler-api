@@ -2,6 +2,7 @@ package emailclient
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -30,6 +31,12 @@ type Verdict struct {
 	Reason string
 }
 
+// maxDkimSignatures bounds the work one message can cause. Each signature costs
+// a DNS lookup and a hash of the whole body, run in parallel, so without a cap a
+// message carrying a thousand DKIM-Signature headers costs a thousand of each.
+// Real mail carries one to three. The topmost signatures are the ones checked.
+const maxDkimSignatures = 5
+
 // TXTLookup resolves DNS TXT records. net.LookupTXT in production.
 type TXTLookup func(name string) ([]string, error)
 
@@ -51,8 +58,14 @@ func VerifySender(raw []byte, fromAddress string, lookup TXTLookup) Verdict {
 		lookup = net.LookupTXT
 	}
 
-	verifications, err := dkim.VerifyWithOptions(bytes.NewReader(raw), &dkim.VerifyOptions{LookupTXT: lookup})
-	if err != nil {
+	verifications, err := dkim.VerifyWithOptions(bytes.NewReader(raw), &dkim.VerifyOptions{
+		LookupTXT:        lookup,
+		MaxVerifications: maxDkimSignatures,
+	})
+	// Over the cap, the library still returns the results for the signatures it
+	// checked. Those are judged like any others.
+	truncated := errors.Is(err, dkim.ErrTooManySignatures)
+	if err != nil && !truncated {
 		return Verdict{Kind: Unauthenticated, Reason: fmt.Sprintf("the message could not be read for DKIM verification: %s", err.Error())}
 	}
 
@@ -81,6 +94,10 @@ func VerifySender(raw []byte, fromAddress string, lookup TXTLookup) Verdict {
 
 	if retry {
 		return Verdict{Kind: RetryLater, Reason: fmt.Sprintf("the DKIM signature from %s could not be checked right now", fromDomain)}
+	}
+
+	if truncated {
+		reasons = append(reasons, fmt.Sprintf("only the first %d of its signatures were checked", maxDkimSignatures))
 	}
 
 	return Verdict{Kind: Unauthenticated, Reason: "no valid DKIM signature from " + fromDomain + " (" + strings.Join(reasons, "; ") + ")"}

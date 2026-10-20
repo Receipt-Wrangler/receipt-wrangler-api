@@ -2,6 +2,7 @@ package wranglerasynq
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -30,14 +31,9 @@ const (
 	maxEmailMessageBytes = 50 << 20
 )
 
-type emailMessageOutcome int
-
-const (
-	// leaveUnread keeps the message for the next poll.
-	leaveUnread emailMessageOutcome = iota
-	// markRead means the message is finished with, processed or failed.
-	markRead
-)
+// signedSenderHint follows a failed sender check, because on some providers the
+// likeliest cause is the mailbox rather than the sender.
+const signedSenderHint = `If this mailbox cannot verify signatures (Exchange and Office 365 rebuild messages served over IMAP), turn off "Require Signed Sender (DKIM)" in the group's email settings.`
 
 // emailPoller reads the group mailboxes and queues their receipts. Its fields are
 // the seams that keep it testable without an IMAP server, DNS or Redis.
@@ -160,52 +156,96 @@ func (poller emailPoller) pollMailbox(systemEmail models.SystemEmail, groups []m
 		}
 		handled++
 
-		outcome, err := poller.processMessage(mailbox, systemEmail, header, fields, matched)
+		plan, err := poller.planMessage(mailbox, systemEmail, header, fields, matched)
 		if err != nil {
 			return err
 		}
+		if plan.retryLater {
+			continue
+		}
 
-		if outcome == markRead {
-			if err := mailbox.MarkSeen(header.UID); err != nil {
-				return err
-			}
+		if err := poller.finishMessage(mailbox, header.UID, plan); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-// processMessage turns one routed message into queued tasks. Anything wrong with
-// the message itself is recorded as a failed activity and the message is marked
-// read, so it is never retried forever. An error is returned only for problems
-// with the connection or the queue, which abort the mailbox and leave the
-// message unread for the next poll.
-func (poller emailPoller) processMessage(
+// pendingFailure is a failed activity waiting to be recorded.
+type pendingFailure struct {
+	groups []models.GroupSettings
+	reason string
+}
+
+// messagePlan is everything one message will cause, worked out before any of it
+// happens: the tasks to queue and the failures to record.
+type messagePlan struct {
+	// retryLater leaves the message unread, untouched, for a later poll.
+	retryLater bool
+	context    emailFailure
+	groups     []models.GroupSettings
+	payloads   []EmailProcessTaskPayload
+	failures   []pendingFailure
+	// summary is logged once the message's tasks are queued.
+	summary string
+}
+
+func (plan *messagePlan) fail(groups []models.GroupSettings, reason string) {
+	plan.failures = append(plan.failures, pendingFailure{groups: groups, reason: reason})
+}
+
+// planMessage works out what one routed message should become. Its only side
+// effect is writing attachments to temp/; queuing and recording wait for
+// finishMessage. Anything wrong with the message itself becomes a failure in the
+// plan. An error is returned only when the session failed, which abandons the
+// mailbox for this poll.
+func (poller emailPoller) planMessage(
 	mailbox emailclient.Mailbox,
 	systemEmail models.SystemEmail,
 	header emailclient.MessageHeader,
 	fields emailclient.HeaderFields,
 	groups []models.GroupSettings,
-) (emailMessageOutcome, error) {
-	failure := emailFailure{systemEmail: systemEmail, sender: firstOrEmpty(fields.From), subject: fields.Subject}
+) (messagePlan, error) {
+	plan := messagePlan{
+		context: emailFailure{systemEmail: systemEmail, sender: firstOrEmpty(fields.From), subject: fields.Subject},
+		groups:  groups,
+	}
 
 	if header.Size > maxEmailMessageBytes {
-		failure.record(groups, fmt.Sprintf("the email is %d MB, over the %d MB limit", header.Size>>20, maxEmailMessageBytes>>20))
-		return markRead, nil
+		plan.fail(groups, fmt.Sprintf("the email is %d MB, over the %d MB limit", header.Size>>20, maxEmailMessageBytes>>20))
+		return plan, nil
 	}
 
 	raw, err := mailbox.FetchRaw(header.UID)
 	if err != nil {
-		return leaveUnread, err
+		var fetchErr *emailclient.MessageFetchError
+		if !errors.As(err, &fetchErr) {
+			return messagePlan{}, err
+		}
+
+		switch {
+		case fetchErr.Gone:
+			logging.LogStd(logging.LOG_LEVEL_INFO, "Skipping an email that is no longer in the mailbox: ", fetchErr.Error())
+			return messagePlan{retryLater: true}, nil
+		case fetchErr.Temporary:
+			logging.LogStd(logging.LOG_LEVEL_INFO, "Leaving an email unread that the server could not return right now: ", fetchErr.Error())
+			return messagePlan{retryLater: true}, nil
+		}
+
+		// Retrying a message the server refuses would block every later one, which
+		// always comes after it in UID order.
+		plan.fail(groups, "the email server would not return it: "+fetchErr.Err.Error())
+		return plan, nil
 	}
 
 	message, err := emailclient.ParseMessage(raw)
 	if err != nil {
-		failure.record(groups, fmt.Sprintf("the email could not be read: %s", err.Error()))
-		return markRead, nil
+		plan.fail(groups, fmt.Sprintf("the email could not be read: %s", err.Error()))
+		return plan, nil
 	}
-	failure.sender = message.From.Email
-	failure.subject = message.Subject
+	plan.context.sender = message.From.Email
+	plan.context.subject = message.Subject
 
 	requiring, notRequiring := splitBySignedSenderRequirement(groups)
 	if len(requiring) > 0 {
@@ -213,27 +253,28 @@ func (poller emailPoller) processMessage(
 		switch verdict.Kind {
 		case emailclient.RetryLater:
 			logging.LogStd(logging.LOG_LEVEL_INFO, "Leaving an email unread to retry its sender check: ", verdict.Reason)
-			return leaveUnread, nil
+			return messagePlan{retryLater: true}, nil
 		case emailclient.Unauthenticated:
-			failure.record(requiring, "the sender could not be verified: "+verdict.Reason)
+			plan.fail(requiring, fmt.Sprintf("the sender could not be verified: %s. %s", verdict.Reason, signedSenderHint))
 			groups = notRequiring
 		}
 	}
+	plan.groups = groups
 
 	if len(groups) == 0 {
-		return markRead, nil
+		return plan, nil
 	}
 
 	if !message.HasContent() {
 		logging.LogStd(logging.LOG_LEVEL_INFO, fmt.Sprintf("Email %q from %s has no attachment or body to process", message.Subject, message.From.Email))
-		return markRead, nil
+		return plan, nil
 	}
 
 	attachments := make([]savedEmailAttachment, 0, len(message.Attachments))
 	for _, attachment := range message.Attachments {
 		saved, err := saveEmailAttachment(attachment)
 		if err != nil {
-			failure.record(groups, fmt.Sprintf("the attachment %q could not be processed: %s", attachment.Filename, err.Error()))
+			plan.fail(groups, fmt.Sprintf("the attachment %q could not be processed: %s", attachment.Filename, err.Error()))
 			continue
 		}
 		attachments = append(attachments, saved)
@@ -242,21 +283,80 @@ func (poller emailPoller) processMessage(
 	if len(message.Attachments) > 0 && len(attachments) == 0 {
 		// Every attachment failed. Falling back to the body alone would create a
 		// receipt without the image it was sent for.
-		return markRead, nil
+		return plan, nil
 	}
 
-	for _, payload := range buildEmailProcessPayloads(emailMetadataOf(message, attachments, groups), attachments, groups) {
-		if err := poller.enqueue(payload); err != nil {
-			return leaveUnread, fmt.Errorf("could not queue the email for processing: %w", err)
-		}
-	}
-
-	logging.LogStd(logging.LOG_LEVEL_INFO, fmt.Sprintf(
+	plan.payloads = buildEmailProcessPayloads(emailMetadataOf(message, attachments, groups), attachments, groups)
+	plan.summary = fmt.Sprintf(
 		"Email captured: subject=%q from=%q attachments=%d bodyLen=%d bodyHtmlLen=%d groups=%v",
 		message.Subject, message.From.Email, len(attachments), len(message.Body), len(message.BodyHtml), groupSettingsIdsOf(groups),
-	))
+	)
 
-	return markRead, nil
+	return plan, nil
+}
+
+// finishMessage carries out a plan, claiming the message first: it is marked
+// read before anything is queued or recorded. Marking it last, as before, meant
+// a queue error part-way through, or a failed mark, sent the whole message
+// through again on the next poll and duplicated the receipts already queued.
+// On a mailbox that never accepts the mark, that repeated on every poll.
+//
+// The cost is the opposite failure: if the process dies between claiming and
+// queuing, that one message is lost without a record.
+func (poller emailPoller) finishMessage(mailbox emailclient.Mailbox, uid uint32, plan messagePlan) error {
+	if err := mailbox.MarkSeen(uid); err != nil {
+		return err
+	}
+
+	queued := 0
+	var queueErr error
+	for _, payload := range plan.payloads {
+		if queueErr = poller.enqueue(payload); queueErr != nil {
+			break
+		}
+		queued++
+	}
+
+	if queueErr != nil {
+		queueErr = fmt.Errorf("could not queue the email for processing: %w", queueErr)
+
+		if queued == 0 {
+			// Nothing has happened yet, so the message can go back for a clean retry.
+			unmarkErr := mailbox.MarkUnseen(uid)
+			if unmarkErr == nil {
+				return queueErr
+			}
+			logging.LogStd(logging.LOG_LEVEL_ERROR, "Could not return an unqueued email to unread: ", unmarkErr.Error())
+		}
+
+		// Retrying now would queue the earlier tasks twice, so the message stays read
+		// and what was not queued is recorded instead.
+		plan.fail(groupsOfPayloads(plan.groups, plan.payloads[queued:]), queueErr.Error())
+	}
+
+	for _, failure := range plan.failures {
+		plan.context.record(failure.groups, failure.reason)
+	}
+
+	if queueErr == nil && len(plan.summary) > 0 {
+		logging.LogStd(logging.LOG_LEVEL_INFO, plan.summary)
+	}
+
+	return queueErr
+}
+
+// groupsOfPayloads returns the groups the payloads are for, in the order given.
+func groupsOfPayloads(groups []models.GroupSettings, payloads []EmailProcessTaskPayload) []models.GroupSettings {
+	result := make([]models.GroupSettings, 0)
+	for _, settings := range groups {
+		for _, payload := range payloads {
+			if payload.GroupSettingsId == settings.ID {
+				result = append(result, settings)
+				break
+			}
+		}
+	}
+	return result
 }
 
 // savedEmailAttachment is an attachment written to temp/, ready for a task.

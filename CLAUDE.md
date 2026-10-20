@@ -660,9 +660,10 @@ desktop**; mobile only carries the regenerated client (it has no group email set
 
 - **The IMAP client is Go** (`api/internal/emailclient/`). It replaced a Python client
   (`api/imap-client/`, deleted). **Python stays in the images** for the optional EasyOCR engine.
-- **A message is only marked read once it is finished with** — processed, or recorded as a failed
-  activity. Mail matching no group is left unread. See `api/CLAUDE.md` → "Email ingestion (IMAP)"
-  for the full table.
+- **A message is marked read just before it is acted on**: its tasks are queued and its failures
+  recorded only once that mark succeeds, so a retry can never queue it twice. If nothing could be
+  queued it goes back to unread. Mail matching no group is left unread. See `api/CLAUDE.md` →
+  "Email ingestion (IMAP)" for the full table.
 - **Routing is per mailbox and per group**: a group only receives mail sent to its own System Email,
   judged by its own whitelist and regexes.
 - **`emailRequireSignedSender`** (per group, default **true** including on upgrade) requires a valid

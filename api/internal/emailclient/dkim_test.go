@@ -7,9 +7,11 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/emersion/go-msgauth/dkim"
@@ -228,6 +230,55 @@ func TestVerifySender_SecondFromHeaderIsNotSigned(t *testing.T) {
 	}
 	if _, err := ParseMessage(forged); !errors.Is(err, ErrAmbiguousFrom) {
 		t.Errorf("ParseMessage() error = %v, want ErrAmbiguousFrom", err)
+	}
+}
+
+// junkSignatures returns well-formed DKIM-Signature headers for domains that
+// publish no key. Each still costs the verifier a DNS lookup.
+func junkSignatures(count int) []byte {
+	var headers bytes.Buffer
+	for i := 0; i < count; i++ {
+		fmt.Fprintf(&headers, "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=junk%d.example; s=%s; h=from; bh=AAAA; b=AAAA\r\n", i, testSelector)
+	}
+	return headers.Bytes()
+}
+
+// countingLookup wraps lookup and counts its calls, which the verifier makes
+// from parallel goroutines.
+func countingLookup(lookup TXTLookup, calls *atomic.Int32) TXTLookup {
+	return func(name string) ([]string, error) {
+		calls.Add(1)
+		return lookup(name)
+	}
+}
+
+func TestVerifySender_ChecksAtMostFiveSignatures(t *testing.T) {
+	key, _ := signingKeys(t)
+	// Signing prepends, so the genuine signature sits above twenty junk ones.
+	raw := sign(t, append(junkSignatures(20), receiptFrom("bob@example.com")...), "example.com", key)
+
+	var calls atomic.Int32
+	verdict := VerifySender(raw, "bob@example.com", countingLookup(publishedKeys(t, "example.com"), &calls))
+
+	if verdict.Kind != Authenticated {
+		t.Errorf("verdict = %+v, want Authenticated from the signature within the cap", verdict)
+	}
+	if got := calls.Load(); got > maxDkimSignatures {
+		t.Errorf("made %d DNS lookups for one message, want at most %d", got, maxDkimSignatures)
+	}
+}
+
+func TestVerifySender_SignatureBeyondTheCapIsNotChecked(t *testing.T) {
+	key, _ := signingKeys(t)
+	raw := append(junkSignatures(maxDkimSignatures), sign(t, receiptFrom("bob@example.com"), "example.com", key)...)
+
+	verdict := VerifySender(raw, "bob@example.com", publishedKeys(t, "example.com"))
+
+	if verdict.Kind != Unauthenticated {
+		t.Fatalf("verdict = %+v, want Unauthenticated", verdict)
+	}
+	if !strings.Contains(verdict.Reason, fmt.Sprintf("only the first %d", maxDkimSignatures)) {
+		t.Errorf("Reason = %q, want it to say the rest were not checked", verdict.Reason)
 	}
 }
 

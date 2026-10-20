@@ -33,21 +33,28 @@ type EmailProcessTaskPayload struct {
 }
 
 func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
-	db := repositories.GetDB()
-	systemTaskService := services.NewSystemTaskService(nil)
-	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
-	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
-	var payload EmailProcessTaskPayload
-
 	taskId, err := GetTaskIdFromContext(context)
 	if err != nil {
 		return HandleError(err)
 	}
 
-	err = json.Unmarshal(task.Payload(), &payload)
-	if err != nil {
+	var payload EmailProcessTaskPayload
+	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 		return HandleError(err)
 	}
+
+	return processEmailTask(taskId, payload)
+}
+
+// processEmailTask is HandleEmailProcessTask once the task id and payload are
+// read. It is separate because asynq offers no way to build the context a task
+// id is read from, so the handler itself cannot be called from a test.
+func processEmailTask(taskId string, payload EmailProcessTaskPayload) error {
+	db := repositories.GetDB()
+	systemTaskService := services.NewSystemTaskService(nil)
+	groupSettingsRepository := repositories.NewGroupSettingsRepository(nil)
+	systemTaskRepository := repositories.NewSystemTaskRepository(nil)
+	var err error
 
 	hasAttachmentImage := len(payload.ImageForOcrPath) > 0
 
@@ -75,6 +82,24 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 	}
 
 	groupIdString := utils.UintToString(groupSettingsToUse.GroupId)
+
+	if hasAttachmentImage {
+		if err := ensureOcrCopy(payload.ImageForOcrPath, fileBytes); err != nil {
+			emailFailure{
+				systemEmail: groupSettingsToUse.SystemEmail,
+				sender:      payload.Metadata.FromEmail,
+				subject:     payload.Metadata.Subject,
+				asynqTaskId: taskId,
+			}.record(
+				[]models.GroupSettings{groupSettingsToUse},
+				fmt.Sprintf("the attachment %q could not be converted: %s", payload.Attachment.Filename, err.Error()),
+			)
+			// Converting the same bytes again fails the same way, and each attempt
+			// would record another failed activity. Archiving now keeps the
+			// original and offers the rerun straight away.
+			return HandleError(fmt.Errorf("%w: %w", err, asynq.SkipRetry))
+		}
+	}
 
 	bodyPdfBytes, bodyImagePath, cleanupBodyImage, htmlPdfTaskCmd, renderErr := renderBodyPdfIfRequested(payload)
 	if cleanupBodyImage != nil {
@@ -256,6 +281,46 @@ func HandleEmailProcessTask(context context.Context, task *asynq.Task) error {
 	})
 
 	return err
+}
+
+// ensureOcrCopy makes the converted copy the OCR pipeline reads from the
+// original's bytes, unless it already exists: a payload queued before the poll
+// stopped converting has one, and so does an attachment a sibling group's task
+// converted first. The copy is written under a temporary name and renamed into
+// place, because those sibling tasks can run at once and one must never read the
+// other's half-written file.
+func ensureOcrCopy(path string, original []byte) error {
+	fileRepository := repositories.NewFileRepository(nil)
+
+	// The path comes out of a Redis payload, and this writes to it.
+	if err := fileRepository.AssertWithinTempDirectory(path); err != nil {
+		return err
+	}
+	if utils.FileExists(path) {
+		return nil
+	}
+
+	converted, err := fileRepository.GetBytesFromImageBytes(original)
+	if err != nil {
+		return err
+	}
+
+	suffix, err := utils.GetRandomString(8)
+	if err != nil {
+		return err
+	}
+	partialPath := path + "." + suffix + ".tmp"
+
+	err = utils.WriteFile(partialPath, converted)
+	if err == nil {
+		err = os.Rename(partialPath, path)
+	}
+	if err != nil {
+		os.Remove(partialPath)
+		return err
+	}
+
+	return nil
 }
 
 // persistHtmlToPdfSystemTask writes an HTML_TO_PDF system task (if one was

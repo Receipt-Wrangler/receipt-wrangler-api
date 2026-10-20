@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"maps"
 	"net"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -563,7 +562,8 @@ func groupsOfPayloads(groups []models.GroupSettings, payloads []EmailProcessTask
 
 // savedEmailAttachment is an attachment written to temp/, ready for a task.
 type savedEmailAttachment struct {
-	tempFilePath    string
+	tempFilePath string
+	// imageForOcrPath is where the task writes the converted copy.
 	imageForOcrPath string
 	attachment      structs.Attachment
 }
@@ -573,6 +573,12 @@ type savedEmailAttachment struct {
 // image "image001.png", used to overwrite each other in temp/, putting one
 // email's image on another email's receipt. The sender's name is kept on the
 // Attachment for display and download.
+//
+// Only the original is written. The OCR copy at imageForOcrPath is made by the
+// task (ensureOcrCopy), so a file ImageMagick cannot convert fails there, where
+// the original is kept and the activity can be rerun. Converting here deleted
+// the original and marked the email read, losing the image for good. It also
+// kept ImageMagick running between IMAP commands.
 func saveEmailAttachment(attachment emailclient.Attachment) (savedEmailAttachment, error) {
 	fileRepository := repositories.NewFileRepository(nil)
 
@@ -581,18 +587,7 @@ func saveEmailAttachment(attachment emailclient.Attachment) (savedEmailAttachmen
 		return savedEmailAttachment{}, err
 	}
 
-	ocrBytes, err := fileRepository.GetBytesFromImageBytes(attachment.Data)
-	if err != nil {
-		os.Remove(tempFilePath)
-		return savedEmailAttachment{}, err
-	}
-
 	imageForOcrPath := filepath.Join(filepath.Dir(tempFilePath), "image-"+filepath.Base(tempFilePath))
-	if err := utils.WriteFile(imageForOcrPath, ocrBytes); err != nil {
-		os.Remove(tempFilePath)
-		os.Remove(imageForOcrPath)
-		return savedEmailAttachment{}, err
-	}
 
 	return savedEmailAttachment{
 		tempFilePath:    tempFilePath,
@@ -684,6 +679,9 @@ type emailFailure struct {
 	systemEmail models.SystemEmail
 	sender      string
 	subject     string
+	// asynqTaskId is set when the failure happened inside a queued task. It is
+	// what lets the activity offer its source file and, once archived, a rerun.
+	asynqTaskId string
 }
 
 func (failure emailFailure) record(groups []models.GroupSettings, reason string) {
@@ -701,6 +699,7 @@ func (failure emailFailure) record(groups []models.GroupSettings, reason string)
 		StartedAt:            now,
 		EndedAt:              &now,
 		ResultDescription:    description,
+		AsynqTaskId:          failure.asynqTaskId,
 	})
 	if err != nil {
 		logging.LogStd(logging.LOG_LEVEL_ERROR, "Could not record the email failure: ", err.Error())
@@ -719,6 +718,7 @@ func (failure emailFailure) record(groups []models.GroupSettings, reason string)
 			ResultDescription:      description,
 			GroupId:                &groupId,
 			AssociatedSystemTaskId: &emailRead.ID,
+			AsynqTaskId:            failure.asynqTaskId,
 		})
 		if err != nil {
 			logging.LogStd(logging.LOG_LEVEL_ERROR, "Could not record the email failure for group ", groupId, ": ", err.Error())

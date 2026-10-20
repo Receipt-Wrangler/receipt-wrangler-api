@@ -134,60 +134,6 @@ func TestDirectoryExistsShouldReturnErrorWhenCreateFails(t *testing.T) {
 	}
 }
 
-func TestReadLastFileLineShouldReturnLastLine(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "lines.txt")
-	if err := os.WriteFile(path, []byte("first\nsecond\nthird\n"), 0o600); err != nil {
-		t.Fatalf("failed to create temp file: %v", err)
-	}
-
-	line, err := ReadLastFileLine(path)
-	if err != nil {
-		PrintTestError(t, err, nil)
-	}
-
-	if line != "third" {
-		PrintTestError(t, line, "third")
-	}
-}
-
-func TestReadLastFileLineShouldReturnEmptyForEmptyFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "empty.txt")
-	if err := os.WriteFile(path, []byte(""), 0o600); err != nil {
-		t.Fatalf("failed to create temp file: %v", err)
-	}
-
-	line, err := ReadLastFileLine(path)
-	if err != nil {
-		PrintTestError(t, err, nil)
-	}
-
-	if line != "" {
-		PrintTestError(t, line, "")
-	}
-}
-
-func TestReadLastFileLineShouldReturnEmptyOnOpenErrorInTestEnv(t *testing.T) {
-	t.Setenv("ENV", "test")
-
-	line, err := ReadLastFileLine("./does-not-exist.txt")
-	if err != nil {
-		PrintTestError(t, err, nil)
-	}
-
-	if line != "" {
-		PrintTestError(t, line, "")
-	}
-}
-
-func TestReadLastFileLineShouldReturnErrorOnOpenErrorOutsideTestEnv(t *testing.T) {
-	t.Setenv("ENV", "production")
-
-	_, err := ReadLastFileLine("./does-not-exist.txt")
-	if err == nil {
-		PrintTestError(t, nil, "error")
-	}
-}
-
 func TestBuildGroupPathStringShouldBuildPath(t *testing.T) {
 	path, err := BuildGroupPathString("42", "Groceries")
 	if err != nil {

@@ -394,7 +394,8 @@ without a record.
 | unparseable, no `From`, or more than one `From` address | failed activity, marked read |
 | DKIM check temporarily impossible (DNS) | left unread, nothing recorded, tried again after 30 minutes. Once the email is 24 hours old by its INTERNALDATE: failed activity for the groups requiring the check; the other matched groups continue |
 | DKIM fails, for a group requiring it | failed activity **for that group**, naming the setting to turn off; other matched groups continue |
-| an attachment fails conversion | failed activity naming it; the email's other attachments continue |
+| an attachment cannot be written to `temp/` | failed activity naming it; the email's other attachments continue |
+| an attachment fails conversion (PDF or HEIC to an image) | queued anyway: the **task** converts it. On failure it records one failed activity carrying the task id and archives at once (no retries), keeping the original, which can be downloaded and rerun straight away |
 | an attachment won't decode, or its declared type is an image/PDF but its contents aren't | failed activity naming it; counts toward "every attachment failed" below |
 | every attachment failed | marked read, **no fallback to the body** (it would make a receipt without its image) |
 | nothing to process (no allowed attachment, no body) | marked read silently — as before |
@@ -439,7 +440,12 @@ on them** — it used to mark group B's mail read without ever routing it to B.
 ### Attachments
 
 - **Temp files get random names** (`FileRepository.WriteTempFile`), and the OCR copy is
-  `temp/image-<that name>`. Writing `temp/<sender's filename>` meant two `receipt.pdf`s, or Outlook's
+  `temp/image-<that name>`, **written by the task, not the poll**. The poll only names it.
+  `ensureOcrCopy` (`email_process_handler.go`) skips an existing copy, and otherwise writes
+  under a temporary name and renames, because the per-group tasks sharing one attachment can run at
+  once. Converting at poll time meant a file ImageMagick could not read deleted the original and
+  marked the email read, so the image was gone for good; it also ran ImageMagick between IMAP
+  commands. Writing `temp/<sender's filename>` meant two `receipt.pdf`s, or Outlook's
   `image001.png` in every email, overwrote each other and put one email's image on another email's
   receipt — possibly in another group. `Attachment.Filename` keeps the sanitized original, which is
   what download and preview already use; the sweeper and source-file code key on payload paths.
@@ -561,7 +567,9 @@ file every poll also wrote to, so it could report another mailbox's failure. Sti
   `email_poll_account_test.go` covers rows sharing an account, the login fallback, account isolation
   and the invalid regex logged once per poll. `email_poll_memory_test.go` covers headers fetched
   once, the rescans after a routing or UIDVALIDITY change, the backoff, no starvation and the 24-hour
-  limit. The claim order is pinned by
+  limit. `email_process_handler_test.go` covers `ensureOcrCopy` (made, reused, refused outside
+  `temp/`, nothing left behind on failure) and a failed conversion: recorded with the task id,
+  archived at once, the original kept and rerunnable. The claim order is pinned by
   `TestPollEmail_AnEmailIsClaimedBeforeAnythingIsQueuedOrRecorded` and
   `TestPollEmail_PartlyQueuedEmailIsRecordedAndNeverQueuedTwice`.
 - `services/system_email_test.go`, the setting's repository / handler / command tests.
@@ -2314,8 +2322,8 @@ and the pure `receiptsource` / `render` cases, each with a `mutation-check.sh` e
 
 `temp/` holds the files the ingest pipelines work from. Everything that writes
 there: the **quick-scan upload** (`handlers/receipts.go`, one per file in a
-multi-file scan), the **email attachment and its `image-` OCR copy**
-(`wranglerasynq/email.go`), the **email body image**, short-lived scratch from
+multi-file scan), the **email attachment** (`wranglerasynq/email_poll.go`) **and its `image-` OCR
+copy** (made by the task, `wranglerasynq/email_process_handler.go`), the **email body image**, short-lived scratch from
 `MagicFillFromImage` / `ReadImageWithEasyOcr` / `ConvertPdfToJpg` (each with a
 `defer os.Remove`), and the **`DebugOcr` dumps** from `services/ocr.go`
 `writeDebuggingFiles`, which are never removed by the code that writes them.
@@ -2515,16 +2523,18 @@ relabels PDF bytes as `image/jpeg` **without converting them** — so a quick-sc
 PDF previewed as `data:image/jpeg;base64,JVBERi0…`: a well-formed data URI carrying
 `%PDF`, which the browser silently fails to decode into a broken-image icon. No
 error, no suspicious mime, nothing in the logs. Quick scan was the exposed case
-because `taskSourceFiles.Preview` is always empty for `QUICK_SCAN`, so the handler
-always falls back to the raw upload; email escaped it only because
-`ImageForOcrPath` was already converted at enqueue.
+because `PreviewPath` is always empty for `QUICK_SCAN`, so the handler always falls
+back to the raw upload; email escaped it only because its `ImageForOcrPath` copy is
+already converted (the task makes it before processing).
 
 **Preview still prefers `ImageForOcrPath` when the payload has one; download always
 serves `TempFilePath`.** That preference is an optimization *within* the canonical
 path, not a divergence: `GetBytesFromImageBytes` on a multi-page PDF runs
 `ConvertPdfToJpg` at the configured `PdfDpi` and concatenates every page into one
-tall JPEG — seconds of CPU inside a request — and for email that conversion already
-exists on disk, passing through untouched. Quick scan has no such copy and pays the
+tall JPEG — seconds of CPU inside a request — and for email that conversion usually
+already exists on disk, passing through untouched. An attachment whose conversion
+failed has no copy, so preview falls back to the original and fails the same way;
+download still serves it. Quick scan has no such copy and pays the
 conversion, exactly as the receipt form does. Download is the *original*, under its
 original name, because that is the file the user recognises.
 
@@ -2584,11 +2594,13 @@ on a succeeded activity for up to an hour and then 404. `ResolveSystemTaskSource
 applies the same predicate — the two read the same task state, so they share one
 function rather than two conditions that can drift.
 
-**Email needs both files for a rerun** — `HandleEmailProcessTask` reads
-`TempFilePath` for the `FileData` it persists and hands `ImageForOcrPath` to the
-OCR/vision pipeline — while `hasSourceFile` keys on `TempFilePath` alone. A
-**body-only email has neither and stays rerunnable**, which is why "expects a
-file" is tracked apart from "has a file".
+**A rerun needs only the original.** `HandleEmailProcessTask` reads `TempFilePath`
+for the `FileData` it persists, and recreates the `ImageForOcrPath` copy from it
+when the copy is missing (`ensureOcrCopy`), so `rerunPaths` is the original alone.
+That is also what lets an attachment whose conversion failed, and so never had a
+copy, be rerun. `hasSourceFile` keys on `TempFilePath` too. A **body-only email has
+neither and stays rerunnable**, which is why "expects a file" is tracked apart from
+"has a file".
 
 ### Authorization order, and why it is not the payload's job
 

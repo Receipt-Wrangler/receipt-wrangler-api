@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bufio"
 	"errors"
 	"os"
 	"path/filepath"
@@ -56,36 +55,6 @@ func MakeDirectory(dir string) error {
 	}
 
 	return nil
-}
-
-func ReadLastFileLine(filePath string) (string, error) {
-	readFile, err := os.Open(filePath)
-	if err != nil {
-		if os.Getenv("ENV") == "test" {
-			return "", nil
-		}
-
-		return "", err
-	}
-
-	fileScanner := bufio.NewScanner(readFile)
-	fileScanner.Split(bufio.ScanLines)
-	var fileLines []string
-
-	for fileScanner.Scan() {
-		fileLines = append(fileLines, fileScanner.Text())
-	}
-
-	err = readFile.Close()
-	if err != nil {
-		return "", err
-	}
-
-	if len(fileLines) == 0 {
-		return "", nil
-	}
-
-	return fileLines[len(fileLines)-1], nil
 }
 
 func BuildGroupPathString(groupId string, groupName string) (string, error) {

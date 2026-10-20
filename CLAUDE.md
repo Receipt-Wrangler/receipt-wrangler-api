@@ -523,6 +523,12 @@ both clients, but mobile gets no new UI.
   tracked separately from "has a file". **Mobile inherits this for free** —
   `group_activity_list_item.dart` already gates its rerun slidable on the flag, so the regen is the
   whole mobile change.
+- **An email attachment is converted by its task, not by the poll** (`ensureOcrCopy`). A file
+  ImageMagick could not read used to fail at poll time, which deleted the original and marked the
+  email read. Now it fails in the task, with one failed activity carrying the task id. The task is
+  archived at once (`asynq.SkipRetry`), since the same bytes fail the same way, and the original is
+  kept. It can be downloaded and rerun straight away: a rerun needs only the original, because the
+  task recreates the OCR copy.
 - **`hasSourceFile` is deliberately NOT gated on `Archived`**, unlike `canBeRestarted`: asynq's retry
   backoff means minutes pass before a task archives, and the user should not watch an activity sit at
   FAILED with no way to get their image.
@@ -666,6 +672,8 @@ desktop**; mobile only carries the regenerated client (it has no group email set
   once per process rather than on every poll. A sender check that cannot finish (DNS) is retried
   every 30 minutes and gives up 24 hours after delivery. See `api/CLAUDE.md` → "Email ingestion
   (IMAP)" for the full table.
+- **Attachments are converted for OCR by the email task, not the poll**, so one that cannot be
+  converted keeps its image (see "Failed Uploads Keep Their Image").
 - **Routing is per IMAP account and per group**: a group only receives mail sent to its own System
   Email's account, judged by its own whitelist and regexes. Two System Email rows for one account
   (host, port, username) are read once, against the groups on both.

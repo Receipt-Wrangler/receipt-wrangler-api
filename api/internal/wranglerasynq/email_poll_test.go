@@ -12,6 +12,7 @@ import (
 
 	"receipt-wrangler/api/internal/emailclient"
 	"receipt-wrangler/api/internal/models"
+	"receipt-wrangler/api/internal/repositories"
 )
 
 func readFile(t *testing.T, path string) []byte {
@@ -45,11 +46,15 @@ func TestPollEmail_QueuesEachAttachmentForEachGroup(t *testing.T) {
 	}
 
 	for _, payload := range fixture.enqueued {
-		if !bytes.Equal(readFile(t, payload.TempFilePath), pollJpeg) || !bytes.Equal(readFile(t, payload.ImageForOcrPath), pollJpeg) {
-			t.Error("the temp files do not hold the attachment")
+		if !bytes.Equal(readFile(t, payload.TempFilePath), pollJpeg) {
+			t.Error("the temp file does not hold the attachment")
 		}
+		// The task makes the OCR copy; the poll only names it.
 		if filepath.Base(payload.ImageForOcrPath) != "image-"+filepath.Base(payload.TempFilePath) {
 			t.Errorf("ImageForOcrPath = %s, want the image- copy of %s", payload.ImageForOcrPath, payload.TempFilePath)
+		}
+		if _, err := os.Stat(payload.ImageForOcrPath); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("the poll wrote the OCR copy (stat: %v); converting is the task's job", err)
 		}
 		if payload.Attachment.Filename != "receipt.jpg" || payload.Attachment.FileType != "image/jpeg" || payload.Attachment.Size != uint(len(pollJpeg)) {
 			t.Errorf("Attachment = %+v", payload.Attachment)
@@ -195,10 +200,13 @@ func TestPollEmail_WhitelistIsCaseInsensitive(t *testing.T) {
 	}
 }
 
-func TestPollEmail_CorruptAttachmentFailsAloneAndLaterEmailsAreProcessed(t *testing.T) {
+func TestPollEmail_AttachmentsAreQueuedUnconverted(t *testing.T) {
+	// A file ImageMagick cannot convert used to fail here: the original was
+	// deleted and the email marked read, so the image was gone for good. Now it is
+	// queued like any other, and the task records the failure with the image kept.
 	fixture := newPollFixture(t)
 	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
-	settings := fixture.addGroup(systemEmail, groupOptions{})
+	fixture.addGroup(systemEmail, groupOptions{})
 
 	broken := mailbox.deliver(rawEmail("bob@example.com", "Broken", "", fixtureAttachment{filename: "receipt.pdf", contentType: "application/pdf", data: corruptPdf}))
 	partial := mailbox.deliver(rawEmail("bob@example.com", "Partial", "", fixtureAttachment{filename: "bad.pdf", contentType: "application/pdf", data: corruptPdf}, jpegNamed("good.jpg", pollJpeg)))
@@ -217,28 +225,15 @@ func TestPollEmail_CorruptAttachmentFailsAloneAndLaterEmailsAreProcessed(t *test
 	subjects := make([]string, 0)
 	for _, payload := range fixture.enqueued {
 		subjects = append(subjects, payload.Metadata.Subject+"/"+payload.Attachment.Filename)
-	}
-	if !slices.Equal(subjects, []string{"Partial/good.jpg", "Later/receipt.jpg"}) {
-		t.Errorf("enqueued %v; one bad attachment must not stop the rest", subjects)
-	}
-
-	emailReads := fixture.systemTasks(models.EMAIL_READ)
-	uploads := fixture.systemTasks(models.EMAIL_UPLOAD)
-	if len(emailReads) != 2 || len(uploads) != 2 {
-		t.Fatalf("EMAIL_READ = %d, EMAIL_UPLOAD = %d, want one failure each per broken attachment", len(emailReads), len(uploads))
-	}
-	for i, task := range emailReads {
-		if task.Status != models.SYSTEM_TASK_FAILED || task.AssociatedEntityType != models.SYSTEM_EMAIL || task.AssociatedEntityId != systemEmail.ID {
-			t.Errorf("EMAIL_READ = %+v", task)
-		}
-		upload := uploads[i]
-		if upload.Status != models.SYSTEM_TASK_FAILED || upload.GroupId == nil || *upload.GroupId != settings.GroupId ||
-			upload.AssociatedSystemTaskId == nil || *upload.AssociatedSystemTaskId != task.ID || upload.RanByUserId != nil {
-			t.Errorf("EMAIL_UPLOAD = %+v", upload)
+		if len(readFile(t, payload.TempFilePath)) == 0 {
+			t.Errorf("%s/%s was queued without its original", payload.Metadata.Subject, payload.Attachment.Filename)
 		}
 	}
-	if !strings.Contains(emailReads[0].ResultDescription, "receipt.pdf") || !strings.Contains(emailReads[0].ResultDescription, "Broken") {
-		t.Errorf("ResultDescription = %q, want the attachment and subject named", emailReads[0].ResultDescription)
+	if !slices.Equal(subjects, []string{"Broken/receipt.pdf", "Partial/bad.pdf", "Partial/good.jpg", "Later/receipt.jpg"}) {
+		t.Errorf("enqueued %v, want every attachment", subjects)
+	}
+	if failures := fixture.systemTasks(models.EMAIL_READ); len(failures) != 0 {
+		t.Errorf("recorded %d failures at poll time, want none: conversion happens in the task", len(failures))
 	}
 }
 
@@ -680,7 +675,7 @@ func TestPollEmail_EmailWithNothingToProcessIsMarkedRead(t *testing.T) {
 	}
 }
 
-func TestPollEmail_FailedAttachmentsDoNotFallBackToTheBody(t *testing.T) {
+func TestPollEmail_UnconvertibleAttachmentIsQueuedNotTheBody(t *testing.T) {
 	fixture := newPollFixture(t)
 	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
 	fixture.addGroup(systemEmail, groupOptions{bodyProcessing: true})
@@ -690,8 +685,35 @@ func TestPollEmail_FailedAttachmentsDoNotFallBackToTheBody(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// A body-only payload would become a receipt without the image it was sent for.
+	if len(fixture.enqueued) != 1 || fixture.enqueued[0].Attachment.Filename != "receipt.pdf" || len(fixture.enqueued[0].TempFilePath) == 0 {
+		t.Errorf("enqueued %+v, want the attachment and no body-only payload", fixture.enqueued)
+	}
+}
+
+func TestPollEmail_AttachmentThatCannotBeSavedIsRecordedNotReplacedByTheBody(t *testing.T) {
+	fixture := newPollFixture(t)
+	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
+	settings := fixture.addGroup(systemEmail, groupOptions{bodyProcessing: true})
+	// A file where temp/ belongs makes every attachment write fail.
+	if err := os.WriteFile(repositories.NewFileRepository(nil).GetTempDirectoryPath(), []byte("not a directory"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	uid := mailbox.deliver(rawEmail("bob@example.com", "Receipt", "See the attached receipt", jpegNamed("receipt.jpg", pollJpeg)))
+
+	if err := PollEmail(true, nil); err != nil {
+		t.Fatalf("PollEmail() = %v; one email's attachment must not abandon the mailbox", err)
+	}
+
 	if len(fixture.enqueued) != 0 {
 		t.Errorf("enqueued %+v; a receipt without its image must not be created from the body", fixture.enqueued)
+	}
+	if !mailbox.isSeen(uid) {
+		t.Error("the email was left unread")
+	}
+	uploads := fixture.systemTasks(models.EMAIL_UPLOAD)
+	if len(uploads) != 1 || *uploads[0].GroupId != settings.GroupId || !strings.Contains(uploads[0].ResultDescription, `"receipt.jpg" could not be processed`) {
+		t.Errorf("failed EMAIL_UPLOAD = %+v, want one naming the attachment", uploads)
 	}
 }
 

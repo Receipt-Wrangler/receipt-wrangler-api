@@ -45,8 +45,6 @@ type taskSourceFiles struct {
 	// Primary is the original upload — what the user recognises. Empty when the
 	// task legitimately has none, e.g. an email with a body but no attachment.
 	Primary string
-	// Preview is the converted copy, when the pipeline made one.
-	Preview string
 }
 
 // expectsSourceFile reports whether this task should have an upload at all.
@@ -56,11 +54,12 @@ func (files taskSourceFiles) expectsSourceFile() bool {
 	return len(files.Primary) > 0
 }
 
-// rerunPaths are every file a rerun reads. Email needs both: HandleEmailProcessTask
-// reads Primary for the FileData it persists and hands Preview to the OCR/vision
-// pipeline, so one missing file is enough to make the rerun fail.
+// rerunPaths are the files a rerun cannot do without. That is only Primary: for
+// email, HandleEmailProcessTask recreates the converted copy from it when the copy
+// is missing (ensureOcrCopy), which is also why an attachment whose conversion
+// failed, and so never had a copy, can be rerun.
 func (files taskSourceFiles) rerunPaths() []string {
-	return cleanedTempPaths(files.Primary, files.Preview)
+	return cleanedTempPaths(files.Primary)
 }
 
 // activityFlags are the two computed booleans an activity carries.
@@ -332,10 +331,7 @@ func taskSourceFilesFromPayload(taskType models.SystemTaskType, payload []byte) 
 			return taskSourceFiles{}, err
 		}
 
-		return taskSourceFiles{
-			Primary: parsedPayload.TempFilePath,
-			Preview: parsedPayload.ImageForOcrPath,
-		}, nil
+		return taskSourceFiles{Primary: parsedPayload.TempFilePath}, nil
 	}
 
 	return taskSourceFiles{}, nil

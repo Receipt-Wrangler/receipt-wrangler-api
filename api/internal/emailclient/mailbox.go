@@ -39,11 +39,16 @@ type MessageHeader struct {
 	Size int64
 	// Header is the raw From and Subject header block.
 	Header []byte
+	// ReceivedAt is the server's delivery time (INTERNALDATE).
+	ReceivedAt time.Time
 }
 
 // Mailbox is the IMAP surface the poller needs. Nothing it does marks a message
 // read except MarkSeen.
 type Mailbox interface {
+	// UIDValidity identifies the INBOX's UID numbering. While it is unchanged, a
+	// UID always names the same message.
+	UIDValidity() uint32
 	// UnseenUIDs lists the INBOX messages without the \Seen flag, in UID order.
 	UnseenUIDs() ([]uint32, error)
 	// FetchHeaders returns the routing header and size of each message.
@@ -123,12 +128,13 @@ func (connector Connector) Connect(credentials Credentials) (Mailbox, error) {
 		return nil, err
 	}
 
-	if _, err := client.Select("INBOX", nil).Wait(); err != nil {
+	selected, err := client.Select("INBOX", nil).Wait()
+	if err != nil {
 		client.Close()
 		return nil, err
 	}
 
-	return &imapMailbox{client: client}, nil
+	return &imapMailbox{client: client, uidValidity: selected.UIDValidity}, nil
 }
 
 // CheckConnection connects, logs in, selects INBOX and logs out, returning the
@@ -193,7 +199,12 @@ func (connector Connector) tlsConfig(host string) *tls.Config {
 }
 
 type imapMailbox struct {
-	client *imapclient.Client
+	client      *imapclient.Client
+	uidValidity uint32
+}
+
+func (mailbox *imapMailbox) UIDValidity() uint32 {
+	return mailbox.uidValidity
 }
 
 func (mailbox *imapMailbox) UnseenUIDs() ([]uint32, error) {
@@ -223,9 +234,10 @@ func (mailbox *imapMailbox) FetchHeaders(uids []uint32) ([]MessageHeader, error)
 		end := min(start+headerFetchBatchSize, len(uids))
 
 		messages, err := mailbox.client.Fetch(toUIDSet(uids[start:end]), &imap.FetchOptions{
-			UID:         true,
-			RFC822Size:  true,
-			BodySection: []*imap.FetchItemBodySection{section},
+			UID:          true,
+			RFC822Size:   true,
+			InternalDate: true,
+			BodySection:  []*imap.FetchItemBodySection{section},
 		}).Collect()
 		if err != nil {
 			return nil, err
@@ -233,9 +245,10 @@ func (mailbox *imapMailbox) FetchHeaders(uids []uint32) ([]MessageHeader, error)
 
 		for _, message := range messages {
 			headers = append(headers, MessageHeader{
-				UID:    uint32(message.UID),
-				Size:   message.RFC822Size,
-				Header: message.FindBodySection(section),
+				UID:        uint32(message.UID),
+				Size:       message.RFC822Size,
+				Header:     message.FindBodySection(section),
+				ReceivedAt: message.InternalDate,
 			})
 		}
 	}

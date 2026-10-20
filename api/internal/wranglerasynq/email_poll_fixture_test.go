@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/emersion/go-msgauth/dkim"
 	"gorm.io/gorm"
@@ -31,20 +32,23 @@ const (
 // --- Fake mailbox -----------------------------------------------------------------
 
 type fakeMessage struct {
-	raw  []byte
-	size int64
-	seen bool
+	raw        []byte
+	size       int64
+	seen       bool
+	receivedAt time.Time
 }
 
 // fakeMailbox is an in-memory emailclient.Mailbox that records what was asked of it.
 type fakeMailbox struct {
-	mu          sync.Mutex
-	messages    map[uint32]*fakeMessage
-	nextUID     uint32
-	rawFetches  []uint32
-	unmarked    []uint32
-	connectErr  error
-	fetchRawErr error
+	mu            sync.Mutex
+	messages      map[uint32]*fakeMessage
+	nextUID       uint32
+	uidValidity   uint32
+	headerFetches [][]uint32
+	rawFetches    []uint32
+	unmarked      []uint32
+	connectErr    error
+	fetchRawErr   error
 	// fetchRawErrs fails FetchRaw for one message only.
 	fetchRawErrs  map[uint32]error
 	markSeenErr   error
@@ -52,17 +56,35 @@ type fakeMailbox struct {
 }
 
 func newFakeMailbox() *fakeMailbox {
-	return &fakeMailbox{messages: make(map[uint32]*fakeMessage), nextUID: 1}
+	return &fakeMailbox{messages: make(map[uint32]*fakeMessage), nextUID: 1, uidValidity: 1}
 }
 
-// deliver adds an unread message and returns its UID.
+// deliver adds an unread message, received now, and returns its UID.
 func (mailbox *fakeMailbox) deliver(raw []byte) uint32 {
+	return mailbox.deliverAt(raw, time.Now())
+}
+
+// deliverAt adds an unread message received at the given time.
+func (mailbox *fakeMailbox) deliverAt(raw []byte, receivedAt time.Time) uint32 {
 	mailbox.mu.Lock()
 	defer mailbox.mu.Unlock()
 	uid := mailbox.nextUID
 	mailbox.nextUID++
-	mailbox.messages[uid] = &fakeMessage{raw: raw, size: int64(len(raw))}
+	mailbox.messages[uid] = &fakeMessage{raw: raw, size: int64(len(raw)), receivedAt: receivedAt}
 	return uid
+}
+
+// fetchedHeadersOf reports every UID whose headers were fetched, across polls.
+func (mailbox *fakeMailbox) fetchedHeadersOf() []uint32 {
+	mailbox.mu.Lock()
+	defer mailbox.mu.Unlock()
+	return slices.Concat(mailbox.headerFetches...)
+}
+
+func (mailbox *fakeMailbox) UIDValidity() uint32 {
+	mailbox.mu.Lock()
+	defer mailbox.mu.Unlock()
+	return mailbox.uidValidity
 }
 
 func (mailbox *fakeMailbox) isSeen(uid uint32) bool {
@@ -87,6 +109,7 @@ func (mailbox *fakeMailbox) UnseenUIDs() ([]uint32, error) {
 func (mailbox *fakeMailbox) FetchHeaders(uids []uint32) ([]emailclient.MessageHeader, error) {
 	mailbox.mu.Lock()
 	defer mailbox.mu.Unlock()
+	mailbox.headerFetches = append(mailbox.headerFetches, slices.Clone(uids))
 	headers := make([]emailclient.MessageHeader, 0, len(uids))
 	for _, uid := range uids {
 		message := mailbox.messages[uid]
@@ -94,7 +117,7 @@ func (mailbox *fakeMailbox) FetchHeaders(uids []uint32) ([]emailclient.MessageHe
 		if end < 0 {
 			end = len(message.raw)
 		}
-		headers = append(headers, emailclient.MessageHeader{UID: uid, Size: message.size, Header: message.raw[:end]})
+		headers = append(headers, emailclient.MessageHeader{UID: uid, Size: message.size, Header: message.raw[:end], ReceivedAt: message.receivedAt})
 	}
 	return headers, nil
 }
@@ -142,9 +165,11 @@ func (mailbox *fakeMailbox) Close() error { return nil }
 // --- Fixture ------------------------------------------------------------------------
 
 type pollFixture struct {
-	t          *testing.T
-	db         *gorm.DB
+	t  *testing.T
+	db *gorm.DB
+	// mailboxes are keyed by lowercased username: rows for one account share one.
 	mailboxes  map[string]*fakeMailbox
+	clock      time.Time
 	connects   []emailclient.Credentials
 	enqueued   []EmailProcessTaskPayload
 	enqueueErr error
@@ -159,10 +184,20 @@ func newPollFixture(t *testing.T) *pollFixture {
 	t.Setenv("BASE_PATH", t.TempDir())
 	t.Cleanup(repositories.TruncateTestDb)
 
+	// Every test reads the same account, so what one poll remembered would carry
+	// into the next test.
+	forgetPollState := func() {
+		mailboxMemories.Clear()
+		mailboxPollLocks.Clear()
+	}
+	forgetPollState()
+	t.Cleanup(forgetPollState)
+
 	fixture := &pollFixture{
 		t:         t,
 		db:        repositories.GetDB(),
 		mailboxes: make(map[string]*fakeMailbox),
+		clock:     time.Now(),
 		lookupTXT: func(name string) ([]string, error) {
 			return nil, &net.DNSError{Err: "no such host", Name: name, IsNotFound: true}
 		},
@@ -179,9 +214,12 @@ func (fixture *pollFixture) poller() emailPoller {
 	return emailPoller{
 		connect: func(credentials emailclient.Credentials) (emailclient.Mailbox, error) {
 			fixture.connects = append(fixture.connects, credentials)
-			mailbox, ok := fixture.mailboxes[credentials.Username]
+			mailbox, ok := fixture.mailboxes[strings.ToLower(credentials.Username)]
 			if !ok {
 				return nil, fmt.Errorf("no mailbox for %s", credentials.Username)
+			}
+			if credentials.Password != pollTestPassword {
+				return nil, errors.New("authentication failed")
 			}
 			if mailbox.connectErr != nil {
 				return nil, mailbox.connectErr
@@ -200,23 +238,40 @@ func (fixture *pollFixture) poller() emailPoller {
 			fixture.enqueued = append(fixture.enqueued, payload)
 			return nil
 		},
+		now: func() time.Time { return fixture.clock },
 	}
+}
+
+func (fixture *pollFixture) advance(duration time.Duration) {
+	fixture.clock = fixture.clock.Add(duration)
 }
 
 func (fixture *pollFixture) addSystemEmail(username string) (models.SystemEmail, *fakeMailbox) {
 	fixture.t.Helper()
-	password, err := utils.EncryptAndEncodeToBase64(pollTestEncryptionKey, pollTestPassword)
+	return fixture.addSystemEmailWithPassword(username, pollTestPassword)
+}
+
+// addSystemEmailWithPassword adds a row for the account; a second row for the same
+// account (the username in any case) shares the first row's mailbox. The fake
+// server accepts only pollTestPassword.
+func (fixture *pollFixture) addSystemEmailWithPassword(username string, password string) (models.SystemEmail, *fakeMailbox) {
+	fixture.t.Helper()
+	encrypted, err := utils.EncryptAndEncodeToBase64(pollTestEncryptionKey, password)
 	if err != nil {
 		fixture.t.Fatal(err)
 	}
 
-	systemEmail := models.SystemEmail{Host: "imap.example.org", Port: "993", Username: username, Password: password}
+	systemEmail := models.SystemEmail{Host: "imap.example.org", Port: "993", Username: username, Password: encrypted}
 	if err := fixture.db.Create(&systemEmail).Error; err != nil {
 		fixture.t.Fatal(err)
 	}
 
-	mailbox := newFakeMailbox()
-	fixture.mailboxes[username] = mailbox
+	key := strings.ToLower(username)
+	mailbox, ok := fixture.mailboxes[key]
+	if !ok {
+		mailbox = newFakeMailbox()
+		fixture.mailboxes[key] = mailbox
+	}
 	return systemEmail, mailbox
 }
 

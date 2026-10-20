@@ -127,7 +127,13 @@ func (server testServer) connector() Connector {
 
 func (server testServer) deliver(t *testing.T, raw []byte, flags ...imap.Flag) {
 	t.Helper()
-	if _, err := server.user.Append("INBOX", bytes.NewReader(raw), &imap.AppendOptions{Flags: flags}); err != nil {
+	server.deliverAt(t, raw, time.Time{}, flags...)
+}
+
+// deliverAt delivers with the given INTERNALDATE; zero means now.
+func (server testServer) deliverAt(t *testing.T, raw []byte, receivedAt time.Time, flags ...imap.Flag) {
+	t.Helper()
+	if _, err := server.user.Append("INBOX", bytes.NewReader(raw), &imap.AppendOptions{Flags: flags, Time: receivedAt}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -244,6 +250,34 @@ func TestMailbox_FetchHeadersOfNothing(t *testing.T) {
 	}
 	if err := mailbox.MarkSeen(); err != nil {
 		t.Errorf("MarkSeen() with no uids = %v", err)
+	}
+}
+
+func TestMailbox_FetchHeadersReturnsTheDeliveryTime(t *testing.T) {
+	server := startServer(t, false)
+	receivedAt := time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
+	server.deliverAt(t, receiptFrom("bob@example.com"), receivedAt)
+
+	headers, err := connect(t, server, false).FetchHeaders([]uint32{1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(headers) != 1 || !headers[0].ReceivedAt.Equal(receivedAt) {
+		t.Errorf("ReceivedAt = %+v, want %v", headers, receivedAt)
+	}
+}
+
+func TestMailbox_UIDValidity(t *testing.T) {
+	server := startServer(t, false)
+
+	first := connect(t, server, false).UIDValidity()
+	second := connect(t, server, false).UIDValidity()
+
+	if first == 0 {
+		t.Error("UIDValidity() = 0; the SELECT response's value was not kept")
+	}
+	if first != second {
+		t.Errorf("UIDValidity() = %d then %d for the same mailbox", first, second)
 	}
 }
 

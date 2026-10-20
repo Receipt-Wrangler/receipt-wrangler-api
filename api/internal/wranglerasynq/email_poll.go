@@ -1,13 +1,18 @@
 package wranglerasynq
 
 import (
+	"cmp"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +34,14 @@ const (
 	maxMatchedMessagesPerMailboxPoll = 50
 	// maxEmailMessageBytes matches the 50 MB request cap nginx puts on uploads.
 	maxEmailMessageBytes = 50 << 20
+	// retryBackoff is how long a message whose check could not finish waits before
+	// it is tried again. Without it, a sender whose DNS keeps failing took a slot
+	// under the cap on every poll, and 50 of them stopped the mailbox.
+	retryBackoff = 30 * time.Minute
+	// senderCheckGiveUpAfter ends the wait on a sender check that keeps failing
+	// temporarily, counted from delivery. The wait also holds back the matched
+	// groups that do not require the check, so it cannot be open-ended.
+	senderCheckGiveUpAfter = 24 * time.Hour
 )
 
 // signedSenderHint follows a failed sender check, because on some providers the
@@ -41,6 +54,7 @@ type emailPoller struct {
 	connect   func(credentials emailclient.Credentials) (emailclient.Mailbox, error)
 	lookupTXT emailclient.TXTLookup
 	enqueue   func(payload EmailProcessTaskPayload) error
+	now       func() time.Time
 }
 
 // newEmailPoller builds the production poller. A variable so tests can drive
@@ -50,6 +64,7 @@ var newEmailPoller = func() emailPoller {
 		connect:   emailclient.Connector{}.Connect,
 		lookupTXT: net.LookupTXT,
 		enqueue:   enqueueEmailProcessTask,
+		now:       time.Now,
 	}
 }
 
@@ -63,63 +78,179 @@ func enqueueEmailProcessTask(payload EmailProcessTaskPayload) error {
 	return err
 }
 
-// mailboxPollLocks holds one mutex per system email. Messages stay unread while
-// they are processed, so the scheduled poll and a manual one reading the same
-// mailbox at once would both see them and queue each twice.
+// accountKey identifies an IMAP account. System Email rows with the same key read
+// the same INBOX, so they are polled as one. The username compares
+// case-insensitively, as email-address logins do on mainstream servers.
+type accountKey struct {
+	host     string
+	port     string
+	username string
+}
+
+func accountKeyOf(systemEmail models.SystemEmail) accountKey {
+	return accountKey{
+		host:     strings.ToLower(strings.TrimSpace(systemEmail.Host)),
+		port:     strings.TrimSpace(systemEmail.Port),
+		username: strings.ToLower(strings.TrimSpace(systemEmail.Username)),
+	}
+}
+
+// mailAccount is one IMAP account and everything that reads it.
+type mailAccount struct {
+	key accountKey
+	// systemEmails are the account's rows, by id. Any of them can log in.
+	systemEmails []models.SystemEmail
+	// groups are the enabled groups on any of those rows.
+	groups []models.GroupSettings
+}
+
+func (account mailAccount) String() string {
+	ids := make([]string, len(account.systemEmails))
+	for i, systemEmail := range account.systemEmails {
+		ids[i] = utils.UintToString(systemEmail.ID)
+	}
+	return fmt.Sprintf("%s on %s (system email %s)", account.key.username, account.key.host, strings.Join(ids, ", "))
+}
+
+// mailboxPollLocks holds one mutex per IMAP account. Messages stay unread while
+// they are processed, so two polls of one account at once (the scheduled poll and
+// a manual one) would both see them and queue each twice.
 var mailboxPollLocks sync.Map
 
-func mailboxPollLock(systemEmailId uint) *sync.Mutex {
-	lock, _ := mailboxPollLocks.LoadOrStore(systemEmailId, &sync.Mutex{})
+func mailboxPollLock(key accountKey) *sync.Mutex {
+	lock, _ := mailboxPollLocks.LoadOrStore(key, &sync.Mutex{})
 	return lock.(*sync.Mutex)
 }
 
-// poll reads every mailbox used by the requested groups. Messages are routed
-// against every enabled group on that mailbox, not just the requested ones, so a
+// mailboxMemory is what one poll learned about an account's unread mail that the
+// next can rely on. A message's From and Subject never change, so one that matched
+// no group matches none until the routing changes. Without it, the headers of
+// every unrelated unread message were fetched again on every poll, forever.
+//
+// It is kept in memory only, so a restart costs one full header scan. It is read
+// and written only under the account's poll lock.
+type mailboxMemory struct {
+	uidValidity uint32
+	fingerprint string
+	unmatched   map[uint32]struct{}
+	// deferredUntil holds the messages waiting to be tried again, and until when.
+	deferredUntil map[uint32]time.Time
+}
+
+var mailboxMemories sync.Map
+
+func mailboxMemoryOf(key accountKey) *mailboxMemory {
+	memory, _ := mailboxMemories.LoadOrStore(key, &mailboxMemory{})
+	return memory.(*mailboxMemory)
+}
+
+// refresh forgets everything once a UID may name a different message (a new
+// UIDVALIDITY) or the routing has changed (a new fingerprint).
+func (memory *mailboxMemory) refresh(uidValidity uint32, fingerprint string) {
+	if memory.unmatched != nil && memory.uidValidity == uidValidity && memory.fingerprint == fingerprint {
+		return
+	}
+	*memory = mailboxMemory{
+		uidValidity:   uidValidity,
+		fingerprint:   fingerprint,
+		unmatched:     make(map[uint32]struct{}),
+		deferredUntil: make(map[uint32]time.Time),
+	}
+}
+
+// forgetAllBut drops the messages that are no longer unread, which bounds the
+// memory to the mailbox's unread mail. unseen is in UID order.
+func (memory *mailboxMemory) forgetAllBut(unseen []uint32) {
+	gone := func(uid uint32) bool {
+		_, found := slices.BinarySearch(unseen, uid)
+		return !found
+	}
+	maps.DeleteFunc(memory.unmatched, func(uid uint32, _ struct{}) bool { return gone(uid) })
+	maps.DeleteFunc(memory.deferredUntil, func(uid uint32, _ time.Time) bool { return gone(uid) })
+}
+
+// worthFetching returns the unread messages whose headers are worth fetching: not
+// known to match no group, and not waiting out a retry.
+func (memory *mailboxMemory) worthFetching(unseen []uint32, now time.Time) []uint32 {
+	result := make([]uint32, 0, len(unseen))
+	for _, uid := range unseen {
+		if _, unmatched := memory.unmatched[uid]; unmatched {
+			continue
+		}
+		if until, deferred := memory.deferredUntil[uid]; deferred && now.Before(until) {
+			continue
+		}
+		result = append(result, uid)
+	}
+	return result
+}
+
+// fingerprintOf summarizes everything that decides where an account's mail goes
+// and whether its sender is checked. A change to any of it starts a fresh memory:
+// a whitelist or regex edit, a group enabled, disabled or moved, or the DKIM
+// requirement turned off to release mail waiting on its sender check.
+func fingerprintOf(groups []models.GroupSettings) string {
+	type groupRouting struct {
+		Id                  uint
+		RequireSignedSender bool
+		Whitelist           []string
+		Regexes             []string
+	}
+
+	routing := make([]groupRouting, 0, len(groups))
+	for _, settings := range groups {
+		entry := groupRouting{Id: settings.ID, RequireSignedSender: settings.EmailRequireSignedSender}
+		for _, allowed := range settings.EmailWhiteList {
+			entry.Whitelist = append(entry.Whitelist, allowed.Email)
+		}
+		for _, subjectRegex := range settings.SubjectLineRegexes {
+			entry.Regexes = append(entry.Regexes, subjectRegex.Regex)
+		}
+		slices.Sort(entry.Whitelist)
+		slices.Sort(entry.Regexes)
+		routing = append(routing, entry)
+	}
+	slices.SortFunc(routing, func(a, b groupRouting) int { return cmp.Compare(a.Id, b.Id) })
+
+	// Marshalling strings, bools and numbers cannot fail.
+	encoded, _ := json.Marshal(routing)
+	sum := sha256.Sum256(encoded)
+	return hex.EncodeToString(sum[:])
+}
+
+// poll reads every IMAP account used by the requested groups. Messages are routed
+// against every enabled group on that account, not just the requested ones, so a
 // manual poll for one group never swallows another group's mail.
 //
-// Each mailbox is independent: one that fails is logged and the rest are still
-// read. The poll only fails when every mailbox did.
+// Each account is independent: one that fails is logged and the rest are still
+// read. The poll only fails when every account did.
 func (poller emailPoller) poll(requested []models.GroupSettings, enabled []models.GroupSettings) error {
-	systemEmails := mailboxesOf(requested)
+	accounts := accountsOf(requested, enabled)
 	failures := 0
 
-	for _, systemEmail := range systemEmails {
-		err := poller.pollMailbox(systemEmail, groupsReading(enabled, systemEmail.ID))
-		if err != nil {
+	for _, account := range accounts {
+		if err := poller.pollAccount(account); err != nil {
 			failures++
-			logging.LogStd(logging.LOG_LEVEL_ERROR, fmt.Sprintf(
-				"Polling system email %d (%s on %s) failed: %s", systemEmail.ID, systemEmail.Username, systemEmail.Host, err.Error(),
-			))
+			logging.LogStd(logging.LOG_LEVEL_ERROR, fmt.Sprintf("Polling %s failed: %s", account, err.Error()))
 		}
 	}
 
-	if len(systemEmails) > 0 && failures == len(systemEmails) {
+	if len(accounts) > 0 && failures == len(accounts) {
 		return fmt.Errorf("polling failed for all %d mailboxes", failures)
 	}
 
 	return nil
 }
 
-func (poller emailPoller) pollMailbox(systemEmail models.SystemEmail, groups []models.GroupSettings) error {
-	lock := mailboxPollLock(systemEmail.ID)
+func (poller emailPoller) pollAccount(account mailAccount) error {
+	lock := mailboxPollLock(account.key)
 	if !lock.TryLock() {
-		logging.LogStd(logging.LOG_LEVEL_INFO, fmt.Sprintf("System email %d is already being polled; skipping it this time", systemEmail.ID))
+		logging.LogStd(logging.LOG_LEVEL_INFO, fmt.Sprintf("%s is already being polled; skipping it this time", account))
 		return nil
 	}
 	defer lock.Unlock()
 
-	password, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), systemEmail.Password)
-	if err != nil {
-		return err
-	}
-
-	mailbox, err := poller.connect(emailclient.Credentials{
-		Host:        systemEmail.Host,
-		Port:        systemEmail.Port,
-		Username:    systemEmail.Username,
-		Password:    password,
-		UseStartTLS: systemEmail.UseStartTLS,
-	})
+	mailbox, systemEmail, err := poller.connectAccount(account)
 	if err != nil {
 		return err
 	}
@@ -129,9 +260,19 @@ func (poller emailPoller) pollMailbox(systemEmail models.SystemEmail, groups []m
 		}
 	}()
 
+	now := poller.now()
+	memory := mailboxMemoryOf(account.key)
+	memory.refresh(mailbox.UIDValidity(), fingerprintOf(account.groups))
+
 	uids, err := mailbox.UnseenUIDs()
-	if err != nil || len(uids) == 0 {
+	if err != nil {
 		return err
+	}
+	memory.forgetAllBut(uids)
+
+	uids = memory.worthFetching(uids, now)
+	if len(uids) == 0 {
+		return nil
 	}
 
 	headers, err := mailbox.FetchHeaders(uids)
@@ -139,18 +280,20 @@ func (poller emailPoller) pollMailbox(systemEmail models.SystemEmail, groups []m
 		return err
 	}
 
+	router := emailclient.NewRouter(account.groups)
 	handled := 0
 	for _, header := range headers {
 		fields := emailclient.ParseHeaderFields(header.Header)
-		matched := groupsWithIds(groups, emailclient.Route(fields.From, fields.Subject, systemEmail.ID, groups))
+		matched := router.Route(fields.From, fields.Subject)
 		if len(matched) == 0 {
 			// Not for any group: left unread for whoever else reads this inbox.
+			memory.unmatched[header.UID] = struct{}{}
 			continue
 		}
 
 		if handled == maxMatchedMessagesPerMailboxPoll {
 			logging.LogStd(logging.LOG_LEVEL_INFO, fmt.Sprintf(
-				"System email %d has more than %d matching emails; the rest wait for the next poll", systemEmail.ID, maxMatchedMessagesPerMailboxPoll,
+				"%s has more than %d matching emails; the rest wait for the next poll", account, maxMatchedMessagesPerMailboxPoll,
 			))
 			break
 		}
@@ -161,6 +304,7 @@ func (poller emailPoller) pollMailbox(systemEmail models.SystemEmail, groups []m
 			return err
 		}
 		if plan.retryLater {
+			memory.deferredUntil[header.UID] = now.Add(retryBackoff)
 			continue
 		}
 
@@ -172,6 +316,43 @@ func (poller emailPoller) pollMailbox(systemEmail models.SystemEmail, groups []m
 	return nil
 }
 
+// connectAccount logs in with the account's rows in id order, so a stale password
+// on one row does not lock out the groups on the others. It returns the row that
+// logged in; the poll's failed activities are recorded against it.
+func (poller emailPoller) connectAccount(account mailAccount) (emailclient.Mailbox, models.SystemEmail, error) {
+	errs := make([]error, 0, len(account.systemEmails))
+
+	for i, systemEmail := range account.systemEmails {
+		mailbox, err := poller.connectAs(systemEmail)
+		if err == nil {
+			return mailbox, systemEmail, nil
+		}
+
+		err = fmt.Errorf("system email %d: %w", systemEmail.ID, err)
+		errs = append(errs, err)
+		if i < len(account.systemEmails)-1 {
+			logging.LogStd(logging.LOG_LEVEL_ERROR, "Could not log in; trying the account's next system email: ", err.Error())
+		}
+	}
+
+	return nil, models.SystemEmail{}, errors.Join(errs...)
+}
+
+func (poller emailPoller) connectAs(systemEmail models.SystemEmail) (emailclient.Mailbox, error) {
+	password, err := utils.DecryptB64EncodedData(config.GetEncryptionKey(), systemEmail.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	return poller.connect(emailclient.Credentials{
+		Host:        systemEmail.Host,
+		Port:        systemEmail.Port,
+		Username:    systemEmail.Username,
+		Password:    password,
+		UseStartTLS: systemEmail.UseStartTLS,
+	})
+}
+
 // pendingFailure is a failed activity waiting to be recorded.
 type pendingFailure struct {
 	groups []models.GroupSettings
@@ -181,7 +362,8 @@ type pendingFailure struct {
 // messagePlan is everything one message will cause, worked out before any of it
 // happens: the tasks to queue and the failures to record.
 type messagePlan struct {
-	// retryLater leaves the message unread, untouched, for a later poll.
+	// retryLater leaves the message unread and untouched, to be tried again once
+	// retryBackoff has passed.
 	retryLater bool
 	context    emailFailure
 	groups     []models.GroupSettings
@@ -252,8 +434,14 @@ func (poller emailPoller) planMessage(
 		verdict := emailclient.VerifySender(raw, message.From.Email, poller.lookupTXT)
 		switch verdict.Kind {
 		case emailclient.RetryLater:
-			logging.LogStd(logging.LOG_LEVEL_INFO, "Leaving an email unread to retry its sender check: ", verdict.Reason)
-			return messagePlan{retryLater: true}, nil
+			if !poller.senderCheckExpired(header) {
+				logging.LogStd(logging.LOG_LEVEL_INFO, "Leaving an email unread to retry its sender check: ", verdict.Reason)
+				return messagePlan{retryLater: true}, nil
+			}
+			plan.fail(requiring, fmt.Sprintf(
+				"the sender could not be verified: its DKIM signature still could not be checked %d hours after the email arrived", int(senderCheckGiveUpAfter.Hours()),
+			))
+			groups = notRequiring
 		case emailclient.Unauthenticated:
 			plan.fail(requiring, fmt.Sprintf("the sender could not be verified: %s. %s", verdict.Reason, signedSenderHint))
 			groups = notRequiring
@@ -300,6 +488,13 @@ func (poller emailPoller) planMessage(
 	)
 
 	return plan, nil
+}
+
+// senderCheckExpired reports whether a message has waited long enough on a sender
+// check that keeps failing temporarily. A message without a delivery time waits
+// indefinitely, at retryBackoff intervals; every IMAP server sends one.
+func (poller emailPoller) senderCheckExpired(header emailclient.MessageHeader) bool {
+	return !header.ReceivedAt.IsZero() && poller.now().Sub(header.ReceivedAt) >= senderCheckGiveUpAfter
 }
 
 // finishMessage carries out a plan, claiming the message first: it is marked
@@ -531,43 +726,55 @@ func (failure emailFailure) record(groups []models.GroupSettings, reason string)
 	}
 }
 
-// mailboxesOf returns the distinct system emails the groups read, by id.
-func mailboxesOf(groupSettings []models.GroupSettings) []models.SystemEmail {
-	byId := make(map[uint]models.SystemEmail)
-	for _, settings := range groupSettings {
-		if settings.SystemEmailId == nil || settings.SystemEmail.ID != *settings.SystemEmailId {
+// accountsOf returns the IMAP accounts the requested groups read, each with every
+// enabled group on any of its rows. Rows for one account used to be polled
+// separately, so whichever ran first consumed the mail and the other row's groups
+// never saw it.
+func accountsOf(requested []models.GroupSettings, enabled []models.GroupSettings) []mailAccount {
+	wanted := make(map[accountKey]bool)
+	for _, settings := range requested {
+		if systemEmail, ok := systemEmailOf(settings); ok {
+			wanted[accountKeyOf(systemEmail)] = true
+		}
+	}
+
+	byKey := make(map[accountKey]*mailAccount)
+	for _, settings := range enabled {
+		systemEmail, ok := systemEmailOf(settings)
+		if !ok {
 			continue
 		}
-		byId[settings.SystemEmail.ID] = settings.SystemEmail
+		key := accountKeyOf(systemEmail)
+		if !wanted[key] {
+			continue
+		}
+
+		account, exists := byKey[key]
+		if !exists {
+			account = &mailAccount{key: key}
+			byKey[key] = account
+		}
+		if !slices.ContainsFunc(account.systemEmails, func(row models.SystemEmail) bool { return row.ID == systemEmail.ID }) {
+			account.systemEmails = append(account.systemEmails, systemEmail)
+		}
+		account.groups = append(account.groups, settings)
 	}
 
-	systemEmails := make([]models.SystemEmail, 0, len(byId))
-	for _, systemEmail := range byId {
-		systemEmails = append(systemEmails, systemEmail)
+	accounts := make([]mailAccount, 0, len(byKey))
+	for _, account := range byKey {
+		slices.SortFunc(account.systemEmails, func(a, b models.SystemEmail) int { return cmp.Compare(a.ID, b.ID) })
+		accounts = append(accounts, *account)
 	}
-	slices.SortFunc(systemEmails, func(a, b models.SystemEmail) int { return int(a.ID) - int(b.ID) })
+	slices.SortFunc(accounts, func(a, b mailAccount) int { return cmp.Compare(a.systemEmails[0].ID, b.systemEmails[0].ID) })
 
-	return systemEmails
+	return accounts
 }
 
-func groupsReading(groupSettings []models.GroupSettings, systemEmailId uint) []models.GroupSettings {
-	result := make([]models.GroupSettings, 0)
-	for _, settings := range groupSettings {
-		if settings.SystemEmailId != nil && *settings.SystemEmailId == systemEmailId {
-			result = append(result, settings)
-		}
+func systemEmailOf(settings models.GroupSettings) (models.SystemEmail, bool) {
+	if settings.SystemEmailId == nil || settings.SystemEmail.ID != *settings.SystemEmailId {
+		return models.SystemEmail{}, false
 	}
-	return result
-}
-
-func groupsWithIds(groupSettings []models.GroupSettings, ids []uint) []models.GroupSettings {
-	result := make([]models.GroupSettings, 0, len(ids))
-	for _, settings := range groupSettings {
-		if slices.Contains(ids, settings.ID) {
-			result = append(result, settings)
-		}
-	}
-	return result
+	return settings.SystemEmail, true
 }
 
 func splitBySignedSenderRequirement(groupSettings []models.GroupSettings) ([]models.GroupSettings, []models.GroupSettings) {

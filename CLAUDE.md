@@ -662,10 +662,13 @@ desktop**; mobile only carries the regenerated client (it has no group email set
   (`api/imap-client/`, deleted). **Python stays in the images** for the optional EasyOCR engine.
 - **A message is marked read just before it is acted on**: its tasks are queued and its failures
   recorded only once that mark succeeds, so a retry can never queue it twice. If nothing could be
-  queued it goes back to unread. Mail matching no group is left unread. See `api/CLAUDE.md` →
-  "Email ingestion (IMAP)" for the full table.
-- **Routing is per mailbox and per group**: a group only receives mail sent to its own System Email,
-  judged by its own whitelist and regexes.
+  queued it goes back to unread. Mail matching no group is left unread, and its headers are fetched
+  once per process rather than on every poll. A sender check that cannot finish (DNS) is retried
+  every 30 minutes and gives up 24 hours after delivery. See `api/CLAUDE.md` → "Email ingestion
+  (IMAP)" for the full table.
+- **Routing is per IMAP account and per group**: a group only receives mail sent to its own System
+  Email's account, judged by its own whitelist and regexes. Two System Email rows for one account
+  (host, port, username) are read once, against the groups on both.
 - **`emailRequireSignedSender`** (per group, default **true** including on upgrade) requires a valid
   DKIM signature from the sender's own domain. It is an optional boolean on `GroupSettings` and
   `UpdateGroupSettingsCommand` — never required, so an older server's payload still parses — and a

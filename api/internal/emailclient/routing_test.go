@@ -1,9 +1,12 @@
 package emailclient
 
 import (
+	"bytes"
 	"slices"
+	"strings"
 	"testing"
 
+	"receipt-wrangler/api/internal/logging"
 	"receipt-wrangler/api/internal/models"
 )
 
@@ -23,19 +26,34 @@ func subjectRegexes(regexes ...string) []models.SubjectLineRegex {
 	return result
 }
 
-func groupOnMailbox(id uint, systemEmailId uint, emails []models.GroupSettingsWhiteListEmail, regexes []models.SubjectLineRegex) models.GroupSettings {
-	settings := models.GroupSettings{
-		SystemEmailId:      &systemEmailId,
-		EmailWhiteList:     emails,
-		SubjectLineRegexes: regexes,
-	}
+func routedGroupSettings(id uint, emails []models.GroupSettingsWhiteListEmail, regexes []models.SubjectLineRegex) models.GroupSettings {
+	settings := models.GroupSettings{EmailWhiteList: emails, SubjectLineRegexes: regexes}
 	settings.ID = id
 	return settings
 }
 
+func routedIds(groups []models.GroupSettings) []uint {
+	ids := make([]uint, len(groups))
+	for i, settings := range groups {
+		ids[i] = settings.ID
+	}
+	return ids
+}
+
+// captureLog sends the file logger's output to a buffer for the rest of the test.
+func captureLog(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	logger := logging.GetLogger()
+	original := logger.Writer()
+	var buffer bytes.Buffer
+	logger.SetOutput(&buffer)
+	t.Cleanup(func() { logger.SetOutput(original) })
+	return &buffer
+}
+
 // --- Parity with the Python client's utils tests --------------------------------
 
-func TestSenderAllowed(t *testing.T) {
+func TestRouter_SenderWhitelist(t *testing.T) {
 	cases := []struct {
 		name      string
 		from      []string
@@ -51,18 +69,20 @@ func TestSenderAllowed(t *testing.T) {
 		{"entry stored with a display name", []string{"bob@example.com"}, whitelist("Bob <bob@example.com>"), true},
 		{"no sender address", nil, whitelist("bob@example.com"), false},
 		{"any of several addresses", []string{"x@example.com", "bob@example.com"}, whitelist("bob@example.com"), true},
+		{"a whitelist of blank entries allows nobody", []string{"bob@example.com"}, whitelist("  "), false},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := SenderAllowed(tc.from, tc.whitelist); got != tc.want {
-				t.Errorf("SenderAllowed(%v) = %v, want %v", tc.from, got, tc.want)
+			router := NewRouter([]models.GroupSettings{routedGroupSettings(1, tc.whitelist, nil)})
+			if got := len(router.Route(tc.from, "Receipt")) == 1; got != tc.want {
+				t.Errorf("Route(%v) matched = %v, want %v", tc.from, got, tc.want)
 			}
 		})
 	}
 }
 
-func TestSubjectAllowed(t *testing.T) {
+func TestRouter_SubjectRegexes(t *testing.T) {
 	cases := []struct {
 		name    string
 		subject string
@@ -77,12 +97,14 @@ func TestSubjectAllowed(t *testing.T) {
 		// New: an invalid regex used to raise and fail the whole poll.
 		{"python-only lookahead is ignored, not fatal", "Receipt", subjectRegexes(`^(?=Receipt)`), false},
 		{"invalid regex skipped, valid one still matches", "Receipt", subjectRegexes(`(unclosed`, `^Receipt$`), true},
+		{"every regex invalid matches nothing", "anything", subjectRegexes(`(unclosed`, `^(?=x)`), false},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := SubjectAllowed(tc.subject, tc.regexes); got != tc.want {
-				t.Errorf("SubjectAllowed(%q) = %v, want %v", tc.subject, got, tc.want)
+			router := NewRouter([]models.GroupSettings{routedGroupSettings(1, nil, tc.regexes)})
+			if got := len(router.Route([]string{"bob@example.com"}, tc.subject)) == 1; got != tc.want {
+				t.Errorf("Route(%q) matched = %v, want %v", tc.subject, got, tc.want)
 			}
 		})
 	}
@@ -90,39 +112,13 @@ func TestSubjectAllowed(t *testing.T) {
 
 // --- Routing ----------------------------------------------------------------------
 
-func TestRoute_OnlyGroupsOnTheReceivingMailbox(t *testing.T) {
-	// Group 2 reads a different mailbox and accepts anyone. The Python client
-	// routed mailbox 1's message to it anyway.
-	groups := []models.GroupSettings{
-		groupOnMailbox(1, 10, whitelist("bob@example.com"), nil),
-		groupOnMailbox(2, 20, nil, nil),
-	}
-
-	got := Route([]string{"bob@example.com"}, "Receipt", 10, groups)
-
-	if !slices.Equal(got, []uint{1}) {
-		t.Errorf("Route() = %v, want [1]", got)
-	}
-}
-
-func TestRoute_SharedSenderReachesOnlyTheReceivingMailboxsGroup(t *testing.T) {
-	groups := []models.GroupSettings{
-		groupOnMailbox(1, 10, whitelist("bob@example.com"), nil),
-		groupOnMailbox(2, 20, whitelist("bob@example.com"), nil),
-	}
-
-	if got := Route([]string{"bob@example.com"}, "Receipt", 20, groups); !slices.Equal(got, []uint{2}) {
-		t.Errorf("Route() = %v, want [2]", got)
-	}
-}
-
-func TestRoute_GroupsKeepTheirOwnFilters(t *testing.T) {
+func TestRouter_GroupsKeepTheirOwnFilters(t *testing.T) {
 	// The Python client unioned every group's whitelist and regexes before
 	// fetching, so group 1's whitelist narrowed group 2, which accepts anyone.
-	groups := []models.GroupSettings{
-		groupOnMailbox(1, 10, whitelist("bob@example.com"), subjectRegexes(`^Receipt`)),
-		groupOnMailbox(2, 10, nil, nil),
-	}
+	router := NewRouter([]models.GroupSettings{
+		routedGroupSettings(1, whitelist("bob@example.com"), subjectRegexes(`^Receipt`)),
+		routedGroupSettings(2, nil, nil),
+	})
 
 	cases := []struct {
 		name    string
@@ -137,24 +133,31 @@ func TestRoute_GroupsKeepTheirOwnFilters(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := Route([]string{tc.from}, tc.subject, 10, groups); !slices.Equal(got, tc.want) {
+			if got := routedIds(router.Route([]string{tc.from}, tc.subject)); !slices.Equal(got, tc.want) {
 				t.Errorf("Route() = %v, want %v", got, tc.want)
 			}
 		})
 	}
 }
 
-func TestRoute_GroupWithoutAMailboxIsIgnored(t *testing.T) {
-	settings := models.GroupSettings{}
-	settings.ID = 1
+func TestRouter_InvalidRegexIsLoggedOnce(t *testing.T) {
+	log := captureLog(t)
+	router := NewRouter([]models.GroupSettings{
+		routedGroupSettings(1, nil, subjectRegexes(`(unclosed`, `^Receipt`)),
+		routedGroupSettings(2, nil, subjectRegexes(`^(?=x)`)),
+	})
 
-	if got := Route([]string{"bob@example.com"}, "Receipt", 10, []models.GroupSettings{settings}); len(got) != 0 {
-		t.Errorf("Route() = %v, want none", got)
+	for range 10 {
+		router.Route([]string{"bob@example.com"}, "Receipt")
+	}
+
+	if got := strings.Count(log.String(), "Ignoring subject line regex"); got != 2 {
+		t.Errorf("logged %d invalid regexes, want 2 (once each, however many messages):\n%s", got, log.String())
 	}
 }
 
-func TestRoute_NoMatchIsEmptyNotNil(t *testing.T) {
-	got := Route([]string{"bob@example.com"}, "Receipt", 10, nil)
+func TestRouter_NoMatchIsEmptyNotNil(t *testing.T) {
+	got := NewRouter(nil).Route([]string{"bob@example.com"}, "Receipt")
 	if got == nil || len(got) != 0 {
 		t.Errorf("Route() = %#v, want an empty slice", got)
 	}

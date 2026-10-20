@@ -353,10 +353,11 @@ the venv and `PYTHONPATH` — so do not strip those from the Dockerfiles.
     did, with 2 minutes, and that closed the session whenever the poller spent long enough between
     two commands. imapclient retries a timed-out read four times at a response boundary, so in
     practice that was about 8 minutes. `TestMailbox_SurvivesAPauseLongerThanTheHandshakeTimeout`
-    pins it.
+    pins it. `UIDValidity()` is kept from the SELECT response, and `FetchHeaders` also returns each
+    message's INTERNALDATE (`ReceivedAt`); the poller's memory and its 24-hour limit rely on them.
   - `parse.go` — `ParseMessage` / `ParseHeaderFields` over `emersion/go-message` (plus its `charset`
     subpackage, which is what decodes windows-1252, ISO-8859-x and friends).
-  - `routing.go` — `Route`, `SenderAllowed`, `SubjectAllowed`.
+  - `routing.go` — `NewRouter` / `Router.Route`, built once per poll from the account's groups.
   - `dkim.go` — `VerifySender` over `emersion/go-msgauth/dkim`, `SameOrganizationalDomain` over
     `golang.org/x/net/publicsuffix`.
 - **Orchestration** is `wranglerasynq/email_poll.go` (`emailPoller`), entered through `PollEmail` in
@@ -385,13 +386,13 @@ without a record.
 
 | Case | Outcome |
 |---|---|
-| matches no group | **left unread**; only its headers are ever fetched |
+| matches no group | **left unread**; only its headers are ever fetched, and once per process (see "Memory and retries") |
 | larger than 50 MB (`RFC822.SIZE`) | failed activity, marked read, body never downloaded |
 | gone by the time it is fetched (another client expunged it) | skipped, nothing recorded |
-| the server says try later (`NO [UNAVAILABLE]`) | left unread, nothing recorded; the next message is still processed |
+| the server says try later (`NO [UNAVAILABLE]`) | left unread, nothing recorded, tried again after 30 minutes; the next message is still processed |
 | the server refuses to return it (any other `NO`) | failed activity, marked read: retrying would block every later message, which always comes after it in UID order |
 | unparseable, no `From`, or more than one `From` address | failed activity, marked read |
-| DKIM check temporarily impossible (DNS) | left unread, nothing recorded — retried next poll |
+| DKIM check temporarily impossible (DNS) | left unread, nothing recorded, tried again after 30 minutes. Once the email is 24 hours old by its INTERNALDATE: failed activity for the groups requiring the check; the other matched groups continue |
 | DKIM fails, for a group requiring it | failed activity **for that group**, naming the setting to turn off; other matched groups continue |
 | an attachment fails conversion | failed activity naming it; the email's other attachments continue |
 | an attachment won't decode, or its declared type is an image/PDF but its contents aren't | failed activity naming it; counts toward "every attachment failed" below |
@@ -408,14 +409,22 @@ child is what the group's activity feed lists (`repositories/system_task.go`). I
 parent/child shape a processed email produces, and it has no `AsynqTaskId`, so rerun and the
 source-file controls stay off.
 
-### Routing is per mailbox and per group
+### Routing is per account and per group
 
-`Route` considers **only groups whose `SystemEmailId` is the mailbox the message came from**, each
-judged by its **own** whitelist and regexes. The Python client pooled every mailbox's messages and
-matched them against every group, so a group with an empty whitelist received mail sent to any other
-group's inbox, and whitelists/regexes were unioned before fetching so one group's filters narrowed
-another's. A **manual poll** reads only the requested groups' mailboxes but routes against **every
-enabled group on them** — it used to mark group B's mail read without ever routing it to B.
+A message is routed **only to the groups reading the IMAP account it came from**, each judged by its
+**own** whitelist and regexes. The Python client pooled every mailbox's messages and matched them
+against every group, so a group with an empty whitelist received mail sent to any other group's
+inbox, and whitelists/regexes were unioned before fetching so one group's filters narrowed another's.
+A **manual poll** reads only the requested groups' accounts but routes against **every enabled group
+on them** — it used to mark group B's mail read without ever routing it to B.
+
+- **An account is host + port + username, not a System Email row** (`accountKeyOf`; host and
+  username compare case-insensitively, as email-address logins do on mainstream servers). Two rows
+  for one account are read **once**, in one session, routing against the groups on both. Polled per
+  row, whichever row ran first consumed the mail and the other row's groups never saw it.
+- **Login tries the account's rows in id order** (`connectAccount`), so a stale password on one row
+  does not lock out the groups on the others. Failed activities are recorded against the row that
+  logged in; each `EMAIL_UPLOAD` child still carries its own group.
 
 - Sender comparison is case-insensitive on the parsed address, and a whitelist entry stored as
   `Name <address>` is reduced to its address. An empty whitelist still allows anyone.
@@ -423,7 +432,9 @@ enabled group on them** — it used to mark group B's mail read without ever rou
 - **Subject regexes are Go RE2.** `UpdateGroupSettingsCommand.Validate` compiles each one
   (`subjectLineRegexes.<i>.regex`, 400). A regex saved before that, using Python-only syntax
   (lookarounds, backreferences), is logged and treated as non-matching at poll time — it can never
-  fail a poll — so that group's mail stays unread until the regex is fixed.
+  fail a poll — so that group's mail stays unread until the regex is fixed. `NewRouter` compiles every
+  regex once per poll, so a bad one is logged once per poll rather than once per message. A group
+  whose regexes are **all** invalid matches nothing, not everything.
 
 ### Attachments
 
@@ -495,12 +506,33 @@ pinned by `commands/email_require_signed_sender_contract_test.go`.
 
 ### Limits and concurrency
 
-- At most **50 matched messages per mailbox per poll** (`maxMatchedMessagesPerMailboxPoll`);
+- At most **50 matched messages per account per poll** (`maxMatchedMessagesPerMailboxPoll`);
   non-matching unread mail does not count, so a backlog can never starve new receipts.
-- **One mailbox failing does not stop the others**; `PollEmail` errors only when every mailbox failed.
-- A per-mailbox **in-process try-lock** skips a mailbox already being polled. Messages stay unread while
-  processed, so the cron poll and a manual poll would otherwise both queue them. It assumes one API
-  process, which is how the monolith runs.
+- **One account failing does not stop the others**; `PollEmail` errors only when every account failed.
+- A per-account **in-process try-lock** (`mailboxPollLock`, keyed like the routing) skips an account
+  already being polled. Messages stay unread while processed, so the cron poll and a manual poll
+  would otherwise both queue them. It assumes one API process, which is how the monolith runs.
+
+### Memory and retries
+
+Each account has a `mailboxMemory`, held in process and touched only under its lock:
+
+- **Messages that matched no group are remembered**, and their headers are not fetched again. A
+  message's From and Subject never change, so it matches nothing until the routing does. Before, the
+  headers of every unrelated unread message were fetched on every poll, forever.
+- **The memory is forgotten** when UIDVALIDITY changes (a UID may now name another message) or the
+  fingerprint does (`fingerprintOf`: each group's id, whitelist, regexes and DKIM requirement). So a
+  whitelist or regex edit, a group enabled, disabled or moved, or turning DKIM off is seen on the
+  next poll. UIDs that are no longer unread are pruned on every poll. A restart empties it, which
+  costs one full header scan.
+- **Retries back off.** A message the server cannot return right now, or whose sender check cannot
+  finish, waits 30 minutes (`retryBackoff`). While it waits it is not fetched and takes no slot under
+  the cap, so 50 uncheckable emails can no longer stop the mailbox. It does take a slot on the poll
+  that tries it.
+- **A sender check gives up 24 hours after delivery** (`senderCheckGiveUpAfter`, by INTERNALDATE,
+  which survives restarts). The wait also holds back the matched groups that don't require the
+  check, which is why it cannot be open-ended. A message without an INTERNALDATE waits
+  indefinitely, but every IMAP server sends one. A `NO [UNAVAILABLE]` fetch never gives up.
 
 ### Connectivity check
 
@@ -521,10 +553,15 @@ file every poll also wrote to, so it could report another mailbox's failure. Sti
   messages are addressed by UID (an expunge makes UIDs and sequence numbers diverge), that the
   zero `Connector` refuses an untrusted certificate, that a session survives a pause, and how
   `FetchRaw` classifies a vanished message and a `NO` / `NO [UNAVAILABLE]` / `BAD` (a wrapped
-  session that refuses one UID).
+  session that refuses one UID), plus UIDVALIDITY and INTERNALDATE. `routing_test.go` also pins that
+  an invalid regex is logged once per router, however many messages it routes.
 - `wranglerasynq/email_poll_test.go` (+ `email_poll_fixture_test.go`: a fake `Mailbox`, recorded
-  enqueues, the real test DB) — every row of the table above, the collision cases, mailbox isolation,
-  the manual-poll routing, the cap, the lock and the payload parity. The claim order is pinned by
+  enqueues, the real test DB and a controllable clock) — every row of the table above, the collision
+  cases, the manual-poll routing, the cap, the lock and the payload parity.
+  `email_poll_account_test.go` covers rows sharing an account, the login fallback, account isolation
+  and the invalid regex logged once per poll. `email_poll_memory_test.go` covers headers fetched
+  once, the rescans after a routing or UIDVALIDITY change, the backoff, no starvation and the 24-hour
+  limit. The claim order is pinned by
   `TestPollEmail_AnEmailIsClaimedBeforeAnythingIsQueuedOrRecorded` and
   `TestPollEmail_PartlyQueuedEmailIsRecordedAndNeverQueuedTwice`.
 - `services/system_email_test.go`, the setting's repository / handler / command tests.

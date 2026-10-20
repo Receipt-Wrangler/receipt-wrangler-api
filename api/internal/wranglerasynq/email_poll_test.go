@@ -648,8 +648,11 @@ func TestPollEmail_SkipsAMailboxAlreadyBeingPolled(t *testing.T) {
 	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
 	fixture.addGroup(systemEmail, groupOptions{})
 	mailbox.deliver(rawEmail("bob@example.com", "Receipt", "", jpegNamed("receipt.jpg", pollJpeg)))
+	// The lock belongs to the account, so a poll through another row for the same
+	// account holds it too.
+	otherRow, _ := fixture.addSystemEmail("Receipts@Example.org")
 
-	lock := mailboxPollLock(systemEmail.ID)
+	lock := mailboxPollLock(accountKeyOf(otherRow))
 	lock.Lock()
 	err := PollEmail(true, nil)
 	lock.Unlock()

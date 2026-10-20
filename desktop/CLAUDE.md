@@ -310,6 +310,12 @@ process.exit(bad.length ? 1 : 0);
 - TypeScript strict mode enabled
 - Angular style guide followed for component organization
 - Lazy loading for feature modules to optimize bundle size
+- Templates use built-in control flow (`@if` / `@else`, `@switch` / `@case`, `@for`), not the
+  deprecated `*ngIf` / `ngSwitch` structural directives — both are fully migrated. `*ngFor` is the
+  one legacy directive still in the codebase and is being migrated separately; don't add new ones.
+  When wrapping an element Material projects into a named slot (`matSuffix`, `matIconSuffix`,
+  `mat-hint`, `mat-error`, `matChipRemove`, …), keep that element the block's **only** root node — a
+  block with several roots falls into the default `<ng-content>` slot instead.
 
 ### Use Established Patterns (do not invent one-offs)
 New UI MUST reuse the application's established patterns and shared components rather than
@@ -2520,7 +2526,7 @@ knowing before removing any other response field: the generated Dart field was `
 no `DisallowUnknownFields`, so an old client still PUTting the field is ignored rather than 400'd.
 
 `carouselComponent` is also no longer `viewChild.required`: the Zoom/Download/Fullscreen header
-buttons render whenever there are images, but the carousel itself is behind `*ngIf="… && showImages"`,
+buttons render whenever there are images, but the carousel itself is behind `@if (… && showImages)`,
 so hiding images and clicking one of them used to throw.
 
 

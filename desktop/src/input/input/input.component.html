@@ -33,33 +33,40 @@
         err.message
       }}
     </mat-error>
-    <div matSuffix *ngIf="showVisibilityEye || showGeneratePassword">
-      <button
-        *ngIf="showGeneratePassword"
-        class="generate-password-button"
-        mat-icon-button
-        type="button"
-        data-testid="password-generate"
-        aria-label="Generate password"
-        matTooltip="Generate password"
-        [disabled]="inputFormControl.disabled || readonly"
-        (click)="generatePassword()"
-      >
-        <mat-icon>autorenew</mat-icon>
-      </button>
-      <button
-        *ngIf="showVisibilityEye"
-        class="visibility-eye-button"
-        mat-icon-button
-        type="button"
-        data-testid="password-visibility-toggle"
-        [matTooltip]="type === 'password' ? 'Show ' + label : 'Hide ' + label"
-        (click)="toggleVisibility()"
-      >
-        <mat-icon *ngIf="type === 'password'">visibility</mat-icon>
-        <mat-icon *ngIf="type !== 'password'">visibility_off</mat-icon>
-      </button>
-    </div>
+    @if (showVisibilityEye || showGeneratePassword) {
+      <div matSuffix>
+        @if (showGeneratePassword) {
+          <button
+            class="generate-password-button"
+            mat-icon-button
+            type="button"
+            data-testid="password-generate"
+            aria-label="Generate password"
+            matTooltip="Generate password"
+            [disabled]="inputFormControl.disabled || readonly"
+            (click)="generatePassword()"
+          >
+            <mat-icon>autorenew</mat-icon>
+          </button>
+        }
+        @if (showVisibilityEye) {
+          <button
+            class="visibility-eye-button"
+            mat-icon-button
+            type="button"
+            data-testid="password-visibility-toggle"
+            [matTooltip]="type === 'password' ? 'Show ' + label : 'Hide ' + label"
+            (click)="toggleVisibility()"
+          >
+            @if (type === 'password') {
+              <mat-icon>visibility</mat-icon>
+            } @else {
+              <mat-icon>visibility_off</mat-icon>
+            }
+          </button>
+        }
+      </div>
+    }
     @if (hint) {
       <mat-hint>
         {{ hint }}

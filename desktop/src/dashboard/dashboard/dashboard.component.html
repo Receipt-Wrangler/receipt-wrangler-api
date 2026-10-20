@@ -2,35 +2,35 @@
   <div class="row g-3">
     @for (widget of selectedDashboard()?.widgets; track widget.id) {
       <div class="d-block widget col-12 col-md-6 col-lg-4 col-xxl-3">
-        <ng-container [ngSwitch]="widget.widgetType">
-          <ng-container *ngSwitchCase="widgetType.GroupSummary">
+        @switch (widget.widgetType) {
+          @case (widgetType.GroupSummary) {
             <app-summary-card
               [headerText]="widget.name ?? 'Receipt Summary'"
               [groupId]="selectedDashboard()?.groupId ?? ''"
             ></app-summary-card>
-          </ng-container>
-          <ng-container *ngSwitchCase="widgetType.FilteredReceipts">
+          }
+          @case (widgetType.FilteredReceipts) {
             <app-filtered-receipts
               [widget]="widget"
               [groupId]="selectedDashboard()?.groupId"
             ></app-filtered-receipts>
-          </ng-container>
-          <ng-container *ngSwitchCase="widgetType.GroupActivity">
+          }
+          @case (widgetType.GroupActivity) {
             <app-activity
               [widget]="widget"
               [groupId]="selectedDashboard()?.groupId"
             ></app-activity>
-          </ng-container>
-          <ng-container *ngSwitchCase="widgetType.PieChart">
+          }
+          @case (widgetType.PieChart) {
             <app-pie-chart
               [widget]="widget"
               [groupId]="selectedDashboard()?.groupId"
             ></app-pie-chart>
-          </ng-container>
-          <ng-container *ngSwitchCase="widgetType.Report">
+          }
+          @case (widgetType.Report) {
             <app-report-widget [widget]="widget"></app-report-widget>
-          </ng-container>
-        </ng-container>
+          }
+        }
       </div>
     }
   </div>

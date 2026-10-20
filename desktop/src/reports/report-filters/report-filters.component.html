@@ -2,39 +2,55 @@
   <div class="report-filter__row">
     @if (operationValueOf(def.field) === FilterOperation.Between) {
       <div class="report-filter__between">
-        <app-input *ngIf="def.type === 'text' || def.type === 'number'" class="report-filter__grow"
-          [isCurrency]="!!def.isCurrency" [label]="'Start ' + def.label"
-          [inputFormControl]="filterGroup | formGet: def.field + '.value.0'"></app-input>
-        <app-datepicker *ngIf="def.type === 'date'" class="report-filter__grow"
-          [label]="'Start ' + def.label"
-          [inputFormControl]="filterGroup | formGet: def.field + '.value.0'"></app-datepicker>
+        @if (def.type === 'text' || def.type === 'number') {
+          <app-input class="report-filter__grow"
+            [isCurrency]="!!def.isCurrency" [label]="'Start ' + def.label"
+            [inputFormControl]="filterGroup | formGet: def.field + '.value.0'"></app-input>
+        }
+        @if (def.type === 'date') {
+          <app-datepicker class="report-filter__grow"
+            [label]="'Start ' + def.label"
+            [inputFormControl]="filterGroup | formGet: def.field + '.value.0'"></app-datepicker>
+        }
         <span class="report-filter__sep">and</span>
-        <app-input *ngIf="def.type === 'text' || def.type === 'number'" class="report-filter__grow"
-          [isCurrency]="!!def.isCurrency" [label]="'End ' + def.label"
-          [inputFormControl]="filterGroup | formGet: def.field + '.value.1'"></app-input>
-        <app-datepicker *ngIf="def.type === 'date'" class="report-filter__grow"
-          [label]="'End ' + def.label"
-          [inputFormControl]="filterGroup | formGet: def.field + '.value.1'"></app-datepicker>
+        @if (def.type === 'text' || def.type === 'number') {
+          <app-input class="report-filter__grow"
+            [isCurrency]="!!def.isCurrency" [label]="'End ' + def.label"
+            [inputFormControl]="filterGroup | formGet: def.field + '.value.1'"></app-input>
+        }
+        @if (def.type === 'date') {
+          <app-datepicker class="report-filter__grow"
+            [label]="'End ' + def.label"
+            [inputFormControl]="filterGroup | formGet: def.field + '.value.1'"></app-datepicker>
+        }
       </div>
     } @else {
-      <app-input *ngIf="def.type === 'text' || def.type === 'number'" class="report-filter__value"
-        [isCurrency]="!!def.isCurrency" [label]="def.label"
-        [inputFormControl]="filterGroup | formGet: def.field + '.value'"></app-input>
-      <app-datepicker *ngIf="def.type === 'date'" class="report-filter__value"
-        [label]="def.label"
-        [inputFormControl]="filterGroup | formGet: def.field + '.value'"></app-datepicker>
-      <app-autocomlete *ngIf="def.type === 'users'" class="report-filter__value"
-        [label]="def.label" [multiple]="true"
-        [options]="paidByOptions()"
-        optionValueKey="id" optionFilterKey="displayName" optionDisplayKey="displayName"
-        [inputFormControl]="filterGroup | formGet: def.field + '.value'"></app-autocomlete>
-      <app-autocomlete *ngIf="def.type === 'list'" class="report-filter__value"
-        [label]="def.label" [multiple]="true"
-        [options]="optionsFor(def)"
-        [optionValueKey]="def.optionValueKey ?? ''"
-        [optionFilterKey]="def.optionFilterKey ?? ''"
-        [optionDisplayKey]="def.optionDisplayKey ?? ''"
-        [inputFormControl]="filterGroup | formGet: def.field + '.value'"></app-autocomlete>
+      @if (def.type === 'text' || def.type === 'number') {
+        <app-input class="report-filter__value"
+          [isCurrency]="!!def.isCurrency" [label]="def.label"
+          [inputFormControl]="filterGroup | formGet: def.field + '.value'"></app-input>
+      }
+      @if (def.type === 'date') {
+        <app-datepicker class="report-filter__value"
+          [label]="def.label"
+          [inputFormControl]="filterGroup | formGet: def.field + '.value'"></app-datepicker>
+      }
+      @if (def.type === 'users') {
+        <app-autocomlete class="report-filter__value"
+          [label]="def.label" [multiple]="true"
+          [options]="paidByOptions()"
+          optionValueKey="id" optionFilterKey="displayName" optionDisplayKey="displayName"
+          [inputFormControl]="filterGroup | formGet: def.field + '.value'"></app-autocomlete>
+      }
+      @if (def.type === 'list') {
+        <app-autocomlete class="report-filter__value"
+          [label]="def.label" [multiple]="true"
+          [options]="optionsFor(def)"
+          [optionValueKey]="def.optionValueKey ?? ''"
+          [optionFilterKey]="def.optionFilterKey ?? ''"
+          [optionDisplayKey]="def.optionDisplayKey ?? ''"
+          [inputFormControl]="filterGroup | formGet: def.field + '.value'"></app-autocomlete>
+      }
     }
 
     <app-select class="report-filter__op" label="Operation" [addEmptyOption]="true"

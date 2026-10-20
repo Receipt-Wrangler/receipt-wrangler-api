@@ -6,11 +6,12 @@
     [formControl]="inputFormControl"
     [matDatepicker]="picker"
   />
-  <mat-datepicker-toggle
-    *ngIf="!readonly"
-    matIconSuffix
-    [for]="picker"
-  ></mat-datepicker-toggle>
+  @if (!readonly) {
+    <mat-datepicker-toggle
+      matIconSuffix
+      [for]="picker"
+    ></mat-datepicker-toggle>
+  }
   <mat-datepicker #picker></mat-datepicker>
   <mat-error *ngFor="let err of formControlErrors | async">{{
     err.message

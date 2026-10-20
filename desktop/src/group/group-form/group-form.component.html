@@ -52,15 +52,16 @@
 </ng-template>
 
 <ng-template #buttonTemplate>
-  <app-button
-    *ngIf="!(formConfig.mode | inputReadonly) && canCreateGroupMembers()"
-    data-testid="add-group-member"
-    matButtonType="iconButton"
-    icon="add"
-    color="accent"
-    tooltip="Add User to Group"
-    (clicked)="addGroupMemberClicked()"
-  ></app-button>
+  @if (!(formConfig.mode | inputReadonly) && canCreateGroupMembers()) {
+    <app-button
+      data-testid="add-group-member"
+      matButtonType="iconButton"
+      icon="add"
+      color="accent"
+      tooltip="Add User to Group"
+      (clicked)="addGroupMemberClicked()"
+    ></app-button>
+  }
 </ng-template>
 
 <ng-template #nameCell let-element="element">
@@ -73,18 +74,20 @@
 
 <ng-template #actionsCell let-index="index">
   <div class="d-flex">
-    <app-edit-button
-      *ngIf="canUpdateGroupMembers()"
-      data-testid="group-member-edit"
-      tooltip="Edit group member"
-      color="accent"
-      (clicked)="editGroupMemberClicked(index)"
-    ></app-edit-button>
-    <app-delete-button
-      *ngIf="canDeleteGroupMembers()"
-      tooltip="Remove group member"
-      [disabled]="disableDeleteButton"
-      (clicked)="removeGroupMember(index)"
-    ></app-delete-button>
+    @if (canUpdateGroupMembers()) {
+      <app-edit-button
+        data-testid="group-member-edit"
+        tooltip="Edit group member"
+        color="accent"
+        (clicked)="editGroupMemberClicked(index)"
+      ></app-edit-button>
+    }
+    @if (canDeleteGroupMembers()) {
+      <app-delete-button
+        tooltip="Remove group member"
+        [disabled]="disableDeleteButton"
+        (clicked)="removeGroupMember(index)"
+      ></app-delete-button>
+    }
   </div>
 </ng-template>

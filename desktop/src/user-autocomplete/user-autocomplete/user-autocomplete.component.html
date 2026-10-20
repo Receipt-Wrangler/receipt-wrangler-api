@@ -1,28 +1,28 @@
-<app-autocomlete
-  *ngIf="multiple()"
-  optionFilterKey="displayName"
-  optionDisplayKey="displayName"
-  [label]="label()"
-  [inputFormControl]="inputFormControl()"
-  [options]="users()"
-  [optionTemplate]="optionTemplate"
-  [multiple]="true"
-  [readonly]="readonly() || (selectGroupMembersOnly() && !groupId())"
-  [optionValueKey]="optionValueKey() ?? ''"
-></app-autocomlete>
-
-<app-autocomlete
-  *ngIf="!multiple()"
-  optionFilterKey="displayName"
-  optionDisplayKey="displayName"
-  [optionValueKey]="optionValueKey() ?? 'id'"
-  [label]="label()"
-  [inputFormControl]="inputFormControl()"
-  [options]="users()"
-  [optionTemplate]="optionTemplate"
-  [displayWith]="displayWith.bind(this)"
-  [readonly]="readonly() || (selectGroupMembersOnly() && !groupId())"
-></app-autocomlete>
+@if (multiple()) {
+  <app-autocomlete
+    optionFilterKey="displayName"
+    optionDisplayKey="displayName"
+    [label]="label()"
+    [inputFormControl]="inputFormControl()"
+    [options]="users()"
+    [optionTemplate]="optionTemplate"
+    [multiple]="true"
+    [readonly]="readonly() || (selectGroupMembersOnly() && !groupId())"
+    [optionValueKey]="optionValueKey() ?? ''"
+  ></app-autocomlete>
+} @else {
+  <app-autocomlete
+    optionFilterKey="displayName"
+    optionDisplayKey="displayName"
+    [optionValueKey]="optionValueKey() ?? 'id'"
+    [label]="label()"
+    [inputFormControl]="inputFormControl()"
+    [options]="users()"
+    [optionTemplate]="optionTemplate"
+    [displayWith]="displayWith.bind(this)"
+    [readonly]="readonly() || (selectGroupMembersOnly() && !groupId())"
+  ></app-autocomlete>
+}
 
 <ng-template #optionTemplate let-option="option"
   >{{ option.displayName }}

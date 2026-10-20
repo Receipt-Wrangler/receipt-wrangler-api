@@ -254,7 +254,7 @@ describe("AutocomleteComponent", () => {
   // flush it - every other optionSelected case stops at the FormArray push.
   //
   // Both required viewChildren are stubbed rather than rendered: #inputMultiple
-  // sits behind *ngIf="multiple" and the real MatAutocompleteTrigger drives a
+  // sits behind @if (multiple) and the real MatAutocompleteTrigger drives a
   // CDK overlay, neither of which this branch is about.
   describe("panel behavior after selecting in multiple mode", () => {
     function selectAnOption(): {

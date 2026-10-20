@@ -48,20 +48,20 @@
       [options]="aiTypeOptions"
     ></app-select>
     <div class="d-flex flex-column">
-      <ng-container *ngIf="
-      (form | formGet: 'aiType')?.value === AiType.OpenAi ||
-       (form | formGet: 'aiType')?.value === AiType.Gemini ||
-       (form | formGet: 'aiType')?.value === AiType.OpenAiCustom
-"
-      >
-        <app-input
-          *ngIf="formConfig.mode != FormMode.view"
-          label="Api Key"
-          [readonly]="formConfig.mode | inputReadonly"
-          [inputFormControl]="form | formGet: 'key'"
-          [showVisibilityEye]="true"
-        ></app-input>
-      </ng-container>
+      @if (
+        (form | formGet: 'aiType')?.value === AiType.OpenAi ||
+        (form | formGet: 'aiType')?.value === AiType.Gemini ||
+        (form | formGet: 'aiType')?.value === AiType.OpenAiCustom
+      ) {
+        @if (formConfig.mode != FormMode.view) {
+          <app-input
+            label="Api Key"
+            [readonly]="formConfig.mode | inputReadonly"
+            [inputFormControl]="form | formGet: 'key'"
+            [showVisibilityEye]="true"
+          ></app-input>
+        }
+      }
 
       @if ((form | formGet: 'aiType')?.value === AiType.OpenAiCustom ||
       (form | formGet: 'aiType')?.value === AiType.Ollama) {
@@ -93,32 +93,35 @@
       ></app-checkbox>
     </div>
   </app-form-section>
-  <app-form-section
-    *ngIf="formConfig.mode != FormMode.add"
-    headerText="System Tasks"
-  >
-    <app-task-table
-      [associatedEntityType]="AssociatedEntityType.ReceiptProcessingSettings"
-      [associatedEntityId]="originalReceiptProcessingSettings?.id"
-      [expandedRowTemplate]="expandedRowTemplate"
-    ></app-task-table>
-  </app-form-section>
+  @if (formConfig.mode != FormMode.add) {
+    <app-form-section
+      headerText="System Tasks"
+    >
+      <app-task-table
+        [associatedEntityType]="AssociatedEntityType.ReceiptProcessingSettings"
+        [associatedEntityId]="originalReceiptProcessingSettings?.id"
+        [expandedRowTemplate]="expandedRowTemplate"
+      ></app-task-table>
+    </app-form-section>
+  }
   <app-form-button-bar [mode]="formConfig.mode">
-    <app-submit-button
-      *ngIf="!(formConfig.mode | inputReadonly)"
-      class="mb-4"
-      [onlyIcon]="false"
-    ></app-submit-button>
+    @if (!(formConfig.mode | inputReadonly)) {
+      <app-submit-button
+        class="mb-4"
+        [onlyIcon]="false"
+      ></app-submit-button>
+    }
   </app-form-button-bar>
 </form>
 
 <ng-template #headerButtons>
   <div class="d-flex">
-    <app-edit-button
-      *ngIf="formConfig.mode === FormMode.view"
-      color="accent"
-      [buttonRouterLink]="['/system-settings/receipt-processing-settings/' + originalReceiptProcessingSettings?.id + '/edit']"
-    ></app-edit-button>
+    @if (formConfig.mode === FormMode.view) {
+      <app-edit-button
+        color="accent"
+        [buttonRouterLink]="['/system-settings/receipt-processing-settings/' + originalReceiptProcessingSettings?.id + '/edit']"
+      ></app-edit-button>
+    }
     <app-button
       matButtonType="iconButton"
       icon="wifi"

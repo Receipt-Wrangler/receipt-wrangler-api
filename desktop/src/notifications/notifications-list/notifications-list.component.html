@@ -17,5 +17,7 @@
     ></app-notification>
     <hr />
   </div>
-  <div *ngIf="notifications().length === 0">All caught up!</div>
+  @if (notifications().length === 0) {
+    <div>All caught up!</div>
+  }
 </div>

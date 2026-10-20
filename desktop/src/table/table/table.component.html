@@ -5,24 +5,26 @@
   [dataSource]="dataSource()"
   (matSortChange)="announceSortChange($event)"
 >
-  <ng-container *ngIf="selectionCheckboxes()" matColumnDef="select">
-    <th mat-header-cell *matHeaderCellDef>
-      <mat-checkbox
-        (change)="$event ? toggleAllRows() : null"
-        [checked]="selection.hasValue() && isAllSelected()"
-        [indeterminate]="selection.hasValue() && !isAllSelected()"
-      >
-      </mat-checkbox>
-    </th>
-    <td mat-cell *matCellDef="let row">
-      <mat-checkbox
-        (click)="$event.stopPropagation()"
-        (change)="$event ? selection.toggle(row) : null"
-        [checked]="selection.isSelected(row)"
-      >
-      </mat-checkbox>
-    </td>
-  </ng-container>
+  @if (selectionCheckboxes()) {
+    <ng-container matColumnDef="select">
+      <th mat-header-cell *matHeaderCellDef>
+        <mat-checkbox
+          (change)="$event ? toggleAllRows() : null"
+          [checked]="selection.hasValue() && isAllSelected()"
+          [indeterminate]="selection.hasValue() && !isAllSelected()"
+        >
+        </mat-checkbox>
+      </th>
+      <td mat-cell *matCellDef="let row">
+        <mat-checkbox
+          (click)="$event.stopPropagation()"
+          (change)="$event ? selection.toggle(row) : null"
+          [checked]="selection.isSelected(row)"
+        >
+        </mat-checkbox>
+      </td>
+    </ng-container>
+  }
   <ng-container
     *ngFor="let column of columns()"
     [matColumnDef]="column.matColumnDef"
@@ -37,29 +39,29 @@
       {{ column.columnHeader }}
     </th>
     <td mat-cell *matCellDef="let element; let i = index">
-      <ng-container *ngIf="column.elementKey">{{
-          element[column.elementKey]
-        }}
-      </ng-container>
-      <ng-container *ngIf="column.template">
+      @if (column.elementKey) {
+        {{ element[column.elementKey] }}
+      }
+      @if (column.template) {
         <ng-template
           [ngTemplateOutlet]="column.template"
           [ngTemplateOutletContext]="{ element: element, index: indexFor(element), column: column }"
         ></ng-template>
-      </ng-container>
+      }
     </td>
   </ng-container>
 
   <ng-container matColumnDef="expand">
     <th mat-header-cell *matHeaderCellDef aria-label="row actions"></th>
     <td mat-cell *matCellDef="let element">
-      <app-button
-        *ngIf="element | isRowExpandable: rowExpandable()"
-        matButtonType="iconButton"
-        color="accent"
-        [icon]="expandedElement === element ? 'keyboard_arrow_up' : 'keyboard_arrow_down'"
-        (clicked)="expanderClicked($event, element)"
-      ></app-button>
+      @if (element | isRowExpandable: rowExpandable()) {
+        <app-button
+          matButtonType="iconButton"
+          color="accent"
+          [icon]="expandedElement === element ? 'keyboard_arrow_up' : 'keyboard_arrow_down'"
+          (clicked)="expanderClicked($event, element)"
+        ></app-button>
+      }
     </td>
   </ng-container>
   <ng-container matColumnDef="expandedDetail">
@@ -84,12 +86,13 @@
   <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="example-detail-row"></tr>
 </table>
 
-<mat-paginator
-  *ngIf="pagination()"
-  showFirstLastButtons
-  [pageIndex]="page()"
-  [pageSizeOptions]="[5, 15, 25, 50, 100]"
-  [pageSize]="pageSize()"
-  [length]="length ? length : null"
-  (page)="pageChanged($event)"
-></mat-paginator>
+@if (pagination()) {
+  <mat-paginator
+    showFirstLastButtons
+    [pageIndex]="page()"
+    [pageSizeOptions]="[5, 15, 25, 50, 100]"
+    [pageSize]="pageSize()"
+    [length]="length ? length : null"
+    (page)="pageChanged($event)"
+  ></mat-paginator>
+}

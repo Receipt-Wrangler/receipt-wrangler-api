@@ -12,14 +12,15 @@
         label="Displayname"
         [inputFormControl]="form | formGet : 'displayName'"
       ></app-input>
-      <app-input
-        *ngIf="!user"
-        label="Password"
-        type="password"
-        [inputFormControl]="form | formGet : 'password'"
-        [showGeneratePassword]="true"
-        [showVisibilityEye]="true"
-      ></app-input>
+      @if (!user) {
+        <app-input
+          label="Password"
+          type="password"
+          [inputFormControl]="form | formGet : 'password'"
+          [showGeneratePassword]="true"
+          [showVisibilityEye]="true"
+        ></app-input>
+      }
       <div class="d-flex align-items-center">
         <app-select
           class="flex-grow-1"

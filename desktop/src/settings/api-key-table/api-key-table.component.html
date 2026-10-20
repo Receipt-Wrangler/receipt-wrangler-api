@@ -4,14 +4,15 @@
     subtitle="Create and manage API keys for programmatic access."
   >
     <div class="d-flex align-items-center">
-      <app-add-button
-        *ngIf="canCreate()"
-        data-testid="api-key-add"
-        buttonText="Add API Key"
-        tooltip="Add API Key"
-        (clicked)="openCreateApiKeyDialog()"
-      ></app-add-button>
-      <ng-container *ngIf="canViewAll()">
+      @if (canCreate()) {
+        <app-add-button
+          data-testid="api-key-add"
+          buttonText="Add API Key"
+          tooltip="Add API Key"
+          (clicked)="openCreateApiKeyDialog()"
+        ></app-add-button>
+      }
+      @if (canViewAll()) {
         <app-button
           data-testid="api-key-filter"
           matButtonType="iconButton"
@@ -20,7 +21,7 @@
           tooltip="Filter API Keys"
           (clicked)="openFilterDialog()"
         ></app-button>
-      </ng-container>
+      }
     </div>
   </app-table-header>
   <div class="table-container">
@@ -61,18 +62,20 @@
 
 <ng-template #actionsCell let-element="element" let-index="index">
   <div class="d-flex">
-    <app-edit-button
-      *ngIf="canEdit(element)"
-      data-testid="api-key-edit"
-      color="accent"
-      tooltip="Edit API Key"
-      (clicked)="openEditDialog(element)"
-    ></app-edit-button>
-    <app-delete-button
-      *ngIf="canDelete(element)"
-      data-testid="api-key-delete"
-      tooltip="Delete API Key"
-      (clicked)="deleteApiKey(element)"
-    ></app-delete-button>
+    @if (canEdit(element)) {
+      <app-edit-button
+        data-testid="api-key-edit"
+        color="accent"
+        tooltip="Edit API Key"
+        (clicked)="openEditDialog(element)"
+      ></app-edit-button>
+    }
+    @if (canDelete(element)) {
+      <app-delete-button
+        data-testid="api-key-delete"
+        tooltip="Delete API Key"
+        (clicked)="deleteApiKey(element)"
+      ></app-delete-button>
+    }
   </div>
 </ng-template>

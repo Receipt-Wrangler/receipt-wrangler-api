@@ -58,12 +58,9 @@
                     "
         [options]="availableWidgetTypeOptions()"
       ></app-select>
-      <ng-container
-        [ngSwitch]="widgets.controls[i].value.widgetType"
-      >
-        <ng-container *ngSwitchCase="WidgetType.GroupSummary">
-        </ng-container>
-        <ng-container *ngSwitchCase="WidgetType.FilteredReceipts">
+      @switch (widgets.controls[i].value.widgetType) {
+        @case (WidgetType.GroupSummary) {}
+        @case (WidgetType.FilteredReceipts) {
           <app-receipt-filter
             class="w-100"
             [parentForm]="form"
@@ -74,8 +71,8 @@
             [inDialog]="false"
             (formCommand)="handleFormCommand($event)"
           ></app-receipt-filter>
-        </ng-container>
-        <ng-container *ngSwitchCase="WidgetType.PieChart">
+        }
+        @case (WidgetType.PieChart) {
           <app-select
             label="Group By"
             optionValueKey="value"
@@ -101,8 +98,8 @@
               (formCommand)="handleFormCommand($event)"
             ></app-receipt-filter>
           </app-form-section>
-        </ng-container>
-        <ng-container *ngSwitchCase="WidgetType.Report">
+        }
+        @case (WidgetType.Report) {
           <app-select
             label="Report"
             optionValueKey="id"
@@ -112,8 +109,8 @@
             "
             [options]="reportTemplateOptions()"
           ></app-select>
-        </ng-container>
-      </ng-container>
+        }
+      }
       <app-dialog-footer
         submitButtonTooltip="Done"
         submitButtonType="button"

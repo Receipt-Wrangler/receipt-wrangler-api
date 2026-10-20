@@ -14,47 +14,51 @@
       [usersToOmit]="usersToOmit"
     >
     </app-user-autocomplete>
-    <ng-container [ngSwitch]="(localForm | formGet : 'quickAction')?.value">
-      <div *ngSwitchCase="radioValues[1].value">
-        <div *ngFor="let user of (localForm | formGet : 'usersToSplit').value">
-          <app-input
-            [label]="user.displayName + '`s Portion'"
-            [isCurrency]="true"
-            [inputFormControl]="localForm | formGet : user.id.toString()"
-          ></app-input>
-        </div>
-      </div>
-      <div *ngSwitchCase="radioValues[2].value">
-        <div *ngFor="let user of (localForm | formGet : 'usersToSplit').value" class="mb-3">
-          <h6>{{ user.displayName }}</h6>
-          <div class="d-flex flex-wrap gap-2 mb-2">
-            <button
-              *ngFor="let percentage of percentageOptions"
-              type="button"
-              class="btn btn-outline-primary btn-sm"
-              [class.active]="(localForm | formGet : user.id.toString() + '_percentage')?.value === percentage && !(localForm | formGet : user.id.toString() + '_customPercentage')?.value"
-              (click)="setPercentage(user.id.toString(), percentage)"
-            >
-              {{ percentage }}%
-            </button>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <app-checkbox
-              label="Custom"
-              [inputFormControl]="localForm | formGet : user.id.toString() + '_customPercentage'"
-            ></app-checkbox>
+    @switch ((localForm | formGet : 'quickAction')?.value) {
+      @case (radioValues[1].value) {
+        <div>
+          <div *ngFor="let user of (localForm | formGet : 'usersToSplit').value">
             <app-input
-              label="Custom Percentage"
-              type="text"
-              mask="percent.2"
-              maskSuffix="%"
-              class="flex-grow-1"
-              [inputFormControl]="localForm | formGet : user.id.toString() + '_percentage'"
+              [label]="user.displayName + '`s Portion'"
+              [isCurrency]="true"
+              [inputFormControl]="localForm | formGet : user.id.toString()"
             ></app-input>
           </div>
         </div>
-      </div>
-    </ng-container>
+      }
+      @case (radioValues[2].value) {
+        <div>
+          <div *ngFor="let user of (localForm | formGet : 'usersToSplit').value" class="mb-3">
+            <h6>{{ user.displayName }}</h6>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <button
+                *ngFor="let percentage of percentageOptions"
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                [class.active]="(localForm | formGet : user.id.toString() + '_percentage')?.value === percentage && !(localForm | formGet : user.id.toString() + '_customPercentage')?.value"
+                (click)="setPercentage(user.id.toString(), percentage)"
+              >
+                {{ percentage }}%
+              </button>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <app-checkbox
+                label="Custom"
+                [inputFormControl]="localForm | formGet : user.id.toString() + '_customPercentage'"
+              ></app-checkbox>
+              <app-input
+                label="Custom Percentage"
+                type="text"
+                mask="percent.2"
+                maskSuffix="%"
+                class="flex-grow-1"
+                [inputFormControl]="localForm | formGet : user.id.toString() + '_percentage'"
+              ></app-input>
+            </div>
+          </div>
+        </div>
+      }
+    }
     <app-dialog-footer
       submitButtonTooltip="Split"
       (submitClicked)="addSplits()"

@@ -17,13 +17,13 @@
           </div>
         </app-form-section>
       }
-      <ng-container *ngIf="mode !== formMode.add">
+      @if (mode !== formMode.add) {
         <app-audit-detail-section
           [data]="originalReceipt"
           [formMode]="mode"
           [indent]="false"
         ></app-audit-detail-section>
-      </ng-container>
+      }
       <div class="row">
         <app-form-section
           class="col-12 col-md"
@@ -136,31 +136,28 @@
                   Your role requires at least one image on this group's receipts.
                 </div>
               }
-              <div
-                class="rw-images-pane__stage"
-                *ngIf="
-                images() &&
-                (images().length > 0 || filesToUpload().length > 0) &&
-                showImages
-              "
-              >
-                <ng-container *ngIf="imagesLoading()">
-                  <div class="d-flex justify-content-center align-items-center">
-                    <mat-spinner></mat-spinner>
-                  </div>
-                </ng-container>
-                <app-carousel
-                  class="rw-carousel--fill"
-                  [images]="images()"
-                  [imagePreviews]="filesToUpload()"
-                  [mode]="mode"
-                  [hideButtonControls]="true"
-                  stageHeight="100%"
-                  [disabled]="
-                  mode !== formMode.edit || (showProgressBar() ?? false)
-                "
-                ></app-carousel>
-              </div>
+              @if (images() && (images().length > 0 || filesToUpload().length > 0) && showImages) {
+                <div
+                  class="rw-images-pane__stage"
+                >
+                  @if (imagesLoading()) {
+                    <div class="d-flex justify-content-center align-items-center">
+                      <mat-spinner></mat-spinner>
+                    </div>
+                  }
+                  <app-carousel
+                    class="rw-carousel--fill"
+                    [images]="images()"
+                    [imagePreviews]="filesToUpload()"
+                    [mode]="mode"
+                    [hideButtonControls]="true"
+                    stageHeight="100%"
+                    [disabled]="
+                    mode !== formMode.edit || (showProgressBar() ?? false)
+                  "
+                  ></app-carousel>
+                </div>
+              }
             </div>
           </app-form-section>
         }
@@ -247,14 +244,15 @@
         }
       </div>
       <div class="d-flex col align-items-center justify-content-end">
-        <app-submit-button
-          *ngIf="!(mode | inputReadonly)"
-          [onlyIcon]="false"
-          [mode]="mode"
-          [disabled]="!canEditReceipt()"
-          [disableOnLoading]="true"
-          [buttonText]="submitButtonText"
-        ></app-submit-button>
+        @if (!(mode | inputReadonly)) {
+          <app-submit-button
+            [onlyIcon]="false"
+            [mode]="mode"
+            [disabled]="!canEditReceipt()"
+            [disableOnLoading]="true"
+            [buttonText]="submitButtonText"
+          ></app-submit-button>
+        }
         @if (queueIndex > -1 && queueIndex != queueIds.length - 1) {
           <app-button
             matButtonType="iconButton"
@@ -302,16 +300,17 @@
 </ng-template>
 
 <ng-template #formHeaderButtons>
-  <app-button
-    *ngIf="mode | inputReadonly"
-    class="ms-1"
-    color="accent"
-    matButtonType="iconButton"
-    tooltip="Edit"
-    icon="edit"
-    [disabled]="!canEditReceipt()"
-    [buttonRouterLink]="[editLink]"
-  ></app-button>
+  @if (mode | inputReadonly) {
+    <app-button
+      class="ms-1"
+      color="accent"
+      matButtonType="iconButton"
+      tooltip="Edit"
+      icon="edit"
+      [disabled]="!canEditReceipt()"
+      [buttonRouterLink]="[editLink]"
+    ></app-button>
+  }
   @if (canManageCustomFields()) {
     <app-filtered-stateful-menu
       data-testid="receipt-manage-custom-fields"
@@ -326,66 +325,71 @@
       (itemSelected)="customFieldChanged($event)"
     ></app-filtered-stateful-menu>
   }
-  <app-button
-    *ngIf="mode | inputReadonly"
-    class="ms-1"
-    data-testid="receipt-duplicate"
-    color="accent"
-    matButtonType="iconButton"
-    tooltip="Duplicate"
-    icon="file_copy"
-    [disabled]="!canDuplicate()"
-    (clicked)="duplicateReceipt()"
-  ></app-button>
+  @if (mode | inputReadonly) {
+    <app-button
+      class="ms-1"
+      data-testid="receipt-duplicate"
+      color="accent"
+      matButtonType="iconButton"
+      tooltip="Duplicate"
+      icon="file_copy"
+      [disabled]="!canDuplicate()"
+      (clicked)="duplicateReceipt()"
+    ></app-button>
+  }
 </ng-template>
 
 <ng-template #itemsSectionHeaderButtons>
-  <app-button
-    *ngIf="!(mode | inputReadonly)"
-    type="button"
-    matButtonType="iconButton"
-    icon="add"
-    tooltip="Add item"
-    color="accent"
-    (clicked)="initItemListAddMode()"
-    [disabled]="!canEditReceipt()"
-  ></app-button>
+  @if (!(mode | inputReadonly)) {
+    <app-button
+      type="button"
+      matButtonType="iconButton"
+      icon="add"
+      tooltip="Add item"
+      color="accent"
+      (clicked)="initItemListAddMode()"
+      [disabled]="!canEditReceipt()"
+    ></app-button>
+  }
 </ng-template>
 
 <ng-template #sharesSectionHeaderButtons>
-  <app-button
-    *ngIf="!(mode | inputReadonly)"
-    type="button"
-    matButtonType="iconButton"
-    icon="add"
-    tooltip="Add share"
-    color="accent"
-    (clicked)="initShareListAddMode()"
-    [disabled]="!canEditReceipt()"
-  ></app-button>
-  <app-button
-    *ngIf="!(mode | inputReadonly)"
-    class="mb-4"
-    customIcon="split"
-    color="accent"
-    matButtonType="iconButton"
-    tooltip="Quick Actions"
-    [disabled]="!canEditReceipt()"
-    (clicked)="openQuickActionsModal()"
-  ></app-button>
+  @if (!(mode | inputReadonly)) {
+    <app-button
+      type="button"
+      matButtonType="iconButton"
+      icon="add"
+      tooltip="Add share"
+      color="accent"
+      (clicked)="initShareListAddMode()"
+      [disabled]="!canEditReceipt()"
+    ></app-button>
+  }
+  @if (!(mode | inputReadonly)) {
+    <app-button
+      class="mb-4"
+      customIcon="split"
+      color="accent"
+      matButtonType="iconButton"
+      tooltip="Quick Actions"
+      [disabled]="!canEditReceipt()"
+      (clicked)="openQuickActionsModal()"
+    ></app-button>
+  }
 </ng-template>
 
 <ng-template #imagesSectionHeaderButtons>
-  <app-button
-    *ngIf="!(mode | inputReadonly)"
-    class="mb-4"
-    color="accent"
-    matButtonType="iconButton"
-    icon="photo_library"
-    tooltip="Upload Image(s)"
-    [disabled]="!canEditReceipt() || (showProgressBar() ?? false)"
-    (clicked)="uploadImageButtonClicked()"
-  ></app-button>
+  @if (!(mode | inputReadonly)) {
+    <app-button
+      class="mb-4"
+      color="accent"
+      matButtonType="iconButton"
+      icon="photo_library"
+      tooltip="Upload Image(s)"
+      [disabled]="!canEditReceipt() || (showProgressBar() ?? false)"
+      (clicked)="uploadImageButtonClicked()"
+    ></app-button>
+  }
   @if (images() && (images().length > 0 || filesToUpload().length > 0)) {
     @if (this.mode != FormMode.add) {
       <app-button
@@ -432,31 +436,27 @@
       (clicked)="zoomImageOut()"
     ></app-button>
   }
-  <app-button
-    *ngIf="
-      !(mode | inputReadonly) &&
-      (images().length > 0 || filesToUpload().length > 0) &&
-      aiPoweredReceipts()
-    "
-    matButtonType="iconButton"
-    icon="receipt_long"
-    tooltip="Magic fill"
-    color="accent"
-    [disabled]="!canMagicFill() || (showProgressBar() ?? false)"
-    (clicked)="magicFill()"
-  ></app-button>
-  <app-button
-    *ngIf="
-      !(mode | inputReadonly) && (images().length > 0 || filesToUpload().length > 0)
-    "
-    data-testid="receipt-image-remove"
-    matButtonType="iconButton"
-    icon="delete"
-    [tooltip]="isLastImageLocked() ? 'An image is required, so the last one cannot be removed' : 'Remove Image'"
-    color="warn"
-    [disabled]="!canEditReceipt() || isLastImageLocked() || (showProgressBar() ?? false)"
-    (clicked)="removeImage()"
-  ></app-button>
+  @if (!(mode | inputReadonly) && (images().length > 0 || filesToUpload().length > 0) && aiPoweredReceipts()) {
+    <app-button
+      matButtonType="iconButton"
+      icon="receipt_long"
+      tooltip="Magic fill"
+      color="accent"
+      [disabled]="!canMagicFill() || (showProgressBar() ?? false)"
+      (clicked)="magicFill()"
+    ></app-button>
+  }
+  @if (!(mode | inputReadonly) && (images().length > 0 || filesToUpload().length > 0)) {
+    <app-button
+      data-testid="receipt-image-remove"
+      matButtonType="iconButton"
+      icon="delete"
+      [tooltip]="isLastImageLocked() ? 'An image is required, so the last one cannot be removed' : 'Remove Image'"
+      color="warn"
+      [disabled]="!canEditReceipt() || isLastImageLocked() || (showProgressBar() ?? false)"
+      (clicked)="removeImage()"
+    ></app-button>
+  }
 </ng-template>
 
 <ng-template #expandedImageTemplate>

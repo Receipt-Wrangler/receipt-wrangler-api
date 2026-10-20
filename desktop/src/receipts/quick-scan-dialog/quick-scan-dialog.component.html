@@ -4,11 +4,12 @@
       [multiple]="true"
       (fileLoaded)="fileLoaded($event)"
     ></app-upload-image>
-    <div
-      *ngIf="images.length === 0"
-    >
-      <strong> Select images to upload</strong>
-    </div>
+    @if (images.length === 0) {
+      <div
+      >
+        <strong> Select images to upload</strong>
+      </div>
+    }
     <carousel
       [interval]="0"
       [isAnimated]="true"
@@ -84,31 +85,34 @@
       icon="upload"
       (clicked)="openImageUploadComponent()">
     </app-button>
-    <app-button
-      *ngIf="images.length > 1"
-      data-testid="quick-scan-nav-left"
-      matButtonType="iconButton"
-      icon="arrow_back"
-      tooltip="Navigate left"
-      color="accent"
-      (clicked)="navigateImages(-1)"
-    >
-    </app-button>
-    <app-button
-      *ngIf="images.length > 1"
-      data-testid="quick-scan-nav-right"
-      matButtonType="iconButton"
-      icon="arrow_forward"
-      tooltip="Navigate right"
-      color="accent"
-      (clicked)="navigateImages(1)"
-    >
-    </app-button>
-    <app-delete-button
-      *ngIf="images.length > 0"
-      tooltip="Remove Current Image"
-      (clicked)="removeImage(currentlySelectedIndex)"
-    >
-    </app-delete-button>
+    @if (images.length > 1) {
+      <app-button
+        data-testid="quick-scan-nav-left"
+        matButtonType="iconButton"
+        icon="arrow_back"
+        tooltip="Navigate left"
+        color="accent"
+        (clicked)="navigateImages(-1)"
+      >
+      </app-button>
+    }
+    @if (images.length > 1) {
+      <app-button
+        data-testid="quick-scan-nav-right"
+        matButtonType="iconButton"
+        icon="arrow_forward"
+        tooltip="Navigate right"
+        color="accent"
+        (clicked)="navigateImages(1)"
+      >
+      </app-button>
+    }
+    @if (images.length > 0) {
+      <app-delete-button
+        tooltip="Remove Current Image"
+        (clicked)="removeImage(currentlySelectedIndex)"
+      >
+      </app-delete-button>
+    }
   </div>
 </ng-template>

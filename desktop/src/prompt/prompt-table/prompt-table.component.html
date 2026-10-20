@@ -11,14 +11,15 @@
         tooltip="Add Prompt"
         [buttonRouterLink]="['create']"
       ></app-add-button>
-      <app-button
-        *ngIf="!defaultPromptExists"
-        color="accent"
-        tooltip="Create default prompt"
-        icon="note_add"
-        matButtonType="iconButton"
-        (clicked)="createDefaultPrompt()">
-      </app-button>
+      @if (!defaultPromptExists) {
+        <app-button
+          color="accent"
+          tooltip="Create default prompt"
+          icon="note_add"
+          matButtonType="iconButton"
+          (clicked)="createDefaultPrompt()">
+        </app-button>
+      }
     </div>
   </app-table-header>
   <div class="table-container">

@@ -11,15 +11,16 @@
         <strong>{{ panel.title }} </strong>
       </mat-panel-title>
       <mat-panel-description>
-        <ng-container *ngIf="panel.description">
+        @if (panel.description) {
           {{ panel.description }}
-        </ng-container>
-        <ng-template
-          *ngIf="panel.descriptionTemplate"
-          [ngTemplateOutlet]="$any(panel.descriptionTemplate)"
-          [ngTemplateOutletContext]="{ index: i }"
-        >
-        </ng-template>
+        }
+        @if (panel.descriptionTemplate) {
+          <ng-template
+            [ngTemplateOutlet]="$any(panel.descriptionTemplate)"
+            [ngTemplateOutletContext]="{ index: i }"
+          >
+          </ng-template>
+        }
       </mat-panel-description>
     </mat-expansion-panel-header>
     <ng-template

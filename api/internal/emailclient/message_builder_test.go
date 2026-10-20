@@ -12,6 +12,9 @@ var (
 	jpegBytes = append([]byte{0xff, 0xd8, 0xff, 0xe0}, []byte("JFIF receipt photo")...)
 	pngBytes  = append([]byte("\x89PNG\r\n\x1a\n"), []byte("receipt png")...)
 	pdfBytes  = []byte("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n")
+	// heifBytes starts with an ftyp box whose major brand is mif1, which is how
+	// a HEIF that is not branded HEIC begins.
+	heifBytes = append([]byte("\x00\x00\x00\x18ftypmif1\x00\x00\x00\x00mif1heic"), make([]byte, 32)...)
 )
 
 // largeJpeg returns a JPEG-sniffing payload of at least size bytes.

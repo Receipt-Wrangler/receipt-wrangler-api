@@ -3,6 +3,7 @@ package emailclient
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -292,16 +293,20 @@ func TestParseMessage_AttachmentTypeIsSniffedNotDeclared(t *testing.T) {
 		contentType string
 		body        []byte
 		wantType    string
+		// wantRejected is set when the part was declared as a receipt type, so it
+		// is reported as unusable rather than dropped.
+		wantRejected bool
 	}{
-		{"jpeg accepted", "image/jpeg", jpegBytes, "image/jpeg"},
-		{"png accepted", "image/png", pngBytes, "image/png"},
-		{"pdf accepted", "application/pdf", pdfBytes, "application/pdf"},
+		{"jpeg accepted", "image/jpeg", jpegBytes, "image/jpeg", false},
+		{"png accepted", "image/png", pngBytes, "image/png", false},
+		{"pdf accepted", "application/pdf", pdfBytes, "application/pdf", false},
+		{"heif accepted", "image/heif", heifBytes, "image/heif", false},
 		// The Python client trusted the declared type and skipped these.
-		{"pdf declared as octet-stream accepted", "application/octet-stream", pdfBytes, "application/pdf"},
-		{"jpeg declared as nonstandard image/jpg accepted", "image/jpg", jpegBytes, "image/jpeg"},
-		// ...and accepted this one.
-		{"text declared as jpeg rejected", "image/jpeg", []byte("this is not an image"), ""},
-		{"plain text rejected", "text/plain", []byte("notes"), ""},
+		{"pdf declared as octet-stream accepted", "application/octet-stream", pdfBytes, "application/pdf", false},
+		{"jpeg declared as nonstandard image/jpg accepted", "image/jpg", jpegBytes, "image/jpeg", false},
+		// ...and accepted this one, which now fails visibly instead.
+		{"text declared as jpeg rejected", "image/jpeg", []byte("this is not an image"), "", true},
+		{"plain text dropped", "text/plain", []byte("notes"), "", false},
 	}
 
 	for _, tc := range cases {
@@ -310,6 +315,12 @@ func TestParseMessage_AttachmentTypeIsSniffedNotDeclared(t *testing.T) {
 				ContentType: tc.contentType, Disposition: `attachment; filename="file.bin"`, Encoding: "base64", Body: tc.body,
 			})))
 
+			if gotRejected := len(message.RejectedAttachments) == 1; gotRejected != tc.wantRejected {
+				t.Errorf("RejectedAttachments = %+v, want rejected: %v", message.RejectedAttachments, tc.wantRejected)
+			}
+			if tc.wantRejected && !strings.Contains(message.RejectedAttachments[0].Reason, "not a supported image or PDF") {
+				t.Errorf("Reason = %q", message.RejectedAttachments[0].Reason)
+			}
 			if tc.wantType == "" {
 				if len(message.Attachments) != 0 {
 					t.Errorf("Attachments = %+v, want none", message.Attachments)
@@ -395,6 +406,13 @@ func TestParseMessage_InlineImageRule(t *testing.T) {
 			1,
 		},
 		{
+			"small cid-referenced inline part that is not an image is dropped, not reported",
+			related(`<img src="cid:logo@example">`, mimePart{
+				ContentType: "image/png", Disposition: `inline; filename="image001.png"`, ContentID: "logo@example", Encoding: "base64", Body: []byte("not an image"),
+			}),
+			0,
+		},
+		{
 			"small attachment referenced by cid is kept",
 			related(`<img src="cid:att@example">`, mimePart{
 				ContentType: "image/jpeg", Disposition: `attachment; filename="receipt.jpg"`, ContentID: "att@example", Encoding: "base64", Body: small,
@@ -408,6 +426,9 @@ func TestParseMessage_InlineImageRule(t *testing.T) {
 			message := mustParse(t, tc.raw)
 			if len(message.Attachments) != tc.wantLen {
 				t.Errorf("Attachments = %d, want %d", len(message.Attachments), tc.wantLen)
+			}
+			if len(message.RejectedAttachments) != 0 {
+				t.Errorf("RejectedAttachments = %+v, want decoration dropped silently", message.RejectedAttachments)
 			}
 		})
 	}
@@ -535,6 +556,172 @@ func TestParseMessage_MalformedMultipartIsAnError(t *testing.T) {
 
 	if _, err := ParseMessage(raw); err == nil {
 		t.Error("ParseMessage() error = nil, want an error for a truncated multipart")
+	}
+}
+
+// --- Forwarded messages --------------------------------------------------------
+
+func pdfAttachment(filename string) mimePart {
+	return mimePart{ContentType: "application/pdf", Disposition: fmt.Sprintf("attachment; filename=%q", filename), Encoding: "base64", Body: pdfBytes}
+}
+
+// forwardedPart wraps a raw message as a message/rfc822 attachment. Its
+// boundaries are renamed with tag, since buildMessage numbers every message's
+// from 1 and a shared boundary would split the outer message.
+func forwardedPart(inner []byte, encoding string, tag string) mimePart {
+	renamed := bytes.ReplaceAll(inner, []byte("boundary-"), []byte(tag+"-"))
+	return mimePart{ContentType: "message/rfc822", Disposition: `attachment; filename="forwarded.eml"`, Encoding: encoding, Body: renamed}
+}
+
+func TestParseMessage_ForwardedMessage(t *testing.T) {
+	inner := buildMessage(
+		[]string{"From: shop@store.example", "Subject: Your order", "Date: Tue, 19 Oct 2021 09:00:00 +0000"},
+		mixed(textPart("text/plain", "Total $12.00"), pdfAttachment("receipt.pdf")),
+	)
+
+	for _, encoding := range []string{"", "base64"} {
+		t.Run("encoding "+encoding, func(t *testing.T) {
+			message := mustParse(t, buildMessage(standardHeaders(), mixed(
+				textPart("text/plain", "See attached"),
+				forwardedPart(inner, encoding, "fwd"),
+			)))
+
+			if len(message.Attachments) != 1 || message.Attachments[0].Filename != "receipt.pdf" {
+				t.Errorf("Attachments = %+v, want the forwarded receipt.pdf", message.Attachments)
+			}
+			if !strings.Contains(message.Body, "See attached") || !strings.Contains(message.Body, "Total $12.00") {
+				t.Errorf("Body = %q, want both the email's text and the forwarded message's", message.Body)
+			}
+			// The forwarded message's own headers never replace the email's.
+			if message.From.Email != "sender@example.com" || message.Subject != "Test Receipt" {
+				t.Errorf("From = %q, Subject = %q", message.From.Email, message.Subject)
+			}
+		})
+	}
+}
+
+// nestedPdf returns a message carrying a PDF forwarded depth times over.
+func nestedPdf(depth int) []byte {
+	raw := buildMessage(standardHeaders(), mixed(pdfAttachment("receipt.pdf")))
+	for i := 1; i <= depth; i++ {
+		raw = buildMessage(standardHeaders(), mixed(
+			textPart("text/plain", "fwd"),
+			forwardedPart(raw, "", fmt.Sprintf("level%d", i)),
+		))
+	}
+	return raw
+}
+
+func TestParseMessage_NestedMessagesStopAtTheDepthLimit(t *testing.T) {
+	if message := mustParse(t, nestedPdf(maxNestedMessageDepth)); len(message.Attachments) != 1 {
+		t.Errorf("at depth %d: Attachments = %d, want the PDF", maxNestedMessageDepth, len(message.Attachments))
+	}
+	if message := mustParse(t, nestedPdf(maxNestedMessageDepth+1)); len(message.Attachments) != 0 {
+		t.Errorf("at depth %d: Attachments = %d, want none past the limit", maxNestedMessageDepth+1, len(message.Attachments))
+	}
+}
+
+func TestParseMessage_BrokenForwardedMessageKeepsTheRest(t *testing.T) {
+	truncated := []byte(strings.Join([]string{
+		"From: shop@store.example",
+		"MIME-Version: 1.0",
+		`Content-Type: multipart/mixed; boundary="inner"`,
+		"",
+		"--inner",
+		"Content-Type: text/plain",
+		"",
+		"unterminated part with no closing boundary",
+	}, "\r\n"))
+
+	message := mustParse(t, buildMessage(standardHeaders(), mixed(
+		forwardedPart(truncated, "", "fwd"),
+		jpegAttachment("receipt.jpg"),
+	)))
+
+	if len(message.Attachments) != 1 || message.Attachments[0].Filename != "receipt.jpg" {
+		t.Errorf("Attachments = %+v, want the email's own receipt.jpg", message.Attachments)
+	}
+}
+
+// --- Lenient headers -------------------------------------------------------------
+
+func TestParseMessage_LenientParameters(t *testing.T) {
+	cases := []struct {
+		name         string
+		part         mimePart
+		wantFilename string
+	}{
+		{
+			"unquoted filename with a space",
+			mimePart{ContentType: "application/pdf", Disposition: "attachment; filename=Receipt 2024.pdf", Encoding: "base64", Body: pdfBytes},
+			"Receipt 2024.pdf",
+		},
+		{
+			"name only in a malformed Content-Type",
+			mimePart{ContentType: "application/pdf; name=Receipt 2024.pdf", Disposition: "attachment", Encoding: "base64", Body: pdfBytes},
+			"Receipt 2024.pdf",
+		},
+		{
+			"unquoted encoded word",
+			mimePart{ContentType: "application/pdf", Disposition: "attachment; filename==?UTF-8?Q?Re=C3=A7u?= 2024.pdf", Encoding: "base64", Body: pdfBytes},
+			"Reçu 2024.pdf",
+		},
+		{
+			"quoted value with a semicolon in a malformed header",
+			mimePart{ContentType: "application/pdf", Disposition: `attachment; filename="a;b.pdf"; size=12 KB`, Encoding: "base64", Body: pdfBytes},
+			"a;b.pdf",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			message := mustParse(t, buildMessage(standardHeaders(), mixed(textPart("text/plain", "x"), tc.part)))
+			if len(message.Attachments) != 1 || message.Attachments[0].Filename != tc.wantFilename {
+				t.Errorf("Attachments = %+v, want one named %q", message.Attachments, tc.wantFilename)
+			}
+		})
+	}
+}
+
+func TestParseMessage_MalformedContentTypeIsStillBodyText(t *testing.T) {
+	message := mustParse(t, buildMessage(standardHeaders(), mixed(
+		textPart("text/plain; charset=utf-8; format=flowed junk", "Total $9.00"),
+	)))
+
+	if message.Body != "Total $9.00" {
+		t.Errorf("Body = %q, want the part read as plain text", message.Body)
+	}
+}
+
+// --- Parts that fail -------------------------------------------------------------
+
+func TestParseMessage_UndecodableAttachmentIsReported(t *testing.T) {
+	// "Base64" rather than "base64": the builder only encodes the exact lower-case
+	// value, so this writes the body raw under a base64 header.
+	message := mustParse(t, buildMessage(standardHeaders(), mixed(
+		textPart("text/plain", "x"),
+		mimePart{ContentType: "application/pdf", Disposition: `attachment; filename="broken.pdf"`, Encoding: "Base64", Body: []byte("!!!! not base64 !!!!")},
+		mimePart{ContentType: "text/plain", Disposition: `attachment; filename="notes.txt"`, Encoding: "Base64", Body: []byte("!!!! not base64 !!!!")},
+		jpegAttachment("receipt.jpg"),
+	)))
+
+	if len(message.Attachments) != 1 || message.Attachments[0].Filename != "receipt.jpg" {
+		t.Errorf("Attachments = %+v, want the good receipt.jpg", message.Attachments)
+	}
+	if len(message.RejectedAttachments) != 1 || message.RejectedAttachments[0].Filename != "broken.pdf" ||
+		!strings.Contains(message.RejectedAttachments[0].Reason, "could not be decoded") {
+		t.Errorf("RejectedAttachments = %+v, want broken.pdf only; notes.txt was never a receipt", message.RejectedAttachments)
+	}
+}
+
+func TestParseHeaderFields_DoesNotWriteIntoTheCallersBuffer(t *testing.T) {
+	header := []byte("From: a@x.example\r\nSubject: s\r\n")
+	buffer := append(append([]byte{}, header...), []byte("SENTINEL")...)
+
+	ParseHeaderFields(buffer[:len(header)])
+
+	if !bytes.Equal(buffer[len(header):], []byte("SENTINEL")) {
+		t.Errorf("bytes past the header became %q", buffer[len(header):])
 	}
 }
 

@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/mail"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -37,10 +39,16 @@ var (
 // Mail are inline too, but are far larger.
 const InlineImageMaxBytes = 20 * 1024
 
-// attachmentMimeTypes is the set of sniffed types an email attachment may have to
-// become a receipt. It is the list the Python client accepted, now matched
-// against the detected type rather than the sender-declared Content-Type.
-var attachmentMimeTypes = regexp.MustCompile(`^(image/(jpeg|png|heic|bmp|webp|tiff)|application/pdf)$`)
+// maxNestedMessageDepth bounds how far a forwarded message inside a forwarded
+// message is followed. Python's walk() had no limit; this one keeps a crafted
+// message from nesting arbitrarily deep.
+const maxNestedMessageDepth = 5
+
+// attachmentMimeTypes is the set of types an email attachment may have to become
+// a receipt: the list the Python client accepted, plus HEIF. It is matched against
+// the detected type, and against the declared Content-Type only to decide whether
+// a part that failed was meant to be a receipt.
+var attachmentMimeTypes = regexp.MustCompile(`^(image/(jpeg|png|heic|heif|bmp|webp|tiff)|application/pdf)$`)
 
 var (
 	horizontalWhitespace = regexp.MustCompile(`[ \t]+`)
@@ -62,15 +70,24 @@ type Attachment struct {
 	Data     []byte
 }
 
+// RejectedAttachment is an attachment that was meant to be a receipt but cannot
+// become one: it would not decode, or its contents are not the image or PDF it
+// was declared as.
+type RejectedAttachment struct {
+	Filename string
+	Reason   string
+}
+
 // Message is the part of an email the receipt pipeline uses.
 type Message struct {
-	From        Address
-	To          string
-	Subject     string
-	Date        time.Time
-	Body        string
-	BodyHtml    string
-	Attachments []Attachment
+	From                Address
+	To                  string
+	Subject             string
+	Date                time.Time
+	Body                string
+	BodyHtml            string
+	Attachments         []Attachment
+	RejectedAttachments []RejectedAttachment
 }
 
 // HasContent reports whether there is anything to make a receipt from.
@@ -128,13 +145,31 @@ func ParseMessage(raw []byte) (Message, error) {
 		Date:    dateOf(reader.Header),
 	}
 
-	var plainParts, htmlParts []string
-	var candidates []attachmentCandidate
+	var parts messageParts
+	if err := parts.collect(reader, 0); err != nil {
+		return Message{}, err
+	}
 
+	result.BodyHtml = strings.Join(parts.html, "\n")
+	result.Body = formatBodyText(parts.plain, parts.html)
+	result.Attachments, result.RejectedAttachments = keepReceiptAttachments(parts.candidates, result.BodyHtml)
+
+	return result, nil
+}
+
+// messageParts collects the body text and attachment candidates of a message
+// and of any message forwarded inside it.
+type messageParts struct {
+	plain      []string
+	html       []string
+	candidates []attachmentCandidate
+}
+
+func (parts *messageParts) collect(reader *gomail.Reader, depth int) error {
 	for {
 		part, err := reader.NextPart()
 		if err == io.EOF {
-			break
+			return nil
 		}
 		if err != nil && !message.IsUnknownCharset(err) {
 			if message.IsUnknownEncoding(err) {
@@ -142,14 +177,24 @@ func ParseMessage(raw []byte) (Message, error) {
 				// meaningless. Skip it rather than lose the whole email.
 				continue
 			}
-			return Message{}, fmt.Errorf("could not parse message part: %w", err)
+			return fmt.Errorf("could not parse message part: %w", err)
 		}
 		unknownCharset := err != nil
 
 		header := partHeader(part)
 		data, readErr := io.ReadAll(part.Body)
 		if readErr != nil {
-			return Message{}, fmt.Errorf("could not read message part: %w", readErr)
+			// One part that will not decode, such as broken base64, costs that
+			// part only. The next NextPart skips whatever of it is left.
+			if candidate, ok := newAttachmentCandidate(header, data, readErr); ok {
+				parts.candidates = append(parts.candidates, candidate)
+			}
+			continue
+		}
+
+		if isNestedMessage(header) {
+			parts.collectNested(data, depth+1)
+			continue
 		}
 
 		if kind := classifyBodyPart(header); kind != notBody {
@@ -158,39 +203,63 @@ func ParseMessage(raw []byte) (Message, error) {
 			if !unknownCharset && len(data) > 0 {
 				text := strings.ToValidUTF8(string(data), "�")
 				if kind == plainBody {
-					plainParts = append(plainParts, text)
+					parts.plain = append(parts.plain, text)
 				} else {
-					htmlParts = append(htmlParts, text)
+					parts.html = append(parts.html, text)
 				}
 			}
 			continue
 		}
 
-		if candidate, ok := newAttachmentCandidate(header, data); ok {
-			candidates = append(candidates, candidate)
+		if candidate, ok := newAttachmentCandidate(header, data, nil); ok {
+			parts.candidates = append(parts.candidates, candidate)
 		}
 	}
-
-	result.BodyHtml = strings.Join(htmlParts, "\n")
-	result.Body = formatBodyText(plainParts, htmlParts)
-	result.Attachments = keepReceiptAttachments(candidates, result.BodyHtml)
-
-	return result, nil
 }
 
-// attachmentCandidate is a part that passed the type allowlist, waiting on the
-// inline-image rule, which needs the HTML body.
+// collectNested reads a message forwarded as an attachment, as Python's walk()
+// did: its attachments become candidates and its text joins the body. Its
+// headers are ignored. A forwarded message that cannot be read, or is nested too
+// deep, is skipped without failing the email carrying it; whatever of it was read
+// before a problem is kept.
+func (parts *messageParts) collectNested(raw []byte, depth int) {
+	if depth > maxNestedMessageDepth {
+		return
+	}
+
+	reader, err := gomail.CreateReader(bytes.NewReader(raw))
+	if err != nil && !message.IsUnknownCharset(err) {
+		return
+	}
+	defer reader.Close()
+
+	_ = parts.collect(reader, depth)
+}
+
+func isNestedMessage(header message.Header) bool {
+	contentType, _ := contentTypeOf(header)
+	return contentType == "message/rfc822" || contentType == "message/global"
+}
+
+// attachmentCandidate is a part meant as an attachment, waiting on the
+// inline-image rule, which needs the HTML body. A rejected one carries why it
+// cannot become a receipt instead of usable data.
 type attachmentCandidate struct {
 	attachment Attachment
+	rejection  string
 	inline     bool
 	contentId  string
 }
 
-func newAttachmentCandidate(header message.Header, data []byte) (attachmentCandidate, bool) {
+// newAttachmentCandidate decides what a part with a filename becomes. The sniffed
+// type decides acceptance. The declared type only decides whether a part that
+// fails was meant as a receipt, and so is reported rather than dropped: Python
+// accepted a part on its declared type, so such a failure used to reach a group.
+// readErr is the error reading the part, when it would not decode.
+func newAttachmentCandidate(header message.Header, data []byte, readErr error) (attachmentCandidate, bool) {
 	// Like the Python client, a part with no Content-Disposition is never an
 	// attachment. Those are typically images an HTML body embeds by cid.
-	rawDisposition := header.Get("Content-Disposition")
-	if len(rawDisposition) == 0 {
+	if len(header.Get("Content-Disposition")) == 0 {
 		return attachmentCandidate{}, false
 	}
 
@@ -199,25 +268,39 @@ func newAttachmentCandidate(header message.Header, data []byte) (attachmentCandi
 		return attachmentCandidate{}, false
 	}
 
-	fileType := utils.GetMimeType(data).String()
-	if !attachmentMimeTypes.MatchString(fileType) {
+	disposition, _ := contentDispositionOf(header)
+	declaredType, _ := contentTypeOf(header)
+	sniffedType := utils.GetMimeType(data).String()
+
+	candidate := attachmentCandidate{
+		attachment: Attachment{Filename: filename, FileType: sniffedType, Data: data},
+		inline:     disposition == "inline",
+		contentId:  strings.Trim(strings.TrimSpace(header.Get("Content-Id")), "<>"),
+	}
+
+	switch {
+	case readErr != nil:
+		if !attachmentMimeTypes.MatchString(declaredType) && !attachmentMimeTypes.MatchString(sniffedType) {
+			return attachmentCandidate{}, false
+		}
+		candidate.rejection = "it could not be decoded: " + readErr.Error()
+	case attachmentMimeTypes.MatchString(sniffedType):
+	case attachmentMimeTypes.MatchString(declaredType):
+		candidate.rejection = fmt.Sprintf("its contents are not a supported image or PDF (they look like %s)", sniffedType)
+	default:
 		return attachmentCandidate{}, false
 	}
 
-	disposition, _, _ := header.ContentDisposition()
-
-	return attachmentCandidate{
-		attachment: Attachment{Filename: filename, FileType: fileType, Data: data},
-		inline:     strings.EqualFold(disposition, "inline"),
-		contentId:  strings.Trim(strings.TrimSpace(header.Get("Content-Id")), "<>"),
-	}, true
+	return candidate, true
 }
 
 // keepReceiptAttachments drops inline images that are HTML decoration: embedded
-// by the body (cid:) and small. Everything else is kept, in message order.
-func keepReceiptAttachments(candidates []attachmentCandidate, bodyHtml string) []Attachment {
+// by the body (cid:) and small, whether usable or not. Everything else is kept,
+// in message order, split into usable attachments and rejected ones.
+func keepReceiptAttachments(candidates []attachmentCandidate, bodyHtml string) ([]Attachment, []RejectedAttachment) {
 	lowerHtml := strings.ToLower(bodyHtml)
 	attachments := make([]Attachment, 0, len(candidates))
+	rejected := make([]RejectedAttachment, 0)
 
 	for _, candidate := range candidates {
 		embedded := candidate.inline &&
@@ -228,10 +311,15 @@ func keepReceiptAttachments(candidates []attachmentCandidate, bodyHtml string) [
 			continue
 		}
 
+		if len(candidate.rejection) > 0 {
+			rejected = append(rejected, RejectedAttachment{Filename: candidate.attachment.Filename, Reason: candidate.rejection})
+			continue
+		}
+
 		attachments = append(attachments, candidate.attachment)
 	}
 
-	return attachments
+	return attachments, rejected
 }
 
 type bodyKind int
@@ -249,8 +337,8 @@ func classifyBodyPart(header message.Header) bodyKind {
 		return notBody
 	}
 
-	contentType, _, _ := header.ContentType()
-	switch strings.ToLower(contentType) {
+	contentType, _ := contentTypeOf(header)
+	switch contentType {
 	case "text/plain":
 		return plainBody
 	case "text/html":
@@ -399,13 +487,114 @@ func dateOf(header gomail.Header) time.Time {
 // partFilename reads the filename from Content-Disposition, falling back to the
 // Content-Type name parameter, decoding RFC 2231 and RFC 2047 forms.
 func partFilename(header message.Header) string {
-	_, params, _ := header.ContentDisposition()
+	_, params := contentDispositionOf(header)
 	if filename, ok := params["filename"]; ok && len(filename) > 0 {
 		return filename
 	}
 
-	_, params, _ = header.ContentType()
+	_, params = contentTypeOf(header)
 	return params["name"]
+}
+
+// contentTypeOf returns the lowercased media type and parameters of a part,
+// text/plain when it declares none.
+func contentTypeOf(header message.Header) (string, map[string]string) {
+	contentType, params, err := header.ContentType()
+	if err != nil {
+		return lenientParams(header.Get("Content-Type"))
+	}
+	return strings.ToLower(contentType), params
+}
+
+// contentDispositionOf returns the lowercased disposition and parameters of a part.
+func contentDispositionOf(header message.Header) (string, map[string]string) {
+	disposition, params, err := header.ContentDisposition()
+	if err != nil {
+		return lenientParams(header.Get("Content-Disposition"))
+	}
+	return strings.ToLower(disposition), params
+}
+
+// parameterWordDecoder decodes RFC 2047 words in a parameter value, with the
+// charsets the charset package registers.
+var parameterWordDecoder = &mime.WordDecoder{
+	CharsetReader: func(charset string, input io.Reader) (io.Reader, error) {
+		return message.CharsetReader(charset, input)
+	},
+}
+
+// lenientParams reads a header that mime.ParseMediaType refuses. That refuses the
+// whole header over one malformed parameter, and go-message then returns no
+// parameters at all; an unquoted filename with a space in it is enough
+// ("filename=Receipt 2024.pdf"). Python's parser read such headers anyway, so
+// this splits on semicolons outside quotes and takes each value as written.
+// RFC 2231 forms (filename*=) are not decoded here: they are rare in a header
+// that is malformed anyway.
+func lenientParams(raw string) (string, map[string]string) {
+	segments := splitOutsideQuotes(raw, ';')
+	params := make(map[string]string)
+
+	for _, segment := range segments[1:] {
+		key, value, found := strings.Cut(segment, "=")
+		if !found {
+			continue
+		}
+		key = strings.ToLower(strings.TrimSpace(key))
+		value = strings.TrimSpace(value)
+		if unquoted, ok := unquote(value); ok {
+			value = unquoted
+		}
+		if decoded, err := parameterWordDecoder.DecodeHeader(value); err == nil {
+			value = decoded
+		}
+		params[key] = value
+	}
+
+	return strings.ToLower(strings.TrimSpace(segments[0])), params
+}
+
+// splitOutsideQuotes splits s on sep, ignoring separators inside a quoted string.
+func splitOutsideQuotes(s string, sep rune) []string {
+	var segments []string
+	var current strings.Builder
+	quoted, escaped := false, false
+
+	for _, r := range s {
+		switch {
+		case escaped:
+			escaped = false
+		case quoted && r == '\\':
+			escaped = true
+		case r == '"':
+			quoted = !quoted
+		case r == sep && !quoted:
+			segments = append(segments, current.String())
+			current.Reset()
+			continue
+		}
+		current.WriteRune(r)
+	}
+
+	return append(segments, current.String())
+}
+
+// unquote removes the quotes around a quoted-string and its backslash escapes.
+func unquote(value string) (string, bool) {
+	if len(value) < 2 || value[0] != '"' || value[len(value)-1] != '"' {
+		return value, false
+	}
+
+	var builder strings.Builder
+	escaped := false
+	for _, r := range value[1 : len(value)-1] {
+		if !escaped && r == '\\' {
+			escaped = true
+			continue
+		}
+		escaped = false
+		builder.WriteRune(r)
+	}
+	return builder.String(), true
 }
 
 func partHeader(part *gomail.Part) message.Header {
@@ -419,7 +608,10 @@ func partHeader(part *gomail.Part) message.Header {
 }
 
 func readHeader(rawHeader []byte) (gomail.Header, error) {
-	entity, err := message.Read(bytes.NewReader(append(bytes.TrimRight(rawHeader, "\r\n"), []byte("\r\n\r\n")...)))
+	// A fresh slice: appending onto the trimmed one would write into the
+	// caller's array whenever it has spare capacity.
+	block := slices.Concat(bytes.TrimRight(rawHeader, "\r\n"), []byte("\r\n\r\n"))
+	entity, err := message.Read(bytes.NewReader(block))
 	if entity == nil {
 		return gomail.Header{}, err
 	}

@@ -722,6 +722,19 @@ func TestConvertHeicToJpg_InvalidBytes(t *testing.T) {
 	}
 }
 
+func TestGetBytesFromImageBytes_RoutesHeifToConversion(t *testing.T) {
+	repository := NewFileRepository(nil)
+	// An ftyp box branded mif1 sniffs as image/heif. The rest is not a real image,
+	// so reaching ImageMagick shows up as an error; passed through unconverted, it
+	// would come back unchanged with none.
+	heif := append([]byte("\x00\x00\x00\x18ftypmif1\x00\x00\x00\x00mif1heic"), make([]byte, 32)...)
+
+	got, err := repository.GetBytesFromImageBytes(heif)
+	if err == nil {
+		utils.PrintTestError(t, len(got), "an ImageMagick error from converting HEIF, not a pass-through")
+	}
+}
+
 func TestGetBytesFromImageBytes_JpgPassThrough(t *testing.T) {
 	repository := NewFileRepository(nil)
 	jpg := readTestJpgBytes(t)

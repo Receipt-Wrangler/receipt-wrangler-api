@@ -265,6 +265,12 @@ func (poller emailPoller) planMessage(
 		return plan, nil
 	}
 
+	// Recorded before the content check, so an email whose only attachment is
+	// unusable is reported rather than marked read as having nothing in it.
+	for _, rejected := range message.RejectedAttachments {
+		plan.fail(groups, fmt.Sprintf("the attachment %q could not be processed: %s", rejected.Filename, rejected.Reason))
+	}
+
 	if !message.HasContent() {
 		logging.LogStd(logging.LOG_LEVEL_INFO, fmt.Sprintf("Email %q from %s has no attachment or body to process", message.Subject, message.From.Email))
 		return plan, nil
@@ -280,7 +286,8 @@ func (poller emailPoller) planMessage(
 		attachments = append(attachments, saved)
 	}
 
-	if len(message.Attachments) > 0 && len(attachments) == 0 {
+	attempted := len(message.Attachments) + len(message.RejectedAttachments)
+	if attempted > 0 && len(attachments) == 0 {
 		// Every attachment failed. Falling back to the body alone would create a
 		// receipt without the image it was sent for.
 		return plan, nil

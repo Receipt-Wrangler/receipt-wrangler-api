@@ -692,6 +692,49 @@ func TestPollEmail_FailedAttachmentsDoNotFallBackToTheBody(t *testing.T) {
 	}
 }
 
+func TestPollEmail_RejectedAttachmentDoesNotFallBackToTheBody(t *testing.T) {
+	fixture := newPollFixture(t)
+	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
+	fixture.addGroup(systemEmail, groupOptions{bodyProcessing: true})
+	mislabelled := fixtureAttachment{filename: "receipt.pdf", contentType: "application/pdf", data: []byte("<html>not a pdf</html>")}
+	uid := mailbox.deliver(rawEmail("bob@example.com", "Receipt", "Total $5.00", mislabelled))
+
+	if err := PollEmail(true, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(fixture.enqueued) != 0 {
+		t.Errorf("enqueued %+v; a receipt made from the body alone would be missing its image", fixture.enqueued)
+	}
+	failures := fixture.systemTasks(models.EMAIL_READ)
+	if len(failures) != 1 || !strings.Contains(failures[0].ResultDescription, "receipt.pdf") ||
+		!strings.Contains(failures[0].ResultDescription, "not a supported image or PDF") {
+		t.Errorf("failed EMAIL_READ = %+v, want one naming receipt.pdf", failures)
+	}
+	if !mailbox.isSeen(uid) {
+		t.Error("the email was left unread")
+	}
+}
+
+func TestPollEmail_RejectedAttachmentBesideAGoodOne(t *testing.T) {
+	fixture := newPollFixture(t)
+	systemEmail, mailbox := fixture.addSystemEmail("receipts@example.org")
+	fixture.addGroup(systemEmail, groupOptions{})
+	mislabelled := fixtureAttachment{filename: "receipt.pdf", contentType: "application/pdf", data: []byte("<html>not a pdf</html>")}
+	mailbox.deliver(rawEmail("bob@example.com", "Receipt", "", mislabelled, jpegNamed("photo.jpg", pollJpeg)))
+
+	if err := PollEmail(true, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(fixture.enqueued) != 1 || fixture.enqueued[0].Attachment.Filename != "photo.jpg" {
+		t.Errorf("enqueued %+v, want photo.jpg only", fixture.enqueued)
+	}
+	if failures := fixture.systemTasks(models.EMAIL_READ); len(failures) != 1 || !strings.Contains(failures[0].ResultDescription, "receipt.pdf") {
+		t.Errorf("failed EMAIL_READ = %+v, want one naming receipt.pdf", failures)
+	}
+}
+
 func TestPollEmail_NoEnabledGroupsDoesNothing(t *testing.T) {
 	fixture := newPollFixture(t)
 

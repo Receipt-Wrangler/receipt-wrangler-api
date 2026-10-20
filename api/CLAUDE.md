@@ -328,7 +328,8 @@ When working with tests in this codebase, follow these critical requirements:
 
 - Tesseract OCR integration via `otiai10/gosseract`
 - ImageMagick integration for image processing and format conversion
-- Supports HEIC format conversion to standard image formats
+- Supports HEIC and HEIF format conversion to standard image formats (`GetBytesFromImageBytes`; a
+  `mif1`-branded file sniffs as `image/heif` and goes through the same `ConvertHeicToJpg`)
 - Python dependencies for additional image processing capabilities
 
 ## Email ingestion (IMAP)
@@ -393,6 +394,7 @@ without a record.
 | DKIM check temporarily impossible (DNS) | left unread, nothing recorded — retried next poll |
 | DKIM fails, for a group requiring it | failed activity **for that group**, naming the setting to turn off; other matched groups continue |
 | an attachment fails conversion | failed activity naming it; the email's other attachments continue |
+| an attachment won't decode, or its declared type is an image/PDF but its contents aren't | failed activity naming it; counts toward "every attachment failed" below |
 | every attachment failed | marked read, **no fallback to the body** (it would make a receipt without its image) |
 | nothing to process (no allowed attachment, no body) | marked read silently — as before |
 | queued | marked read |
@@ -430,9 +432,24 @@ enabled group on them** — it used to mark group B's mail read without ever rou
   `image001.png` in every email, overwrote each other and put one email's image on another email's
   receipt — possibly in another group. `Attachment.Filename` keeps the sanitized original, which is
   what download and preview already use; the sweeper and source-file code key on payload paths.
-- **The type is sniffed** (`utils.GetMimeType`), never the declared `Content-Type`, against the same
-  allowlist as before (`image/jpeg|png|heic|bmp|webp|tiff`, `application/pdf`). A PDF labelled
-  `application/octet-stream` is now accepted; a non-image labelled `image/jpeg` is not.
+- **The type is sniffed** (`utils.GetMimeType`), never the declared `Content-Type`, against the
+  allowlist the Python client used plus HEIF (`image/jpeg|png|heic|heif|bmp|webp|tiff`,
+  `application/pdf`). A PDF labelled `application/octet-stream` is now accepted.
+- **The declared type still decides one thing: whether a failure is reported.** A part declared as
+  an allowed type whose contents sniff as something else, or a part that will not decode (broken
+  base64), becomes a `RejectedAttachment`: a failed activity naming it, and it counts toward "every
+  attachment failed", so the email does not fall back to a body-only receipt. Python accepted these
+  on the declared type. A part neither declared nor sniffed as a receipt type is dropped silently,
+  as before. One undecodable part no longer fails the whole message.
+- **Forwarded messages are read** (`message/rfc822`, `message/global`), as Python's `walk()` did:
+  their attachments are candidates and their text joins the body; their headers are ignored. At most
+  `maxNestedMessageDepth` (5) levels, and a broken forwarded message never fails the email carrying
+  it. go-message does not descend into these on its own.
+- **Malformed header parameters are read leniently.** `mime.ParseMediaType` gives up on a whole
+  `Content-Type` / `Content-Disposition` over one bad parameter (`filename=Receipt 2024.pdf`), and
+  go-message then returns no parameters at all. `contentTypeOf` / `contentDispositionOf` call
+  go-message first and fall back to `lenientParams` only on that error: split on `;` outside
+  quotes, unquote, decode RFC 2047 words. RFC 2231 `filename*=` is not decoded in the fallback.
 - Like the old client, a part with **no `Content-Disposition`** is never an attachment, and the
   filename goes through `utils.SanitizeFileName` (GHSA-h3pr-mhcr-8phg).
 - **Inline images are skipped only when they are decoration**: disposition `inline`, referenced by the
@@ -496,7 +513,8 @@ file every poll also wrote to, so it could report another mailbox's failure. Sti
 
 - `emailclient/parse_test.go` — the Python suite ported for parity, plus decoding, charsets, dates
   (a `-0500` date is now converted to UTC rather than relabelled), the `From` rules, sniffing and the
-  inline rule.
+  inline rule, forwarded messages (plain and base64, the depth limit, a broken one), lenient
+  parameters, rejected attachments, and that `ParseHeaderFields` never writes into its input.
 - `emailclient/routing_test.go`, `dkim_test.go` (real RSA keys signed with `dkim.Sign`, a stubbed
   `lookupTXT`), and `mailbox_test.go` against `go-imap/v2/imapserver/imapmemserver` over implicit TLS
   and STARTTLS with a self-signed certificate — including that PEEK leaves messages unread, that

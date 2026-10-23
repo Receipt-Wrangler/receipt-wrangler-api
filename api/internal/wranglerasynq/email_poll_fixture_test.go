@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -335,6 +336,23 @@ func (fixture *pollFixture) payloadsFor(groupSettingsId uint) []EmailProcessTask
 		}
 	}
 	return result
+}
+
+// tempFiles lists the files in temp/; a temp/ that was never made has none.
+func (fixture *pollFixture) tempFiles() []string {
+	fixture.t.Helper()
+	entries, err := os.ReadDir(repositories.NewFileRepository(nil).GetTempDirectoryPath())
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		fixture.t.Fatal(err)
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		names = append(names, entry.Name())
+	}
+	return names
 }
 
 func (fixture *pollFixture) systemTasks(taskType models.SystemTaskType) []models.SystemTask {

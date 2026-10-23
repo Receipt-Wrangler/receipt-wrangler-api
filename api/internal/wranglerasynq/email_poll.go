@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"maps"
 	"net"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -506,6 +507,7 @@ func (poller emailPoller) senderCheckExpired(header emailclient.MessageHeader) b
 // queuing, that one message is lost without a record.
 func (poller emailPoller) finishMessage(mailbox emailclient.Mailbox, uid uint32, plan messagePlan) error {
 	if err := mailbox.MarkSeen(uid); err != nil {
+		removeSavedAttachments(plan)
 		return err
 	}
 
@@ -522,6 +524,8 @@ func (poller emailPoller) finishMessage(mailbox emailclient.Mailbox, uid uint32,
 		queueErr = fmt.Errorf("could not queue the email for processing: %w", queueErr)
 
 		if queued == 0 {
+			removeSavedAttachments(plan)
+
 			// Nothing has happened yet, so the message can go back for a clean retry.
 			unmarkErr := mailbox.MarkUnseen(uid)
 			if unmarkErr == nil {
@@ -544,6 +548,22 @@ func (poller emailPoller) finishMessage(mailbox emailclient.Mailbox, uid uint32,
 	}
 
 	return queueErr
+}
+
+// removeSavedAttachments deletes the attachments a plan wrote to temp/ when none
+// of its tasks was queued. No task will read them, so they would only wait for
+// the temp sweep, and a retried message saves them again under new names. Every
+// saved attachment is in a payload; the groups' payloads share one file, so a
+// path already removed is skipped.
+func removeSavedAttachments(plan messagePlan) {
+	for _, payload := range plan.payloads {
+		if len(payload.TempFilePath) == 0 {
+			continue
+		}
+		if err := os.Remove(payload.TempFilePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			logging.LogStd(logging.LOG_LEVEL_ERROR, "Could not remove an unqueued attachment: ", err.Error())
+		}
+	}
 }
 
 // groupsOfPayloads returns the groups the payloads are for, in the order given.

@@ -374,8 +374,9 @@ fetch marked a whole batch read before processing it, so any exception lost ever
 **Each message is planned, then claimed, then acted on** (`planMessage`, then `finishMessage`):
 1. **Plan.** Work out everything the message will cause: the tasks to queue and the failed activities
    to record. The only side effect is writing attachments to `temp/`.
-2. **Claim.** Mark it read (`MarkSeen`). If that fails, nothing has happened yet, so the mailbox is
-   abandoned for this poll and the message is retried whole.
+2. **Claim.** Mark it read (`MarkSeen`). If that fails, nothing has happened yet, so the attachments
+   the plan saved are deleted, the mailbox is abandoned for this poll and the message is retried
+   whole. The same deletion runs whenever nothing could be queued, because no task will read them.
 3. **Queue, then record.** Failures are recorded last, so a retried message never records one twice.
 
 Claiming first is deliberate. The first port marked a message read only after queuing it, so a queue
@@ -400,15 +401,16 @@ without a record.
 | every attachment failed | marked read, **no fallback to the body** (it would make a receipt without its image) |
 | nothing to process (no allowed attachment, no body) | marked read silently — as before |
 | queued | marked read |
-| the queue (Redis) errors before anything was queued | put back to unread (`MarkUnseen`); the mailbox is abandoned for this poll |
-| the queue errors after part of it was queued, or the unread mark cannot be undone | stays read, failed activity for the groups not queued; the mailbox is abandoned |
+| the queue (Redis) errors before anything was queued | its saved attachments are deleted and it is put back to unread (`MarkUnseen`); the mailbox is abandoned for this poll |
+| the queue errors after part of it was queued, or the unread mark cannot be undone | stays read, failed activity for the groups not queued; the mailbox is abandoned. If nothing was queued, its saved attachments are deleted, since nothing can reach them |
 | the session itself fails (connection, a `BAD`) | the mailbox is abandoned; the message is retried |
 
 A **failed activity** is a FAILED `EMAIL_READ` (`AssociatedEntityType: SYSTEM_EMAIL`, the admin
 System Tasks page) with a FAILED `EMAIL_UPLOAD` child per affected group carrying `GroupId` — the
 child is what the group's activity feed lists (`repositories/system_task.go`). It is the same
-parent/child shape a processed email produces, and it has no `AsynqTaskId`, so rerun and the
-source-file controls stay off.
+parent/child shape a processed email produces. A failure recorded by the poll has no
+`AsynqTaskId`, so rerun and the source-file controls stay off. A conversion failure recorded by
+the task carries the task id, so those controls are offered.
 
 ### Routing is per account and per group
 

@@ -464,6 +464,10 @@ func TestPollEmail_QueueFailureLeavesTheEmailUnread(t *testing.T) {
 	if len(fixture.systemTasks(models.EMAIL_READ)) != 0 {
 		t.Error("a queue outage was recorded as a problem with the email")
 	}
+	// The retry saves the attachment again, so this poll's copy would only pile up.
+	if files := fixture.tempFiles(); len(files) != 0 {
+		t.Errorf("temp/ holds %v after nothing was queued", files)
+	}
 
 	// Once the queue is back, the email goes through exactly once.
 	fixture.enqueueErr = nil
@@ -490,6 +494,9 @@ func TestPollEmail_AnEmailIsClaimedBeforeAnythingIsQueuedOrRecorded(t *testing.T
 	if len(fixture.enqueued) != 0 || len(fixture.systemTasks(models.EMAIL_READ)) != 0 {
 		t.Fatalf("enqueued %d and recorded %d failures for an email that could not be claimed",
 			len(fixture.enqueued), len(fixture.systemTasks(models.EMAIL_READ)))
+	}
+	if files := fixture.tempFiles(); len(files) != 0 {
+		t.Errorf("temp/ holds %v after an email that could not be claimed", files)
 	}
 
 	mailbox.markSeenErr = nil
@@ -524,6 +531,9 @@ func TestPollEmail_PartlyQueuedEmailIsRecordedAndNeverQueuedTwice(t *testing.T) 
 	if !mailbox.isSeen(uid) {
 		t.Error("a partly queued email went back to unread; the next poll would queue the first task again")
 	}
+	if _, err := os.Stat(fixture.enqueued[0].TempFilePath); err != nil {
+		t.Errorf("the queued task's attachment was removed: %v", err)
+	}
 	uploads := fixture.systemTasks(models.EMAIL_UPLOAD)
 	if len(uploads) != 1 || *uploads[0].GroupId != second.GroupId || !strings.Contains(uploads[0].ResultDescription, "could not queue") {
 		t.Errorf("failed EMAIL_UPLOAD = %+v, want one for the group whose task was not queued", uploads)
@@ -557,6 +567,10 @@ func TestPollEmail_UnqueuedEmailThatCannotGoBackToUnreadIsRecorded(t *testing.T)
 	uploads := fixture.systemTasks(models.EMAIL_UPLOAD)
 	if len(uploads) != 1 || *uploads[0].GroupId != settings.GroupId {
 		t.Errorf("failed EMAIL_UPLOAD = %+v; an email left read and unqueued must not vanish silently", uploads)
+	}
+	// No task refers to the attachment, and the failure carries no task id to reach it by.
+	if files := fixture.tempFiles(); len(files) != 0 {
+		t.Errorf("temp/ holds %v after nothing was queued", files)
 	}
 }
 

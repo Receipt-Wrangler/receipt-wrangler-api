@@ -7,8 +7,6 @@ apt-get install python3.13-venv -y
 # Set up venv
 python3 -m venv wranglervenv
 . wranglervenv/bin/activate
-# Install requirements
-pip3 install -r ./imap-client/requirements.txt
 # Install pytorch cpu
 pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 # Install easyocr

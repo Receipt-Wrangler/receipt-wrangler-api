@@ -26,8 +26,8 @@ the project's Docker images (and `set-up-dependencies.sh`) assume **Debian** (`g
   repos only ship ImageMagick **6** (`libmagickwand-dev` = IM6) and have no IM7 package, so
   `set-up-dependencies.sh`'s `libmagickwand-7.q16-dev` isn't installable and the Go build fails to
   link. **IM7 must be built from source.**
-- `set-up-dependencies.sh` also installs heavy Python (torch, easyocr) used only by the **IMAP email
-  client**, not the Go server. **Skip it** — install just the native libs below.
+- `set-up-dependencies.sh` also installs heavy Python (torch, easyocr) used only by the optional
+  **EasyOCR** engine, not to boot the Go server. **Skip it** — install just the native libs below.
 
 **Step 1 — Start Redis** (installed but not running by default):
 ```bash
@@ -144,7 +144,6 @@ pre-installed binary works.
 ### Testing
 - `go test -v ./...` - Run all Go tests with verbose output
 - `go test -coverprofile=coverage.out -covermode=atomic -v ./...` - Run tests with coverage
-- `python3 -m unittest discover -s ./imap-client` - Run Python IMAP client tests
 
 ### Seeding test data
 - `RW_API_KEY='key.1.<id>.<secret>' node dev/seed-reporting-data.mjs` - Seed a realistic, high-volume
@@ -183,7 +182,7 @@ pre-installed binary works.
 ### Core Structure
 - **main.go** - Application entry point, initializes logging, config, database, and starts HTTP server
 - **internal/** - Core application code organized by domain
-- **imap-client/** - Python-based email processing client
+- **internal/emailclient/** - IMAP, MIME parsing, routing and DKIM for email ingestion
 
 ### Key Directories
 - **internal/handlers/** - HTTP request handlers for each API endpoint
@@ -329,8 +328,254 @@ When working with tests in this codebase, follow these critical requirements:
 
 - Tesseract OCR integration via `otiai10/gosseract`
 - ImageMagick integration for image processing and format conversion
-- Supports HEIC format conversion to standard image formats
+- Supports HEIC and HEIF format conversion to standard image formats (`GetBytesFromImageBytes`; a
+  `mif1`-branded file sniffs as `image/heif` and goes through the same `ConvertHeicToJpg`)
 - Python dependencies for additional image processing capabilities
+
+## Email ingestion (IMAP)
+
+Groups receive receipts by email: a System Email (an IMAP account) is polled, each unread message is
+routed to the groups reading that mailbox, and every attachment (or the body) becomes an
+`EmailProcessTaskPayload` for `HandleEmailProcessTask`. That handler, the payload, the temp sweeper,
+the source-file endpoints and rerun are all **downstream and unchanged** by how the mail is read.
+
+This used to be a Python client (`api/imap-client/`, run with `exec`). It was ported to Go and
+deleted. **Python is still installed** — the optional EasyOCR engine (`services/ocr.go`) needs it,
+the venv and `PYTHONPATH` — so do not strip those from the Dockerfiles.
+
+- **`internal/emailclient/`** imports no repositories, asynq or config, so it tests without a DB:
+  - `mailbox.go` — `Connector` / `Mailbox` over `emersion/go-imap/v2` (pinned `v2.0.0-beta.8`; v2 has
+    been beta since 2023 and its API surface used here is small). Implicit TLS by default, STARTTLS
+    when `UseStartTLS`, always with certificate verification. 30s dial and a 30s deadline on the
+    implicit-TLS handshake, cleared once it completes. After that imapclient times every exchange
+    itself (30s per command or response, 5 minutes per literal) and waits for the next response with
+    **no** deadline. **Never wrap the connection to push a deadline onto every read.** The first port
+    did, with 2 minutes, and that closed the session whenever the poller spent long enough between
+    two commands. imapclient retries a timed-out read four times at a response boundary, so in
+    practice that was about 8 minutes. `TestMailbox_SurvivesAPauseLongerThanTheHandshakeTimeout`
+    pins it. `UIDValidity()` is kept from the SELECT response, and `FetchHeaders` also returns each
+    message's INTERNALDATE (`ReceivedAt`); the poller's memory and its 24-hour limit rely on them.
+  - `parse.go` — `ParseMessage` / `ParseHeaderFields` over `emersion/go-message` (plus its `charset`
+    subpackage, which is what decodes windows-1252, ISO-8859-x and friends).
+  - `routing.go` — `NewRouter` / `Router.Route`, built once per poll from the account's groups.
+  - `dkim.go` — `VerifySender` over `emersion/go-msgauth/dkim`, `SameOrganizationalDomain` over
+    `golang.org/x/net/publicsuffix`.
+- **Orchestration** is `wranglerasynq/email_poll.go` (`emailPoller`), entered through `PollEmail` in
+  `email.go` from both the cron poll and `POST /group/{id}/pollGroupEmail`. Its three seams —
+  `connect`, `lookupTXT`, `enqueue` — are fields, and `newEmailPoller` is a package variable so tests
+  drive `PollEmail` end to end with fakes.
+
+### What happens to each message
+
+Nothing is fetched with `RFC822`, which sets `\Seen` as a side effect: headers come from
+`BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)]` and bodies from `BODY.PEEK[]`. The old client's `RFC822`
+fetch marked a whole batch read before processing it, so any exception lost every email in it.
+
+**Each message is planned, then claimed, then acted on** (`planMessage`, then `finishMessage`):
+1. **Plan.** Work out everything the message will cause: the tasks to queue and the failed activities
+   to record. The only side effect is writing attachments to `temp/`.
+2. **Claim.** Mark it read (`MarkSeen`). If that fails, nothing has happened yet, so the attachments
+   the plan saved are deleted, the mailbox is abandoned for this poll and the message is retried
+   whole. The same deletion runs whenever nothing could be queued, because no task will read them.
+3. **Queue, then record.** Failures are recorded last, so a retried message never records one twice.
+
+Claiming first is deliberate. The first port marked a message read only after queuing it, so a queue
+error part-way through, or a failed mark, sent it through again and duplicated the receipts already
+queued. A mailbox that never accepts the mark (a read-only ACL) duplicated them on **every** poll. The
+cost runs the other way: if the process dies between claiming and queuing, that one message is lost
+without a record.
+
+| Case | Outcome |
+|---|---|
+| matches no group | **left unread**; only its headers are ever fetched, and once per process (see "Memory and retries") |
+| larger than 50 MB (`RFC822.SIZE`) | failed activity, marked read, body never downloaded |
+| gone by the time it is fetched (another client expunged it) | skipped, nothing recorded |
+| the server says try later (`NO [UNAVAILABLE]`) | left unread, nothing recorded, tried again after 30 minutes; the next message is still processed |
+| the server refuses to return it (any other `NO`) | failed activity, marked read: retrying would block every later message, which always comes after it in UID order |
+| unparseable, no `From`, or more than one `From` address | failed activity, marked read |
+| DKIM check temporarily impossible (DNS) | left unread, nothing recorded, tried again after 30 minutes. Once the email is 24 hours old by its INTERNALDATE: failed activity for the groups requiring the check; the other matched groups continue |
+| DKIM fails, for a group requiring it | failed activity **for that group**, naming the setting to turn off; other matched groups continue |
+| an attachment cannot be written to `temp/` | failed activity naming it; the email's other attachments continue |
+| an attachment fails conversion (PDF or HEIC to an image) | queued anyway: the **task** converts it. On failure it records one failed activity carrying the task id and archives at once (no retries), keeping the original, which can be downloaded and rerun straight away |
+| an attachment won't decode, or its declared type is an image/PDF but its contents aren't | failed activity naming it; counts toward "every attachment failed" below |
+| every attachment failed | marked read, **no fallback to the body** (it would make a receipt without its image) |
+| nothing to process (no allowed attachment, no body) | marked read silently — as before |
+| queued | marked read |
+| the queue (Redis) errors before anything was queued | its saved attachments are deleted and it is put back to unread (`MarkUnseen`); the mailbox is abandoned for this poll |
+| the queue errors after part of it was queued, or the unread mark cannot be undone | stays read, failed activity for the groups not queued; the mailbox is abandoned. If nothing was queued, its saved attachments are deleted, since nothing can reach them |
+| the session itself fails (connection, a `BAD`) | the mailbox is abandoned; the message is retried |
+
+A **failed activity** is a FAILED `EMAIL_READ` (`AssociatedEntityType: SYSTEM_EMAIL`, the admin
+System Tasks page) with a FAILED `EMAIL_UPLOAD` child per affected group carrying `GroupId` — the
+child is what the group's activity feed lists (`repositories/system_task.go`). It is the same
+parent/child shape a processed email produces. A failure recorded by the poll has no
+`AsynqTaskId`, so rerun and the source-file controls stay off. A conversion failure recorded by
+the task carries the task id, so those controls are offered.
+
+### Routing is per account and per group
+
+A message is routed **only to the groups reading the IMAP account it came from**, each judged by its
+**own** whitelist and regexes. The Python client pooled every mailbox's messages and matched them
+against every group, so a group with an empty whitelist received mail sent to any other group's
+inbox, and whitelists/regexes were unioned before fetching so one group's filters narrowed another's.
+A **manual poll** reads only the requested groups' accounts but routes against **every enabled group
+on them** — it used to mark group B's mail read without ever routing it to B.
+
+- **An account is host + port + username, not a System Email row** (`accountKeyOf`; host and
+  username compare case-insensitively, as email-address logins do on mainstream servers). Two rows
+  for one account are read **once**, in one session, routing against the groups on both. Polled per
+  row, whichever row ran first consumed the mail and the other row's groups never saw it.
+- **Login tries the account's rows in id order** (`connectAccount`), so a stale password on one row
+  does not lock out the groups on the others. Failed activities are recorded against the row that
+  logged in; each `EMAIL_UPLOAD` child still carries its own group.
+
+- Sender comparison is case-insensitive on the parsed address, and a whitelist entry stored as
+  `Name <address>` is reduced to its address. An empty whitelist still allows anyone.
+- Subjects are matched **decoded** (RFC 2047), unanchored like `re.search`.
+- **Subject regexes are Go RE2.** `UpdateGroupSettingsCommand.Validate` compiles each one
+  (`subjectLineRegexes.<i>.regex`, 400). A regex saved before that, using Python-only syntax
+  (lookarounds, backreferences), is logged and treated as non-matching at poll time — it can never
+  fail a poll — so that group's mail stays unread until the regex is fixed. `NewRouter` compiles every
+  regex once per poll, so a bad one is logged once per poll rather than once per message. A group
+  whose regexes are **all** invalid matches nothing, not everything.
+
+### Attachments
+
+- **Temp files get random names** (`FileRepository.WriteTempFile`), and the OCR copy is
+  `temp/image-<that name>`, **written by the task, not the poll**. The poll only names it.
+  `ensureOcrCopy` (`email_process_handler.go`) skips an existing copy, and otherwise writes
+  under a temporary name and renames, because the per-group tasks sharing one attachment can run at
+  once. Converting at poll time meant a file ImageMagick could not read deleted the original and
+  marked the email read, so the image was gone for good; it also ran ImageMagick between IMAP
+  commands. Writing `temp/<sender's filename>` meant two `receipt.pdf`s, or Outlook's
+  `image001.png` in every email, overwrote each other and put one email's image on another email's
+  receipt — possibly in another group. `Attachment.Filename` keeps the sanitized original, which is
+  what download and preview already use; the sweeper and source-file code key on payload paths.
+- **The type is sniffed** (`utils.GetMimeType`), never the declared `Content-Type`, against the
+  allowlist the Python client used plus HEIF (`image/jpeg|png|heic|heif|bmp|webp|tiff`,
+  `application/pdf`). A PDF labelled `application/octet-stream` is now accepted.
+- **The declared type still decides one thing: whether a failure is reported.** A part declared as
+  an allowed type whose contents sniff as something else, or a part that will not decode (broken
+  base64), becomes a `RejectedAttachment`: a failed activity naming it, and it counts toward "every
+  attachment failed", so the email does not fall back to a body-only receipt. Python accepted these
+  on the declared type. A part neither declared nor sniffed as a receipt type is dropped silently,
+  as before. One undecodable part no longer fails the whole message.
+- **Forwarded messages are read** (`message/rfc822`, `message/global`), as Python's `walk()` did:
+  their attachments are candidates and their text joins the body; their headers are ignored. At most
+  `maxNestedMessageDepth` (5) levels, and a broken forwarded message never fails the email carrying
+  it. go-message does not descend into these on its own.
+- **Malformed header parameters are read leniently.** `mime.ParseMediaType` gives up on a whole
+  `Content-Type` / `Content-Disposition` over one bad parameter (`filename=Receipt 2024.pdf`), and
+  go-message then returns no parameters at all. `contentTypeOf` / `contentDispositionOf` call
+  go-message first and fall back to `lenientParams` only on that error: split on `;` outside
+  quotes, unquote, decode RFC 2047 words. RFC 2231 `filename*=` is not decoded in the fallback.
+- Like the old client, a part with **no `Content-Disposition`** is never an attachment, and the
+  filename goes through `utils.SanitizeFileName` (GHSA-h3pr-mhcr-8phg).
+- **Inline images are skipped only when they are decoration**: disposition `inline`, referenced by the
+  HTML body as `cid:<Content-ID>`, **and** under 20 KB (`InlineImageMaxBytes`). Skipping every inline
+  image would drop photos attached from Apple Mail and iOS Mail, which are structurally the same as a
+  signature logo.
+- HTML→text (`StripHtmlTags`) concatenates text nodes exactly as before but drops `<style>` and
+  `<script>` contents, so CSS never reaches the AI prompt. Bodies are charset-decoded; an
+  unknown-charset part is skipped rather than failing the message.
+
+### Sender verification (DKIM)
+
+`GroupSettings.EmailRequireSignedSender` (default **true**, also for upgraded installs — AutoMigrate
+backfills the column) makes the poller accept an email only when it carries a valid DKIM signature
+whose `d=` has the **same organizational domain** as the `From:` address. The command field is a
+`*bool` — omitted leaves it alone — and the swagger field is an optional boolean on both schemas,
+pinned by `commands/email_require_signed_sender_contract_test.go`.
+
+- **The library does the cryptography and the known refusals**: a signature not covering `From`, the
+  `l=` body-length tag, SHA-1, RSA keys under 1024 bits. **Alignment is ours** — the library reports a
+  bulk-mail service's valid signature (`d=sendgrid.net`) as a clean pass.
+- **A message must have exactly one `From:` address** (`ErrAmbiguousFrom`). A signature covers only
+  the bottom-most `From`, so a forged one added above it rides a genuine signature past naive readers.
+  `TestVerifySender_SecondFromHeaderIsNotSigned` shows the signature still verifying on such a message.
+- A temporary DNS failure is `RetryLater` only when the temp-failed signature is **aligned** —
+  retrying a third-party signature cannot change the answer.
+- **At most 5 signatures are checked** (`maxDkimSignatures`, the topmost ones). Each costs a DNS
+  lookup and a hash of the whole body, in parallel, so a message carrying a thousand
+  `DKIM-Signature` headers would otherwise cost a thousand of each. Over the cap the library returns
+  `ErrTooManySignatures` **along with** the results it did check, and those are judged normally;
+  treating the error as unreadable would reject genuine mail that passed through several signers.
+- **It proves the domain, not the person**: `bob@gmail.com` and `eve@gmail.com` are both signed by
+  `gmail.com`; the full address rests on the provider stopping its users impersonating each other.
+- **Upgrade impact:** mail from senders that don't DKIM-sign (some self-hosted servers, some mailing
+  lists) is now rejected, with a failed activity saying why, until an admin unticks "Require Signed
+  Sender (DKIM)" on the group's email settings.
+- **Exchange and Office 365 mailboxes can fail every message.** They rebuild each message when serving
+  it over IMAP, which can break the body hash of any signature. So the failed activity always ends
+  with `signedSenderHint`, naming the setting to turn off. The default stays on regardless.
+- Checking `Authentication-Results` instead was considered and rejected: it is only trustworthy as
+  the topmost header from your own provider, which needs per-mailbox configuration and fails open on
+  a provider that does not add one.
+
+### Limits and concurrency
+
+- At most **50 matched messages per account per poll** (`maxMatchedMessagesPerMailboxPoll`);
+  non-matching unread mail does not count, so a backlog can never starve new receipts.
+- **One account failing does not stop the others**; `PollEmail` errors only when every account failed.
+- A per-account **in-process try-lock** (`mailboxPollLock`, keyed like the routing) skips an account
+  already being polled. Messages stay unread while processed, so the cron poll and a manual poll
+  would otherwise both queue them. It assumes one API process, which is how the monolith runs.
+
+### Memory and retries
+
+Each account has a `mailboxMemory`, held in process and touched only under its lock:
+
+- **Messages that matched no group are remembered**, and their headers are not fetched again. A
+  message's From and Subject never change, so it matches nothing until the routing does. Before, the
+  headers of every unrelated unread message were fetched on every poll, forever.
+- **The memory is forgotten** when UIDVALIDITY changes (a UID may now name another message) or the
+  fingerprint does (`fingerprintOf`: each group's id, whitelist, regexes and DKIM requirement). So a
+  whitelist or regex edit, a group enabled, disabled or moved, or turning DKIM off is seen on the
+  next poll. UIDs that are no longer unread are pruned on every poll. A restart empties it, which
+  costs one full header scan.
+- **Retries back off.** A message the server cannot return right now, or whose sender check cannot
+  finish, waits 30 minutes (`retryBackoff`). While it waits it is not fetched and takes no slot under
+  the cap, so 50 uncheckable emails can no longer stop the mailbox. It does take a slot on the poll
+  that tries it.
+- **A sender check gives up 24 hours after delivery** (`senderCheckGiveUpAfter`, by INTERNALDATE,
+  which survives restarts). The wait also holds back the matched groups that don't require the
+  check, which is why it cannot be open-ended. A message without an INTERNALDATE waits
+  indefinitely, but every IMAP server sends one. A `NO [UNAVAILABLE]` fetch never gives up.
+
+### Connectivity check
+
+`SystemEmailService.CheckEmailConnectivity` calls `emailclient.Connector.CheckConnection` (connect,
+log in, select INBOX, log out) through the package variable `checkEmailConnection`, and reports the
+returned error text on the system task. It used to scrape the last line of `logs/imap-client.log`, a
+file every poll also wrote to, so it could report another mailbox's failure. Still always a 200.
+
+### Tests
+
+- `emailclient/parse_test.go` — the Python suite ported for parity, plus decoding, charsets, dates
+  (a `-0500` date is now converted to UTC rather than relabelled), the `From` rules, sniffing and the
+  inline rule, forwarded messages (plain and base64, the depth limit, a broken one), lenient
+  parameters, rejected attachments, and that `ParseHeaderFields` never writes into its input.
+- `emailclient/routing_test.go`, `dkim_test.go` (real RSA keys signed with `dkim.Sign`, a stubbed
+  `lookupTXT`), and `mailbox_test.go` against `go-imap/v2/imapserver/imapmemserver` over implicit TLS
+  and STARTTLS with a self-signed certificate — including that PEEK leaves messages unread, that
+  messages are addressed by UID (an expunge makes UIDs and sequence numbers diverge), that the
+  zero `Connector` refuses an untrusted certificate, that a session survives a pause, and how
+  `FetchRaw` classifies a vanished message and a `NO` / `NO [UNAVAILABLE]` / `BAD` (a wrapped
+  session that refuses one UID), plus UIDVALIDITY and INTERNALDATE. `routing_test.go` also pins that
+  an invalid regex is logged once per router, however many messages it routes.
+- `wranglerasynq/email_poll_test.go` (+ `email_poll_fixture_test.go`: a fake `Mailbox`, recorded
+  enqueues, the real test DB and a controllable clock) — every row of the table above, the collision
+  cases, the manual-poll routing, the cap, the lock and the payload parity.
+  `email_poll_account_test.go` covers rows sharing an account, the login fallback, account isolation
+  and the invalid regex logged once per poll. `email_poll_memory_test.go` covers headers fetched
+  once, the rescans after a routing or UIDVALIDITY change, the backoff, no starvation and the 24-hour
+  limit. `email_process_handler_test.go` covers `ensureOcrCopy` (made, reused, refused outside
+  `temp/`, nothing left behind on failure) and a failed conversion: recorded with the task id,
+  archived at once, the original kept and rerunnable. The claim order is pinned by
+  `TestPollEmail_AnEmailIsClaimedBeforeAnythingIsQueuedOrRecorded` and
+  `TestPollEmail_PartlyQueuedEmailIsRecordedAndNeverQueuedTwice`.
+- `services/system_email_test.go`, the setting's repository / handler / command tests.
+- Every fix was mutation-checked: reverting it fails a named test.
 
 ## Email HTML to PDF Rendering
 
@@ -2085,8 +2330,8 @@ and the pure `receiptsource` / `render` cases, each with a `mutation-check.sh` e
 
 `temp/` holds the files the ingest pipelines work from. Everything that writes
 there: the **quick-scan upload** (`handlers/receipts.go`, one per file in a
-multi-file scan), the **email attachment and its `image-` OCR copy**
-(`wranglerasynq/email.go`), the **email body image**, short-lived scratch from
+multi-file scan), the **email attachment** (`wranglerasynq/email_poll.go`) **and its `image-` OCR
+copy** (made by the task, `wranglerasynq/email_process_handler.go`), the **email body image**, short-lived scratch from
 `MagicFillFromImage` / `ReadImageWithEasyOcr` / `ConvertPdfToJpg` (each with a
 `defer os.Remove`), and the **`DebugOcr` dumps** from `services/ocr.go`
 `writeDebuggingFiles`, which are never removed by the code that writes them.
@@ -2286,16 +2531,18 @@ relabels PDF bytes as `image/jpeg` **without converting them** — so a quick-sc
 PDF previewed as `data:image/jpeg;base64,JVBERi0…`: a well-formed data URI carrying
 `%PDF`, which the browser silently fails to decode into a broken-image icon. No
 error, no suspicious mime, nothing in the logs. Quick scan was the exposed case
-because `taskSourceFiles.Preview` is always empty for `QUICK_SCAN`, so the handler
-always falls back to the raw upload; email escaped it only because
-`ImageForOcrPath` was already converted at enqueue.
+because `PreviewPath` is always empty for `QUICK_SCAN`, so the handler always falls
+back to the raw upload; email escaped it only because its `ImageForOcrPath` copy is
+already converted (the task makes it before processing).
 
 **Preview still prefers `ImageForOcrPath` when the payload has one; download always
 serves `TempFilePath`.** That preference is an optimization *within* the canonical
 path, not a divergence: `GetBytesFromImageBytes` on a multi-page PDF runs
 `ConvertPdfToJpg` at the configured `PdfDpi` and concatenates every page into one
-tall JPEG — seconds of CPU inside a request — and for email that conversion already
-exists on disk, passing through untouched. Quick scan has no such copy and pays the
+tall JPEG — seconds of CPU inside a request — and for email that conversion usually
+already exists on disk, passing through untouched. An attachment whose conversion
+failed has no copy, so preview falls back to the original and fails the same way;
+download still serves it. Quick scan has no such copy and pays the
 conversion, exactly as the receipt form does. Download is the *original*, under its
 original name, because that is the file the user recognises.
 
@@ -2355,11 +2602,13 @@ on a succeeded activity for up to an hour and then 404. `ResolveSystemTaskSource
 applies the same predicate — the two read the same task state, so they share one
 function rather than two conditions that can drift.
 
-**Email needs both files for a rerun** — `HandleEmailProcessTask` reads
-`TempFilePath` for the `FileData` it persists and hands `ImageForOcrPath` to the
-OCR/vision pipeline — while `hasSourceFile` keys on `TempFilePath` alone. A
-**body-only email has neither and stays rerunnable**, which is why "expects a
-file" is tracked apart from "has a file".
+**A rerun needs only the original.** `HandleEmailProcessTask` reads `TempFilePath`
+for the `FileData` it persists, and recreates the `ImageForOcrPath` copy from it
+when the copy is missing (`ensureOcrCopy`), so `rerunPaths` is the original alone.
+That is also what lets an attachment whose conversion failed, and so never had a
+copy, be rerun. `hasSourceFile` keys on `TempFilePath` too. A **body-only email has
+neither and stays rerunnable**, which is why "expects a file" is tracked apart from
+"has a file".
 
 ### Authorization order, and why it is not the payload's job
 

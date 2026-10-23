@@ -48,6 +48,7 @@ describe("GroupSettingsEmailComponent", () => {
       emailDefaultReceiptPaidById: new FormControl(""),
       emailIntegrationEnabled: new FormControl(false),
       emailBodyProcessingEnabled: new FormControl(false),
+      emailRequireSignedSender: new FormControl(true),
     });
     component.formCommand.subscribe((command) =>
       component.handleFormCommand(command)
@@ -67,6 +68,7 @@ describe("GroupSettingsEmailComponent", () => {
       systemEmailId: undefined,
       emailIntegrationEnabled: undefined,
       emailBodyProcessingEnabled: undefined,
+      emailRequireSignedSender: true,
       subjectLineRegexes: [],
       emailWhiteList: [],
       emailDefaultReceiptStatus: undefined,
@@ -123,6 +125,7 @@ describe("GroupSettingsEmailComponent", () => {
       systemEmailId: "test@test.com",
       emailIntegrationEnabled: true,
       emailBodyProcessingEnabled: undefined,
+      emailRequireSignedSender: true,
       subjectLineRegexes: [{ regex: "test" }],
       emailWhiteList: [
         {
@@ -147,5 +150,40 @@ describe("GroupSettingsEmailComponent", () => {
     expect(
       form.get("emailDefaultReceiptPaidById")?.hasValidator(Validators.required)
     ).toBe(true);
+  });
+
+  it("should seed the signed sender check from the group settings", () => {
+    const activatedRoute = TestBed.inject(ActivatedRoute);
+    activatedRoute.snapshot.data = {
+      ...activatedRoute.snapshot.data,
+      group: { id: 1, groupSettings: { id: 1, groupId: 1, emailRequireSignedSender: false } } as any,
+    };
+
+    component.ngOnInit();
+
+    expect(component.form.get("emailRequireSignedSender")?.value).toBe(false);
+  });
+
+  it("should keep the signed sender check on when the settings omit it", () => {
+    const activatedRoute = TestBed.inject(ActivatedRoute);
+    component.form.get("emailRequireSignedSender")?.setValue(false);
+    activatedRoute.snapshot.data = {
+      ...activatedRoute.snapshot.data,
+      group: { id: 1, groupSettings: { id: 1, groupId: 1 } } as any,
+    };
+
+    component.ngOnInit();
+
+    // The form always submits this control, so an unset value must not read as
+    // "off" and silently disable the check on save.
+    expect(component.form.get("emailRequireSignedSender")?.value).toBe(true);
+  });
+
+  it("should render the signed sender checkbox bound to its control", () => {
+    component.ngOnInit();
+    fixture.detectChanges();
+
+    const checkbox = fixture.nativeElement.querySelector('app-checkbox[label="Require Signed Sender (DKIM)"]');
+    expect(checkbox).toBeTruthy();
   });
 });

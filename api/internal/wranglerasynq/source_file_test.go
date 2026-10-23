@@ -95,15 +95,23 @@ func TestResolveActivityFlags(t *testing.T) {
 			expectedHasSourceFile:  false,
 		},
 		{
-			// A rerun reads the attachment AND the converted copy, so a missing
-			// OCR image breaks it — but the attachment is still the user's file,
-			// so the download stays offered. The two predicates differ on purpose.
-			name:                   "email missing only its OCR copy is downloadable but not rerunnable",
+			// The task recreates the OCR copy from the original, so a missing copy,
+			// or one a failed conversion never made, does not stop a rerun.
+			name:                   "email missing only its OCR copy is rerunnable and downloadable",
 			taskType:               models.EMAIL_UPLOAD,
 			state:                  asynq.TaskStateArchived,
 			payload:                EmailProcessTaskPayload{TempFilePath: present, ImageForOcrPath: missing},
-			expectedCanBeRestarted: false,
+			expectedCanBeRestarted: true,
 			expectedHasSourceFile:  true,
+		},
+		{
+			// The original is the one file nothing can recreate.
+			name:                   "email missing its original is neither",
+			taskType:               models.EMAIL_UPLOAD,
+			state:                  asynq.TaskStateArchived,
+			payload:                EmailProcessTaskPayload{TempFilePath: missing, ImageForOcrPath: presentOcr},
+			expectedCanBeRestarted: false,
+			expectedHasSourceFile:  false,
 		},
 	}
 
@@ -241,9 +249,15 @@ func TestRerunSourceFilesPresent(t *testing.T) {
 		{"quick scan without its upload", models.QUICK_SCAN, QuickScanTaskPayload{TempPath: missing}, false},
 		{"body-only email needs nothing", models.EMAIL_UPLOAD, EmailProcessTaskPayload{}, true},
 		{
-			"email missing its OCR copy",
+			"email missing only its OCR copy, which the task recreates",
 			models.EMAIL_UPLOAD,
 			EmailProcessTaskPayload{TempFilePath: present, ImageForOcrPath: missing},
+			true,
+		},
+		{
+			"email missing its original",
+			models.EMAIL_UPLOAD,
+			EmailProcessTaskPayload{TempFilePath: missing, ImageForOcrPath: present},
 			false,
 		},
 	}

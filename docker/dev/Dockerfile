@@ -52,9 +52,6 @@ ENV BASE_PATH="/app/api"
 # Install tesseract dependencies
 RUN bash set-up-dependencies.sh
 
-# Install python dependencies for imap-client
-RUN pip3 install -r imap-client/requirements.txt --break-system-packages
-
 # Build api
 RUN go build
 

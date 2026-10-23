@@ -523,6 +523,12 @@ both clients, but mobile gets no new UI.
   tracked separately from "has a file". **Mobile inherits this for free** —
   `group_activity_list_item.dart` already gates its rerun slidable on the flag, so the regen is the
   whole mobile change.
+- **An email attachment is converted by its task, not by the poll** (`ensureOcrCopy`). A file
+  ImageMagick could not read used to fail at poll time, which deleted the original and marked the
+  email read. Now it fails in the task, with one failed activity carrying the task id. The task is
+  archived at once (`asynq.SkipRetry`), since the same bytes fail the same way, and the original is
+  kept. It can be downloaded and rerun straight away: a rerun needs only the original, because the
+  task recreates the OCR copy.
 - **`hasSourceFile` is deliberately NOT gated on `Archived`**, unlike `canBeRestarted`: asynq's retry
   backoff means minutes pass before a task archives, and the user should not watch an activity sit at
   FAILED with no way to get their image.
@@ -652,6 +658,32 @@ Unchanged: log timestamps, token expiry, `@every` schedules, sort order.
   `AppData.timeZone`, edits the setting on System Settings, sends filter days as `yyyy-MM-dd` and
   displays instants in the app zone (see `desktop/CLAUDE.md`). Mobile only carries the regenerated
   client for now; building filters and displaying dates in the app zone is a pending follow-up.
+
+### Email Ingestion (IMAP)
+
+Groups receive receipts by email through an IMAP System Email polled by the API. **Backend +
+desktop**; mobile only carries the regenerated client (it has no group email settings UI).
+
+- **The IMAP client is Go** (`api/internal/emailclient/`). It replaced a Python client
+  (`api/imap-client/`, deleted). **Python stays in the images** for the optional EasyOCR engine.
+- **A message is marked read just before it is acted on**: its tasks are queued and its failures
+  recorded only once that mark succeeds, so a retry can never queue it twice. If nothing could be
+  queued it goes back to unread. Mail matching no group is left unread, and its headers are fetched
+  once per process rather than on every poll. A sender check that cannot finish (DNS) is retried
+  every 30 minutes and gives up 24 hours after delivery. See `api/CLAUDE.md` → "Email ingestion
+  (IMAP)" for the full table.
+- **Attachments are converted for OCR by the email task, not the poll**, so one that cannot be
+  converted keeps its image (see "Failed Uploads Keep Their Image").
+- **Routing is per IMAP account and per group**: a group only receives mail sent to its own System
+  Email's account, judged by its own whitelist and regexes. Two System Email rows for one account
+  (host, port, username) are read once, against the groups on both.
+- **`emailRequireSignedSender`** (per group, default **true** including on upgrade) requires a valid
+  DKIM signature from the sender's own domain. It is an optional boolean on `GroupSettings` and
+  `UpdateGroupSettingsCommand` — never required, so an older server's payload still parses — and a
+  `*bool` on the command, so a client that omits it leaves it alone. The desktop edits it with a
+  checkbox on the group's email settings.
+- **Subject regexes are Go RE2**, validated on save; a stored Python-only regex is ignored at poll
+  time rather than failing it.
 
 ### State Management Patterns
 - **Backend**: Service layer handles business logic, repositories handle data access

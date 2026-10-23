@@ -18,6 +18,7 @@ part 'update_group_settings_command.g.dart';
 /// * [systemEmailId] - System email foreign key
 /// * [emailIntegrationEnabled] - Whether email integration is enabled
 /// * [emailBodyProcessingEnabled] - Whether email body text processing is enabled (opt-in, default false)
+/// * [emailRequireSignedSender] - Whether an email is accepted only when it carries a valid DKIM signature from its From domain (default true). Omitting it on update leaves the stored value unchanged.
 /// * [subjectLineRegexes] - Subject line regexes
 /// * [emailWhiteList] - Email white list
 /// * [emailDefaultReceiptStatus] - Default receipt status
@@ -37,6 +38,10 @@ abstract class UpdateGroupSettingsCommand implements Built<UpdateGroupSettingsCo
   /// Whether email body text processing is enabled (opt-in, default false)
   @BuiltValueField(wireName: r'emailBodyProcessingEnabled')
   bool? get emailBodyProcessingEnabled;
+
+  /// Whether an email is accepted only when it carries a valid DKIM signature from its From domain (default true). Omitting it on update leaves the stored value unchanged.
+  @BuiltValueField(wireName: r'emailRequireSignedSender')
+  bool? get emailRequireSignedSender;
 
   /// Subject line regexes
   @BuiltValueField(wireName: r'subjectLineRegexes')
@@ -102,6 +107,13 @@ class _$UpdateGroupSettingsCommandSerializer implements PrimitiveSerializer<Upda
       yield r'emailBodyProcessingEnabled';
       yield serializers.serialize(
         object.emailBodyProcessingEnabled,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.emailRequireSignedSender != null) {
+      yield r'emailRequireSignedSender';
+      yield serializers.serialize(
+        object.emailRequireSignedSender,
         specifiedType: const FullType(bool),
       );
     }
@@ -186,6 +198,13 @@ class _$UpdateGroupSettingsCommandSerializer implements PrimitiveSerializer<Upda
             specifiedType: const FullType(bool),
           ) as bool;
           result.emailBodyProcessingEnabled = valueDes;
+          break;
+        case r'emailRequireSignedSender':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.emailRequireSignedSender = valueDes;
           break;
         case r'subjectLineRegexes':
           final valueDes = serializers.deserialize(

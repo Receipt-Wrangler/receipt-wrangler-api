@@ -52,6 +52,7 @@ export class GroupSettingsComponent
       systemEmailId: "",
       emailIntegrationEnabled: false,
       emailBodyProcessingEnabled: false,
+      emailRequireSignedSender: true,
       subjectLineRegexes: this.formBuilder.array([]),
       emailWhiteList: this.formBuilder.array([]),
       emailDefaultReceiptStatus: "",

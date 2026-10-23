@@ -115,7 +115,9 @@ func (repository FileRepository) GetBytesFromImageBytes(imageData []byte) ([]byt
 		if err != nil {
 			return nil, err
 		}
-	} else if validatedType == constants.ImageHeic {
+	} else if validatedType == constants.ImageHeic || validatedType == constants.ImageHeif {
+		// HEIF is the container HEIC is a profile of; a mif1-branded file sniffs as
+		// HEIF and is read the same way.
 		bytes, err = repository.ConvertHeicToJpg(imageData)
 		if err != nil {
 			return nil, err
@@ -128,8 +130,8 @@ func (repository FileRepository) GetBytesFromImageBytes(imageData []byte) ([]byt
 }
 
 // BuildDisplayImageString turns raw file bytes into a data URI a browser can
-// render in an <img>: a PDF rasterizes, HEIC transcodes, anything else passes
-// through.
+// render in an <img>: a PDF rasterizes, HEIC and HEIF transcode, anything else
+// passes through.
 //
 // Every browser-facing image response goes through this. Calling
 // BuildEncodedImageString on unconverted bytes is the trap it closes — GetFileType

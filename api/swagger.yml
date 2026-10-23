@@ -6248,6 +6248,12 @@ components:
         emailBodyProcessingEnabled:
           type: boolean
           description: Whether email body text processing is enabled (opt-in, default false)
+        emailRequireSignedSender:
+          type: boolean
+          description: >-
+            Whether an email is accepted only when it carries a valid DKIM signature
+            from its From domain (default true). Omitting it on update leaves the
+            stored value unchanged.
         systemEmailId:
           type: integer
           description: System email foreign key
@@ -6352,6 +6358,12 @@ components:
         emailBodyProcessingEnabled:
           type: boolean
           description: Whether email body text processing is enabled (opt-in, default false)
+        emailRequireSignedSender:
+          type: boolean
+          description: >-
+            Whether an email is accepted only when it carries a valid DKIM signature
+            from its From domain (default true). Omitting it on update leaves the
+            stored value unchanged.
         subjectLineRegexes:
           type: array
           description: Subject line regexes

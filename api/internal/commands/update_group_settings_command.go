@@ -8,12 +8,14 @@ import (
 	"receipt-wrangler/api/internal/models"
 	"receipt-wrangler/api/internal/structs"
 	"receipt-wrangler/api/internal/utils"
+	"regexp"
 )
 
 type UpdateGroupSettingsCommand struct {
 	SystemEmailId               *uint                                `json:"SystemEmailId"`
 	EmailIntegrationEnabled     bool                                 `json:"emailIntegrationEnabled"`
 	EmailBodyProcessingEnabled  bool                                 `json:"emailBodyProcessingEnabled"`
+	EmailRequireSignedSender    *bool                                `json:"emailRequireSignedSender"`
 	SubjectLineRegexes          []models.SubjectLineRegex            `json:"subjectLineRegexes"`
 	EmailWhiteList              []models.GroupSettingsWhiteListEmail `json:"emailWhiteList"`
 	EmailDefaultReceiptStatus   models.ReceiptStatus                 `json:"emailDefaultReceiptStatus"`
@@ -38,6 +40,7 @@ func (command *UpdateGroupSettingsCommand) LoadDataFromRequest(w http.ResponseWr
 
 	command.EmailIntegrationEnabled = updateGroupSettingsCommand.EmailIntegrationEnabled
 	command.EmailBodyProcessingEnabled = updateGroupSettingsCommand.EmailBodyProcessingEnabled
+	command.EmailRequireSignedSender = updateGroupSettingsCommand.EmailRequireSignedSender
 	command.SystemEmailId = updateGroupSettingsCommand.SystemEmailId
 	command.SubjectLineRegexes = updateGroupSettingsCommand.SubjectLineRegexes
 	command.EmailWhiteList = updateGroupSettingsCommand.EmailWhiteList
@@ -72,6 +75,16 @@ func (command UpdateGroupSettingsCommand) Validate() structs.ValidatorError {
 
 	if command.FallbackPromptId != nil && *command.FallbackPromptId < 1 {
 		vErr.Errors["fallbackPromptId"] = "FallbackPromptId must be greater than 0"
+	}
+
+	// The poller matches subjects with Go's RE2 engine. A regex it cannot compile
+	// would never match, so refuse it here rather than let a group silently stop
+	// receiving email. Python-only syntax such as lookarounds lands here too.
+	for index, subjectLineRegex := range command.SubjectLineRegexes {
+		if _, err := regexp.Compile(subjectLineRegex.Regex); err != nil {
+			errorKey := fmt.Sprintf("subjectLineRegexes.%d.regex", index)
+			vErr.Errors[errorKey] = fmt.Sprintf("Invalid regular expression: %s", err.Error())
+		}
 	}
 
 	for index, email := range command.EmailWhiteList {

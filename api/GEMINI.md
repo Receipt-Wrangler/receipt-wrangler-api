@@ -16,7 +16,6 @@ To run the tests, use the following commands:
 
 ```bash
 go test -coverprofile=coverage.out -covermode=atomic -v ./...
-python3 -m unittest discover -s ./imap-client
 ```
 
 # Development Conventions

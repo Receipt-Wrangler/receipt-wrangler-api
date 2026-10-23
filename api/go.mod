@@ -3,11 +3,13 @@ module receipt-wrangler/api
 go 1.26.9
 
 require (
-	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/auth0/go-jwt-middleware/v2 v2.3.0
 	github.com/chromedp/cdproto v0.0.0-20250403032234-65de8f5d025b
 	github.com/chromedp/chromedp v0.13.7
 	github.com/coreos/go-oidc/v3 v3.20.0
+	github.com/emersion/go-imap/v2 v2.0.0-beta.8
+	github.com/emersion/go-message v0.18.2
+	github.com/emersion/go-msgauth v0.7.0
 	github.com/expr-lang/expr v1.17.8
 	github.com/gabriel-vasile/mimetype v1.4.10
 	github.com/glebarez/sqlite v1.11.0
@@ -45,6 +47,7 @@ require (
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
@@ -80,7 +83,6 @@ require (
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect

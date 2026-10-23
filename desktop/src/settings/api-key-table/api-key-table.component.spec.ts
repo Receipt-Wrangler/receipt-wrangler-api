@@ -1,12 +1,13 @@
 import { provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
-import { provideHttpClientTesting } from "@angular/common/http/testing";
+import { HttpTestingController, provideHttpClientTesting } from "@angular/common/http/testing";
 import { provideZonelessChangeDetection } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { MatDialogModule } from "@angular/material/dialog";
 import { NoopAnimationsModule } from "@angular/platform-browser/animations";
 import { provideRouter } from "@angular/router";
 import { NgxsModule, Store } from "@ngxs/store";
-import { ApiKeyView, Permission } from "../../open-api";
+import { ApiKeyScope, ApiKeyView, Permission } from "../../open-api";
+import { PipesModule } from "../../pipes/pipes.module";
 import { SharedUiModule } from "../../shared-ui/shared-ui.module";
 import { AuthState } from "../../store/auth.state";
 import { SetAuthState, SetPermissions } from "../../store/auth.state.actions";
@@ -28,6 +29,7 @@ describe("ApiKeyTableComponent", () => {
       declarations: [ApiKeyTableComponent],
       imports: [
         SharedUiModule,
+        PipesModule,
         NgxsModule.forRoot([AuthState, ApiKeyTableState]),
         TableModule,
         MatDialogModule,
@@ -119,6 +121,39 @@ describe("ApiKeyTableComponent", () => {
       store.dispatch(new SetPermissions([], {}));
       expect(component.canDelete(ownKey)).toBe(false);
       expect(component.canDelete(otherKey)).toBe(false);
+    });
+  });
+
+  describe("scope column", () => {
+    beforeEach(() => {
+      fixture.detectChanges(false);
+    });
+
+    it("is displayed after the description and is not sortable", () => {
+      const displayed = component.displayedColumns;
+      expect(displayed.indexOf("scope")).toBe(displayed.indexOf("description") + 1);
+
+      const column = component.columns.find((c) => c.matColumnDef === "scope");
+      expect(column?.columnHeader).toBe("Scope");
+      expect(column?.sortable).toBe(false);
+    });
+
+    it("renders each scope's label, and an unknown value as-is", async () => {
+      const httpMock = TestBed.inject(HttpTestingController);
+      const data = [
+        { id: "a", name: "read key", scope: ApiKeyScope.R },
+        { id: "b", name: "write key", scope: ApiKeyScope.W },
+        { id: "c", name: "read write key", scope: ApiKeyScope.Rw },
+        { id: "d", name: "odd key", scope: "x" },
+      ];
+      httpMock.match(() => true).forEach((req) => req.flush({ totalCount: data.length, data }));
+      await fixture.whenStable();
+      fixture.detectChanges(false);
+
+      const cells = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="api-key-scope"]')
+      ).map((cell) => cell.textContent?.trim());
+      expect(cells).toEqual(["Read", "Write", "Read/Write", "x"]);
     });
   });
 });

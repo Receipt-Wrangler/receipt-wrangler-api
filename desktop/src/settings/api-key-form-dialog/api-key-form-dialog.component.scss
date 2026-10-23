@@ -1,3 +1,6 @@
+@use "sass:map";
+@use "../../variables.scss" as variables;
+
 .alert {
   display: flex;
   align-items: center;
@@ -16,4 +19,10 @@ code {
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
   word-break: break-all;
+}
+
+.hint {
+  margin-top: 4px;
+  font-size: 13px;
+  color: map.get(variables.$accent-palette, 500);
 }

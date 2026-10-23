@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
 import { NgxsModule } from '@ngxs/store';
 import { of, throwError } from 'rxjs';
+import { API_KEY_SCOPE_OPTIONS } from '../../constants';
 import { ApiKeyResult, ApiKeyScope, ApiKeyService, ApiKeyView } from '../../open-api';
 import { SnackbarService } from '../../services';
 import { SharedUiModule } from '../../shared-ui/shared-ui.module';
@@ -295,6 +296,29 @@ describe('ApiKeyFormDialogComponent', () => {
       // No clipboard interaction should occur for empty key
       expect(mockSnackbarService.success).not.toHaveBeenCalled();
       expect(mockSnackbarService.error).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Scope field', () => {
+    it('renders the scope select and its hint when creating', () => {
+      const element: HTMLElement = fixture.nativeElement;
+
+      expect(element.querySelector('app-select')?.textContent).toContain('Scope');
+      expect(element.querySelector('[data-testid="api-key-scope-hint"]')?.textContent).toContain('Read/Write');
+    });
+
+    it('renders the scope select when editing', () => {
+      component.apiKey = { id: '123', name: 'Existing API Key', scope: ApiKeyScope.W };
+      component.ngOnInit();
+      fixture.detectChanges();
+
+      const element: HTMLElement = fixture.nativeElement;
+      expect(element.querySelector('app-select')?.textContent).toContain('Scope');
+      expect(element.querySelector('[data-testid="api-key-scope-hint"]')).toBeTruthy();
+    });
+
+    it('uses the shared scope options', () => {
+      expect(component.apiKeyScopes).toBe(API_KEY_SCOPE_OPTIONS);
     });
   });
 

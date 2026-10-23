@@ -47,6 +47,10 @@
   {{ element.description || '-' }}
 </ng-template>
 
+<ng-template #scopeCell let-element="element" let-index="index">
+  <span data-testid="api-key-scope">{{ scopeLabels[element.scope] || element.scope }}</span>
+</ng-template>
+
 <ng-template #createdByCell let-element="element" let-index="index">
   {{ (element.createdBy | user)?.displayName || element.createdByString }}
 </ng-template>

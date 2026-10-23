@@ -18,17 +18,19 @@
           ></app-input>
         </div>
 
-        @if (false) {
-          <div class="mb-2">
-            <app-select
-              label="Scope"
-              optionValueKey="value"
-              optionDisplayKey="label"
-              [inputFormControl]="form | formGet : 'scope'"
-              [options]="apiKeyScopes"
-            ></app-select>
+        <div class="mb-2">
+          <app-select
+            label="Scope"
+            optionValueKey="value"
+            optionDisplayKey="label"
+            [inputFormControl]="form | formGet : 'scope'"
+            [options]="apiKeyScopes"
+          ></app-select>
+          <div class="hint" data-testid="api-key-scope-hint">
+            Read keys can only read data. Write keys can only change data and are refused on every
+            read, so most integrations need Read/Write.
           </div>
-        }
+        </div>
       </form>
 
       <app-dialog-footer

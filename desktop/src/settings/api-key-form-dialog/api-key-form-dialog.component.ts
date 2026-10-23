@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from "@angular/core";
 import { FormBuilder, FormGroup, Validators } from "@angular/forms";
 import { MatDialogRef } from "@angular/material/dialog";
 import { take, tap } from "rxjs";
+import { API_KEY_SCOPE_OPTIONS } from "../../constants";
 import { ApiKeyResult, ApiKeyScope, ApiKeyService, ApiKeyView, UpsertApiKeyCommand } from "../../open-api";
 import { SnackbarService } from "../../services";
 
@@ -17,11 +18,7 @@ export class ApiKeyFormDialogComponent implements OnInit {
 
   public form!: FormGroup;
   public apiKeyResult?: ApiKeyResult;
-  public apiKeyScopes = [
-    { value: ApiKeyScope.R, label: "Read" },
-    { value: ApiKeyScope.W, label: "Write" },
-    { value: ApiKeyScope.Rw, label: "Read/Write" }
-  ];
+  public apiKeyScopes = API_KEY_SCOPE_OPTIONS;
 
   constructor(
     private dialogRef: MatDialogRef<ApiKeyFormDialogComponent>,

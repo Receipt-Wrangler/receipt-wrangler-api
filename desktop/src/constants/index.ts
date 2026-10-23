@@ -1,3 +1,4 @@
+export * from './api-key-scope-options';
 export * from './components.constant';
 export * from './dialog.constant';
 export * from './filter-fields.constant';

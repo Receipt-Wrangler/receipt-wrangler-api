@@ -4,7 +4,7 @@ import { UntilDestroy, untilDestroyed } from "@ngneat/until-destroy";
 import { Store } from "@ngxs/store";
 import { take, tap } from "rxjs";
 import { TableComponent } from "src/table/table/table.component";
-import { DEFAULT_DIALOG_CONFIG, DEFAULT_HOST_CLASS } from "../../constants";
+import { API_KEY_SCOPE_LABELS, DEFAULT_DIALOG_CONFIG, DEFAULT_HOST_CLASS } from "../../constants";
 import { ApiKeyService, ApiKeyView, AssociatedApiKeys, Permission } from "../../open-api";
 import { BaseTableService } from "../../services/base-table.service";
 import { SnackbarService } from "../../services/snackbar.service";
@@ -36,6 +36,8 @@ export class ApiKeyTableComponent extends BaseTableComponent<ApiKeyView> impleme
 
   private readonly descriptionCell = viewChild.required<TemplateRef<any>>("descriptionCell");
 
+  private readonly scopeCell = viewChild.required<TemplateRef<any>>("scopeCell");
+
   private readonly createdByCell = viewChild.required<TemplateRef<any>>("createdByCell");
 
   private readonly createdAtCell = viewChild.required<TemplateRef<any>>("createdAtCell");
@@ -48,6 +50,8 @@ export class ApiKeyTableComponent extends BaseTableComponent<ApiKeyView> impleme
   private readonly table = viewChild.required(TableComponent);
 
   protected readonly Permission = Permission;
+
+  protected readonly scopeLabels: Record<string, string> = API_KEY_SCOPE_LABELS;
 
   public readonly canViewAll = this.store.selectSignal(
     AuthState.hasAppPermission(Permission.AppApiKeysReadAny)
@@ -116,6 +120,12 @@ export class ApiKeyTableComponent extends BaseTableComponent<ApiKeyView> impleme
         sortable: true,
       },
       {
+        columnHeader: "Scope",
+        matColumnDef: "scope",
+        template: this.scopeCell(),
+        sortable: false,
+      },
+      {
         columnHeader: "Created By",
         matColumnDef: "created_by",
         template: this.createdByCell(),
@@ -143,6 +153,7 @@ export class ApiKeyTableComponent extends BaseTableComponent<ApiKeyView> impleme
     this.displayedColumns = [
       "name",
       "description",
+      "scope",
       "created_by",
       "created_at",
       "last_used_at",

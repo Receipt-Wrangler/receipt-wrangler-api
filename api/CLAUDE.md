@@ -1197,9 +1197,15 @@ It was not enforced anywhere until this change. The value was stored on the key,
 claims, and validated for well-formedness — and then read by nothing. Both `IsValid()` calls check
 that the value is one of the three, never that the request is allowed, and `enforcePermissions`
 resolves everything from the caller's user id without consulting it. So a key created as "Read" could
-create, update and delete anything its owner could. That was not a dormant field: the desktop form
-presents a required Read / Write / Read-Write picker and **defaults to Read**, so the most restrictive
-label was the default and it meant nothing.
+create, update and delete anything its owner could. The desktop form's Read / Write / Read-Write
+picker **defaults to Read**, so the most restrictive label was the default and it meant nothing.
+
+**That picker was also hidden** (`@if (false)` in `api-key-form-dialog`) until after enforcement
+landed, so every key created from the UI is `r`. The backend always accepted `scope` on both
+`POST /apiKey` and `PUT /apiKey/{id}` (`UpsertApiKeyCommand` is shared). The desktop now offers the
+picker on create **and** edit and shows each key's scope in the table, and editing is the fix for a
+pre-existing key that now 403s on writes. A scope change applies on the key's next request, because
+`ValidateV1ApiKey` reads the row every time, and the secret does not change.
 
 **The match on the scope string is EXACT, and that is load-bearing rather than tidy.** It was
 `strings.Contains(scope, "r")` / `"w"`, which read the `r` in `rx` and both letters in `wr`, `rww`,

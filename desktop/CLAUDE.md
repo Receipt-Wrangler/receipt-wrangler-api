@@ -1256,6 +1256,24 @@ for the server side and the lockout recovery.
   the warning is conservative there. The spec drives it under jsdom's `http://localhost` and
   overrides the field for the HTTPS case.
 
+## API key scope
+
+The API key dialog (`src/settings/api-key-form-dialog/`) offers a **Scope** select (Read / Write /
+Read/Write → `r` / `w` / `rw`) on create **and** edit. The API keys table shows it in a **Scope**
+column. The server enforces scopes literally, so a `w` key is refused on every read; see
+`api/CLAUDE.md` → "API key scopes". The select was hidden behind `@if (false)` until after that
+enforcement landed, so every key created from the UI before then is `r`. Editing the key is the fix,
+and the secret is unchanged.
+
+- **The labels live in one place**, `API_KEY_SCOPE_LABELS` / `API_KEY_SCOPE_OPTIONS`
+  (`src/constants/api-key-scope-options.ts`), read by both the dialog and the table cell. The cell
+  falls back to the raw value for anything outside the three.
+- **The hint under the select is a plain `div.hint`** (`data-testid="api-key-scope-hint"`), because
+  `app-select` has no `hint` input. It states that Write-only cannot read, since that is the surprise.
+- **The Scope column is not sortable**: `ApiKeyRepository.isValidColumn` does not accept `scope`.
+- New keys still default to `r`.
+- E2E: `e2e/api-key-scope.spec.ts` covers the create → table → edit → reload round trip.
+
 ## Duration settings (Hours/Days selector over an hours-based API)
 
 The System Settings form exposes two configurable refresh-token lifetimes (see `api/CLAUDE.md` →
